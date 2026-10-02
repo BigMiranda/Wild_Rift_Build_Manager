@@ -15,3 +15,7 @@ backend/src/main/resources/static/
 *.iml
 .DS_Store
 Thumbs.db
+
+# game screenshots used to transcribe the catalog (only the instructions are versioned)
+capturas/*
+!capturas/LEIA-ME.md

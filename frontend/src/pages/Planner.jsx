@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import FolderTree from '../components/FolderTree.jsx';
-import ItemPicker from '../components/ItemPicker.jsx';
+import Shop from '../components/Shop.jsx';
+import BuildBar from '../components/BuildBar.jsx';
 import TimelineTable from '../components/TimelineTable.jsx';
 import StatChart from '../components/StatChart.jsx';
-import ItemIcon from '../components/ItemIcon.jsx';
-import { SERIES_COLORS, n0, statLabel } from '../format.js';
+import { SERIES_COLORS, statLabel } from '../format.js';
 
 const emptyBuild = (folderId) => ({
   id: null,
@@ -175,6 +175,8 @@ export default function Planner({ meta, items }) {
   ];
   const warnings = [...(result?.warnings ?? [])];
   const isRagdoll = draft.unitCode === 'RAGDOLL';
+  const canCalculate = Number(draft.goldPerMin) > 0 && draft.xpPerMin !== '' && Number(draft.xpPerMin) >= 0;
+  const payload = toPayload(draft);
 
   return (
     <div className="layout">
@@ -200,19 +202,9 @@ export default function Planner({ meta, items }) {
           </div>
         )}
 
-        <section className="panel">
-          <div className="spread" style={{ marginBottom: 10 }}>
-            <h2 style={{ margin: 0 }}>
-              {draft.id ? 'Build' : 'Nova build'} {dirty && <small>• alterações não salvas</small>}
-            </h2>
-            <div className="row">
-              {draft.id && <button onClick={saveAsCopy}>Salvar como cópia</button>}
-              {draft.id && <button className="danger" onClick={remove}>Apagar</button>}
-              <button className="primary" onClick={save} disabled={!dirty && draft.id != null}>Salvar</button>
-            </div>
-          </div>
+        <section className="panel build-head">
           <div className="fields">
-            <label className="field">Nome
+            <label className="field grow">Nome
               <input value={draft.name} onChange={(e) => update({ name: e.target.value })} />
             </label>
             <label className="field">Pasta
@@ -225,59 +217,47 @@ export default function Planner({ meta, items }) {
                 {meta.units.map((u) => <option key={u.code} value={u.code}>{u.name}</option>)}
               </select>
             </label>
-            <label className="field">Ouro inicial
+            <label className="field narrow">Ouro inicial
               <input type="number" value={meta.startingGold} disabled title="Fixo em 500" />
             </label>
-            <label className="field">Ouro médio por minuto
+            <label className="field narrow">Ouro/min
               <input type="number" min="1" value={draft.goldPerMin} placeholder="ex.: 350" onChange={(e) => update({ goldPerMin: e.target.value })} />
             </label>
-            <label className="field">XP médio por minuto
+            <label className="field narrow">XP/min
               <input type="number" min="0" value={draft.xpPerMin} placeholder="ex.: 450" onChange={(e) => update({ xpPerMin: e.target.value })} />
             </label>
+            <div className="row build-actions">
+              {dirty && <small>não salva</small>}
+              {draft.id && <button onClick={saveAsCopy}>Duplicar</button>}
+              {draft.id && <button className="danger" onClick={remove}>Apagar</button>}
+              <button className="primary" onClick={save} disabled={!dirty && draft.id != null}>Salvar</button>
+            </div>
           </div>
-          <label className="field" style={{ marginTop: 10 }}>Nota
-            <textarea rows={2} value={draft.note} onChange={(e) => update({ note: e.target.value })} />
-          </label>
-
-          {isRagdoll && (
-            <RagdollEditor meta={meta} stats={draft.ragdollStats} onChange={(ragdollStats) => update({ ragdollStats })} />
-          )}
+          <details className="build-extra" open={isRagdoll || undefined}>
+            <summary>Nota{isRagdoll ? ' e status do boneco de pano' : ''}{draft.note ? ' •' : ''}</summary>
+            <textarea rows={2} value={draft.note} placeholder="Anotações livres sobre esta build" aria-label="Nota" onChange={(e) => update({ note: e.target.value })} />
+            {isRagdoll && (
+              <RagdollEditor meta={meta} stats={draft.ragdollStats} onChange={(ragdollStats) => update({ ragdollStats })} />
+            )}
+          </details>
         </section>
 
-        <div className="grid-2">
-          <section className="panel">
-            <h3>Catálogo</h3>
-            <ItemPicker items={items} onAdd={(id) => update((d) => ({ itemIds: [...d.itemIds, id] }))} />
-          </section>
-          <section className="panel">
-            <div className="spread">
-              <h3>Sequência de compras</h3>
-              {draft.itemIds.length > 0 && <button className="link" onClick={() => update({ itemIds: [] })}>limpar</button>}
-            </div>
-            {draft.itemIds.length === 0 && <p className="muted">Adicione itens completos ou componentes pelo catálogo.</p>}
-            <ol className="sequence">
-              {draft.itemIds.map((id, idx) => {
-                const it = itemsById.get(id);
-                const step = result?.steps.find((s) => s.index === idx);
-                return (
-                  <li key={`${idx}-${id}`}>
-                    <span className="num">{idx + 1}.</span>
-                    <span className="with-icon">
-                      <ItemIcon id={it ? id : null} size={24} />
-                      {it?.name ?? `item ${id} (removido)`}{' '}
-                      <small>{n0(step ? step.paidCost : it?.cost)}g</small>
-                    </span>
-                    <span className="row" style={{ gap: 2 }}>
-                      <button className="icon" onClick={() => moveItem(idx, -1)} disabled={idx === 0} aria-label="Mover para cima">↑</button>
-                      <button className="icon" onClick={() => moveItem(idx, 1)} disabled={idx === draft.itemIds.length - 1} aria-label="Mover para baixo">↓</button>
-                      <button className="icon danger" onClick={() => update((d) => ({ itemIds: d.itemIds.filter((_, k) => k !== idx) }))} aria-label="Remover">✕</button>
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
-        </div>
+        <section className="panel shop-panel">
+          <Shop
+            items={items}
+            buildPayload={canCalculate ? payload : null}
+            ownedIds={draft.itemIds}
+            onAdd={(id) => update((d) => ({ itemIds: [...d.itemIds, id] }))}
+          />
+          <BuildBar
+            itemIds={draft.itemIds}
+            itemsById={itemsById}
+            steps={result?.steps}
+            onMove={moveItem}
+            onRemove={(idx) => update((d) => ({ itemIds: d.itemIds.filter((_, k) => k !== idx) }))}
+            onClear={() => update({ itemIds: [] })}
+          />
+        </section>
 
         <section className="panel">
           <h3>Linha do tempo</h3>
