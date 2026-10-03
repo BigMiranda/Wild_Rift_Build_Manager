@@ -14,6 +14,8 @@
 #   fabrica     nomes dos itens em que este se transforma ("Fabrica:")
 #   captura     arquivo de origem do detalhe
 #   evolucao    item em que este se transforma sozinho (missão / carga de mana), com seus status
+#   exclusivo   grupos dos quais só se pode ter 1 item no inventário (regra do jogo: % de penetração, Lâmina Arcana,
+#               Lágrima da Deusa, Salva-Vidas, item de suporte); botas ficam fora dos grupos de penetração
 #   efeitos     modelagem numérica das passivas que mexem em status (o resto das passivas é só texto):
 #                 {passiva, tipo, ratio, ref, escopo: total|bonus|base, condicional}  -> ratio x status 'ref'
 #                 {passiva, tipo, valor, valor_nv15, condicional}                     -> valor fixo (interpolado nv1..15)
@@ -178,6 +180,8 @@ itens:
       valor: 200
       valor_nv15: 300
       condicional: true
+    exclusivo:
+    - Salva-Vidas
   Medalhão dos Solari de Ferro:
     custo: 2600
     secao: aprimorado
@@ -248,6 +252,8 @@ itens:
         ratio: 0.15
         ref: Mana Máximo
         escopo: total
+      exclusivo:
+      - Lágrima da Deusa
     receita:
     - Lágrima da Deusa
     - Gema Ardente
@@ -262,6 +268,8 @@ itens:
       tipo: Mana Máximo
       valor: 700
       condicional: true
+    exclusivo:
+    - Lágrima da Deusa
   Virtude Radiante:
     custo: 2650
     secao: aprimorado
@@ -629,6 +637,8 @@ itens:
     - Fulgor
     - Gema Ardente
     - Proteção Glacial
+    exclusivo:
+    - Lâmina Arcana
   Hidra Titânica:
     custo: 3000
     secao: aprimorado
@@ -732,6 +742,8 @@ itens:
       ratio: 0.5
       ref: Dano de Ataque
       escopo: base
+    exclusivo:
+    - Salva-Vidas
   Duplaguarda de Amaranto:
     custo: 3200
     secao: aprimorado
@@ -884,6 +896,8 @@ itens:
         ratio: 0.02
         ref: Mana Máximo
         escopo: total
+      exclusivo:
+      - Lágrima da Deusa
     receita:
     - Lágrima da Deusa
     - Martelo de Guerra de Caulfield
@@ -898,6 +912,8 @@ itens:
       tipo: Mana Máximo
       valor: 700
       condicional: true
+    exclusivo:
+    - Lágrima da Deusa
   Eclipse:
     custo: 2900
     secao: aprimorado
@@ -986,6 +1002,8 @@ itens:
     receita:
     - item: Hexdrinker
       qtd: 2
+    exclusivo:
+    - Salva-Vidas
   Cutelo Negro:
     custo: 3000
     secao: aprimorado
@@ -1136,6 +1154,8 @@ itens:
     receita:
     - Último Sussurro
     - Martelo de Guerra de Caulfield
+    exclusivo:
+    - Penetração de Armadura %
   Lança de Shojin:
     custo: 3100
     secao: aprimorado
@@ -1233,6 +1253,8 @@ itens:
     - Machado Termestre
     - Fulgor
     - Fago
+    exclusivo:
+    - Lâmina Arcana
   Ruptor Divino:
     custo: 3400
     secao: aprimorado
@@ -1258,6 +1280,8 @@ itens:
     - Fulgor
     - Gema Ardente
     - Punho de Jaurim
+    exclusivo:
+    - Lâmina Arcana
   Fulgor:
     custo: 800
     secao: tier_medio
@@ -1285,6 +1309,8 @@ itens:
     - Manopla dos Glacinatas
     - Perdição de Lich
     - Ruptor Divino
+    exclusivo:
+    - Lâmina Arcana
   Picareta:
     custo: 800
     secao: tier_medio
@@ -1724,6 +1750,8 @@ itens:
     - Lembranças do Lorde Dominik
     - Lembrete Mortal
     - Rancor de Serylda
+    exclusivo:
+    - Penetração de Armadura %
   Hexdrinker:
     custo: 1200
     secao: tier_medio
@@ -1842,6 +1870,8 @@ itens:
     - Cajado do Arcanjo
     - Manamune
     - Tiara Sussurrante
+    exclusivo:
+    - Lágrima da Deusa
   Adaga:
     custo: 400
     secao: basico
@@ -2413,6 +2443,8 @@ itens:
     - Último Sussurro
     - Chamado do Carrasco
     - Luvas da Pancadaria
+    exclusivo:
+    - Penetração de Armadura %
   Colhedor de Essência:
     custo: 3000
     secao: aprimorado
@@ -2438,6 +2470,8 @@ itens:
     - Fulgor
     - Martelo de Guerra de Caulfield
     - Luvas da Pancadaria
+    exclusivo:
+    - Lâmina Arcana
   Arco-escudo Imortal:
     custo: 3000
     secao: aprimorado
@@ -2459,6 +2493,8 @@ itens:
     - Aljava Vespertina
     - Espada Longa
     - Luvas da Pancadaria
+    exclusivo:
+    - Salva-Vidas
   Terminus:
     custo: 3000
     secao: aprimorado
@@ -2487,6 +2523,8 @@ itens:
     receita:
     - Machado Termestre
     - Arco Recurvo
+    exclusivo:
+    - Penetração de Armadura %
   Chuva de Canivete:
     custo: 3000
     secao: aprimorado
@@ -2579,6 +2617,8 @@ itens:
     receita:
     - Aljava Vespertina
     - Último Sussurro
+    exclusivo:
+    - Penetração de Armadura %
   Gume do Infinito:
     custo: 3400
     secao: aprimorado
@@ -2761,6 +2801,8 @@ itens:
         ratio: 0.0025
         ref: Mana Máximo
         escopo: total
+      exclusivo:
+      - Lágrima da Deusa
     receita:
     - Lágrima da Deusa
     - Ídolo Proibido
@@ -2775,6 +2817,8 @@ itens:
       tipo: Mana Máximo
       valor: 700
       condicional: true
+    exclusivo:
+    - Lágrima da Deusa
   Redenção:
     custo: 2450
     secao: aprimorado
@@ -3088,6 +3132,8 @@ itens:
     - Cintilação Etérea
     - Fulgor
     - Tomo Amplificador
+    exclusivo:
+    - Lâmina Arcana
   Maldição Sanguinária:
     custo: 2900
     secao: aprimorado
@@ -3131,6 +3177,8 @@ itens:
     - Códex Demoníaco
     - Ametista do Vazio
     - Tomo Amplificador
+    exclusivo:
+    - Penetração Mágica %
   Cajado do Vazio:
     custo: 3000
     secao: aprimorado
@@ -3147,6 +3195,8 @@ itens:
     receita:
     - Bastão Desnecessariamente Grande
     - Ametista do Vazio
+    exclusivo:
+    - Penetração Mágica %
   Tormento de Liandry:
     custo: 3000
     secao: aprimorado
@@ -3208,6 +3258,9 @@ itens:
         ratio: 0.02
         ref: Mana Máximo
         escopo: total
+      exclusivo:
+      - Lágrima da Deusa
+      - Salva-Vidas
     receita:
     - Lágrima da Deusa
     - Capítulo Perdido
@@ -3222,6 +3275,8 @@ itens:
       tipo: Mana Máximo
       valor: 700
       condicional: true
+    exclusivo:
+    - Lágrima da Deusa
   Ímpeto Cósmico:
     custo: 3000
     secao: aprimorado
@@ -3272,6 +3327,8 @@ itens:
     - Varinha Explosiva
     - Fulgor
     - Gema Ardente
+    exclusivo:
+    - Lâmina Arcana
   Orbe do Infinito:
     custo: 3100
     secao: aprimorado
@@ -3520,6 +3577,8 @@ itens:
     fabrica:
     - Cajado do Vazio
     - Criptoflora
+    exclusivo:
+    - Penetração Mágica %
   Alternador Hextec:
     custo: 1100
     secao: tier_medio
@@ -3889,11 +3948,15 @@ itens:
         tipo: Dano de Ataque
         valor: 20
         condicional: true
+      exclusivo:
+      - Item de suporte
     receita: []
     efeitos:
     - passiva: Versátil (adaptativo)
       tipo: Dano de Ataque
       valor: 10
+    exclusivo:
+    - Item de suporte
   Escudo Relicário:
     custo: 500
     secao: preparacao
@@ -3937,7 +4000,11 @@ itens:
         tipo: Dano de Ataque
         valor: 20
         condicional: true
+      exclusivo:
+      - Item de suporte
     receita: []
+    exclusivo:
+    - Item de suporte
   Botas da Velocidade:
     custo: 400
     secao: basico

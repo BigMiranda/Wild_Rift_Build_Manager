@@ -67,23 +67,30 @@ public class TimelineEngine {
     public static final double STARTING_GOLD = 500;
     public static final int MAX_LEVEL = 15;
     public static final int INVENTORY_SLOTS = 6;
+    /** Item slots besides the single boots slot. */
+    public static final int ITEM_SLOTS = 5;
 
     private final ReferenceData ref;
-    /** Set at the start of each run: whether conditional effects count. */
-    private boolean includeConditional = true;
 
     public TimelineEngine(ReferenceData ref) {
         this.ref = ref;
     }
 
-    /** One item in the inventory, remembering the purchase that brought it. */
+    /** One item in the inventory, remembering the purchase that brought it and its conditional-effects choice. */
     private static final class Owned {
         final ItemDef item;
         final int purchaseIndex;
+        final boolean conditional;
 
-        Owned(ItemDef item, int purchaseIndex) {
+        Owned(ItemDef item, int purchaseIndex, boolean conditional) {
             this.item = item;
             this.purchaseIndex = purchaseIndex;
+            this.conditional = conditional;
+        }
+
+        /** Whether a line of this item counts: unconditional lines always, conditional ones only when enabled. */
+        boolean counts(StatLine l) {
+            return conditional || !l.conditional;
         }
     }
 
@@ -95,7 +102,6 @@ public class TimelineEngine {
         result.goldPerMin = in.goldPerMin;
         result.xpPerMin = in.xpPerMin;
         result.statPrices = ref.statPrices;
-        includeConditional = in.includeConditional;
 
         if (in.goldPerMin <= 0) {
             result.warnings.add("Ouro por minuto deve ser maior que zero.");
@@ -142,18 +148,20 @@ public class TimelineEngine {
             step.xp = in.xpPerMin * step.minute;
             step.level = levelForXp(step.xp);
 
-            inventory.add(new Owned(item, i));
+            boolean cond = i < in.conditional.size() && in.conditional.get(i) != null
+                    ? in.conditional.get(i) : in.includeConditional;
+            Owned bought = new Owned(item, i, cond);
+            inventory.add(bought);
             inventoryAfterStep.add(new ArrayList<>(inventory));
             for (Owned o : inventory) {
                 step.inventory.add(o.item.name);
+                step.inventoryIds.add(o.item.id);
             }
-            if (inventory.size() > INVENTORY_SLOTS) {
-                step.warnings.add("Inventário com " + inventory.size() + " itens (limite do jogo: " + INVENTORY_SLOTS + ").");
-            }
+            step.violations = violations(item, inventory);
 
             step.stats = snapshot(in.unit, inventory, step.level);
             StatSnapshot beforeSnap = snapshot(in.unit, before, step.level);
-            step.efficiency = efficiency(item, i, step, beforeSnap);
+            step.efficiency = efficiency(bought, step, beforeSnap);
             for (PassiveDetail p : step.stats.passives) {
                 if (p.purchaseIndex == i && p.staticFallback) {
                     step.warnings.add("Passiva '" + p.passive + "' não tem ref_type: usado valor estático " + fmt(p.value) + ".");
@@ -191,6 +199,56 @@ public class TimelineEngine {
         return discount;
     }
 
+    /**
+     * Shop rules, checked on the inventory right after a purchase (owned components already consumed, as in game):
+     * no completed item twice, one item per exclusive group, one active item, one boots and five other items.
+     * Only violations involving the item just bought are reported, so a broken rule shows up once.
+     */
+    static List<Model.Violation> violations(ItemDef bought, List<Owned> inventory) {
+        List<Model.Violation> out = new ArrayList<>();
+        String key = bought.group == null ? bought.name : bought.group;
+        if (bought.finished()) {
+            List<String> same = names(inventory, o -> key.equals(o.group == null ? o.name : o.group));
+            if (same.size() > 1) {
+                out.add(new Model.Violation("duplicate", null, same));
+            }
+        }
+        for (String group : bought.exclusiveGroups) {
+            List<String> members = names(inventory, o -> o.exclusiveGroups.contains(group));
+            if (members.size() > 1) {
+                out.add(new Model.Violation("exclusive", group, members));
+            }
+        }
+        if (bought.active) {
+            List<String> actives = names(inventory, o -> o.active);
+            if (actives.size() > 1) {
+                out.add(new Model.Violation("active", null, actives));
+            }
+        }
+        if (bought.boots()) {
+            List<String> boots = names(inventory, ItemDef::boots);
+            if (boots.size() > 1) {
+                out.add(new Model.Violation("boots", null, boots));
+            }
+        } else {
+            List<String> others = names(inventory, o -> !o.boots());
+            if (others.size() > ITEM_SLOTS) {
+                out.add(new Model.Violation("slots", null, others));
+            }
+        }
+        return out;
+    }
+
+    private static List<String> names(List<Owned> inventory, java.util.function.Predicate<ItemDef> filter) {
+        List<String> out = new ArrayList<>();
+        for (Owned o : inventory) {
+            if (filter.test(o.item)) {
+                out.add(o.item.name);
+            }
+        }
+        return out;
+    }
+
     public int levelForXp(double xp) {
         int level = 1;
         for (Map.Entry<Integer, Double> e : ref.xpTable.entrySet()) {
@@ -225,7 +283,7 @@ public class TimelineEngine {
         // Step 1: flat stats of every owned item (level ranges interpolated, conditional ones only when enabled).
         for (Owned o : inventory) {
             for (StatLine l : o.item.stats) {
-                if (l.countsAsFlat() && counts(l)) {
+                if (l.countsAsFlat() && o.counts(l)) {
                     s.itemFlat.merge(l.type, l.valueAt(level), Double::sum);
                 }
             }
@@ -234,8 +292,9 @@ public class TimelineEngine {
         // Step 3: percentage passives, composed in purchase order.
         for (Owned o : inventory) {
             Map<String, Double> contributions = new LinkedHashMap<>();
+            List<Model.PassivePart> passiveParts = new ArrayList<>();
             for (StatLine l : o.item.stats) {
-                if (!l.hasRatio() || l.marker() || !counts(l)) {
+                if (!l.hasRatio() || l.marker() || !o.counts(l)) {
                     continue;
                 }
                 PassiveDetail d = new PassiveDetail();
@@ -267,10 +326,12 @@ public class TimelineEngine {
                     d.formula = "valor estático da referência = " + fmt(d.value) + " " + l.type;
                 }
                 contributions.merge(l.type, d.value, Double::sum);
+                passiveParts.add(part(d.passive, d.stat, d.value, l.conditional));
                 s.passives.add(d);
             }
             // Added only after the whole item was evaluated: an item never compounds on itself.
             contributions.forEach((k, v) -> s.itemPassives.merge(k, v, Double::sum));
+            s.contributions.add(contribution(o, level, passiveParts));
         }
 
         // Step 4: Living Forge on bonus health / armor / MR.
@@ -304,8 +365,43 @@ public class TimelineEngine {
         return s;
     }
 
-    private boolean counts(StatLine l) {
-        return includeConditional || !l.conditional;
+    private Model.PassivePart part(String passive, String stat, double amount, boolean conditional) {
+        Model.PassivePart p = new Model.PassivePart();
+        p.passive = passive;
+        p.stat = stat;
+        p.amount = amount;
+        p.gold = goldValue(stat, amount);
+        p.conditional = conditional;
+        return p;
+    }
+
+    /**
+     * Gold value an owned item adds: plain stats, and its passives one by one (percentage passives as evaluated in
+     * step 3, plus fixed bonuses that belong to a named passive, e.g. "Salva-Vidas: +200–300 Vida").
+     */
+    private Model.ItemContribution contribution(Owned o, int level, List<Model.PassivePart> ratioParts) {
+        Model.ItemContribution c = new Model.ItemContribution();
+        c.purchaseIndex = o.purchaseIndex;
+        c.itemId = o.item.id;
+        c.itemName = o.item.name;
+        c.conditionalIncluded = o.conditional;
+        for (StatLine l : o.item.stats) {
+            if (!l.countsAsFlat() || !o.counts(l)) {
+                continue;
+            }
+            if (l.passive != null) {
+                c.passiveParts.add(part(l.passive, l.type, l.valueAt(level), l.conditional));
+            } else {
+                c.flat.merge(l.type, l.valueAt(level), Double::sum);
+            }
+        }
+        c.passiveParts.addAll(ratioParts);
+        for (Model.PassivePart p : c.passiveParts) {
+            c.passives.merge(p.stat, p.amount, Double::sum);
+            c.passiveGold += p.gold;
+        }
+        c.flat.forEach((k, v) -> c.flatGold += goldValue(k, v));
+        return c;
     }
 
     private static double bonusOf(StatSnapshot s, String stat) {
@@ -328,7 +424,9 @@ public class TimelineEngine {
         return total;
     }
 
-    private Efficiency efficiency(ItemDef item, int purchaseIndex, TimelineStep step, StatSnapshot before) {
+    private Efficiency efficiency(Owned bought, TimelineStep step, StatSnapshot before) {
+        ItemDef item = bought.item;
+        int purchaseIndex = bought.purchaseIndex;
         Efficiency e = new Efficiency();
         GoldPricing.StaticResult st = GoldPricing.staticEfficiency(item, ref.statPrices, ref.baseItemNames);
         e.staticPct = st.pct;
@@ -337,7 +435,7 @@ public class TimelineEngine {
         double worth = 0;
         StringBuilder f = new StringBuilder();
         for (StatLine l : item.stats) {
-            if (l.countsAsFlat() && counts(l)) {
+            if (l.countsAsFlat() && bought.counts(l)) {
                 double v = l.valueAt(step.level);
                 worth += goldValue(l.type, v);
                 appendTerm(f, v, l.type + (l.passive != null ? " [" + l.passive + "]" : ""));
@@ -413,6 +511,11 @@ public class TimelineEngine {
             for (String k : Stats.DISPLAY_STATS) {
                 p.total.put(k, snap.total.getOrDefault(k, 0.0));
             }
+            snap.total.forEach(p.total::putIfAbsent);
+            p.base.putAll(snap.base);
+            p.forge.putAll(snap.forge);
+            p.forgePct = snap.forgePct;
+            p.contributions = snap.contributions;
             result.series.add(p);
         }
     }

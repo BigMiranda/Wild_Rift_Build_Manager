@@ -1,5 +1,7 @@
 -- Schema is idempotent (CREATE ... IF NOT EXISTS) and runs on every start, after SchemaManager migrations.
 -- Version (PRAGMA user_version) 2: catalog transcribed from the Wild Rift shop (pt-BR).
+-- Version 3: conditional effects chosen per purchase (build_step.include_conditional).
+-- Version 4: exclusive item groups (item.exclusive_groups).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -25,7 +27,8 @@ CREATE TABLE IF NOT EXISTS item (
     marker       TEXT,                       -- novo | reformulado | alterado
     summary      TEXT,
     item_group   TEXT,                       -- shop tile the item belongs to (base item for evolutions)
-    capture      TEXT                        -- screenshot the data came from
+    capture      TEXT,                       -- screenshot the data came from
+    exclusive_groups TEXT                    -- groups of which only one item can be held, joined by ", "
 );
 
 CREATE TABLE IF NOT EXISTS item_passive (
@@ -97,7 +100,7 @@ CREATE TABLE IF NOT EXISTS build (
     unit_code    TEXT    NOT NULL REFERENCES unit (code),
     gold_per_min REAL    NOT NULL,
     xp_per_min   REAL    NOT NULL,
-    include_conditional INTEGER NOT NULL DEFAULT 1,
+    include_conditional INTEGER NOT NULL DEFAULT 1, -- unused since v3 (kept for old databases)
     created_at   TEXT    NOT NULL,
     updated_at   TEXT    NOT NULL
 );
@@ -106,6 +109,7 @@ CREATE TABLE IF NOT EXISTS build_step (
     build_id INTEGER NOT NULL REFERENCES build (id) ON DELETE CASCADE,
     seq      INTEGER NOT NULL,
     item_id  INTEGER NOT NULL REFERENCES item (id),
+    include_conditional INTEGER NOT NULL DEFAULT 1, -- count this purchase's conditional effects
     PRIMARY KEY (build_id, seq)
 );
 

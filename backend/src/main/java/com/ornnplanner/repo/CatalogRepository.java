@@ -89,7 +89,7 @@ public class CatalogRepository {
         jdbc.update(con -> {
             PreparedStatement ps = con.prepareStatement(
                     "INSERT INTO item (name, cost, category, image, source_patch, edited, section, active, marker, summary, "
-                            + "item_group, capture) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                            + "item_group, capture, exclusive_groups) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, item.name);
             ps.setInt(2, item.cost);
@@ -103,6 +103,7 @@ public class CatalogRepository {
             ps.setString(10, item.summary);
             ps.setString(11, item.group == null ? item.name : item.group);
             ps.setString(12, item.capture);
+            ps.setString(13, joinGroups(item));
             return ps;
         }, kh);
         long id = kh.getKey().longValue();
@@ -113,11 +114,16 @@ public class CatalogRepository {
 
     public void updateItem(long id, ItemDef item) {
         jdbc.update("UPDATE item SET name = ?, cost = ?, category = ?, image = ?, source_patch = ?, edited = ?, section = ?, "
-                        + "active = ?, marker = ?, summary = ?, item_group = ?, capture = ? WHERE id = ?",
+                        + "active = ?, marker = ?, summary = ?, item_group = ?, capture = ?, exclusive_groups = ? WHERE id = ?",
                 item.name, item.cost, categoryOf(item), item.image, item.sourcePatch, item.edited ? 1 : 0, item.section,
-                item.active ? 1 : 0, item.marker, item.summary, item.group == null ? item.name : item.group, item.capture, id);
+                item.active ? 1 : 0, item.marker, item.summary, item.group == null ? item.name : item.group, item.capture,
+                joinGroups(item), id);
         replaceStats(id, item.stats);
         replacePassives(id, item.passives);
+    }
+
+    private static String joinGroups(ItemDef item) {
+        return item.exclusiveGroups == null || item.exclusiveGroups.isEmpty() ? null : String.join(", ", item.exclusiveGroups);
     }
 
     /** Tabs are stored joined in `category`; an item edited without tabs keeps whatever category it was given. */
@@ -209,6 +215,10 @@ public class CatalogRepository {
         i.summary = rs.getString("summary");
         i.group = rs.getString("item_group");
         i.capture = rs.getString("capture");
+        String groups = rs.getString("exclusive_groups");
+        if (groups != null && !groups.isBlank()) {
+            i.exclusiveGroups = new java.util.ArrayList<>(Arrays.asList(groups.split("\\s*,\\s*")));
+        }
         if (i.category != null && !i.category.isBlank()) {
             i.tabs = new java.util.ArrayList<>(Arrays.asList(i.category.split("\\s*,\\s*")));
         }

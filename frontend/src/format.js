@@ -1,51 +1,35 @@
-export const STAT_LABELS = {
-  'Max Health': 'Vida',
-  Armor: 'Armadura',
-  'Magic Resistance': 'Resist. Mágica',
-  'Ability Haste': 'Aceleração de Hab.',
-  'Health Regen': 'Regen. de vida (/5s)',
-  'Ability Power': 'Poder de Hab.',
-  'Attack Damage': 'Dano de Ataque',
-  'Max Mana': 'Mana',
-  'Mana Regen': 'Regen. de mana (/5s)',
-  'Move Speed': 'Vel. de movimento',
-  '% Health Regen': '% Regeneração de Vida',
-  '% Mana Regeneration': '% Regeneração de Mana',
-  '% Attack Speed': '% Velocidade de Ataque',
-  '% Critical Rate': '% Taxa de Crítico',
-  '% Move Speed': '% Velocidade de Movimento',
-  '% Lifesteal': '% Roubo de Vida',
-  '% Heal and shield strength': '% Potência de Escudo e Cura',
-  '% Tenacity': '% Tenacidade',
-  'Armor Penetration': 'Penetração de Armadura',
-  '% Armor Penetration': '% Penetração de Armadura',
-  'Magic Penetration': 'Penetração Mágica',
-  '% Magic Penetration': '% Penetração Mágica',
-};
+import { currentLang } from './i18n.js';
 
-export const SHORT_LABELS = {
-  'Max Health': 'Vida',
-  Armor: 'Arm',
-  'Magic Resistance': 'RM',
-  'Ability Haste': 'AH',
-  'Health Regen': 'Regen',
-  'Ability Power': 'AP',
-  'Attack Damage': 'AD',
-};
+export { statLabel, statAbbr } from './i18n.js';
 
 /** Stats shown in the timeline table and selectable in the chart. */
 export const TABLE_STATS = ['Max Health', 'Armor', 'Magic Resistance', 'Ability Haste', 'Health Regen', 'Ability Power', 'Attack Damage'];
 
-export const statLabel = (s) => STAT_LABELS[s] ?? s;
+/** Stats of the champion sheet (in-game stats tab order). */
+export const SHEET_STATS = [
+  'Attack Damage', 'Ability Power', 'Max Health', 'Max Mana',
+  'Armor', 'Magic Resistance', '% Attack Speed', 'Ability Haste',
+  '% Critical Rate', 'Health Regen', 'Mana Regen', 'Move Speed',
+  'Armor Penetration', '% Armor Penetration', 'Magic Penetration', '% Magic Penetration',
+  '% Lifesteal', '% Tenacity', '% Heal and shield strength', '% Move Speed',
+];
 
-const nf0 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
-const nf1 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
-const nf2 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
+/** Stats whose value is a percentage. */
+export const PERCENT_STATS = new Set(['% Attack Speed', '% Critical Rate', '% Armor Penetration', '% Magic Penetration',
+  '% Lifesteal', '% Tenacity', '% Heal and shield strength', '% Move Speed', '% Health Regen', '% Mana Regeneration']);
 
-export const n0 = (v) => (v == null || Number.isNaN(v) ? '—' : nf0.format(v));
-export const n1 = (v) => (v == null || Number.isNaN(v) ? '—' : nf1.format(v));
-export const n2 = (v) => (v == null || Number.isNaN(v) ? '—' : nf2.format(v));
-export const pct = (v) => (v == null || Number.isNaN(v) ? '—' : `${nf1.format(v)}%`);
+const fmt = (digits) => (v) => {
+  if (v == null || Number.isNaN(v)) return '—';
+  return new Intl.NumberFormat(currentLang() === 'en' ? 'en-US' : 'pt-BR', { maximumFractionDigits: digits }).format(v);
+};
+
+export const n0 = fmt(0);
+export const n1 = fmt(1);
+export const n2 = fmt(2);
+export const pct = (v) => (v == null || Number.isNaN(v) ? '—' : `${n1(v)}%`);
+
+/** A stat value with its unit (percent stats get a % sign). */
+export const statValue = (stat, v) => (PERCENT_STATS.has(stat) ? `${n1(v)}%` : stat.includes('Regen') ? n1(v) : n0(v));
 
 /** 12.57 -> "12:34" */
 export function mmss(minutes) {
@@ -58,7 +42,7 @@ export function mmss(minutes) {
 
 /**
  * Categorical series colors, fixed order (never cycled): one color per build, following the entity.
- * Validated palette from the dataviz reference instance; the dark column is used in dark mode.
+ * Validated palette from the dataviz reference instance (dark-surface steps).
  */
 export const SERIES_COLORS = [
   'var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)',

@@ -105,7 +105,8 @@ O texto das passivas é guardado como na loja. Só as que **mudam status** ganha
 | Aproximação Invernal / Fimbulwinter | Vida = 15% do Mana máximo |
 
 Escopos: `total` (base + bônus), `bonus` (o que a loja chama de “adicional”) e `base`. Efeitos **condicionais**
-(acúmulos, combate, vida baixa, carga de mana) podem ser ligados ou desligados em cada build. Status adaptativos
+(acúmulos, combate, vida baixa, carga de mana) são ligados ou desligados **em cada compra** da build (botão “cond.” na
+sequência de compras), e itens que evoluem podem ser contados já evoluídos (botão “evoluído”). Status adaptativos
 (Grevas Vorazes, Passos Imortais, Foice Espectral) foram modelados como Dano de Ataque, que é o que o Ornn recebe.
 
 ### Importação
@@ -141,8 +142,18 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
   - *marginal* (extra): ganho de valor em ouro de **toda** a build (inclui Forja Viva e passivas de outros itens)
     ÷ ouro efetivamente pago.
 - **Componentes**: componentes já possuídos são consumidos (recursivamente) e descontados do preço, como na loja.
+- **Regras da loja** (checadas pelo motor sobre o inventário logo após cada compra, já com os componentes consumidos):
+  nenhum item finalizado repetido; só um item por grupo exclusivo (penetração de armadura %, penetração mágica %,
+  Lâmina Arcana, Lágrima da Deusa, Salva-Vidas, item de suporte — campo `exclusivo` do catálogo; botas ficam fora dos
+  grupos de penetração); só um item ativável; 5 itens + 1 bota. A interface não deixa adicionar uma compra que quebre
+  uma regra, e a linha do tempo mostra os 6 espaços do inventário a cada compra, com os itens finalizados em destaque.
 - Clique numa linha da linha do tempo para ver o **detalhamento**: base/itens/passivas/forja por status, fórmula de
   cada passiva e de cada eficiência.
+- No gráfico, a faixa de eventos mostra cada compra (ícone do item) e cada subida de nível. Clicar no gráfico ou num
+  evento escolhe o momento exibido no **painel de status do campeão** (total com base + adicional, como na aba de
+  status do jogo) e no **relatório de relevância** (valor em ouro de cada item e de cada passiva, mais a Forja Viva).
+- Interface em português ou inglês, com siglas de status em qualquer dos dois (DdA/AD, PdH/AP, RM/MR…), escolhidas
+  no cabeçalho. Nomes e textos dos itens continuam em português, como na loja.
 
 ## Aproximações assumidas
 
@@ -160,4 +171,4 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
   [changchiyou/wildrift-gold-efficiency](https://github.com/changchiyou/wildrift-gold-efficiency), licença MIT —
   Copyright (c) 2024 changchiyou. Aviso completo em
   [`backend/src/test/resources/referencia/LICENSE-wildrift-gold-efficiency.txt`](backend/src/test/resources/referencia/LICENSE-wildrift-gold-efficiency.txt).
-- Status base do Ornn e Forja Viva: wiki.leagueoflegends.com/en-us/WR:Ornn.
+- Status base do Ornn: medidos no jogo (aba de status nos níveis 1 e 15); Forja Viva: wiki.leagueoflegends.com/en-us/WR:Ornn.

@@ -183,6 +183,7 @@ public class CatalogImporter {
         item.summary = str(shop.get("resumo"));
         item.capture = str(shop.get("captura"));
         item.sourcePatch = patch;
+        item.exclusiveGroups = new ArrayList<>((List<String>) data.getOrDefault("exclusivo", List.of()));
 
         for (Map<String, Object> s : (List<Map<String, Object>>) data.getOrDefault("status", List.of())) {
             item.stats.add(StatLine.flat(code(str(s.get("tipo")), codes, name, warnings), num(s.get("valor"))));

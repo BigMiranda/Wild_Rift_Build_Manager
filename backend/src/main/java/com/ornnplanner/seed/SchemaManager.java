@@ -19,10 +19,12 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 2;
+    static final int VERSION = 4;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
+    /** Set when a migration added catalog data that only a re-import can fill. */
+    private boolean catalogReimportNeeded;
 
     public SchemaManager(JdbcTemplate jdbc, DataSource dataSource) {
         this.jdbc = jdbc;
@@ -48,10 +50,27 @@ public class SchemaManager {
                 jdbc.execute("ALTER TABLE build ADD COLUMN include_conditional INTEGER NOT NULL DEFAULT 1");
             }
         }
+        if (version < 3 && tableExists("build_step") && !columnExists("build_step", "include_conditional")) {
+            // v3: conditional effects are chosen per purchase; existing steps inherit their build's old choice.
+            jdbc.execute("ALTER TABLE build_step ADD COLUMN include_conditional INTEGER NOT NULL DEFAULT 1");
+            if (columnExists("build", "include_conditional")) {
+                jdbc.execute("UPDATE build_step SET include_conditional = "
+                        + "(SELECT b.include_conditional FROM build b WHERE b.id = build_step.build_id)");
+            }
+        }
+        if (version < 4 && tableExists("item") && !columnExists("item", "exclusive_groups")) {
+            // v4: exclusive groups come from the catalog file; ReferenceSeeder re-imports it (edited items are kept).
+            jdbc.execute("ALTER TABLE item ADD COLUMN exclusive_groups TEXT");
+            catalogReimportNeeded = true;
+        }
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {
             jdbc.execute("PRAGMA user_version = " + VERSION);
         }
+    }
+
+    public boolean isCatalogReimportNeeded() {
+        return catalogReimportNeeded;
     }
 
     private boolean tableExists(String table) {

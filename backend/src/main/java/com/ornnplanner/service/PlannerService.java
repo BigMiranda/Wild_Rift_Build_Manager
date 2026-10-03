@@ -61,8 +61,12 @@ public class PlannerService {
         in.unit = resolveUnit(build);
         in.goldPerMin = build.goldPerMin;
         in.xpPerMin = build.xpPerMin;
-        in.includeConditional = build.includeConditional;
-        in.itemIds = build.itemIds == null ? new ArrayList<>() : build.itemIds;
+        if (build.steps != null) {
+            for (com.ornnplanner.repo.BuildRepository.Step s : build.steps) {
+                in.itemIds.add(s.itemId);
+                in.conditional.add(s.includeConditional);
+            }
+        }
         TimelineResult result = new TimelineEngine(ref).run(in);
         if (ReferenceSeeder.RAGDOLL.equals(in.unit.code)) {
             boolean anyFilled = build.ragdollStats != null && build.ragdollStats.values().stream()
@@ -113,6 +117,7 @@ public class PlannerService {
             v.passives = i.passives;
             v.stats = i.stats;
             v.components = i.components;
+            v.exclusiveGroups = i.exclusiveGroups;
             GoldPricing.StaticResult st = GoldPricing.staticEfficiency(i, ref.statPrices, ref.baseItemNames);
             v.staticPct = st.pct;
             v.staticFormula = st.formula;

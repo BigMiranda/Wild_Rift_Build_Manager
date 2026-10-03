@@ -1,23 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
+import { statLabel, t, violationText } from '../i18n.js';
 import FolderTree from '../components/FolderTree.jsx';
 import Shop from '../components/Shop.jsx';
 import BuildBar from '../components/BuildBar.jsx';
 import TimelineTable from '../components/TimelineTable.jsx';
 import StatChart from '../components/StatChart.jsx';
-import { SERIES_COLORS, statLabel } from '../format.js';
+import { RelevanceReport, StatSheet, pointAt } from '../components/MomentPanels.jsx';
+import { StatIcon } from '../components/StatIcon.jsx';
+import { SERIES_COLORS } from '../format.js';
+import { evolutionPairs } from '../shopModel.js';
 
 const emptyBuild = (folderId) => ({
   id: null,
   folderId,
-  name: 'Nova build',
+  name: t('build.new'),
   note: '',
   unitCode: 'ORNN',
   goldPerMin: '',
   xpPerMin: '',
-  itemIds: [],
+  steps: [],
   ragdollStats: {},
-  includeConditional: true,
 });
 
 const numOrNull = (v) => (v === '' || v == null ? null : Number(v));
@@ -36,7 +39,7 @@ function fromApi(b) {
   for (const [k, v] of Object.entries(b.ragdollStats ?? {})) {
     ragdollStats[k] = { base: v.base ?? '', growth: v.growth ?? '' };
   }
-  return { ...b, note: b.note ?? '', ragdollStats };
+  return { ...b, note: b.note ?? '', steps: b.steps ?? [], ragdollStats };
 }
 
 export default function Planner({ meta, items }) {
@@ -49,9 +52,11 @@ export default function Planner({ meta, items }) {
   const [compareIds, setCompareIds] = useState([]);
   const [compareResults, setCompareResults] = useState({});
   const [chartStat, setChartStat] = useState('Max Health');
+  const [selectedMinute, setSelectedMinute] = useState(null);
   const [message, setMessage] = useState(null);
 
   const itemsById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  const evoPairs = useMemo(() => evolutionPairs(items), [items]);
 
   const loadTree = useCallback(async () => {
     const [f, b] = await Promise.all([api.get('/api/folders'), api.get('/api/builds')]);
@@ -67,14 +72,14 @@ export default function Planner({ meta, items }) {
   // Live recalculation of the (possibly unsaved) active build.
   const calcSeq = useRef(0);
   useEffect(() => {
-    if (!draft) return;
+    if (!draft) return undefined;
     if (!(Number(draft.goldPerMin) > 0) || draft.xpPerMin === '' || Number(draft.xpPerMin) < 0) {
       setResult(null);
       setCalcError(null);
-      return;
+      return undefined;
     }
     const seq = ++calcSeq.current;
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       try {
         const r = await api.post('/api/calculate', toPayload(draft));
         if (seq === calcSeq.current) {
@@ -85,7 +90,7 @@ export default function Planner({ meta, items }) {
         if (seq === calcSeq.current) setCalcError(e.message);
       }
     }, 250);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [draft, items]);
 
   // Saved builds added for comparison.
@@ -105,8 +110,9 @@ export default function Planner({ meta, items }) {
     setDraft((d) => ({ ...d, ...(typeof patch === 'function' ? patch(d) : patch) }));
     setDirty(true);
   };
+  const updateStep = (idx, fn) => update((d) => ({ steps: d.steps.map((s, k) => (k === idx ? fn(s) : s)) }));
 
-  const confirmDiscard = () => !dirty || window.confirm('Descartar alterações não salvas da build atual?');
+  const confirmDiscard = () => !dirty || window.confirm(t('build.discardConfirm'));
 
   const openBuild = async (id) => {
     if (!confirmDiscard()) return;
@@ -114,6 +120,7 @@ export default function Planner({ meta, items }) {
       const b = await api.get(`/api/builds/${id}`);
       setDraft(fromApi(b));
       setDirty(false);
+      setSelectedMinute(null);
       setCompareIds((c) => c.filter((x) => x !== id));
     } catch (e) {
       setMessage(e.message);
@@ -124,6 +131,7 @@ export default function Planner({ meta, items }) {
     if (!confirmDiscard()) return;
     setDraft(emptyBuild(folderId));
     setDirty(false);
+    setSelectedMinute(null);
   };
 
   const save = async () => {
@@ -132,20 +140,20 @@ export default function Planner({ meta, items }) {
       const saved = draft.id ? await api.put(`/api/builds/${draft.id}`, payload) : await api.post('/api/builds', payload);
       setDraft(fromApi(saved));
       setDirty(false);
-      setMessage('Build salva.');
+      setMessage(t('build.saved'));
       await loadTree();
     } catch (e) {
-      setMessage(`Erro ao salvar: ${e.message}`);
+      setMessage(t('build.saveError', { msg: e.message }));
     }
   };
 
   const saveAsCopy = () => {
-    setDraft((d) => ({ ...d, id: null, name: `${d.name} (cópia)` }));
+    setDraft((d) => ({ ...d, id: null, name: `${d.name}${t('build.copySuffix')}` }));
     setDirty(true);
   };
 
   const remove = async () => {
-    if (!draft.id || !window.confirm(`Apagar a build "${draft.name}"?`)) return;
+    if (!draft.id || !window.confirm(t('build.deleteConfirm', { name: draft.name }))) return;
     try {
       await api.del(`/api/builds/${draft.id}`);
       setDraft(emptyBuild(draft.folderId));
@@ -156,14 +164,33 @@ export default function Planner({ meta, items }) {
     }
   };
 
-  const moveItem = (idx, delta) =>
+  const moveStep = (idx, delta) =>
     update((d) => {
-      const ids = [...d.itemIds];
+      const steps = [...d.steps];
       const j = idx + delta;
-      if (j < 0 || j >= ids.length) return {};
-      [ids[idx], ids[j]] = [ids[j], ids[idx]];
-      return { itemIds: ids };
+      if (j < 0 || j >= steps.length) return {};
+      [steps[idx], steps[j]] = [steps[j], steps[idx]];
+      return { steps };
     });
+
+  /** Adds a purchase unless the game would not allow it (checked by the engine on the resulting inventory). */
+  const addItem = async (id) => {
+    const steps = [...draft.steps, { itemId: id, includeConditional: true }];
+    if (canCalculate) {
+      try {
+        const r = await api.post('/api/calculate', { ...payload, steps });
+        const last = r.steps[r.steps.length - 1];
+        if (last?.violations?.length) {
+          setMessage(t('rule.blocked', { name: itemsById.get(id)?.name ?? id, reason: last.violations.map(violationText).join(' · ') }));
+          return;
+        }
+      } catch (e) {
+        setMessage(e.message);
+        return;
+      }
+    }
+    update((d) => ({ steps: [...d.steps, { itemId: id, includeConditional: true }] }));
+  };
 
   const toggleCompare = (id) => setCompareIds((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
 
@@ -171,13 +198,18 @@ export default function Planner({ meta, items }) {
 
   const buildName = (id) => builds.find((b) => b.id === id)?.name ?? `#${id}`;
   const chartSeries = [
-    { key: 'active', name: draft.name + (dirty ? ' (não salva)' : ''), result, colorIndex: 0 },
+    { key: 'active', name: draft.name + (dirty ? t('chart.unsaved') : ''), result, colorIndex: 0 },
     ...compareIds.map((id, i) => ({ key: id, name: buildName(id), result: compareResults[id], colorIndex: i + 1 })),
   ];
   const warnings = [...(result?.warnings ?? [])];
   const isRagdoll = draft.unitCode === 'RAGDOLL';
   const canCalculate = Number(draft.goldPerMin) > 0 && draft.xpPerMin !== '' && Number(draft.xpPerMin) >= 0;
   const payload = toPayload(draft);
+
+  // Moment inspected by the stat sheet and the relevance report: the clicked one, or the last purchase.
+  const lastStep = result?.steps[result.steps.length - 1];
+  const moment = selectedMinute ?? lastStep?.minute ?? null;
+  const point = result && moment != null ? pointAt(result.series, moment) : null;
 
   return (
     <div className="layout">
@@ -199,48 +231,44 @@ export default function Planner({ meta, items }) {
         {message && (
           <div className="notice spread">
             <span>{message}</span>
-            <button className="link" onClick={() => setMessage(null)}>fechar</button>
+            <button className="link" onClick={() => setMessage(null)}>{t('close')}</button>
           </div>
         )}
 
         <section className="panel build-head">
           <div className="fields">
-            <label className="field grow">Nome
+            <label className="field grow">{t('build.name')}
               <input value={draft.name} onChange={(e) => update({ name: e.target.value })} />
             </label>
-            <label className="field">Pasta
+            <label className="field">{t('build.folder')}
               <select value={draft.folderId ?? ''} onChange={(e) => update({ folderId: Number(e.target.value) })}>
                 {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
               </select>
             </label>
-            <label className="field">Unidade
+            <label className="field">{t('build.unit')}
               <select value={draft.unitCode} onChange={(e) => update({ unitCode: e.target.value })}>
                 {meta.units.map((u) => <option key={u.code} value={u.code}>{u.name}</option>)}
               </select>
             </label>
-            <label className="field narrow">Ouro inicial
-              <input type="number" value={meta.startingGold} disabled title="Fixo em 500" />
+            <label className="field narrow">{t('build.startGold')}
+              <input type="number" value={meta.startingGold} disabled title={t('build.startGoldTitle')} />
             </label>
-            <label className="field narrow">Ouro/min
-              <input type="number" min="1" value={draft.goldPerMin} placeholder="ex.: 350" onChange={(e) => update({ goldPerMin: e.target.value })} />
+            <label className="field narrow">{t('build.gpm')}
+              <input type="number" min="1" value={draft.goldPerMin} placeholder="350" onChange={(e) => update({ goldPerMin: e.target.value })} />
             </label>
-            <label className="field narrow">XP/min
-              <input type="number" min="0" value={draft.xpPerMin} placeholder="ex.: 450" onChange={(e) => update({ xpPerMin: e.target.value })} />
-            </label>
-            <label className="check toggle" title="Passivas que só valem em certas situações: acúmulos em combate, vida baixa, carga de mana...">
-              <input type="checkbox" checked={draft.includeConditional !== false} onChange={(e) => update({ includeConditional: e.target.checked })} />
-              efeitos condicionais
+            <label className="field narrow">{t('build.xpm')}
+              <input type="number" min="0" value={draft.xpPerMin} placeholder="450" onChange={(e) => update({ xpPerMin: e.target.value })} />
             </label>
             <div className="row build-actions">
-              {dirty && <small>não salva</small>}
-              {draft.id && <button onClick={saveAsCopy}>Duplicar</button>}
-              {draft.id && <button className="danger" onClick={remove}>Apagar</button>}
-              <button className="primary" onClick={save} disabled={!dirty && draft.id != null}>Salvar</button>
+              {dirty && <small>{t('build.unsaved')}</small>}
+              {draft.id && <button onClick={saveAsCopy}>{t('build.duplicate')}</button>}
+              {draft.id && <button className="danger" onClick={remove}>{t('build.delete')}</button>}
+              <button className="primary" onClick={save} disabled={!dirty && draft.id != null}>{t('build.save')}</button>
             </div>
           </div>
           <details className="build-extra" open={isRagdoll || undefined}>
-            <summary>Nota{isRagdoll ? ' e status do boneco de pano' : ''}{draft.note ? ' •' : ''}</summary>
-            <textarea rows={2} value={draft.note} placeholder="Anotações livres sobre esta build" aria-label="Nota" onChange={(e) => update({ note: e.target.value })} />
+            <summary>{isRagdoll ? t('build.noteAndRagdoll') : t('build.note')}{draft.note ? ' •' : ''}</summary>
+            <textarea rows={2} value={draft.note} placeholder={t('build.notePlaceholder')} aria-label={t('build.note')} onChange={(e) => update({ note: e.target.value })} />
             {isRagdoll && (
               <RagdollEditor meta={meta} stats={draft.ragdollStats} onChange={(ragdollStats) => update({ ragdollStats })} />
             )}
@@ -251,36 +279,37 @@ export default function Planner({ meta, items }) {
           <Shop
             items={items}
             buildPayload={canCalculate ? payload : null}
-            ownedIds={draft.itemIds}
-            onAdd={(id) => update((d) => ({ itemIds: [...d.itemIds, id] }))}
+            ownedIds={draft.steps.map((s) => s.itemId)}
+            onAdd={addItem}
           />
           <BuildBar
-            itemIds={draft.itemIds}
+            steps={draft.steps}
             itemsById={itemsById}
-            steps={result?.steps}
-            onMove={moveItem}
-            onRemove={(idx) => update((d) => ({ itemIds: d.itemIds.filter((_, k) => k !== idx) }))}
-            onClear={() => update({ itemIds: [] })}
+            evoPairs={evoPairs}
+            timeline={result?.steps}
+            onMove={moveStep}
+            onRemove={(idx) => update((d) => ({ steps: d.steps.filter((_, k) => k !== idx) }))}
+            onClear={() => update({ steps: [] })}
+            onToggleCond={(idx) => updateStep(idx, (s) => ({ ...s, includeConditional: !s.includeConditional }))}
+            onToggleEvolved={(idx) => updateStep(idx, (s) => ({ ...s, itemId: evoPairs.get(s.itemId)?.id ?? s.itemId }))}
           />
         </section>
 
         <section className="panel">
-          <h3>Linha do tempo</h3>
-          <p className="muted" style={{ marginTop: 0 }}>
-            Nível derivado de uma <strong>tabela de XP estimada</strong> (editável no Admin). Ouro inicial fixo em {meta.startingGold}.
-          </p>
-          {!result && !calcError && <p className="muted">Informe ouro/min e XP/min para calcular.</p>}
+          <h3>{t('timeline.title')}</h3>
+          <p className="muted" style={{ marginTop: 0 }} dangerouslySetInnerHTML={{ __html: t('timeline.xpNote', { gold: meta.startingGold }) }} />
+          {!result && !calcError && <p className="muted">{t('timeline.needInputs')}</p>}
           {calcError && <p className="error">{calcError}</p>}
           {warnings.length > 0 && (
             <div className="notice"><ul>{warnings.map((w) => <li key={w}>{w}</li>)}</ul></div>
           )}
-          {result && compareIds.length === 0 && <TimelineTable result={result} />}
+          {result && compareIds.length === 0 && <TimelineTable result={result} itemsById={itemsById} />}
           {result && compareIds.length > 0 && (
             <div className="compare-grid">
               {chartSeries.map((s) => (
                 <div key={s.key}>
                   <h4><span className="swatch" style={{ background: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length] }} />{s.name}</h4>
-                  {s.result ? <TimelineTable result={s.result} compact /> : <p className="muted">Calculando…</p>}
+                  {s.result ? <TimelineTable result={s.result} itemsById={itemsById} compact /> : <p className="muted">{t('compare.calculating')}</p>}
                 </div>
               ))}
             </div>
@@ -290,11 +319,21 @@ export default function Planner({ meta, items }) {
         {result && (
           <section className="panel">
             <div className="spread">
-              <h3>{statLabel(chartStat)} ao longo do tempo</h3>
-              <small>Marque “comparar” em builds salvas na barra lateral para sobrepor.</small>
+              <h3><StatIcon stat={chartStat} size={16} />{t('chart.title', { stat: statLabel(chartStat) })}</h3>
+              <small>{t('chart.compareHint')}</small>
             </div>
-            <StatChart series={chartSeries} stat={chartStat} onStatChange={setChartStat} />
+            <StatChart
+              series={chartSeries} stat={chartStat} onStatChange={setChartStat} xpTable={meta.xpTable}
+              selectedMinute={moment} onSelectMinute={setSelectedMinute}
+            />
           </section>
+        )}
+
+        {point && (
+          <div className="grid-2 moment-panels">
+            <StatSheet point={point} itemsById={itemsById} />
+            <RelevanceReport point={point} prices={result.statPrices} itemsById={itemsById} />
+          </div>
         )}
       </main>
     </div>
@@ -305,17 +344,17 @@ function RagdollEditor({ meta, stats, onChange }) {
   const set = (stat, field, value) => onChange({ ...stats, [stat]: { base: '', growth: '', ...stats[stat], [field]: value } });
   return (
     <div style={{ marginTop: 12 }}>
-      <h4>Status do boneco de pano (por build, sem valores padrão)</h4>
-      <p className="muted" style={{ marginTop: 0 }}>Campos em branco contam como 0. Sem Forja Viva. Valor no nível L = base + crescimento × (L − 1).</p>
+      <h4>{t('ragdoll.title')}</h4>
+      <p className="muted" style={{ marginTop: 0 }}>{t('ragdoll.help')}</p>
       <div className="table-wrap">
         <table className="data">
-          <thead><tr><th className="l">Status</th><th>Base</th><th>Crescimento/nível</th></tr></thead>
+          <thead><tr><th className="l">{t('ragdoll.stat')}</th><th>{t('ragdoll.base')}</th><th>{t('ragdoll.growth')}</th></tr></thead>
           <tbody>
             {meta.unitStats.map((s) => (
               <tr key={s}>
-                <td className="l">{statLabel(s)}</td>
-                <td><input type="number" value={stats[s]?.base ?? ''} onChange={(e) => set(s, 'base', e.target.value)} aria-label={`${statLabel(s)} base`} /></td>
-                <td><input type="number" value={stats[s]?.growth ?? ''} onChange={(e) => set(s, 'growth', e.target.value)} aria-label={`${statLabel(s)} crescimento`} /></td>
+                <td className="l"><StatIcon stat={s} />{statLabel(s)}</td>
+                <td><input type="number" value={stats[s]?.base ?? ''} onChange={(e) => set(s, 'base', e.target.value)} aria-label={`${statLabel(s)} ${t('ragdoll.base')}`} /></td>
+                <td><input type="number" value={stats[s]?.growth ?? ''} onChange={(e) => set(s, 'growth', e.target.value)} aria-label={`${statLabel(s)} ${t('ragdoll.growth')}`} /></td>
               </tr>
             ))}
           </tbody>

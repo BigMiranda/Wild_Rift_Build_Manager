@@ -282,4 +282,91 @@ class TimelineEngineTest {
         double expected = 200 + 100 * 9 / 14.0;
         assertEquals(600 + expected, s.stats.itemFlat.get(MAX_HEALTH), EPS);
     }
+
+    @Test
+    void conditionalEffectsAreChosenPerPurchase() {
+        StatLine armor = StatLine.percent(ARMOR, "Tolerância", 0.3, ARMOR, RefScope.BONUS);
+        armor.conditional = true;
+        ItemDef twinguard = item(50, "Duplaguarda de Amaranto", 3200, StatLine.flat(ARMOR, 50), armor);
+
+        EngineInput in = new EngineInput();
+        in.unit = ornn();
+        in.goldPerMin = 1000;
+        in.itemIds = List.of(twinguard.id, twinguard.id);
+        in.conditional = java.util.Arrays.asList(true, false);
+        TimelineStep s = new TimelineEngine(ref).run(in).steps.get(1);
+
+        assertEquals(1, s.stats.passives.size());              // only the first copy's passive counts
+        assertEquals(0, s.stats.passives.get(0).purchaseIndex);
+        assertEquals(0.3 * 100, s.stats.passives.get(0).value, EPS);
+        assertEquals(2, s.stats.contributions.size());
+        assertTrue(s.stats.contributions.get(0).conditionalIncluded);
+        assertEquals(30 * 25.0, s.stats.contributions.get(0).passiveGold, EPS);
+        assertEquals(0.0, s.stats.contributions.get(1).passiveGold, EPS);
+    }
+
+    // ------------------------------------------------------------------ shop rules
+
+    private ItemDef shopItem(long id, String name, String section, String... groups) {
+        ItemDef i = item(id, name, 1000, StatLine.flat(ARMOR, 10));
+        i.section = section;
+        i.tabs = new java.util.ArrayList<>(List.of("Defesa"));
+        i.exclusiveGroups = new java.util.ArrayList<>(List.of(groups));
+        return i;
+    }
+
+    private List<Model.Violation> lastViolations(Long... ids) {
+        TimelineResult r = run(ornn(), 1000, 0, ids);
+        return r.steps.get(r.steps.size() - 1).violations;
+    }
+
+    @Test
+    void completedItemsCannotBeRepeatedButComponentsCan() {
+        ItemDef finished = shopItem(60, "Coração de Aço", "aprimorado");
+        ItemDef component = shopItem(61, "Cinto do Gigante", "tier_medio");
+        assertEquals("duplicate", lastViolations(finished.id, finished.id).get(0).code);
+        assertTrue(lastViolations(component.id, component.id).isEmpty());
+    }
+
+    @Test
+    void oneItemPerExclusiveGroupUnlessTheComponentIsConsumed() {
+        ItemDef tear = shopItem(62, "Lágrima da Deusa", "basico", "Lágrima da Deusa");
+        ItemDef manamune = shopItem(63, "Manamune", "aprimorado", "Lágrima da Deusa");
+        ItemDef winters = shopItem(64, "Aproximação Invernal", "aprimorado", "Lágrima da Deusa");
+        manamune.components.add(new ComponentRef(tear.id, 1));
+
+        assertTrue(lastViolations(tear.id, manamune.id).isEmpty()); // the Tear is consumed by the recipe
+        Model.Violation v = lastViolations(manamune.id, winters.id).get(0);
+        assertEquals("exclusive", v.code);
+        assertEquals("Lágrima da Deusa", v.group);
+        assertEquals(List.of("Manamune", "Aproximação Invernal"), v.items);
+    }
+
+    @Test
+    void onlyOneActiveItem() {
+        ItemDef locket = shopItem(65, "Medalhão", "aprimorado");
+        ItemDef zhonya = shopItem(66, "Ampulheta", "aprimorado");
+        locket.active = true;
+        zhonya.active = true;
+        assertEquals("active", lastViolations(locket.id, zhonya.id).get(0).code);
+    }
+
+    @Test
+    void oneBootsAndFiveOtherItems() {
+        ItemDef boots1 = shopItem(67, "Botas Galvanizadas", "tier_medio");
+        ItemDef boots2 = shopItem(68, "Passos de Mercúrio", "tier_medio");
+        boots1.tabs = new java.util.ArrayList<>(List.of("Botas"));
+        boots2.tabs = new java.util.ArrayList<>(List.of("Botas"));
+        assertEquals("boots", lastViolations(boots1.id, boots2.id).get(0).code);
+
+        Long[] six = new Long[7];
+        six[0] = boots1.id;
+        for (int k = 0; k < 6; k++) {
+            six[k + 1] = shopItem(70 + k, "Item " + k, "aprimorado").id;
+        }
+        TimelineResult r = run(ornn(), 1000, 0, six);
+        assertTrue(r.steps.get(5).violations.isEmpty());          // boots + 5 items: a full, legal inventory
+        assertEquals("slots", r.steps.get(6).violations.get(0).code);
+        assertEquals(7, r.steps.get(6).inventoryIds.size());
+    }
 }

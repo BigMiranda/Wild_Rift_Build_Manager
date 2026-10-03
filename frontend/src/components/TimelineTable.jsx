@@ -1,32 +1,55 @@
 import { Fragment, useState } from 'react';
+import { statAbbr, statLabel, t, violationText } from '../i18n.js';
+import { TABLE_STATS, mmss, n0, n1, pct } from '../format.js';
 import ItemIcon from './ItemIcon.jsx';
-import { SHORT_LABELS, TABLE_STATS, mmss, n0, n1, pct, statLabel } from '../format.js';
+import InventorySlots from './InventorySlots.jsx';
+import { StatIcon, statColor } from './StatIcon.jsx';
 
-/** Timeline of one build. `compact` hides the efficiency formulas for side-by-side comparison. */
-export default function TimelineTable({ result, compact = false }) {
+/** Header cell with an explanation on hover (and for screen readers). */
+function Th({ label, title, className = '' }) {
+  return (
+    <th className={className} title={title} scope="col">
+      {label}
+      {title && <span className="sr-only"> — {title}</span>}
+    </th>
+  );
+}
+
+/** Timeline of one build. `compact` hides some columns for side-by-side comparison. */
+export default function TimelineTable({ result, itemsById, compact = false }) {
   const [open, setOpen] = useState(null);
-  if (!result || result.steps.length === 0) return <p className="muted">Nenhuma compra na sequência.</p>;
+  if (!result || result.steps.length === 0) return <p className="muted">{t('timeline.empty')}</p>;
 
   const stats = compact ? TABLE_STATS.slice(0, 4) : TABLE_STATS;
-  const cols = 6 + stats.length + (compact ? 1 : 3);
+  const purchaseCols = compact ? 6 : 7;
+  const effCols = compact ? 1 : 3;
+  const cols = purchaseCols + stats.length + effCols;
 
   return (
     <div className="table-wrap">
-      <table className="data">
+      <table className="data timeline">
         <thead>
+          <tr className="group-row">
+            <th colSpan={purchaseCols} className="l">{t('timeline.group.purchase')}</th>
+            <th colSpan={stats.length} className="group-stats">{t('timeline.group.stats')}</th>
+            <th colSpan={effCols} className="group-eff">{t('timeline.group.eff')}</th>
+          </tr>
           <tr>
-            <th>#</th>
-            <th className="l">Item</th>
-            <th title="Ouro efetivamente pago (desconta componentes já comprados)">Pago</th>
-            <th title="Ouro acumulado gasto">Acum.</th>
-            <th title="Minuto da compra">Min</th>
-            <th title="Nível no minuto da compra">Nv</th>
-            {stats.map((s) => (
-              <th key={s} title={statLabel(s)}>{SHORT_LABELS[s] ?? s}</th>
+            <Th label={t('col.n')} />
+            <Th label={t('col.item')} className="l" />
+            <Th label={t('col.paid')} title={t('col.paidTitle')} />
+            <Th label={t('col.cum')} title={t('col.cumTitle')} />
+            <Th label={t('col.time')} title={t('col.timeTitle')} />
+            <Th label={t('col.level')} title={t('col.levelTitle')} />
+            {!compact && <Th label={t('col.inventory')} title={t('col.inventoryTitle')} className="l" />}
+            {stats.map((s, i) => (
+              <th key={s} title={statLabel(s)} scope="col" className={i === 0 ? 'group-start' : ''} style={{ color: statColor(s) }}>
+                <StatIcon stat={s} />{statAbbr(s)}
+              </th>
             ))}
-            {!compact && <th title="Eficiência estática (site de referência, sem contexto da build)">Efic. estática</th>}
-            <th title="Eficiência dinâmica: status planos + passiva calculada no contexto real da build">Efic. dinâmica</th>
-            {!compact && <th title="Ganho de valor em ouro da build inteira (inclui Forja Viva e passivas de outros itens) / ouro pago">Marginal</th>}
+            {!compact && <Th label={t('col.static')} title={t('col.staticTitle')} className="group-start" />}
+            <Th label={t('col.dynamic')} title={t('col.dynamicTitle')} className={compact ? 'group-start' : ''} />
+            {!compact && <Th label={t('col.marginal')} title={t('col.marginalTitle')} />}
           </tr>
         </thead>
         <tbody>
@@ -35,21 +58,30 @@ export default function TimelineTable({ result, compact = false }) {
             const up = e.dynamicPct != null && e.staticPct != null && e.dynamicPct - e.staticPct > 0.05;
             return (
               <Fragment key={s.index}>
-                <tr className="clickable" onClick={() => setOpen(open === s.index ? null : s.index)} aria-expanded={open === s.index}>
+                <tr className={`clickable${s.violations?.length ? ' violating' : ''}`} onClick={() => setOpen(open === s.index ? null : s.index)} aria-expanded={open === s.index}>
                   <td>{s.index + 1}</td>
                   <td className="l">
-                    <span className="with-icon"><ItemIcon id={s.itemId} size={22} />{s.itemName}</span>
-                    {s.warnings.length > 0 && <span title={s.warnings.join('\n')}> ⚠</span>}
+                    <span className="with-icon">
+                      <ItemIcon id={s.itemId} size={22} />
+                      {s.itemName}
+                      {s.warnings.length > 0 && <span title={s.warnings.join('\n')}>⚠</span>}
+                      {s.violations?.length > 0 && (
+                        <span className="violation" title={`${t('rule.title')}: ${s.violations.map(violationText).join(' · ')}`}>⛔</span>
+                      )}
+                    </span>
                   </td>
                   <td>{n0(s.paidCost)}</td>
                   <td>{n0(s.cumulativeGold)}</td>
                   <td>{mmss(s.minute)}</td>
                   <td>{s.level}</td>
-                  {stats.map((st) => (
-                    <td key={st}>{st === 'Health Regen' ? n1(s.stats.total[st]) : n0(s.stats.total[st])}</td>
+                  {!compact && <td className="l"><InventorySlots ids={s.inventoryIds ?? []} itemsById={itemsById} /></td>}
+                  {stats.map((st, i) => (
+                    <td key={st} className={i === 0 ? 'group-start' : ''} style={{ color: statColor(st) }}>
+                      {st === 'Health Regen' ? n1(s.stats.total[st]) : n0(s.stats.total[st])}
+                    </td>
                   ))}
-                  {!compact && <td>{pct(e.staticPct)}</td>}
-                  <td className={up ? 'eff-up' : ''}>{pct(e.dynamicPct)}</td>
+                  {!compact && <td className="group-start">{pct(e.staticPct)}</td>}
+                  <td className={`${up ? 'eff-up' : ''} ${compact ? 'group-start' : ''}`}>{pct(e.dynamicPct)}</td>
                   {!compact && <td>{pct(e.marginalPct)}</td>}
                 </tr>
                 {open === s.index && (
@@ -64,7 +96,7 @@ export default function TimelineTable({ result, compact = false }) {
           })}
         </tbody>
       </table>
-      <small>Clique numa linha para ver o detalhamento do cálculo.</small>
+      <small>{t('timeline.clickHint')}</small>
     </div>
   );
 }
@@ -75,31 +107,42 @@ function StepDetail({ step }) {
   return (
     <div className="detail-grid">
       <div>
-        <h4>Compra</h4>
-        <div>Custo do item: {n0(step.itemCost)} · pago: {n0(step.paidCost)}</div>
-        {step.consumedComponents.length > 0 && <div>Componentes usados: {step.consumedComponents.join(', ')}</div>}
-        <div>Minuto {mmss(step.minute)} · XP {n0(step.xp)} · nível {step.level}</div>
-        <div>Inventário: {step.inventory.join(', ')}</div>
+        <h4>{t('detail.purchase')}</h4>
+        <div>{t('detail.itemCost', { cost: n0(step.itemCost), paid: n0(step.paidCost) })}</div>
+        {step.consumedComponents.length > 0 && <div>{t('detail.components', { list: step.consumedComponents.join(', ') })}</div>}
+        <div>{t('detail.when', { time: mmss(step.minute), xp: n0(step.xp), level: step.level })}</div>
+        <div>{t('detail.inventory', { list: step.inventory.join(', ') })}</div>
         {step.warnings.length > 0 && (
           <ul className="error">
             {step.warnings.map((w) => <li key={w}>{w}</li>)}
           </ul>
         )}
+        {step.violations?.length > 0 && (
+          <>
+            <h4 className="violation">⛔ {t('rule.title')}</h4>
+            <ul className="violation">
+              {step.violations.map((v, i) => <li key={i}>{violationText(v)}</li>)}
+            </ul>
+          </>
+        )}
       </div>
       <div>
-        <h4>Composição dos status</h4>
+        <h4>{t('detail.composition')}</h4>
         <table className="data">
           <thead>
-            <tr><th className="l">Status</th><th>Base</th><th>Itens</th><th>Passivas</th><th>Forja</th><th>Total</th></tr>
+            <tr>
+              <th className="l">{t('detail.stat')}</th><th>{t('detail.base')}</th><th>{t('detail.items')}</th>
+              <th>{t('detail.passives')}</th><th>{t('detail.forge')}</th><th>{t('detail.total')}</th>
+            </tr>
           </thead>
           <tbody>
             {TABLE_STATS.map((k) => (
-              <tr key={k}>
-                <td className="l">{statLabel(k)}</td>
+              <tr key={k} style={{ color: statColor(k) }}>
+                <td className="l"><StatIcon stat={k} />{statLabel(k)}</td>
                 <td>{n1(st.base[k])}</td>
                 <td>
                   {k === 'Health Regen'
-                    ? (st.itemFlat['% Health Regen'] ? `+${n0(st.itemFlat['% Health Regen'])}% da base` : '—')
+                    ? (st.itemFlat['% Health Regen'] ? t('detail.ofBase', { n: n0(st.itemFlat['% Health Regen']) }) : '—')
                     : n1(st.itemFlat[k])}
                 </td>
                 <td>{n1(st.itemPassives[k])}</td>
@@ -111,37 +154,38 @@ function StepDetail({ step }) {
         </table>
       </div>
       <div>
-        <h4>Passivas percentuais (ordem de compra)</h4>
-        {st.passives.length === 0 && <div className="muted">Nenhuma.</div>}
+        <h4>{t('detail.pctPassives')}</h4>
+        {st.passives.length === 0 && <div className="muted">{t('detail.none')}</div>}
         <ul>
           {st.passives.map((p, i) => (
             <li key={i} className={p.purchaseIndex === step.index ? 'eff-up' : ''}>
-              #{p.purchaseIndex + 1} {p.itemName} — {p.passive}
-              {p.refScope === 'BONUS' && <small> (só bônus)</small>}
+              <StatIcon stat={p.stat} />#{p.purchaseIndex + 1} {p.itemName} — {p.passive}
+              {p.refScope === 'BONUS' && <small> {t('detail.bonusOnly')}</small>}
               <div className="formula">{p.formula}</div>
             </li>
           ))}
         </ul>
-        <h4>Forja Viva ({pct(st.forgePct * 100)})</h4>
+        <h4>{t('detail.livingForge', { pct: pct(st.forgePct * 100) })}</h4>
         {st.forgeDetails.length === 0 ? (
-          <div className="muted">Não se aplica a esta unidade.</div>
+          <div className="muted">{t('detail.noForge')}</div>
         ) : (
           <ul>
             {st.forgeDetails.map((f) => (
-              <li key={f.stat} className="formula">
-                {statLabel(f.stat)}: {n1(f.bonus)} bônus × {pct(f.pct * 100)} = {n1(f.value)}
+              <li key={f.stat} className="formula" style={{ color: statColor(f.stat) }}>
+                <StatIcon stat={f.stat} />
+                {t('detail.forgeLine', { stat: statLabel(f.stat), bonus: n1(f.bonus), pct: pct(f.pct * 100), value: n1(f.value) })}
               </li>
             ))}
           </ul>
         )}
       </div>
       <div>
-        <h4>Eficiência de ouro</h4>
-        <div>Estática: <strong>{pct(e.staticPct)}</strong></div>
+        <h4>{t('detail.efficiency')}</h4>
+        <div>{t('detail.static')}: <strong>{pct(e.staticPct)}</strong></div>
         <div className="formula">{e.staticFormula}</div>
-        <div style={{ marginTop: 6 }}>Dinâmica: <strong>{pct(e.dynamicPct)}</strong></div>
+        <div style={{ marginTop: 6 }}>{t('detail.dynamic')}: <strong>{pct(e.dynamicPct)}</strong></div>
         <div className="formula">{e.dynamicFormula}</div>
-        <div style={{ marginTop: 6 }}>Marginal: <strong>{pct(e.marginalPct)}</strong></div>
+        <div style={{ marginTop: 6 }}>{t('detail.marginal')}: <strong>{pct(e.marginalPct)}</strong></div>
         <div className="formula">{e.marginalFormula}</div>
       </div>
     </div>

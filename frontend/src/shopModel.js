@@ -1,30 +1,32 @@
-import { statLabel } from './format.js';
+import { statLabel, t } from './i18n.js';
 
 /**
  * Turns the flat item catalog into the shop layout: tabs -> sections -> tiles, following the Wild Rift shop.
  *
  * One tile per shop item. Evolutions (Fimbulwinter, Muramana...) are separate catalog items grouped under their base
- * item (`group`) and picked in the detail panel, since the shop never sells them directly.
+ * item (`group`) and picked in the detail panel or per purchase, since the shop never sells them directly.
  */
 
-/** Shop tabs in the game's order. */
+/** Shop tabs in the game's order (values are the catalog's pt-BR tab names). */
 export const TABS = ['Lutador', 'Assassino', 'Atirador', 'Mágico', 'Defesa', 'Suporte', 'Botas'];
 export const DEFAULT_TAB = 'Defesa';
 
+/** Section order as in the shop; support starters come after mid tier items. */
 const SECTIONS = [
-  { key: 'ativo', label: 'Ativo', match: (i) => i.active && i.section === 'aprimorado' },
-  { key: 'aprimorado', label: 'Aprimorado', match: (i) => i.section === 'aprimorado' },
-  { key: 'preparacao', label: 'Item inicial de suporte', match: (i) => i.section === 'preparacao' },
-  { key: 'tier_medio', label: 'Tier médio', match: (i) => i.section === 'tier_medio' },
-  { key: 'basico', label: 'Básico', match: (i) => i.section === 'basico' },
+  { key: 'ativo', match: (i) => i.active && i.section === 'aprimorado' },
+  { key: 'aprimorado', match: (i) => i.section === 'aprimorado' },
+  { key: 'tier_medio', match: (i) => i.section === 'tier_medio' },
+  { key: 'preparacao', match: (i) => i.section === 'preparacao' },
+  { key: 'basico', match: (i) => i.section === 'basico' },
 ];
-const BOOT_LABELS = { aprimorado: 'Botas aprimoradas', tier_medio: 'Botas', basico: 'Básica' };
+const BOOT_SECTIONS = { aprimorado: 'section.bootsUpgraded', tier_medio: 'section.boots', basico: 'section.bootsBasic' };
 
 export const MARKERS = {
-  novo: { badge: 'N', label: 'Novo neste patch' },
-  reformulado: { badge: '⟳', label: 'Reformulado neste patch' },
-  alterado: { badge: '!', label: 'Alterado neste patch' },
+  novo: { badge: 'N' },
+  reformulado: { badge: '⟳' },
+  alterado: { badge: '!' },
 };
+export const markerLabel = (marker) => t(`marker.${marker}`);
 
 /** Groups evolutions under their base item. Returns tiles sorted by cost, then name. */
 export function buildTiles(items) {
@@ -43,15 +45,32 @@ export function buildTiles(items) {
   return tiles.sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name));
 }
 
+/** Map item id -> the other state of the same shop item (base <-> evolution), for items that evolve. */
+export function evolutionPairs(items) {
+  const pairs = new Map();
+  for (const tile of buildTiles(items)) {
+    const evo = tile.variants.find((v) => v.section === 'evolucao');
+    if (evo) {
+      pairs.set(tile.base.id, evo);
+      pairs.set(evo.id, tile.base);
+    }
+  }
+  return pairs;
+}
+
 /** Sections (with their tiles) of one tab; `query` searches every tab at once. */
 export function sectionsFor(tiles, tab, query) {
   const q = query.trim().toLowerCase();
   if (q) {
-    const found = tiles.filter((t) => t.variants.some((v) => v.name.toLowerCase().includes(q)));
-    return found.length ? [{ key: 'search', label: `Resultado da busca (${found.length})`, tiles: found }] : [];
+    const found = tiles.filter((x) => x.variants.some((v) => v.name.toLowerCase().includes(q)));
+    return found.length ? [{ key: 'search', label: t('shop.searchResult', { n: found.length }), tiles: found }] : [];
   }
-  const visible = tiles.filter((t) => t.base.tabs.includes(tab));
-  const out = SECTIONS.map((s) => ({ key: s.key, label: tab === 'Botas' ? BOOT_LABELS[s.key] ?? s.label : s.label, tiles: [] }));
+  const visible = tiles.filter((x) => x.base.tabs.includes(tab));
+  const out = SECTIONS.map((s) => ({
+    key: s.key,
+    label: t(tab === 'Botas' && BOOT_SECTIONS[s.key] ? BOOT_SECTIONS[s.key] : `section.${s.key}`),
+    tiles: [],
+  }));
   for (const tile of visible) {
     const idx = SECTIONS.findIndex((s) => s.match(tile.base));
     if (idx >= 0) out[idx].tiles.push(tile);
@@ -59,10 +78,11 @@ export function sectionsFor(tiles, tab, query) {
   return out.filter((s) => s.tiles.length > 0);
 }
 
-export const variantLabel = (item) => (item.section === 'evolucao' ? `${item.name} (evoluído)` : 'Ao comprar');
+export const variantLabel = (item) => (item.section === 'evolucao' ? t('shop.evolved', { name: item.name }) : t('shop.onBuy'));
+
+export const hasConditional = (item) => item?.stats.some((s) => s.conditional) ?? false;
 
 const pctOf = (r) => `${Math.round(r * 10000) / 100}%`;
-const SCOPE_TEXT = { BONUS: 'adicional', BASE: 'base', TOTAL: 'total' };
 
 /** Plain stats of an item and the passive effects the calculation models. */
 export function describeStats(item) {
@@ -72,12 +92,13 @@ export function describeStats(item) {
     if (s.ratio != null && s.refType) {
       modeled.push({
         name: s.passive ?? 'Passiva',
+        stat: s.type,
         conditional: s.conditional,
-        text: `${pctOf(s.ratio)} de ${statLabel(s.refType)} (${SCOPE_TEXT[s.refScope] ?? 'total'}) como ${statLabel(s.type)}`,
+        text: t('modeled.ratio', { pct: pctOf(s.ratio), ref: statLabel(s.refType), scope: t(`scope.${s.refScope ?? 'TOTAL'}`), stat: statLabel(s.type) }),
       });
     } else if (s.passive && s.value != null) {
-      const range = s.valueMax != null ? `${s.value}–${s.valueMax} (por nível)` : `${s.value}`;
-      modeled.push({ name: s.passive, conditional: s.conditional, text: `+${range} ${statLabel(s.type)}` });
+      const range = s.valueMax != null ? `${s.value}–${s.valueMax} ${t('modeled.byLevel')}` : `${s.value}`;
+      modeled.push({ name: s.passive, stat: s.type, conditional: s.conditional, text: `+${range} ${statLabel(s.type)}` });
     } else if (s.value != null) {
       flat.push({ type: s.type, value: s.value });
     }

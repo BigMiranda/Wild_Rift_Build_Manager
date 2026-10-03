@@ -145,6 +145,18 @@ public final class Model {
         public List<PassiveText> passives = new ArrayList<>();
         public List<StatLine> stats = new ArrayList<>();
         public List<ComponentRef> components = new ArrayList<>();
+        /** Groups of which only one item can be held (Lâmina Arcana, Lágrima da Deusa, % penetration...). */
+        public List<String> exclusiveGroups = new ArrayList<>();
+
+        /** Boots take the single boots slot. */
+        public boolean boots() {
+            return tabs != null && tabs.contains("Botas");
+        }
+
+        /** Completed item (upgraded tier or an evolution): cannot be held twice. */
+        public boolean finished() {
+            return "aprimorado".equals(section) || "evolucao".equals(section);
+        }
     }
 
     public static class StatGrowth {
@@ -199,8 +211,10 @@ public final class Model {
 
     public static class EngineInput {
         public UnitProfile unit;
-        /** Count conditional effects (stacks, in combat, low health...) as active. */
+        /** Default for purchases without their own choice: count conditional effects (stacks, in combat...). */
         public boolean includeConditional = true;
+        /** Per purchase (same order as itemIds): count that item's conditional effects. Null entries use the default. */
+        public List<Boolean> conditional = new ArrayList<>();
         public double goldPerMin;
         public double xpPerMin;
         public List<Long> itemIds = new ArrayList<>();
@@ -247,6 +261,28 @@ public final class Model {
         public String marginalFormula;
     }
 
+    /** One passive's share of an item's contribution. */
+    public static class PassivePart {
+        public String passive;
+        public String stat;
+        public double amount;
+        public double gold;
+        public boolean conditional;
+    }
+
+    /** What one owned item adds at a point of the timeline (before Living Forge). */
+    public static class ItemContribution {
+        public int purchaseIndex;
+        public long itemId;
+        public String itemName;
+        public boolean conditionalIncluded;
+        public Map<String, Double> flat = new LinkedHashMap<>();
+        public Map<String, Double> passives = new LinkedHashMap<>();
+        public List<PassivePart> passiveParts = new ArrayList<>();
+        public double flatGold;
+        public double passiveGold;
+    }
+
     public static class StatSnapshot {
         public int level;
         public double forgePct;
@@ -257,6 +293,25 @@ public final class Model {
         public Map<String, Double> total = new LinkedHashMap<>();
         public List<PassiveDetail> passives = new ArrayList<>();
         public List<ForgeDetail> forgeDetails = new ArrayList<>();
+        public List<ItemContribution> contributions = new ArrayList<>();
+    }
+
+    /** A shop rule broken by a purchase. `code` is translated by the UI; `items` are the items involved. */
+    public static class Violation {
+        /** duplicate | exclusive | active | boots | slots */
+        public String code;
+        /** Exclusive group name (code "exclusive"). */
+        public String group;
+        public List<String> items = new ArrayList<>();
+
+        public Violation() {
+        }
+
+        public Violation(String code, String group, List<String> items) {
+            this.code = code;
+            this.group = group;
+            this.items = items;
+        }
     }
 
     public static class TimelineStep {
@@ -272,6 +327,10 @@ public final class Model {
         public double xp;
         public int level;
         public List<String> inventory = new ArrayList<>();
+        /** Inventory after the purchase, by item id (same order as `inventory`). */
+        public List<Long> inventoryIds = new ArrayList<>();
+        /** Shop rules this purchase breaks (the build would not be possible in game). */
+        public List<Violation> violations = new ArrayList<>();
         public StatSnapshot stats;
         public Efficiency efficiency;
         public List<String> warnings = new ArrayList<>();
@@ -283,6 +342,11 @@ public final class Model {
         /** Index of the last purchase completed at this minute (-1 = none yet). */
         public int stepIndex;
         public Map<String, Double> total = new LinkedHashMap<>();
+        /** Unit base stats at this minute's level (bonus = total - base). */
+        public Map<String, Double> base = new LinkedHashMap<>();
+        public Map<String, Double> forge = new LinkedHashMap<>();
+        public double forgePct;
+        public List<ItemContribution> contributions = new ArrayList<>();
     }
 
     public static class TimelineResult {

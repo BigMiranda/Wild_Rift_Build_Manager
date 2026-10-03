@@ -18,6 +18,19 @@
   --warn-border: #8a6d1f;
   --error: #ff8f85;
   --grid: #1a2d44;
+  /* stat colors (Wild Rift style) */
+  --stat-hp: #6fd486;
+  --stat-mana: #4fa8ff;
+  --stat-ad: #f39a4a;
+  --stat-ap: #a58bff;
+  --stat-armor: #e3cf5c;
+  --stat-mr: #5ec5ff;
+  --stat-ah: #e8e2d4;
+  --stat-as: #f0c75e;
+  --stat-ms: #cfd8e3;
+  --stat-crit: #f06a5f;
+  --stat-ten: #9b86e8;
+  --bonus: #6fd486;
   /* categorical series colors (validated dark-surface steps), fixed order, one per build */
   --series-1: #3987e5;
   --series-2: #d95926;
@@ -260,3 +273,93 @@ table.data td input, table.data td select { width: 100%; }
 .modeled li { margin: 2px 0; font-size: 13px; }
 .cond { color: #e2b440; font-style: italic; }
 label.check.toggle { font-size: 12px; color: var(--text-2); align-self: center; }
+
+/* stat names / icons */
+.stat-icon { display: inline-block; vertical-align: -2px; margin-right: 4px; flex: none; }
+.stat-name { display: inline-flex; align-items: center; white-space: nowrap; }
+.bonus { color: var(--bonus); }
+
+/* header settings */
+.settings { margin-left: auto; display: flex; gap: 12px; }
+.settings label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.settings select { font-size: 12px; padding: 3px 6px; text-transform: none; letter-spacing: 0; color: var(--text); }
+
+/* per-purchase options */
+.buildbar-opts { display: flex; flex-direction: column; gap: 2px; min-height: 18px; }
+.buildbar-opts .opt {
+  font-size: 10px; padding: 0 6px; line-height: 16px; border-radius: 8px; background: none; color: var(--muted);
+  border: 1px solid var(--border); white-space: nowrap;
+}
+.buildbar-opts .opt.on { color: var(--accent-ink); background: var(--gold); border-color: var(--gold-bright); font-weight: 700; }
+
+/* timeline table groups */
+table.timeline .group-row th { text-align: center; font-size: 10px; color: var(--gold); border-bottom: 1px solid var(--border-strong); background: var(--surface); }
+table.timeline .group-row th.l { text-align: left; }
+table.timeline th.group-start, table.timeline td.group-start { border-left: 1px solid var(--border-strong); }
+table.timeline thead tr:nth-child(2) th { top: 24px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* chart event lanes (purchases and level ups), like the in-game gold graph */
+.stat-chip { display: inline-flex; align-items: center; gap: 2px; }
+.stat-chip.active { background: var(--surface-3); border-width: 1px; font-weight: 600; }
+.event-lane { position: relative; height: 46px; border-top: 1px solid var(--grid); }
+.lane-label {
+  position: absolute; left: 0; top: 0; height: 100%; display: flex; align-items: center; font-size: 11px;
+  color: var(--text-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.lane-track { position: absolute; top: 28px; height: 2px; background: var(--lane-color); opacity: .35; border-radius: 1px; }
+.lane-cursor { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1.5px solid var(--gold); pointer-events: none; }
+.lane-item {
+  position: absolute; top: 2px; transform: translateX(-50%); padding: 0; background: none; border: none; line-height: 0;
+  border-radius: 4px;
+}
+.lane-item:hover .item-icon, .lane-item:focus-visible .item-icon { border-color: var(--gold-bright); }
+.lane-item:hover { z-index: 2; }
+.lane-level {
+  position: absolute; top: 31px; transform: translateX(-50%); padding: 0 3px; min-width: 14px; height: 13px; line-height: 12px;
+  font-size: 9px; font-weight: 700; border-radius: 3px; background: var(--surface-3); color: var(--gold-bright);
+  border: 1px solid var(--border-strong);
+}
+.lane-level::before { content: '▲'; font-size: 6px; margin-right: 1px; vertical-align: 1px; }
+
+/* champion stat sheet (like the in-game stats tab) */
+.stat-sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0 24px; }
+.sheet-row { display: flex; justify-content: space-between; gap: 8px; padding: 5px 4px; border-bottom: 1px solid var(--grid); }
+.sheet-label { display: inline-flex; align-items: center; }
+.sheet-value { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.sheet-value small { font-weight: 400; color: var(--text-2); }
+
+/* relevance report */
+.stat-inline { display: inline-flex; flex-wrap: wrap; gap: 4px 10px; }
+table.report tr.report-passive td { font-size: 12px; color: var(--text-2); border-bottom-color: transparent; }
+table.report tr.report-item td { border-top: 1px solid var(--border); }
+.share-col { min-width: 150px; }
+.share { display: flex; align-items: center; gap: 6px; }
+.share-bar { display: inline-block; height: 8px; border-radius: 0 4px 4px 0; background: var(--gold); min-width: 2px; }
+.share-bar.thin { height: 4px; background: var(--border-strong); }
+.share-text { font-size: 11px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.cond { margin-left: 6px; }
+.moment-panels { grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); align-items: start; }
+.panel h3 .stat-icon { margin-right: 6px; }
+
+/* inventory slots (5 items + 1 boots) */
+.inv { display: inline-flex; align-items: center; gap: 2px; vertical-align: middle; }
+.inv-slot {
+  display: inline-flex; align-items: center; justify-content: center; border: 1px dashed var(--border); border-radius: 4px;
+  background: rgba(6, 13, 23, .5); line-height: 0;
+}
+.inv-slot .item-icon { border: none; border-radius: 3px; }
+.inv-slot:not(:empty) { border-style: solid; border-color: var(--border-strong); }
+.inv-slot.finished { border-color: var(--gold-bright); box-shadow: 0 0 0 1px rgba(240, 217, 160, .35); }
+.inv-slot.boots { border-color: var(--stat-ms); opacity: .9; }
+.inv-slot.boots:empty { border-style: dashed; border-color: var(--border); }
+.inv-slot.overflow { border-color: var(--error); border-style: solid; }
+.inv-sep { width: 4px; }
+
+/* shop rule violations */
+.violation { color: var(--error); }
+.buildbar-item.blocked .item-icon { border-color: var(--error); box-shadow: 0 0 0 2px rgba(255, 143, 133, .4); }
+tr.violating td { background: rgba(180, 35, 24, .12); }
+.preview .violation { margin: 0 0 6px; font-size: 13px; }
+
+.sheet-inventory { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }

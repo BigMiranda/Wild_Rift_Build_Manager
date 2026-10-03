@@ -37,19 +37,21 @@ public class ReferenceSeeder implements ApplicationRunner {
     private final ReferenceRepository reference;
     private final BuildRepository builds;
     private final CatalogImporter importer;
+    private final SchemaManager schema;
 
     public ReferenceSeeder(CatalogRepository catalog, ReferenceRepository reference, BuildRepository builds,
-                           CatalogImporter importer) {
+                           CatalogImporter importer, SchemaManager schema) {
         this.catalog = catalog;
         this.reference = reference;
         this.builds = builds;
         this.importer = importer;
+        this.schema = schema;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (catalog.countItems() == 0 || catalog.countStatDefs() == 0) {
+        if (catalog.countItems() == 0 || catalog.countStatDefs() == 0 || schema.isCatalogReimportNeeded()) {
             importer.importAll(false);
         }
         if (reference.findUnit(ORNN).isEmpty()) {
@@ -78,18 +80,23 @@ public class ReferenceSeeder implements ApplicationRunner {
         }
     }
 
-    /** Ornn, Wild Rift (wiki.leagueoflegends.com/en-us/WR:Ornn). value(L) = base + growth * (L - 1). */
+    /**
+     * Ornn, Wild Rift, measured in game (stats tab at levels 1 and 15, 03/10/2026): growth = (level 15 - level 1) / 14.
+     * value(L) = base + growth * (L - 1). Health and AD come out exact (132 and 4 per level), confirming linear growth;
+     * the other fractions come from the in-game rounding. Move speed was not measurable (the tab showed 548 at both
+     * levels) and keeps the wiki value.
+     */
     static UnitProfile ornn() {
         UnitProfile u = new UnitProfile();
         u.code = ORNN;
         u.name = "Ornn";
         u.livingForge = true;
-        u.stats.put(Stats.MAX_HEALTH, new StatGrowth(720, 120));
-        u.stats.put(Stats.MAX_MANA, new StatGrowth(38, 6));
-        u.stats.put(Stats.HEALTH_REGEN, new StatGrowth(12, 1.2));
-        u.stats.put(Stats.MANA_REGEN, new StatGrowth(12, 0.8));
-        u.stats.put(Stats.ARMOR, new StatGrowth(46, 5));
-        u.stats.put(Stats.MAGIC_RESIST, new StatGrowth(40, 2));
+        u.stats.put(Stats.MAX_HEALTH, new StatGrowth(690, 132));
+        u.stats.put(Stats.MAX_MANA, new StatGrowth(380, 60));
+        u.stats.put(Stats.HEALTH_REGEN, new StatGrowth(17, 17.0 / 14));
+        u.stats.put(Stats.MANA_REGEN, new StatGrowth(12, 12.0 / 14));
+        u.stats.put(Stats.ARMOR, new StatGrowth(48, 72.0 / 14));
+        u.stats.put(Stats.MAGIC_RESIST, new StatGrowth(42, 29.0 / 14));
         u.stats.put(Stats.ATTACK_DAMAGE, new StatGrowth(62, 4));
         u.stats.put(Stats.ABILITY_POWER, new StatGrowth(0, 0));
         u.stats.put(Stats.ABILITY_HASTE, new StatGrowth(0, 0));
