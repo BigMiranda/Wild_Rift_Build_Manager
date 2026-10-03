@@ -127,9 +127,11 @@ label.check { display: inline-flex; gap: 6px; align-items: center; cursor: point
 
 /* ------------------------------------------------------------------ shop */
 .shop-panel { padding: 0; overflow: hidden; }
-.shop { display: grid; grid-template-columns: 150px minmax(0, 1fr) 320px; height: 560px; }
+.shop { display: grid; grid-template-columns: 150px minmax(0, 1fr) 320px; grid-template-rows: minmax(0, 1fr); height: 560px; }
+/* grid/flex children default to min-height: auto and would grow to their content, overflowing the fixed-height shop */
+.shop > * { min-height: 0; }
 @media (max-width: 1100px) {
-  .shop { grid-template-columns: 120px minmax(0, 1fr); height: auto; }
+  .shop { grid-template-columns: 120px minmax(0, 1fr); grid-template-rows: auto; height: auto; }
   .shop-grid-scroll { max-height: 460px; }
   .shop-detail { grid-column: 1 / -1; border-left: none !important; border-top: 1px solid var(--border); }
 }
@@ -148,7 +150,7 @@ label.check { display: inline-flex; gap: 6px; align-items: center; cursor: point
 
 .shop-grid-wrap { display: flex; flex-direction: column; min-width: 0; padding: 12px 14px 0; }
 .shop-search { width: 100%; margin-bottom: 8px; }
-.shop-grid-scroll { overflow-y: auto; flex: 1; padding-right: 6px; padding-bottom: 12px; }
+.shop-grid-scroll { overflow-y: auto; flex: 1; min-height: 0; padding-right: 6px; padding-bottom: 12px; }
 .shop-section {
   background: linear-gradient(90deg, var(--surface-3), transparent); padding: 6px 10px; margin: 6px 0 10px;
   color: var(--text-2); font-size: 13px; letter-spacing: .12em;
