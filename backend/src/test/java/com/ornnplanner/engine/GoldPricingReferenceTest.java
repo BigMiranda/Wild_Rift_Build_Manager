@@ -27,8 +27,8 @@ class GoldPricingReferenceTest {
     void staticEfficiencyMatchesReferenceSiteForEveryItem() throws Exception {
         List<Map<String, Object>> rows;
         Map<String, Map<String, Object>> statsYaml;
-        try (InputStream items = getClass().getResourceAsStream("/seed/items_7_3.yml");
-             InputStream stats = getClass().getResourceAsStream("/seed/stats_7_3.yml")) {
+        try (InputStream items = getClass().getResourceAsStream("/referencia/items_7_3.yml");
+             InputStream stats = getClass().getResourceAsStream("/referencia/stats_7_3.yml")) {
             rows = new Yaml().load(items);
             statsYaml = new Yaml().load(stats);
         }

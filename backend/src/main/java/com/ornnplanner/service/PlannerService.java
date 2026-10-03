@@ -3,7 +3,6 @@ package com.ornnplanner.service;
 import com.ornnplanner.engine.GoldPricing;
 import com.ornnplanner.engine.GoldPricing.PriceTable;
 import com.ornnplanner.engine.GoldPricing.StatDef;
-import com.ornnplanner.engine.Model.ComponentRef;
 import com.ornnplanner.engine.Model.EngineInput;
 import com.ornnplanner.engine.Model.ItemDef;
 import com.ornnplanner.engine.Model.ReferenceData;
@@ -22,28 +21,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 public class PlannerService {
 
-    /** Final-item categories shown by default (tank / support focus). */
-    public static final Set<String> DEFAULT_CATEGORIES = Set.of(
-            "DEFENSE ITEMS", "SUPPORT ITEMS", "DEFENSE ITEMS, SUPPORT ITEMS", "SUPPORT ITEMS, ACTIVE ITEMS",
-            "DEFENSE ITEMS, ACTIVE ITEMS", "BOOTS");
-
-    /** Stats that make a basic / mid tier item a likely tank-support component when no recipe is registered. */
-    private static final Set<String> COMPONENT_HINT_STATS = Set.of(
-            Stats.MAX_HEALTH, Stats.ARMOR, Stats.MAGIC_RESIST, Stats.ABILITY_HASTE, Stats.PCT_HEALTH_REGEN,
-            Stats.PCT_MANA_REGEN, "% Heal and shield strength");
-
     public static class ItemView extends ItemDef {
-        public boolean relevant;
-        public String relevanceReason;
         public double staticPct;
         public String staticFormula;
     }
@@ -77,6 +61,7 @@ public class PlannerService {
         in.unit = resolveUnit(build);
         in.goldPerMin = build.goldPerMin;
         in.xpPerMin = build.xpPerMin;
+        in.includeConditional = build.includeConditional;
         in.itemIds = build.itemIds == null ? new ArrayList<>() : build.itemIds;
         TimelineResult result = new TimelineEngine(ref).run(in);
         if (ReferenceSeeder.RAGDOLL.equals(in.unit.code)) {
@@ -105,26 +90,11 @@ public class PlannerService {
         return unit;
     }
 
-    /** Catalog with the default tank/support filter flag and static efficiency. */
+    /** Whole catalog with the static (reference site) efficiency of each item. */
     public List<ItemView> itemViews() {
         ReferenceData ref = referenceData();
-        Map<Long, ItemDef> items = ref.items;
-
-        // Components (recursively) of every default-category final item.
-        Map<Long, String> componentOf = new HashMap<>();
-        boolean recipesIncomplete = false;
-        for (ItemDef i : items.values()) {
-            if (!DEFAULT_CATEGORIES.contains(i.category)) {
-                continue;
-            }
-            if (i.components.isEmpty() && !isComponentCategory(i.category) && i.cost > 1000) {
-                recipesIncomplete = true;
-            }
-            collectComponents(i, i.name, items, componentOf, new HashSet<>());
-        }
-
         List<ItemView> views = new ArrayList<>();
-        for (ItemDef i : items.values()) {
+        for (ItemDef i : ref.items.values()) {
             ItemView v = new ItemView();
             v.id = i.id;
             v.name = i.name;
@@ -133,42 +103,21 @@ public class PlannerService {
             v.image = i.image;
             v.sourcePatch = i.sourcePatch;
             v.edited = i.edited;
+            v.section = i.section;
+            v.tabs = i.tabs;
+            v.active = i.active;
+            v.marker = i.marker;
+            v.summary = i.summary;
+            v.group = i.group;
+            v.capture = i.capture;
+            v.passives = i.passives;
             v.stats = i.stats;
             v.components = i.components;
             GoldPricing.StaticResult st = GoldPricing.staticEfficiency(i, ref.statPrices, ref.baseItemNames);
             v.staticPct = st.pct;
             v.staticFormula = st.formula;
-            if (DEFAULT_CATEGORIES.contains(i.category)) {
-                v.relevant = true;
-                v.relevanceReason = "categoria";
-            } else if (isComponentCategory(i.category) && componentOf.containsKey(i.id)) {
-                v.relevant = true;
-                v.relevanceReason = "componente de " + componentOf.get(i.id);
-            } else if (isComponentCategory(i.category) && recipesIncomplete
-                    && i.stats.stream().anyMatch(s -> COMPONENT_HINT_STATS.contains(s.type))) {
-                v.relevant = true;
-                v.relevanceReason = "provável componente (receitas não cadastradas)";
-            }
             views.add(v);
         }
         return views;
-    }
-
-    private static boolean isComponentCategory(String category) {
-        return category != null && (category.startsWith("BASIC ITEMS") || category.startsWith("MID TIER ITEMS"));
-    }
-
-    private static void collectComponents(ItemDef item, String finalName, Map<Long, ItemDef> items,
-                                          Map<Long, String> out, Set<Long> seen) {
-        for (ComponentRef c : item.components) {
-            if (!seen.add(c.itemId)) {
-                continue;
-            }
-            out.putIfAbsent(c.itemId, finalName);
-            ItemDef comp = items.get(c.itemId);
-            if (comp != null) {
-                collectComponents(comp, finalName, items, out, seen);
-            }
-        }
     }
 }

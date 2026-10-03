@@ -1,0 +1,29 @@
+# Gold price per stat point, derived from the shop's base items (methodology of changchiyou/wildrift-gold-efficiency,
+# MIT License, Copyright (c) 2024 changchiyou):
+#   first   = item that grants only this stat: price = cost / amount
+#   second  = item with this stat + others already priced: price = (cost - value of the others) / amount
+#   exclude = no clean base item: price fixed by hand
+# Keys are the planner's internal stat codes; `loja` is the name shown in the Wild Rift shop (pt-BR), used to map the
+# transcribed catalog. Base items use their pt-BR shop names. Order matters: "second" stats need the "first" ones.
+"Attack Damage":        {loja: "Dano de Ataque", base_type: first, base_item: "Espada Longa", type: Attack}
+"Ability Power":        {loja: "Poder de Habilidade", base_type: first, base_item: "Tomo Amplificador", type: Magic}
+"Armor":                {loja: "Armadura", base_type: first, base_item: "Couraça de Pano", type: Defence}
+"Magic Resistance":     {loja: "Resistência Mágica", base_type: first, base_item: "Manto Anula-Magia", type: Defence}
+"Max Health":           {loja: "Vida Máxima", base_type: first, base_item: "Cristal de Rubi", type: Defence}
+"% Critical Rate":      {loja: "% Taxa de Crítico", base_type: first, base_item: "Luvas da Pancadaria", type: Attack}
+"% Attack Speed":       {loja: "% Velocidade de Ataque", base_type: first, base_item: "Adaga", type: Attack}
+"Move Speed":           {loja: "Velocidade de Movimento", base_type: first, base_item: "Botas da Velocidade", type: Others}
+"Ability Haste":        {loja: "Aceleração de Habilidade", base_type: first, base_item: "Anel da Revelação", type: Magic}
+"% Lifesteal":          {loja: "% Roubo de Vida", base_type: second, base_item: "Cetro Vampírico", type: Attack}
+"Armor Penetration":    {loja: "Penetração de Armadura", base_type: second, base_item: "Punhal Serrilhado", type: Attack}
+"% Armor Penetration":  {loja: "% Penetração de Armadura", base_type: second, base_item: "Último Sussurro", type: Attack}
+"Magic Penetration":    {loja: "Penetração Mágica", base_type: exclude, price: 46.66, type: Magic}
+"% Magic Penetration":  {loja: "% Penetração Mágica", base_type: second, base_item: "Ametista do Vazio", type: Magic}
+"% Move Speed":         {loja: "% Velocidade de Movimento", base_type: second, base_item: "Cintilação Etérea", type: Others}
+# The original method priced mana with a fully charged Tear (400 gold / 900 mana). The 7.3 shop Tear shows only its
+# base 200 mana, so that ratio is kept as a fixed price instead of 400/200.
+"Max Mana":             {loja: "Mana Máximo", base_type: exclude, price: 0.44, type: Magic}
+"% Mana Regeneration":  {loja: "% Regeneração de Mana", base_type: exclude, price: 4, type: Magic}
+"% Heal and shield strength": {loja: "% Potência de Escudo e Cura", base_type: second, base_item: "Ídolo Proibido", type: Defence}
+"% Tenacity":           {loja: "% Tenacidade", base_type: exclude, price: 10.33, type: Defence}
+"% Health Regen":       {loja: "% Regeneração de Vida", base_type: exclude, price: 3, type: Defence}

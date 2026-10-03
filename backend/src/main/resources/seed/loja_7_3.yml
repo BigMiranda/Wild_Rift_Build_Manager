@@ -1,0 +1,4274 @@
+# Catálogo transcrito das capturas da loja do Wild Rift (pt-BR), patch 7.3.
+# Fonte: capturas/7.3 (prints do jogo). Transcrição feita por IA e revisada pelo usuário.
+#
+# Por item:
+#   custo       custo total na loja (dos prints "Aba ... Resumos")
+#   secao       aprimorado | tier_medio | basico | preparacao   (como a loja agrupa; botas usam as mesmas seções)
+#   ativavel    true quando o ícone tem o losango de item ativável
+#   marcador    selo da loja (mudança no patch): novo (N) | reformulado (setas azuis) | alterado (seta vermelha)
+#   abas        abas da loja onde o item aparece
+#   resumo      texto curto da lista de resumos
+#   status      [{tipo, valor}]       status planos, como escritos na loja ('% ' no início = valor percentual)
+#   passivas    [{nome, texto}]       texto das passivas/ativos, como escrito na loja
+#   receita     componentes diretos (árvore de construção, um nível); {item, qtd} quando repetido
+#   fabrica     nomes dos itens em que este se transforma ("Fabrica:")
+#   captura     arquivo de origem do detalhe
+#   evolucao    item em que este se transforma sozinho (missão / carga de mana), com seus status
+#   efeitos     modelagem numérica das passivas que mexem em status (o resto das passivas é só texto):
+#                 {passiva, tipo, ratio, ref, escopo: total|bonus|base, condicional}  -> ratio x status 'ref'
+#                 {passiva, tipo, valor, valor_nv15, condicional}                     -> valor fixo (interpolado nv1..15)
+#               condicional = só vale em certas situações (acúmulos, combate, vida baixa); o cálculo deixa ligar/desligar.
+#   revisar     dúvidas que só o usuário pode resolver (o resto foi conferido cruzando árvores e listas "Fabrica")
+patch: "7.3"
+itens:
+  Máscara Abissal:
+    custo: 2400
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Suporte
+    resumo: Causa mais Dano Mágico
+    marcador: reformulado
+    captura: 1 - Defesa, 3 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 350
+    - tipo: Resistência Mágica
+      valor: 45
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Destroçar
+      texto: Dano Mágico contra Campeões inimigos a até 650 unidades de você é 12% maior. (O adicional de dano de Destroçar não é cumulativo.)
+    receita:
+    - Gema Ardente
+    - Capa Negatron
+  Convergência de Zeke:
+    custo: 2400
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Suporte
+    resumo: Causa dano em área e Lentidão a inimigos próximos
+    marcador: reformulado
+    captura: 2 - Defesa, 6 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 300
+    - tipo: Armadura
+      valor: 25
+    - tipo: Resistência Mágica
+      valor: 25
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Convergir
+      texto: recebe 10 de Aceleração da Habilidade Ultimate.
+    - nome: Tempestade do Raio de Gelo
+      texto: usar sua ultimate invoca uma tempestade ao seu redor por 5s. A tempestade causa 150 de Dano Mágico total e 30% de Lentidão a Campeões
+        inimigos a até 350 unidades de distância. Se não houver nenhum Campeão inimigo ao alcance no momento da conjuração da ultimate, a tempestade
+        será adiada até um Campeão inimigo entrar no alcance, ou por, no máximo, 5s (30s de Tempo de Recarga).
+    receita:
+    - Gema Ardente
+    - Couraça de Pano
+    - Manto Anula-Magia
+  Armadilha de Yordle:
+    custo: 2400
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Suporte
+    resumo: Aplicar Controle de Grupo em inimigos fortalece você e Campeões aliados
+    marcador: reformulado
+    captura: 3 - Defesa, 7 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 200
+    - tipo: Armadura
+      valor: 20
+    - tipo: Resistência Mágica
+      valor: 20
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Apanhador
+      texto: aplicar Lentidão ou Imobilização a um Campeão inimigo fortalece você por 8s (4s para Campeões de Ataque a distância) e concede 20
+        de Velocidade de Movimento. Ao receber fortalecimento, você e Campeões aliados próximos recebem 30% de Velocidade de Ataque (20% para
+        Campeões de Ataque a distância). Receberá 20 de ouro adicional se você ou seus aliados abaterem um Campeão enquanto estiverem fortalecidos.
+    receita:
+    - Gema Ardente
+    - Couraça de Pano
+    - Manto Anula-Magia
+  Juramento do Cavaleiro:
+    custo: 2450
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Suporte
+    resumo: Redireciona o dano para si e restaura Vida
+    marcador: reformulado
+    captura: 4 - Defesa, 9 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 200
+    - tipo: '% Regeneração de Vida'
+      valor: 100
+    - tipo: Armadura
+      valor: 40
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Sacrifício
+      texto: enquanto o aliado Digno estiver próximo, redirecionará para você 12% do dano que ele sofrer e curará em 10% do dano que ele causar
+        a Campeões.
+    - nome: Pacto
+      texto: ao comprar ou recomprar este item, designe um aliado Digno.
+    receita:
+    - Gema Ardente
+    - Cota de Malha
+  Coração Congelado:
+    custo: 2550
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Suporte
+    resumo: Reduz a Velocidade de Ataque do inimigo
+    marcador: reformulado
+    captura: 5 - Defesa, 13 - Suporte.png
+    status:
+    - tipo: Armadura
+      valor: 80
+    - tipo: Mana Máximo
+      valor: 400
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Carícia do Inverno
+      texto: reduz a Velocidade de Ataque de Campeões inimigos a até 650 unidades de você em 25%.
+    receita:
+    - Carapaça do Vigia
+    - Proteção Glacial
+  Manto da Meia-noite:
+    custo: 2550
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Suporte
+    resumo: Aumenta a Vida máxima quando sua Vida está baixa.
+    marcador: reformulado
+    captura: 6 - Defesa, 14 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 600
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Salva-Vidas
+      texto: qualquer dano que deixe você com menos de 30% de Vida concede Vida máxima adicional equivalente a 200–300 da Vida adicional por 5s.
+        Além disso, recebe 10% de Velocidade de Movimento e 20% de Tenacidade e aumenta de tamanho em 10% por 5s. Durante esse tempo, restaura
+        (200–400 (por nível) + 120% da Armadura adicional + 120% da Resistência Mágica adicional + 15% da Vida) de Vida (70s de Tempo de Recarga).
+    - nome: null
+      texto: Só é possível carregar um item de Salva-Vidas.
+    receita:
+    - Gema Ardente
+    - Cinto do Gigante
+    efeitos:
+    - passiva: Salva-Vidas
+      tipo: Vida Máxima
+      valor: 200
+      valor_nv15: 300
+      condicional: true
+  Medalhão dos Solari de Ferro:
+    custo: 2600
+    secao: aprimorado
+    ativavel: true
+    abas:
+    - Defesa
+    - Suporte
+    resumo: Escudo de equipe
+    captura: 7 - Defesa, 15 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 200
+    - tipo: Armadura
+      valor: 30
+    - tipo: Resistência Mágica
+      valor: 30
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Medalhão (Ativo)
+      texto: concede um Escudo que protege você e todos os Campeões aliados próximos, absorvendo 250–370 de dano por 2,5s (60s de Tempo de Recarga).
+        Esse efeito diminuirá em 50% se o alvo tiver recebido o efeito de outro Medalhão nos últimos 20s.
+    receita:
+    - Gema Ardente
+    - Couraça de Pano
+    - Manto Anula-Magia
+  Aproximação Invernal:
+    custo: 2600
+    secao: aprimorado
+    abas:
+    - Defesa
+    resumo: Converte Mana em Vida
+    marcador: reformulado
+    captura: 8 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 500
+    - tipo: Mana Máximo
+      valor: 500
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Fascínio
+      texto: concede Vida adicional equivalente a 15% do Mana máximo e restitui 15% de todo o Mana usado.
+    - nome: Carga de Mana
+      texto: concede 14 de Mana máximo a cada Ataque, gasto de Mana ou a cada vez que você sofrer dano de Campeões, estruturas ou monstros épicos.
+        Este item se transformará em Fimbulwinter ao conceder um máximo de 700 de Mana máximo. Ocorre até 3x a cada 10s. Você só pode carregar
+        1 item de Lágrima da Deusa por vez.
+    evolucao:
+      nome: Fimbulwinter
+      status:
+      - tipo: Vida Máxima
+        valor: 500
+      - tipo: Mana Máximo
+        valor: 1200
+      - tipo: Aceleração de Habilidade
+        valor: 15
+      passivas:
+      - nome: Fascínio
+        texto: concede Vida adicional equivalente a 15% do Mana máximo e restitui 15% de todo o Mana usado.
+      - nome: Colosso Congelado
+        texto: debilitar o movimento de um Campeão inimigo concede um Escudo que absorve dano equivalente a 120 mais 4,5% do Mana máximo por 3s,
+          valor esse que aumentará em 80% se houver mais de 1 Campeão inimigo por perto (8s de Tempo de Recarga). O Escudo tem 50% de eficácia
+          para Campeões de Ataque a distância.
+      efeitos:
+      - passiva: Fascínio
+        tipo: Vida Máxima
+        ratio: 0.15
+        ref: Mana Máximo
+        escopo: total
+    receita:
+    - Lágrima da Deusa
+    - Gema Ardente
+    - Cinto do Gigante
+    efeitos:
+    - passiva: Fascínio
+      tipo: Vida Máxima
+      ratio: 0.15
+      ref: Mana Máximo
+      escopo: total
+    - passiva: Carga de Mana
+      tipo: Mana Máximo
+      valor: 700
+      condicional: true
+  Virtude Radiante:
+    custo: 2650
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Suporte
+    resumo: Cura aliados ao conjurar sua ultimate
+    marcador: reformulado
+    captura: 9 - Defesa, 19 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 300
+    - tipo: Armadura
+      valor: 30
+    - tipo: Resistência Mágica
+      valor: 30
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Luz-guia
+      texto: ao conjurar sua ultimate, você Transcende, aumentando sua Vida máxima em 10% por 6s. No estado Transcendido, você e Campeões aliados
+        em até 1.200 unidades de distância de você se curam em 2,5% da sua Vida máxima por segundo ao longo da duração (60s de Tempo de Recarga).
+        Se você for um Campeão de ataque à distância, as curas concedidas serão 50% menores.
+    receita:
+    - Cinto do Gigante
+    - Couraça de Pano
+    - Manto Anula-Magia
+  Armadura de Espinhos:
+    custo: 2700
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Suporte
+    resumo: Reflete dano e reduz a cura do inimigo
+    captura: 10 - Defesa, 20 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 200
+    - tipo: Armadura
+      valor: 75
+    passivas:
+    - nome: Espinhos
+      texto: ao ser atingido por um ataque, causa (20 + 6% da Armadura adicional + 1% da Vida adicional) de Dano Mágico ao atacante.
+    - nome: Entrelaçar
+      texto: aplica 50% de Feridas Dolorosas a Campeões inimigos por 3s ao ser atingido pelos ataques deles ou ao causar dano a eles.
+    receita:
+    - Colete Espinhoso
+    - Cota de Malha
+  Manto da Aurora:
+    custo: 2700
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Suporte
+    resumo: Efeitos imobilizadores causam dano e revelam os arredores
+    captura: 11 - Defesa, 21 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 250
+    - tipo: Armadura
+      valor: 50
+    - tipo: Resistência Mágica
+      valor: 30
+    passivas:
+    - nome: Emissário da Aurora
+      texto: ao imobilizar um Campeão ou ser imobilizado em um raio de 400 unidades de distância de um Campeão inimigo, você revelará todos os
+        Campeões inimigos próximos por 3s, causará Dano Mágico igual a 40 mais 2,5% da Vida adicional e ganhará 20% de Armadura e Resistência
+        Mágica (3s de Tempo de Recarga).
+    receita:
+    - Capuz do Espectro
+    - Cota de Malha
+    efeitos:
+    - passiva: Emissário da Aurora
+      tipo: Armadura
+      ratio: 0.2
+      ref: Armadura
+      escopo: total
+      condicional: true
+    - passiva: Emissário da Aurora
+      tipo: Resistência Mágica
+      ratio: 0.2
+      ref: Resistência Mágica
+      escopo: total
+      condicional: true
+  Resplendor Vazio:
+    custo: 2800
+    secao: aprimorado
+    abas:
+    - Defesa
+    resumo: Causa dano em uma área
+    captura: 12 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 400
+    - tipo: Resistência Mágica
+      valor: 40
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Imolar
+      texto: enquanto estiver em combate, causará Dano Mágico igual a 20–30 mais 1% da Vida adicional por segundo por 5s a inimigos próximos.
+        Causa 125% de dano contra monstros e 200% de dano contra tropas.
+    - nome: Desolar
+      texto: abater um monstro neutro ou um inimigo causa Dano Mágico igual a 30 mais 2% da Vida adicional em uma área ao redor dele.
+    receita:
+    - Brasa de Bami
+    - Capa Negatron
+  Presságio de Randuin:
+    custo: 2800
+    secao: aprimorado
+    abas:
+    - Defesa
+    resumo: Contra Dano de Acerto Crítico
+    captura: 13 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 400
+    - tipo: Armadura
+      valor: 75
+    passivas:
+    - nome: Contracorrente
+      texto: recebe 1 acúmulo(s) de Contracorrente ao sofrer Acertos Críticos de Dano Físico. Cada acúmulo concede 5% de Velocidade de Movimento
+        e 5% de Resistência a Lentidão. Máximo de 4 acúmulos.
+    - nome: Resiliência
+      texto: Acertos Críticos causam 30% a menos de Dano Físico a você.
+    receita:
+    - Cinto do Gigante
+    - Carapaça do Vigia
+  Couraça do Defunto:
+    custo: 2800
+    secao: aprimorado
+    abas:
+    - Defesa
+    resumo: Aumenta a Velocidade de Movimento
+    marcador: reformulado
+    captura: 14 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 350
+    - tipo: Armadura
+      valor: 70
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas:
+    - nome: Embalo
+      texto: você ganha Embalo ao se mover, e esse efeito concede até 40 de Velocidade de Movimento com 100 acúmulos. Atacar remove todo o Embalo.
+        Os acúmulos decaem quando o movimento estiver debilitado.
+    - nome: Golpe Destruidor
+      texto: os ataques causam até 100 de Dano Mágico adicional com base no Embalo perdido. Ataques corpo a corpo com o máximo de Embalo causam
+        75% de Lentidão por 1s.
+    receita:
+    - Cota de Malha
+    - Couraça Lunar Alada
+    - Cristal de Rubi
+  Força da Natureza:
+    custo: 2800
+    secao: aprimorado
+    abas:
+    - Defesa
+    resumo: Resistência Mágica e Velocidade de Movimento adicionais
+    marcador: reformulado
+    captura: 15 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 400
+    - tipo: Resistência Mágica
+      valor: 60
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas:
+    - nome: Absorção
+      texto: sofrer dano de Habilidade de Campeões inimigos concede 1 acúmulo(s) de Impassível por 7s (máx. de 4 acúmulos). Causar dano a um Campeão
+        inimigo renova a duração dos acúmulos. Com o máximo de acúmulos, recebe 6% de Velocidade de Movimento e 70 de Resistência Mágica adicional.
+    receita:
+    - Couraça Lunar Alada
+    - Capa Negatron
+    - Cristal de Rubi
+    efeitos:
+    - passiva: Absorção
+      tipo: Resistência Mágica
+      valor: 70
+      condicional: true
+    - passiva: Absorção
+      tipo: '% Velocidade de Movimento'
+      valor: 6
+      condicional: true
+  Coração de Aço:
+    custo: 2800
+    secao: aprimorado
+    abas:
+    - Defesa
+    resumo: Aumente a Vida máxima
+    captura: 16 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 700
+    - tipo: '% Regeneração de Vida'
+      valor: 150
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Consumo Colossal
+      texto: enquanto estiver a até 700 unidades de um Campeão inimigo, carrega por 2,5s antes de desferir um golpe imenso contra ele. Esse ataque
+        carregado causa Dano Físico adicional equivalente a 140 + 3,5% da Vida máxima e concede Vida máxima equivalente a 15% do dano causado.
+        20s de Tempo de Recarga para cada alvo.
+    receita:
+    - Gema Ardente
+    - Cinto do Gigante
+    - Cristal de Rubi
+  Rookern Lamúrico:
+    custo: 2800
+    secao: aprimorado
+    abas:
+    - Defesa
+    resumo: Recebe um Escudo mágico quando está fora de combate
+    captura: 17 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 350
+    - tipo: '% Regeneração de Vida'
+      valor: 100
+    - tipo: Resistência Mágica
+      valor: 80
+    passivas:
+    - nome: Perdição dos Magos
+      texto: depois de não sofrer Dano Mágico por 12s, recebe um Escudo Mágico que absorve dano equivalente a 50–150 + 14% da Vida máxima.
+    receita:
+    - Capuz do Espectro
+    - Capa Negatron
+  Armadura de Warmog:
+    custo: 2850
+    secao: aprimorado
+    abas:
+    - Defesa
+    resumo: Regeneração de Vida fora de combate
+    captura: 18 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 700
+    - tipo: '% Regeneração de Vida'
+      valor: 100
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Abençoado
+      texto: aumenta em 30% todos os efeitos de cura e de escudo em você.
+    - nome: Coração de Warmog
+      texto: se você tiver pelo menos 950 de Vida adicional, restaura 3,5% da Vida máxima por segundo caso você não tenha sofrido dano nos últimos
+        5s.
+    receita:
+    - Gema Ardente
+    - Cinto do Gigante
+  Placa Gargolítica:
+    custo: 2900
+    secao: aprimorado
+    ativavel: true
+    abas:
+    - Defesa
+    resumo: Escudo
+    captura: 19 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 200
+    - tipo: Armadura
+      valor: 45
+    - tipo: Resistência Mágica
+      valor: 45
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Placa (Ativo)
+      texto: cresce em tamanho e recebe um Escudo que absorve dano equivalente a 100 mais 90% da Vida adicional, decaindo ao longo de 2,5s (60s
+        de Tempo de Recarga).
+    receita:
+    - Cota de Malha
+    - Capa Negatron
+    - Cristal de Rubi
+  Égide de Fogo Solar:
+    custo: 2900
+    secao: aprimorado
+    abas:
+    - Defesa
+    resumo: Queima os inimigos próximos
+    marcador: reformulado
+    captura: 20 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 350
+    - tipo: Armadura
+      valor: 40
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Imolar
+      texto: enquanto estiver em combate, causará Dano Mágico equivalente a 20 mais 1,5% da Vida adicional a inimigos próximos a cada segundo.
+        Imolar causa 130% de dano contra monstros e 175–250% de dano (por nível) contra tropas.
+    receita:
+    - Brasa de Bami
+    - Cota de Malha
+  Véu da Banshee:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Mágico
+    resumo: Bloqueia uma habilidade inimiga
+    captura: 18 - Magico, 21 - Defesa.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 105
+    - tipo: Resistência Mágica
+      valor: 40
+    passivas:
+    - nome: Anular
+      texto: concede um Escudo de Feitiço que bloqueia a próxima habilidade inimiga (30s de Tempo de Recarga).
+    receita:
+    - Barreira Verdejante
+    - Varinha Explosiva
+  Desespero Eterno:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Defesa
+    resumo: Aumenta a sustentação de tanques em confrontos de equipe
+    captura: 22 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 300
+    - tipo: Armadura
+      valor: 40
+    - tipo: Resistência Mágica
+      valor: 40
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Angústia
+      texto: a cada 4s enquanto estiver em combate com um Campeão, causará 3% da sua Vida máxima como Dano Mágico a Campeões próximos, curando-se
+        em 250% do dano causado. Angústia não se beneficia de Aceleração de Habilidade de Item.
+    receita:
+    - Gema Ardente
+    - Cota de Malha
+    - Capa Negatron
+  Manopla dos Glacinatas:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Defesa
+    resumo: Os ataques criam um campo que reduz a velocidade
+    captura: 23 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 300
+    - tipo: Armadura
+      valor: 50
+    - tipo: Mana Máximo
+      valor: 250
+    - tipo: Aceleração de Habilidade
+      valor: 30
+    passivas:
+    - nome: Lâmina Arcana
+      texto: depois de usar uma habilidade, seu próximo ataque em até 10s causa Dano Físico adicional equivalente a 100% base (Dano de Ataque
+        + 25% da Armadura adicional) em uma área e cria um campo congelado por 2s que causa 30% de Lentidão. Armadura aumenta o tamanho do campo
+        congelado (1,5s de Tempo de Recarga). Dano reduzido contra estruturas.
+    receita:
+    - Fulgor
+    - Gema Ardente
+    - Proteção Glacial
+  Hidra Titânica:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Lutador
+    resumo: Causa dano adicional em uma área
+    marcador: reformulado
+    captura: 8 - Lutador, 24 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 450
+    - tipo: Dano de Ataque
+      valor: 40
+    passivas:
+    - nome: Fenda
+      texto: a cada 1,75s, seu próximo ataque causará Dano Físico adicional igual a 25 mais 3% da Vida adicional (também afeta torres) e gerará
+        uma onda de choque que causa Dano Físico igual a 80 mais 10% da Vida adicional a inimigos atrás do alvo. Campeões de ataque à distância
+        causam 75% do dano.
+    receita:
+    - Picareta
+    - Punho de Jaurim
+    - Cristal de Rubi
+  Armadura Sangrenta do Suserano:
+    custo: 3200
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Lutador
+    resumo: Recebe Dano de Ataque ao perder Vida
+    captura: 16 - Lutador, 25 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 450
+    - tipo: Dano de Ataque
+      valor: 30
+    passivas:
+    - nome: Tirania
+      texto: recebe Dano de Ataque equivalente a 2,5% da sua Vida adicional.
+    - nome: Retaliação
+      texto: recebe até 9% a mais de Dano de Ataque com base no seu percentual de Vida perdida. Recebe o máximo de Retaliação adicional quando
+        está abaixo de 30% de Vida.
+    receita:
+    - item: Punho de Jaurim
+      qtd: 2
+    efeitos:
+    - passiva: Tirania
+      tipo: Dano de Ataque
+      ratio: 0.025
+      ref: Vida Máxima
+      escopo: bonus
+  Anjo Guardião:
+    custo: 3200
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Lutador
+    - Assassino
+    - Atirador
+    resumo: Ressuscita ao morrer
+    captura: 17 - Lutador, 10 - Assassino, 24 - Atirador, 26 - Defesa.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 45
+    - tipo: Armadura
+      valor: 40
+    passivas:
+    - nome: Ressurreição
+      texto: ao sofrer dano letal, restaura 50% da Vida base e 100% do Mana máximo após 4s de Estase (180s de Tempo de Recarga).
+    receita:
+    - Espada G. p. C.
+    - Cota de Malha
+  Sinal de Sterak:
+    custo: 3200
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Lutador
+    resumo: Aciona um escudo ao sofrer dano
+    marcador: reformulado
+    captura: 19 - Lutador, 27 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 400
+    - tipo: '% Tenacidade'
+      valor: 20
+    passivas:
+    - nome: Severidade
+      texto: +50% de Dano de Ataque base como Dano de Ataque adicional.
+    - nome: Salva-Vidas
+      texto: qualquer dano que deixe você com menos de 35% de Vida concede um Escudo igual a 75% da Vida adicional. Ele decai ao longo de 5s (70s
+        de Tempo de Recarga).
+    - nome: Fúria de Sterak
+      texto: ativar Salva-Vidas aumenta seu tamanho e fortalece você por 8s.
+    receita:
+    - Espada G. p. C.
+    - Punho de Jaurim
+    efeitos:
+    - passiva: Severidade
+      tipo: Dano de Ataque
+      ratio: 0.5
+      ref: Dano de Ataque
+      escopo: base
+  Duplaguarda de Amaranto:
+    custo: 3200
+    secao: aprimorado
+    abas:
+    - Defesa
+    resumo: Durabilidade em combate
+    marcador: reformulado
+    captura: 28 - Defesa.png
+    status:
+    - tipo: Vida Máxima
+      valor: 300
+    - tipo: Armadura
+      valor: 50
+    - tipo: Resistência Mágica
+      valor: 50
+    passivas:
+    - nome: Tolerância
+      texto: receberá 1 acúmulo(s) de Tolerância a cada 1s enquanto estiver em combate contra Campeões inimigos (máximo de 5 acúmulos). Com o
+        máximo de acúmulos, recebe 20% de tamanho, 20% de Tenacidade e aumenta em 30% a Armadura adicional e em 30% a Resistência Mágica adicional
+        até sair de combate contra Campeões.
+    receita:
+    - Cinto do Gigante
+    - Cota de Malha
+    - Capa Negatron
+    efeitos:
+    - passiva: Tolerância
+      tipo: Armadura
+      ratio: 0.3
+      ref: Armadura
+      escopo: bonus
+      condicional: true
+    - passiva: Tolerância
+      tipo: Resistência Mágica
+      ratio: 0.3
+      ref: Resistência Mágica
+      escopo: bonus
+      condicional: true
+  Ampulheta de Zhonya:
+    custo: 3300
+    secao: aprimorado
+    ativavel: true
+    abas:
+    - Defesa
+    - Mágico
+    resumo: Fica invulnerável
+    captura: 28 - Magico, 29 - Defesa, ativavel.png
+    status:
+    - tipo: Armadura
+      valor: 40
+    - tipo: Poder de Habilidade
+      valor: 110
+    passivas:
+    - nome: Estase (Ativo)
+      texto: torna-se invulnerável e inalvejável por 2,5s, mas sem poder se mexer, atacar, conjurar habilidades nem usar itens. (90s de Tempo
+        de Recarga)
+    receita:
+    - Bastão Desnecessariamente Grande
+    - Armaguarda da Caçadora
+  Dança da Morte:
+    custo: 3300
+    secao: aprimorado
+    abas:
+    - Defesa
+    - Lutador
+    resumo: Atrasa o dano sofrido
+    marcador: reformulado
+    captura: 20 - Lutador, 30 - Defesa.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 50
+    - tipo: Armadura
+      valor: 45
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Cauterização
+      texto: 30% de todo o Dano Físico e Dano Mágico sofrido (12% para Campeões de ataque a distância) é causado a você ao longo de 3s como Dano
+        Verdadeiro.
+    - nome: Desafiar
+      texto: quando um Campeão a quem você tenha causado dano nos últimos 3s morre, purifica o restante do dano de Cauterização e restaura Vida
+        equivalente a 90% do Dano de Ataque adicional ao longo de 2s.
+    receita:
+    - Picareta
+    - Martelo de Guerra de Caulfield
+    - Cota de Malha
+  Serrespada Quimiopunk:
+    custo: 2800
+    secao: aprimorado
+    abas:
+    - Lutador
+    resumo: Reduz a cura do inimigo
+    captura: 1 - Lutador.png
+    status:
+    - tipo: Vida Máxima
+      valor: 400
+    - tipo: Dano de Ataque
+      valor: 45
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Punição
+      texto: causar Dano Físico a Campeões inimigos aplica 50% de Feridas Dolorosas por 3s.
+    receita:
+    - Chamado do Carrasco
+    - Martelo de Guerra de Caulfield
+  Manamune:
+    custo: 2900
+    secao: aprimorado
+    abas:
+    - Lutador
+    - Assassino
+    - Atirador
+    resumo: Converte Mana em Dano de Ataque
+    marcador: reformulado
+    captura: 2 - Lutador, 2 - Assassino, 10 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 40
+    - tipo: Mana Máximo
+      valor: 500
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Fascínio
+      texto: concede Dano de Ataque igual a 2% do Mana máximo e devolve 15% de todo o Mana usado.
+    - nome: Carga de Mana
+      texto: concede 14 de Mana máximo a cada Ataque ou gasto de Mana. Este item se transformará em Muramana ao conceder um máximo de 700 de Mana
+        máximo. Ocorre até 3x a cada 10s. Você só pode carregar 1 item de Lágrima da Deusa por vez.
+    evolucao:
+      nome: Muramana
+      status:
+      - tipo: Dano de Ataque
+        valor: 40
+      - tipo: Mana Máximo
+        valor: 1200
+      - tipo: Aceleração de Habilidade
+        valor: 15
+      passivas:
+      - nome: Fascínio
+        texto: concede Dano de Ataque igual a 2% do Mana máximo e devolve 15% de todo o Mana usado.
+      - nome: Choque
+        texto: Ataques contra Campeões causam 1,5% do Mana máximo como Dano Físico adicional, e o Dano de Habilidades contra Campeões causa 3,5%
+          do Mana máximo (3% para Campeões de Ataque a distância) como Dano Físico adicional. Esse efeito só pode ser acionado uma vez por Ataque
+          ou conjuração de Habilidade contra o mesmo Campeão.
+      - nome: null
+        texto: Você só pode ter um item Lágrima da Deusa.
+      efeitos:
+      - passiva: Fascínio
+        tipo: Dano de Ataque
+        ratio: 0.02
+        ref: Mana Máximo
+        escopo: total
+    receita:
+    - Lágrima da Deusa
+    - Martelo de Guerra de Caulfield
+    - Espada Longa
+    efeitos:
+    - passiva: Fascínio
+      tipo: Dano de Ataque
+      ratio: 0.02
+      ref: Mana Máximo
+      escopo: total
+    - passiva: Carga de Mana
+      tipo: Mana Máximo
+      valor: 700
+      condicional: true
+  Eclipse:
+    custo: 2900
+    secao: aprimorado
+    abas:
+    - Lutador
+    resumo: Recebe um Escudo e causa dano adicional
+    captura: 3 - Lutador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 65
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Lua Sempre Crescente
+      texto: atingir um Campeão inimigo com 2 ataques ou habilidades diferentes dentro de 1,8s causa Dano Físico adicional equivalente a 7% da
+        Vida máxima do alvo (3,5% para Campeões de ataque a distância), e você recebe um Escudo que absorve dano igual a 150 + 40% do Dano de
+        Ataque adicional (70 + 18% de Dano de Ataque adicional para Campeões de ataque a distância) por 2s (6s de Tempo de Recarga).
+    receita:
+    - item: Martelo de Guerra de Caulfield
+      qtd: 2
+  Céu Dividido:
+    custo: 2900
+    secao: aprimorado
+    abas:
+    - Lutador
+    resumo: Fortalece ataques periodicamente
+    captura: 4 - Lutador.png
+    status:
+    - tipo: Vida Máxima
+      valor: 350
+    - tipo: Dano de Ataque
+      valor: 40
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Golpe de Lumescudo
+      texto: o primeiro ataque contra um Campeão inimigo é um Acerto Crítico (6s de Tempo de Recarga por alvo), causando 160% de dano e restaurando
+        Vida igual a 125% do Dano de Ataque base + 6% da Vida perdida.
+    receita:
+    - Martelo de Guerra de Caulfield
+    - Punho de Jaurim
+  Hexoplaca Experimental:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Lutador
+    resumo: Recebe Velocidade de Ataque e Velocidade de Movimento quando sua ultimate é conjurada
+    marcador: reformulado
+    captura: 5 - Lutador.png
+    status:
+    - tipo: Vida Máxima
+      valor: 400
+    - tipo: Dano de Ataque
+      valor: 35
+    - tipo: '% Velocidade de Ataque'
+      valor: 20
+    passivas:
+    - nome: Hexcarregado
+      texto: recebe 20 de Aceleração de Habilidade para sua ultimate.
+    - nome: Turbo
+      texto: após usar sua ultimate, recebe 40% de Velocidade de Ataque e 20% de Velocidade de Movimento por 8s (30s de Tempo de Recarga).
+    receita:
+    - Fago
+    - Punho de Jaurim
+    - Adaga
+  Mandíbula de Malmortius:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Lutador
+    - Assassino
+    - Atirador
+    resumo: Recebe um Escudo mágico ao sofrer dano
+    captura: 6 - Lutador, 5 - Assassino, 14 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 55
+    - tipo: Resistência Mágica
+      valor: 45
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Salva-Vidas
+      texto: ao sofrer Dano Mágico suficiente para reduzir sua Vida a menos de 35%, recebe 10% de Vampirismo Universal até o fim do combate e
+        um Escudo mágico que absorve 220–530 de Dano Mágico por 3s (70s de Tempo de Recarga).
+    receita:
+    - item: Hexdrinker
+      qtd: 2
+  Cutelo Negro:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Lutador
+    resumo: Dano Físico reduz Armadura
+    captura: 7 - Lutador.png
+    status:
+    - tipo: Vida Máxima
+      valor: 400
+    - tipo: Dano de Ataque
+      valor: 40
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Fatiar
+      texto: causar Dano Físico a um Campeão reduz a Armadura dele em 6% por 6s, acumulando 5 vezes e resultando em 30% de redução.
+    - nome: Perseguir
+      texto: recebe 20 de Velocidade de Movimento ao causar Dano Físico. Ao se mover na direção de Campeões inimigos com 5 acúmulo(s) de Fatiamento,
+        recebe 40 de Velocidade de Movimento. Campeões de ataque à distância recebem valores reduzidos pela metade.
+    receita:
+    - Fago
+    - Gema Ardente
+    - Espada Longa
+  Quebrapassos:
+    custo: 3100
+    secao: aprimorado
+    ativavel: true
+    abas:
+    - Lutador
+    resumo: Causa Lentidão a inimigos próximos após um curto avanço
+    captura: 9 ativavel - Lutador.png
+    status:
+    - tipo: Vida Máxima
+      valor: 400
+    - tipo: Dano de Ataque
+      valor: 40
+    - tipo: '% Velocidade de Ataque'
+      valor: 25
+    passivas:
+    - nome: Onda de Choque Quebradora (Ativo)
+      texto: ative para avançar uma curta distância, causando 100% do Dano de Ataque como Dano Físico e 40% de Lentidão por 3s a inimigos próximos
+        (25s de Tempo de Recarga).
+    - nome: Marcha (Passivo)
+      texto: recebe 20 de Velocidade de Movimento por 2s ao causar Dano Físico.
+    receita:
+    - Fago
+    - Punho de Jaurim
+    - Adaga
+  Hemodrenário:
+    custo: 3100
+    secao: aprimorado
+    ativavel: true
+    abas:
+    - Lutador
+    resumo: Causa dano em uma área
+    captura: 10 ativavel - Lutador.png
+    status:
+    - tipo: Vida Máxima
+      valor: 350
+    - tipo: Dano de Ataque
+      valor: 40
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Hemodrenagem (Passivo)
+      texto: recebe 8% de Vampirismo Universal.
+    - nome: Corte Sedento (Ativo)
+      texto: causa 175% do Dano de Ataque base como Dano Físico a inimigos próximos. Restaura Vida igual a 20% do Dano de Ataque mais 10% da Vida
+        perdida para cada Campeão inimigo atingido (12s de Tempo de Recarga).
+    receita:
+    - Fago
+    - Punho de Jaurim
+    - Anel da Revelação
+  Cimitarra Mercurial:
+    custo: 3100
+    secao: aprimorado
+    ativavel: true
+    abas:
+    - Lutador
+    - Assassino
+    - Atirador
+    resumo: Dissipa efeitos de controle de grupo
+    marcador: reformulado
+    captura: 11 - Lutador, 8 ativavel - Assassino, 22 - Atirador, ativavel.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 45
+    - tipo: Resistência Mágica
+      valor: 40
+    - tipo: '% Roubo de Vida'
+      valor: 12
+    passivas:
+    - nome: Bandana de Mercúrio (Ativo)
+      texto: remove de si todos os efeitos de Controle de Grupo e concede imunidade a Controle de Grupo por 0,25s.
+    - nome: Perseverança (Passivo)
+      texto: quando o efeito de Mercúrio terminar, recebe 30% de Tenacidade e 30% de Resistência a Lentidão por 1,5s (60s de Tempo de Recarga).
+        Não pode ser usado no ar ou ao sofrer um empurrão.
+    receita:
+    - Bandana de Mercúrio
+    - Cetro Vampírico
+    - Espada Longa
+  Espada do Rei Destruído:
+    custo: 3100
+    secao: aprimorado
+    abas:
+    - Lutador
+    - Atirador
+    resumo: Os ataques causam dano adicional
+    marcador: reformulado
+    captura: 12 - Lutador, 23 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 40
+    - tipo: '% Velocidade de Ataque'
+      valor: 30
+    - tipo: '% Roubo de Vida'
+      valor: 12
+    passivas:
+    - nome: Golpes Destrutivos
+      texto: 'seus ataques causam Dano Físico adicional igual a 6% da Vida atual do inimigo ao contato (ataques corpo a corpo causam 8%). Dano
+        mínimo: 15. Dano máximo contra monstros: 100.'
+    - nome: Drenar
+      texto: atingir um Campeão com 3 Ataques ou Habilidades causa 30% de Lentidão por 1,5s (30s de Tempo de Recarga).
+    receita:
+    - Picareta
+    - Cetro Vampírico
+    - Arco Recurvo
+  Rancor de Serylda:
+    custo: 3100
+    secao: aprimorado
+    abas:
+    - Lutador
+    - Assassino
+    resumo: Penetração de Armadura (%) e aplica Lentidão
+    marcador: reformulado
+    captura: 13 - Lutador, 9 - Assassino.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 50
+    - tipo: '% Penetração de Armadura'
+      valor: 35
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Gélido
+      texto: Habilidades ativas de dano e Ataques fortalecidos causam 30% de Lentidão a inimigos com menos de 60% de Vida por 1s.
+    receita:
+    - Último Sussurro
+    - Martelo de Guerra de Caulfield
+  Lança de Shojin:
+    custo: 3100
+    secao: aprimorado
+    abas:
+    - Lutador
+    resumo: Recebe adicionais de dano
+    captura: 14 - Lutador.png
+    status:
+    - tipo: Vida Máxima
+      valor: 450
+    - tipo: Dano de Ataque
+      valor: 40
+    passivas:
+    - nome: Força Dracônica
+      texto: recebe 20 de Aceleração de Habilidade Básica.
+    - nome: Determinação Concentrada
+      texto: causar dano a monstros ou inimigos com habilidades aumenta o dano de habilidade e o dano da Passiva do seu Campeão em 3% por 6s (acumula
+        4x). O acúmulo de Determinação Concentrada tem um bloqueio de 1s por conjuração de habilidade.
+    receita:
+    - item: Punho de Jaurim
+      qtd: 2
+  Quebracascos:
+    custo: 3100
+    secao: aprimorado
+    abas:
+    - Lutador
+    resumo: Poder de investidas divididas
+    captura: 15 - Lutador.png
+    status:
+    - tipo: Vida Máxima
+      valor: 400
+    - tipo: Dano de Ataque
+      valor: 50
+    - tipo: '% Velocidade de Movimento'
+      valor: 5
+    passivas:
+    - nome: Marujo
+      texto: todo 4º ataque contra Campeões e monstros épicos causa Dano Físico adicional igual a 160% do Dano de Ataque base mais 5% da Vida
+        (Campeões de ataque à distância causam 40% do dano), aumentado para 240% do Dano de Ataque base mais 9% da Vida contra estruturas (Campeões
+        de ataque à distância causam 40% do dano).
+    - nome: Invasão Pirata
+      texto: tropas de cerco e supertropas aliadas próximas recebem 20–130 de Armadura (mais 25% se você for um Campeão de ataque à distância)
+        e 10–120 de Resistência Mágica (por nível) (mais 25% se você for um Campeão de ataque à distância).
+    receita:
+    - item: Punho de Jaurim
+      qtd: 2
+  Sedenta por Sangue:
+    custo: 3200
+    secao: aprimorado
+    abas:
+    - Lutador
+    - Atirador
+    resumo: Recebe Roubo de Vida e converte o excesso de cura em um Escudo
+    marcador: reformulado
+    captura: 18 - Lutador, 25 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 75
+    - tipo: '% Roubo de Vida'
+      valor: 15
+    passivas:
+    - nome: Ícor-escudo
+      texto: converte a cura excedente do Roubo de Vida em um Escudo que absorve até 165–345 de dano (por nível).
+    receita:
+    - Cetro Vampírico
+    - Espada G. p. C.
+  Força da Trindade:
+    custo: 3333
+    secao: aprimorado
+    abas:
+    - Lutador
+    - Atirador
+    resumo: Versátil
+    marcador: reformulado
+    captura: 21 - Lutador, 27 - Atirador.png
+    status:
+    - tipo: Vida Máxima
+      valor: 333
+    - tipo: Dano de Ataque
+      valor: 36
+    - tipo: '% Velocidade de Ataque'
+      valor: 30
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Valentia
+      texto: ao contato, ataques concedem 20 de Velocidade de Movimento por 2s. A Velocidade de Movimento adicional não acumula. Campeões de ataque
+        a distância recebem valores reduzidos pela metade.
+    - nome: Lâmina Arcana
+      texto: usar uma habilidade faz com que o próximo ataque desferido dentro de 10s cause Dano Físico adicional igual a 200% do dano base. (1,5s
+        de Tempo de Recarga) Seu dano é reduzido contra estruturas.
+    - nome: null
+      texto: Só é possível carregar um item de Lâmina Arcana.
+    receita:
+    - Machado Termestre
+    - Fulgor
+    - Fago
+  Ruptor Divino:
+    custo: 3400
+    secao: aprimorado
+    abas:
+    - Lutador
+    resumo: Ataques antivida
+    captura: 22 - Lutador.png
+    status:
+    - tipo: Vida Máxima
+      valor: 425
+    - tipo: Dano de Ataque
+      valor: 25
+    - tipo: Aceleração de Habilidade
+      valor: 25
+    passivas:
+    - nome: Lâmina Arcana
+      texto: depois de usar uma habilidade, seu próximo ataque dentro de 10s causa 10% da Vida máxima do alvo como Dano Físico adicional (7% para
+        ataque à distância). Se o alvo for um Campeão, cura em 6% da Vida máxima do alvo (2,5% para ataque à distância) (1,5s de Tempo de Recarga).
+        Seu dano é reduzido contra estruturas.
+    - nome: null
+      texto: Só é possível carregar um item de Lâmina Arcana.
+    receita:
+    - Fulgor
+    - Gema Ardente
+    - Punho de Jaurim
+  Fulgor:
+    custo: 800
+    secao: tier_medio
+    abas:
+    - Defesa
+    - Lutador
+    - Assassino
+    - Atirador
+    - Mágico
+    resumo: Os ataques causam dano adicional após conjurar habilidades
+    captura: 2 - Meio item.png
+    status:
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Lâmina Arcana
+      texto: usar uma habilidade faz com que o próximo ataque desferido dentro de 10s cause Dano Físico adicional igual a 100% do Dano de Ataque
+        base (1,5s de Tempo de Recarga). O dano é reduzido contra estruturas.
+    receita:
+    - Anel da Revelação
+    fabrica:
+    - Aurora e Crepúsculo
+    - Colhedor de Essência
+    - Força da Trindade
+    - Manopla dos Glacinatas
+    - Perdição de Lich
+    - Ruptor Divino
+  Picareta:
+    custo: 800
+    secao: tier_medio
+    abas:
+    - Lutador
+    - Assassino
+    - Atirador
+    resumo: +20 DdA
+    marcador: novo
+    captura: 1 - Meio item.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 20
+    passivas: []
+    receita:
+    - Espada Longa
+    fabrica:
+    - Dança da Morte
+    - Espada do Rei Destruído
+    - Faca de Statikk
+    - Força do Vendaval
+    - Gume do Infinito
+    - Hexótica C44
+    - Hidra Titânica
+    - Lâmina da Fúria de Guinsoo
+  Chamado do Carrasco:
+    custo: 800
+    secao: tier_medio
+    abas:
+    - Lutador
+    - Assassino
+    - Atirador
+    resumo: Dano Físico reduz a cura do inimigo
+    captura: 3 - Meio item.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 15
+    passivas:
+    - nome: Ataque Mutilador
+      texto: causar Dano Físico a Campeões inimigos aplica 40% de Feridas Dolorosas por 3s.
+    receita:
+    - Espada Longa
+    fabrica:
+    - Lembrete Mortal
+    - Serrespada Quimiopunk
+  Cota de Malha:
+    custo: 900
+    secao: tier_medio
+    abas:
+    - Defesa
+    - Suporte
+    resumo: +40 Armadura
+    captura: 34 - Meio item.png
+    status:
+    - tipo: Armadura
+      valor: 40
+    passivas: []
+    receita:
+    - Couraça de Pano
+    fabrica:
+    - Anjo Guardião
+    - Armadura de Espinhos
+    - Couraça do Defunto
+    - Dança da Morte
+    - Desespero Eterno
+    - Duplaguarda de Amaranto
+    - Juramento do Cavaleiro
+    - Manto da Aurora
+    - Placa Gargolítica
+    - Égide de Fogo Solar
+  Couraça Lunar Alada:
+    custo: 900
+    secao: tier_medio
+    abas:
+    - Defesa
+    resumo: Aumenta a Velocidade de Movimento
+    marcador: reformulado
+    captura: 35 - Meio item.png
+    status:
+    - tipo: Vida Máxima
+      valor: 150
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas: []
+    receita:
+    - Cristal de Rubi
+    fabrica:
+    - Couraça do Defunto
+    - Força da Natureza
+  Capa Negatron:
+    custo: 900
+    secao: tier_medio
+    abas:
+    - Defesa
+    - Suporte
+    resumo: +40 RM
+    captura: 36 - Meio item.png
+    status:
+    - tipo: Resistência Mágica
+      valor: 40
+    passivas: []
+    receita:
+    - Manto Anula-Magia
+    fabrica:
+    - Desespero Eterno
+    - Duplaguarda de Amaranto
+    - Força da Natureza
+    - Limite da Razão
+    - Máscara Abissal
+    - Placa Gargolítica
+    - Resplendor Vazio
+    - Rookern Lamúrico
+  Gema Ardente:
+    custo: 1000
+    secao: tier_medio
+    abas:
+    - Defesa
+    - Mágico
+    - Suporte
+    resumo: +175 Vida, +10 Aceleração de Habilidade
+    captura: 25 - Meio item.png
+    status:
+    - tipo: Vida Máxima
+      valor: 175
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas: []
+    receita:
+    - Cristal de Rubi
+    fabrica:
+    - Aproximação Invernal
+    - Armadilha de Yordle
+    - Armadura de Warmog
+    - Aurora e Crepúsculo
+    - Bênção de Mikael
+    - Convergência de Zeke
+    - Coração de Aço
+    - Cutelo Negro
+    - Desespero Eterno
+    - Eco Harmônico
+    - Ecos de Helia
+    - Explocinturão Hextec
+    - Juramento do Cavaleiro
+    - Manopla dos Glacinatas
+    - Manto da Meia-noite
+    - Medalhão dos Solari de Ferro
+    - Morellonomicon
+    - Máscara Abissal
+    - Ruptor Divino
+    - Ímpeto Cósmico
+  Cinto do Gigante:
+    custo: 1000
+    secao: tier_medio
+    abas:
+    - Defesa
+    - Suporte
+    resumo: +300 Vida
+    captura: 37 - Meio item.png
+    status:
+    - tipo: Vida Máxima
+      valor: 300
+    passivas: []
+    receita:
+    - Cristal de Rubi
+    fabrica:
+    - Aproximação Invernal
+    - Armadura de Warmog
+    - Cetro de Cristal de Rylai
+    - Coração de Aço
+    - Duplaguarda de Amaranto
+    - Manto da Meia-noite
+    - Presságio de Randuin
+    - Virtude Radiante
+  Colete Espinhoso:
+    custo: 1000
+    secao: tier_medio
+    abas:
+    - Defesa
+    - Suporte
+    resumo: Reflete dano e reduz a cura do inimigo
+    captura: 38 - Meio item.png
+    status:
+    - tipo: Armadura
+      valor: 30
+    passivas:
+    - nome: Espinhos
+      texto: ao ser atingido por um ataque, causa (4 + 6% da Armadura adicional) de Dano Mágico ao atacante.
+    - nome: Entrelaçar
+      texto: aplica 40% de Feridas Dolorosas a Campeões inimigos por 3s ao ser atingido pelos ataques deles ou ao causar dano a eles.
+    receita:
+    - Couraça de Pano
+    fabrica:
+    - Armadura de Espinhos
+  Proteção Glacial:
+    custo: 1000
+    secao: tier_medio
+    abas:
+    - Defesa
+    - Suporte
+    resumo: +20 Armadura, +150 Mana, +10 Aceleração de Habilidade
+    captura: 39 - Meio item.png
+    status:
+    - tipo: Armadura
+      valor: 20
+    - tipo: Mana Máximo
+      valor: 150
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas: []
+    receita:
+    - Couraça de Pano
+    fabrica:
+    - Coração Congelado
+    - Manopla dos Glacinatas
+  Fago:
+    custo: 1000
+    secao: tier_medio
+    abas:
+    - Lutador
+    resumo: Os ataques aumentam a Velocidade de Movimento
+    marcador: reformulado
+    captura: 4 - Meio item.png
+    status:
+    - tipo: Vida Máxima
+      valor: 150
+    - tipo: Dano de Ataque
+      valor: 15
+    passivas:
+    - nome: Fúria
+      texto: ao contato, Ataques concedem 20 de Velocidade de Movimento por 2s. A Velocidade de Movimento adicional não acumula. Campeões de Ataque
+        a distância recebem valores reduzidos pela metade.
+    receita:
+    - Espada Longa
+    fabrica:
+    - Cutelo Negro
+    - Força da Trindade
+    - Hemodrenário
+    - Hexoplaca Experimental
+    - Quebrapassos
+  Carapaça do Vigia:
+    custo: 1050
+    secao: tier_medio
+    abas:
+    - Defesa
+    - Suporte
+    resumo: Reduz a Velocidade de Ataque do inimigo
+    captura: 40 - Meio item.png
+    status:
+    - tipo: Armadura
+      valor: 35
+    passivas:
+    - nome: Aço Gelado
+      texto: reduz a Velocidade de Ataque dos inimigos em 15% por 1,5s ao ser atingido por um ataque.
+    receita:
+    - Couraça de Pano
+    fabrica:
+    - Coração Congelado
+    - Presságio de Randuin
+  Bandana de Mercúrio:
+    custo: 1100
+    secao: tier_medio
+    ativavel: true
+    abas:
+    - Defesa
+    - Lutador
+    - Assassino
+    - Atirador
+    resumo: Dissipa efeitos de controle de grupo
+    captura: 5 ativavel - Meio item.png
+    status:
+    - tipo: Resistência Mágica
+      valor: 30
+    passivas:
+    - nome: Bandana de Mercúrio (Ativo)
+      texto: remove de si todos os efeitos de Controle de Grupo e concede imunidade a Controle de Grupo por 0,25s.
+    - nome: Perseverança (Passivo)
+      texto: quando o efeito de Mercúrio terminar, recebe 30% de Tenacidade e 30% de Resistência a Lentidão por 1,5s (60s de Tempo de Recarga).
+        Não pode ser usado no ar ou ao sofrer um empurrão.
+    receita:
+    - Manto Anula-Magia
+    fabrica:
+    - Cimitarra Mercurial
+  Catalisador das Eras:
+    custo: 1100
+    secao: tier_medio
+    abas:
+    - Defesa
+    - Mágico
+    resumo: Consome Mana para Curar
+    captura: 26 - Meio item.png
+    status:
+    - tipo: Vida Máxima
+      valor: 200
+    - tipo: Mana Máximo
+      valor: 300
+    passivas:
+    - nome: Eternidade
+      texto: restaura Mana igual a 15% do dano sofrido vindo de Campeões. Regenera Vida equivalente a 20% do custo de Mana. Limite de 15 de Vida
+        a cada conjuração.
+    receita:
+    - Cristal de Rubi
+    fabrica:
+    - Bastão das Eras
+  Capuz do Espectro:
+    custo: 1100
+    secao: tier_medio
+    abas:
+    - Defesa
+    - Suporte
+    resumo: Aumenta a Regeneração de Vida ao sofrer dano
+    captura: 41 - Meio item.png
+    status:
+    - tipo: Vida Máxima
+      valor: 175
+    - tipo: Resistência Mágica
+      valor: 20
+    passivas:
+    - nome: Visitação Espectral
+      texto: concede 150% de Regeneração de Vida por 10s após sofrer dano de um Campeão inimigo.
+    receita:
+    - Manto Anula-Magia
+    fabrica:
+    - Manto da Aurora
+    - Rookern Lamúrico
+  Brasa de Bami:
+    custo: 1200
+    secao: tier_medio
+    abas:
+    - Defesa
+    resumo: Queima os inimigos próximos
+    marcador: reformulado
+    captura: 42 - Meio item.png
+    status:
+    - tipo: Vida Máxima
+      valor: 250
+    - tipo: Aceleração de Habilidade
+      valor: 5
+    passivas:
+    - nome: Brasas
+      texto: causa 10–20 de Dano Mágico por segundo a inimigos próximos. (Causa 115% do dano contra tropas e monstros.)
+    receita:
+    - Cristal de Rubi
+    - Anel da Revelação
+    fabrica:
+    - Resplendor Vazio
+    - Égide de Fogo Solar
+  Punho de Jaurim:
+    custo: 1200
+    secao: tier_medio
+    abas:
+    - Defesa
+    resumo: +200 Vida, +15 DdA
+    status:
+    - tipo: Vida Máxima
+      valor: 200
+    - tipo: Dano de Ataque
+      valor: 15
+    passivas: []
+    receita:
+    - Cristal de Rubi
+    - Espada Longa
+    fabrica:
+    - Armadura Sangrenta do Suserano
+    - Céu Dividido
+    - Hemodrenário
+    - Hexoplaca Experimental
+    - Hidra Titânica
+    - Lança de Shojin
+    - Limiar da Noite
+    - Quebracascos
+    - Quebrapassos
+    - Ruptor Divino
+    - Sinal de Sterak
+    captura: 43 - Meio item.png
+  Machado Termestre:
+    custo: 1200
+    secao: tier_medio
+    abas:
+    - Lutador
+    - Atirador
+    resumo: +20 DdA, +15% VdA
+    marcador: novo
+    captura: 6 - Meio item.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 20
+    - tipo: '% Velocidade de Ataque'
+      valor: 15
+    passivas: []
+    receita:
+    - Espada Longa
+    - Adaga
+    fabrica:
+    - Força da Trindade
+    - Mata-Cráquens
+    - Terminus
+  Cetro Vampírico:
+    custo: 1200
+    secao: tier_medio
+    abas:
+    - Lutador
+    - Atirador
+    resumo: +20 DdA, +8% Roubo de Vida
+    marcador: reformulado
+    captura: 7 - Meio item.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 20
+    - tipo: '% Roubo de Vida'
+      valor: 8
+    passivas: []
+    receita:
+    - Espada Longa
+    fabrica:
+    - Cimitarra Mercurial
+    - Espada do Rei Destruído
+    - Sedenta por Sangue
+  Último Sussurro:
+    custo: 1200
+    secao: tier_medio
+    abas:
+    - Lutador
+    - Assassino
+    - Atirador
+    resumo: Penetração de Armadura
+    marcador: reformulado
+    captura: 8 - Meio item.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 15
+    - tipo: '% Penetração de Armadura'
+      valor: 15
+    passivas: []
+    receita:
+    - Espada Longa
+    fabrica:
+    - Lembranças do Lorde Dominik
+    - Lembrete Mortal
+    - Rancor de Serylda
+  Hexdrinker:
+    custo: 1200
+    secao: tier_medio
+    abas:
+    - Lutador
+    resumo: +20 DdA, +20 RM
+    captura: 9 - Meio item.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 20
+    - tipo: Resistência Mágica
+      valor: 20
+    passivas: []
+    receita:
+    - Espada Longa
+    - Manto Anula-Magia
+    fabrica:
+    - Mandíbula de Malmortius
+  Martelo de Guerra de Caulfield:
+    custo: 1200
+    secao: tier_medio
+    abas:
+    - Lutador
+    - Assassino
+    - Atirador
+    resumo: +25 DdA, +10 Aceleração de Habilidade
+    captura: 10 - Meio item.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 25
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas: []
+    receita:
+    - item: Espada Longa
+      qtd: 2
+    fabrica:
+    - Colhedor de Essência
+    - Crepúsculo de Draktharr
+    - Céu Dividido
+    - Dança da Morte
+    - Eclipse
+    - Lâmina Fantasma de Youmuu
+    - Manamune
+    - Presa da Serpente
+    - Rancor de Serylda
+    - Serrespada Quimiopunk
+  Armaguarda da Caçadora:
+    custo: 1400
+    secao: tier_medio
+    ativavel: true
+    abas:
+    - Defesa
+    - Mágico
+    resumo: Fica invulnerável
+    captura: 31 ativavel - Meio item.png
+    status:
+    - tipo: Armadura
+      valor: 20
+    - tipo: Poder de Habilidade
+      valor: 35
+    passivas:
+    - nome: Estase (Ativo)
+      texto: torna-se invulnerável e inalvejável por 2,5s, mas sem poder se mexer, atacar, conjurar habilidades nem usar itens. (150s de Tempo
+        de Recarga)
+    receita:
+    - Tomo Amplificador
+    - Couraça de Pano
+    fabrica:
+    - Ampulheta de Zhonya
+  Barreira Verdejante:
+    custo: 1600
+    secao: tier_medio
+    abas:
+    - Defesa
+    - Mágico
+    resumo: Bloqueia uma habilidade inimiga
+    captura: 32 - Meio item.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 40
+    - tipo: Resistência Mágica
+      valor: 25
+    passivas:
+    - nome: Anular
+      texto: concede um Escudo de Feitiço que bloqueia a próxima habilidade inimiga (65s de Tempo de Recarga).
+    receita:
+    - Tomo Amplificador
+    - Manto Anula-Magia
+    fabrica:
+    - Véu da Banshee
+  Lágrima da Deusa:
+    custo: 400
+    secao: basico
+    abas:
+    - Defesa
+    - Lutador
+    - Assassino
+    - Atirador
+    - Mágico
+    resumo: Aumenta o Mana
+    marcador: reformulado
+    captura: 3 - Item menor.png
+    status:
+    - tipo: Mana Máximo
+      valor: 200
+    passivas:
+    - nome: Fascínio
+      texto: 10% do Mana usado é devolvido.
+    - nome: Carga de Mana
+      texto: aumenta o Mana máximo em 5 toda vez que você usa Mana. Atinge o limite ao alcançar 700 de Mana adicional. Aciona até 3 vezes a cada
+        10s. Você só pode carregar um item Lágrima da Deusa por vez.
+    receita: []
+    fabrica:
+    - Aproximação Invernal
+    - Cajado do Arcanjo
+    - Manamune
+    - Tiara Sussurrante
+  Adaga:
+    custo: 400
+    secao: basico
+    abas:
+    - Lutador
+    - Atirador
+    resumo: +12% VdA
+    marcador: reformulado
+    captura: 4 - Item menor.png
+    status:
+    - tipo: '% Velocidade de Ataque'
+      valor: 12
+    passivas: []
+    receita: []
+    fabrica:
+    - Adagas Rápidas Navori
+    - Arco Recurvo
+    - Dançarina Fantasma
+    - Estilhaço de Kircheis
+    - Grevas do Berserker
+    - Hexoplaca Experimental
+    - Limite da Razão
+    - Machado Termestre
+    - Quebrapassos
+    - Zelo
+  Cristal de Rubi:
+    custo: 500
+    secao: basico
+    abas:
+    - Defesa
+    - Mágico
+    resumo: +150 Vida
+    captura: 8 - Item menor.png
+    status:
+    - tipo: Vida Máxima
+      valor: 150
+    passivas: []
+    receita: []
+    fabrica:
+    - Botas Galvanizadas de Aço
+    - Brasa de Bami
+    - Catalisador das Eras
+    - Cinto do Gigante
+    - Coração de Aço
+    - Couraça Lunar Alada
+    - Couraça do Defunto
+    - Força da Natureza
+    - Gema Ardente
+    - Hidra Titânica
+    - Máscara Assustadora
+    - Passos de Mercúrio
+    - Placa Gargolítica
+    - Punho de Jaurim
+    - Tiara Sussurrante
+    - Tridente da Oceânide
+  Couraça de Pano:
+    custo: 500
+    secao: basico
+    abas:
+    - Defesa
+    resumo: +20 Armadura
+    captura: 10 - Item menor.png
+    status:
+    - tipo: Armadura
+      valor: 20
+    passivas: []
+    receita: []
+    fabrica:
+    - Armadilha de Yordle
+    - Armaguarda da Caçadora
+    - Carapaça do Vigia
+    - Colete Espinhoso
+    - Convergência de Zeke
+    - Cota de Malha
+    - Medalhão dos Solari de Ferro
+    - Proteção Glacial
+    - Virtude Radiante
+  Manto Anula-Magia:
+    custo: 500
+    secao: basico
+    abas:
+    - Defesa
+    resumo: +20 RM
+    captura: 11 - Item menor.png
+    status:
+    - tipo: Resistência Mágica
+      valor: 20
+    passivas: []
+    receita: []
+    fabrica:
+    - Armadilha de Yordle
+    - Bandana de Mercúrio
+    - Barreira Verdejante
+    - Capa Negatron
+    - Capuz do Espectro
+    - Convergência de Zeke
+    - Hexdrinker
+    - Medalhão dos Solari de Ferro
+    - Virtude Radiante
+  Espada Longa:
+    custo: 500
+    secao: basico
+    abas:
+    - Lutador
+    - Assassino
+    - Atirador
+    resumo: +12 DdA
+    captura: 5 - Item menor.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 12
+    passivas: []
+    receita: []
+    fabrica:
+    - Aljava Vespertina
+    - Arco-escudo Imortal
+    - Botas do Dinamismo
+    - Cetro Vampírico
+    - Chamado do Carrasco
+    - Cimitarra Mercurial
+    - Cutelo Negro
+    - Espada G. p. C.
+    - Fago
+    - Força do Vendaval
+    - Hexdrinker
+    - Hexótica C44
+    - Limiar da Noite
+    - Machado Termestre
+    - Manamune
+    - Martelo de Guerra de Caulfield
+    - Mata-Cráquens
+    - Picareta
+    - Punhal Serrilhado
+    - Punho de Jaurim
+    - Último Sussurro
+  Luvas da Pancadaria:
+    custo: 500
+    secao: basico
+    abas:
+    - Lutador
+    - Assassino
+    - Atirador
+    resumo: +10% Taxa de Crít.
+    captura: 6 - Item menor.png
+    status:
+    - tipo: '% Taxa de Crítico'
+      valor: 10
+    passivas: []
+    receita: []
+    fabrica:
+    - Aljava Vespertina
+    - Arco-escudo Imortal
+    - Chuva de Canivete
+    - Colhedor de Essência
+    - Gume do Infinito
+    - Lembrete Mortal
+    - Zelo
+  Presa da Serpente:
+    custo: 2800
+    secao: aprimorado
+    abas:
+    - Assassino
+    resumo: Antiescudo
+    captura: 1 - Assassino.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 50
+    - tipo: Penetração de Armadura
+      valor: 15
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Ceifador de Escudos
+      texto: causar dano a um Campeão inimigo reduz quaisquer Escudos que ele receba por 3s. Campeões corpo a corpo aplicam (10% do Dano de Ataque
+        adicional + 40)% de redução de Escudo, com máximo de 60%; Campeões de ataque a distância aplicam (10% do Dano de Ataque adicional + 25)%
+        de redução de Escudo, com máximo de 45%. Causar dano a um inimigo que não esteja afetado por Ceifador de Escudos reduz todos os Escudos
+        dele aplicando os mesmos valores.
+    receita:
+    - Punhal Serrilhado
+    - Martelo de Guerra de Caulfield
+  Lâmina Fantasma de Youmuu:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Assassino
+    resumo: Aumenta a Velocidade de Movimento
+    marcador: reformulado
+    captura: 3 - Assassino.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 55
+    - tipo: Penetração de Armadura
+      valor: 15
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas:
+    - nome: Embalo
+      texto: 3s após sair de combate contra Campeões, recebe 30 de Velocidade de Movimento (20 para Campeões de Ataque a distância).
+    receita:
+    - Punhal Serrilhado
+    - Martelo de Guerra de Caulfield
+  Crepúsculo de Draktharr:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Assassino
+    resumo: Os ataques causam dano adicional
+    captura: 4 - Assassino.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 55
+    - tipo: Penetração de Armadura
+      valor: 18
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Predador Noturno
+      texto: Seu primeiro ataque contra um Campeão causa 60–160 de Dano Físico adicional e 99% de Lentidão por 0,35s (10s de Tempo de Recarga).
+        Eliminar Campeões redefine o Tempo de Recarga.
+    receita:
+    - Punhal Serrilhado
+    - Martelo de Guerra de Caulfield
+  Limiar da Noite:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Assassino
+    resumo: Bloqueia uma habilidade inimiga
+    captura: 6 - Assassino.png
+    status:
+    - tipo: Vida Máxima
+      valor: 250
+    - tipo: Dano de Ataque
+      valor: 50
+    - tipo: Penetração de Armadura
+      valor: 12
+    passivas:
+    - nome: Anular
+      texto: concede um Escudo de Feitiço que bloqueia a próxima habilidade inimiga (35s de Tempo de Recarga).
+    receita:
+    - Punhal Serrilhado
+    - Punho de Jaurim
+    - Espada Longa
+  A Coletora:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Assassino
+    - Atirador
+    resumo: Executa Campeões com Vida baixa.
+    marcador: reformulado
+    captura: 7 - Assassino, 17 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 50
+    - tipo: Penetração de Armadura
+      valor: 10
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    passivas:
+    - nome: Morte Abrupta
+      texto: se você causar dano suficiente para deixar um Campeão inimigo com Vida abaixo de 5% da Vida máxima, ele será executado, aumentando
+        permanentemente o limiar percentual de execução em 0,1% da Vida máxima e concedendo 25 de ouro adicional.
+    receita:
+    - Aljava Vespertina
+    - Punhal Serrilhado
+  Punhal Serrilhado:
+    custo: 1000
+    secao: tier_medio
+    abas:
+    - Assassino
+    resumo: Penetração de Armadura
+    captura: 11 - Meio item.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 20
+    - tipo: Penetração de Armadura
+      valor: 8
+    passivas: []
+    receita:
+    - Espada Longa
+    fabrica:
+    - A Coletora
+    - Crepúsculo de Draktharr
+    - Limiar da Noite
+    - Lâmina Fantasma de Youmuu
+    - Presa da Serpente
+  Dardos de Caça-Demônios:
+    custo: 2650
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Após usar sua ultimate seus próximos Ataques causarão Acerto Crítico
+    marcador: novo
+    captura: 1 - Atirador.png
+    status:
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    - tipo: '% Velocidade de Ataque'
+      valor: 45
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas:
+    - nome: Vigília Noturna
+      texto: recebe 20 de Aceleração da Habilidade Ultimate.
+    - nome: Barragem de Abertura
+      texto: depois de conjurar sua ultimate, seus próximos 3 Ataques dentro de 8s recebem 50% de Velocidade de Ataque e causam Acerto Crítico
+        de 80% do seu Dano Crítico normal. Se algum Ataque já seria um Acerto Crítico, ele causará 15% de Dano Verdadeiro adicional em vez disso
+        (45s de Tempo de Recarga).
+    receita:
+    - Zelo
+    - Estilhaço de Kircheis
+  Canhão Fumegante:
+    custo: 2650
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Aumenta o Alcance de Ataque e o dano
+    marcador: novo
+    captura: 2 - Atirador.png
+    status:
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    - tipo: '% Velocidade de Ataque'
+      valor: 40
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas:
+    - nome: Atirador de Elite
+      texto: movimentar-se e atacar gera um Ataque Energizado que tem 35% de Alcance de Ataque adicional (até um alcance máximo de 150) e causa
+        80 de Dano Mágico adicional.
+    receita:
+    - Zelo
+    - Estilhaço de Kircheis
+  Furacão de Runaan:
+    custo: 2650
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Ataques à distância acertam 3 alvos
+    marcador: reformulado
+    captura: 3 - Atirador.png
+    status:
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    - tipo: '% Velocidade de Ataque'
+      valor: 40
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas:
+    - nome: Fúria do Vento
+      texto: seus ataques atingem mais 2 inimigos próximos, causando 55% de Dano de Ataque. Esses ataques podem causar Acerto Crítico e acionar
+        efeitos de contato.
+    - nome: null
+      texto: Campeões de ataque corpo a corpo não podem usar este item.
+    receita:
+    - Zelo
+    - Estilhaço de Kircheis
+  Dançarina Fantasma:
+    custo: 2650
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Velocidade de Movimento e Velocidade de Ataque
+    marcador: reformulado
+    captura: 4 - Atirador.png
+    status:
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    - tipo: '% Velocidade de Ataque'
+      valor: 40
+    - tipo: '% Velocidade de Movimento'
+      valor: 7
+    passivas:
+    - nome: Valsa Espectral
+      texto: ao contato, seus Ataques contra um Campeão concedem 6% de Velocidade de Ataque e 1% de Velocidade de Movimento por 6s. Esses bônus
+        acumulam até 5x.
+    receita:
+    - Zelo
+    - item: Adaga
+      qtd: 2
+  Adagas Rápidas Navori:
+    custo: 2650
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Ataques reduzem o Tempo de Recarga das habilidades básicas.
+    marcador: reformulado
+    captura: 5 - Atirador.png
+    status:
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    - tipo: '% Velocidade de Ataque'
+      valor: 40
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas:
+    - nome: Golpes Hábeis
+      texto: ataques reduzem em 15% o Tempo de Recarga restante das suas habilidades básicas.
+    receita:
+    - Zelo
+    - item: Adaga
+      qtd: 2
+  Limite da Razão:
+    custo: 2800
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Ataques básicos causam dano adicional
+    marcador: reformulado
+    captura: 6 - Atirador.png
+    status:
+    - tipo: '% Velocidade de Ataque'
+      valor: 50
+    - tipo: Resistência Mágica
+      valor: 45
+    - tipo: '% Tenacidade'
+      valor: 20
+    passivas:
+    - nome: No Limite da Razão
+      texto: Ataques causam 40 de Dano Mágico adicional ao contato.
+    receita:
+    - Arco Recurvo
+    - Capa Negatron
+    - Adaga
+  Hexótica C44:
+    custo: 2900
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Aumenta o Alcance de Ataque e o dano
+    marcador: reformulado
+    captura: 7 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 55
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    passivas:
+    - nome: Magnificação
+      texto: causa 0–10% de dano a mais com Ataques dependendo da distância que seu inimigo está de você (dano máximo a 550 de alcance).
+    - nome: Mira Arcana
+      texto: quando um Campeão a quem você tenha causado dano nos últimos 3s for abatido, receberá 100 de Alcance de Ataque adicional por 8s.
+    receita:
+    - Picareta
+    - Aljava Vespertina
+    - Espada Longa
+  Mata-Cráquens:
+    custo: 2900
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Causa Dano Físico adicional
+    marcador: reformulado
+    captura: 8 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 45
+    - tipo: '% Velocidade de Ataque'
+      valor: 35
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas:
+    - nome: Derrubar
+      texto: todo terceiro ataque causa 150–210 de Dano Físico adicional (120–168 para Campeões de ataque a distância), aumentado em 0,75% a cada
+        1% de Vida perdida do alvo, até um máximo de 75%.
+    receita:
+    - Machado Termestre
+    - Arco Recurvo
+    - Espada Longa
+  Dente de Na'Shor:
+    custo: 2900
+    secao: aprimorado
+    abas:
+    - Atirador
+    - Mágico
+    resumo: Os ataques causam dano adicional
+    marcador: reformulado
+    captura: 9 - Atirador, 16 - Magico.png
+    status:
+    - tipo: '% Velocidade de Ataque'
+      valor: 50
+    - tipo: Poder de Habilidade
+      valor: 80
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Roer
+      texto: Ataques causam (15 + 20% do Poder de Habilidade adicional) de Dano Mágico como efeitos de contato.
+    receita:
+    - Códex Demoníaco
+    - Varinha Explosiva
+    - Arco Recurvo
+  Faca de Statikk:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Atirador
+    - Mágico
+    resumo: Ataques Energizados causam dano em cadeia
+    marcador: novo
+    captura: 11 - Atirador, 17 - Magico.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 40
+    - tipo: '% Velocidade de Ataque'
+      valor: 30
+    - tipo: Poder de Habilidade
+      valor: 40
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas:
+    - nome: Eletrochoque
+      texto: Ataques concedem 5 acúmulos adicionais de Energizado.
+    - nome: Eletrocentelha
+      texto: mover-se e Atacar gera um Ataque Energizado que dispara uma cadeia de relâmpagos em 4 a 7 alvos (por nível), causando 60 de Dano
+        Mágico (aumentado para 90 de Dano Mágico contra tropas e monstros) e aplicando efeitos de contato aos alvos secundários da propagação.
+    receita:
+    - Picareta
+    - Cintilação Etérea
+    - Estilhaço de Kircheis
+  Lâmina da Fúria de Guinsoo:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Atirador
+    - Mágico
+    resumo: Aplica efeitos de contato
+    marcador: reformulado
+    captura: 12 - Atirador, 21 - Magico.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 35
+    - tipo: '% Velocidade de Ataque'
+      valor: 30
+    - tipo: Poder de Habilidade
+      valor: 30
+    passivas:
+    - nome: Ira
+      texto: Ataques causam 30 de Dano Mágico adicional ao contato.
+    - nome: Golpe Fervente
+      texto: ataques concedem 8% de Velocidade de Ataque, acumulando até 4 vezes e chegando a um máximo de 32% de Velocidade de Ataque. Enquanto
+        estiver com o máximo de acúmulos, a cada 3 ataque(s) aplicará efeitos de contato mais 1x.
+    receita:
+    - Picareta
+    - Arco Recurvo
+    - Tomo Amplificador
+  Lembrete Mortal:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Penetração de Armadura (%) e redução de cura inimiga
+    marcador: reformulado
+    captura: 13 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 35
+    - tipo: '% Penetração de Armadura'
+      valor: 30
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    passivas:
+    - nome: Sepse
+      texto: causar Dano Físico a Campeões inimigos aplica 50% de Feridas Dolorosas por 3s.
+    receita:
+    - Último Sussurro
+    - Chamado do Carrasco
+    - Luvas da Pancadaria
+  Colhedor de Essência:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Após conjurar uma Habilidade seu próximo Ataque causará dano adicional
+    marcador: reformulado
+    captura: 15 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 50
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Lâmina Arcana
+      texto: usar uma Habilidade faz seu próximo Ataque em até 10s causar Dano Físico adicional equivalente a 135% do Dano de Ataque base mais
+        0–80 (que aumenta em 0,8 a cada 1% de Taxa de Crítico) e restaurar 50% desse dano como Mana (1,5s de Tempo de Recarga).
+    - nome: null
+      texto: Só é possível carregar um item de Lâmina Arcana.
+    receita:
+    - Fulgor
+    - Martelo de Guerra de Caulfield
+    - Luvas da Pancadaria
+  Arco-escudo Imortal:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Recebe um Escudo quando a Vida está baixa
+    marcador: novo
+    captura: 16 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 55
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    passivas:
+    - nome: Salva-Vidas
+      texto: dano que deixe você com menos de 35% de Vida concede um Escudo por 3s. Ele absorve 350–650 de dano para Campeões de ataque corpo
+        a corpo e 300–550 de dano para Campeões de ataque a distância (por nível) (70s de Tempo de Recarga).
+    receita:
+    - Aljava Vespertina
+    - Espada Longa
+    - Luvas da Pancadaria
+  Terminus:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Aumenta a Penetração de Armadura Penetração Mágica Armadura e Resistência Mágica
+    marcador: reformulado
+    captura: 18 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 35
+    - tipo: '% Velocidade de Ataque'
+      valor: 35
+    passivas:
+    - nome: Sombra
+      texto: ataques causam 30 de Dano Mágico adicional ao contato.
+    - nome: Justaposição
+      texto: ao atacar, alterna entre efeitos ao contato da Luz e da Escuridão. Ataques da Luz concedem 5–8 de Armadura e de Resistência Mágica
+        (por nível) por 5s ao contato. Ataques da Escuridão concedem 10% de Penetração de Armadura e 10% de Penetração Mágica por 5s ao contato.
+        Cada efeito ao contato acumula até 3x. Enquanto possuir este item, a Penetração de Armadura e a Penetração Mágica adicionais concedidas
+        por ele têm um limite de 40%.
+    - nome: null
+      texto: Você não pode ter este item e Lembrete Mortal ao mesmo tempo.
+    - nome: null
+      texto: Você não pode ter este item e Rancor de Serylda ao mesmo tempo.
+    receita:
+    - Machado Termestre
+    - Arco Recurvo
+  Chuva de Canivete:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Ataques Energizados causam dano adicional e concedem Velocidade de Movimento
+    marcador: novo
+    captura: 19 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 50
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    - tipo: '% Velocidade de Ataque'
+      valor: 20
+    passivas:
+    - nome: Raio
+      texto: movimentar-se e atacar gera um Ataque Energizado que causa 120 de Dano Mágico adicional e concede 45% de Velocidade de Movimento
+        por 1,5s ao acertar.
+    receita:
+    - Estilhaço de Kircheis
+    - Espada G. p. C.
+    - Luvas da Pancadaria
+  Flechatroz de Yun Tal:
+    custo: 3100
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Ataques recebem Taxa de Crítico
+    marcador: reformulado
+    captura: 20 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 50
+    - tipo: '% Velocidade de Ataque'
+      valor: 35
+    passivas:
+    - nome: Praticar e Matar
+      texto: ao atacar, recebe Taxa de Crítico permanentemente (0,4% para Campeões de ataque corpo a corpo e 0,2% para Campeões de ataque a distância
+        por Ataque), até um máximo de 25%.
+    - nome: Agitação
+      texto: ao atacar um Campeão inimigo, recebe 35% de Velocidade de Ataque por 6s (25s de Tempo de Recarga). Ataques reduzem esse Tempo de
+        Recarga em 1s, valor que aumenta para 2s no caso de Acertos Críticos.
+    receita:
+    - Estilhaço de Kircheis
+    - Espada G. p. C.
+  Força do Vendaval:
+    custo: 3100
+    secao: aprimorado
+    ativavel: true
+    abas:
+    - Atirador
+    resumo: Concede um avanço e dano adicional
+    marcador: reformulado
+    captura: 21 ativavel - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 60
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas:
+    - nome: Erupção das Brumas (Ativo)
+      texto: avança na direção-alvo e dispara 3 projétil(eis) no inimigo com a Vida mais baixa que estiver próximo ao destino do avanço, priorizando
+        Campeões. Causa Dano Físico igual a 40–125 (por nível) mais 35% do Dano de Ataque adicional (60s de Tempo de Recarga).
+    receita:
+    - Picareta
+    - Aljava Vespertina
+    - Espada Longa
+  Lembranças do Lorde Dominik:
+    custo: 3300
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Penetração de Armadura e dano adicional
+    marcador: reformulado
+    captura: 27 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 35
+    - tipo: '% Penetração de Armadura'
+      valor: 35
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    passivas:
+    - nome: Mata-Gigantes
+      texto: causa dano adicional com base na Vida adicional do Campeão inimigo, causando até 12% de dano adicional quando o Campeão inimigo tiver
+        1.200 de Vida adicional.
+    receita:
+    - Aljava Vespertina
+    - Último Sussurro
+  Gume do Infinito:
+    custo: 3400
+    secao: aprimorado
+    abas:
+    - Atirador
+    resumo: Aumenta o dano do Acerto Crítico
+    marcador: reformulado
+    captura: 28 - Atirador.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 75
+    - tipo: '% Taxa de Crítico'
+      valor: 25
+    passivas:
+    - nome: Infinito
+      texto: Acertos Críticos causam 230% de dano em vez de 200% de dano.
+    receita:
+    - Picareta
+    - Espada G. p. C.
+    - Luvas da Pancadaria
+  Estilhaço de Kircheis:
+    custo: 800
+    secao: tier_medio
+    abas:
+    - Atirador
+    resumo: Causa dano adicional
+    marcador: reformulado
+    captura: 12 - Meio item.png
+    status:
+    - tipo: '% Velocidade de Ataque'
+      valor: 20
+    passivas:
+    - nome: Choque
+      texto: provoca 40 de Dano Mágico adicional ao causar dano a um Campeão inimigo (25s de Tempo de Recarga; Ataques reduzem esse Tempo de Recarga
+        em 1s).
+    receita:
+    - Adaga
+    fabrica:
+    - Canhão Fumegante
+    - Chuva de Canivete
+    - Dardos de Caça-Demônios
+    - Faca de Statikk
+    - Flechatroz de Yun Tal
+    - Furacão de Runaan
+  Arco Recurvo:
+    custo: 900
+    secao: tier_medio
+    abas:
+    - Atirador
+    resumo: Os ataques causam dano adicional
+    captura: 13 - Meio item.png
+    status:
+    - tipo: '% Velocidade de Ataque'
+      valor: 20
+    passivas:
+    - nome: Reforçado
+      texto: os ataques causam 15 de Dano Físico adicional ao contato com os alvos.
+    receita:
+    - Adaga
+    fabrica:
+    - Dente de Na'Shor
+    - Espada do Rei Destruído
+    - Limite da Razão
+    - Lâmina da Fúria de Guinsoo
+    - Mata-Cráquens
+    - Terminus
+  Aljava Vespertina:
+    custo: 1300
+    secao: tier_medio
+    abas:
+    - Atirador
+    resumo: +20 DdA, +15% Taxa de Crít.
+    marcador: reformulado
+    captura: 14 - Meio item.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 20
+    - tipo: '% Taxa de Crítico'
+      valor: 15
+    passivas: []
+    receita:
+    - Espada Longa
+    - Luvas da Pancadaria
+    fabrica:
+    - A Coletora
+    - Arco-escudo Imortal
+    - Força do Vendaval
+    - Hexótica C44
+    - Lembranças do Lorde Dominik
+  Zelo:
+    custo: 1400
+    secao: tier_medio
+    abas:
+    - Atirador
+    resumo: Aumenta a Velocidade de Movimento
+    marcador: reformulado
+    captura: 15 - Meio item.png
+    status:
+    - tipo: '% Taxa de Crítico'
+      valor: 15
+    - tipo: '% Velocidade de Ataque'
+      valor: 15
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas: []
+    receita:
+    - Luvas da Pancadaria
+    - Adaga
+    fabrica:
+    - Adagas Rápidas Navori
+    - Canhão Fumegante
+    - Dançarina Fantasma
+    - Dardos de Caça-Demônios
+    - Furacão de Runaan
+  Espada G. p. C.:
+    custo: 1500
+    secao: tier_medio
+    abas:
+    - Atirador
+    resumo: +40 DdA
+    captura: 16 - Meio item.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 40
+    passivas: []
+    receita:
+    - item: Espada Longa
+      qtd: 2
+    fabrica:
+    - Anjo Guardião
+    - Chuva de Canivete
+    - Flechatroz de Yun Tal
+    - Gume do Infinito
+    - Sedenta por Sangue
+    - Sinal de Sterak
+  Tiara Sussurrante:
+    custo: 2400
+    secao: aprimorado
+    abas:
+    - Mágico
+    - Suporte
+    resumo: Converte Mana em Potência de Escudo e Cura
+    marcador: alterado
+    captura: 1 - Magico, 2 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 200
+    - tipo: Mana Máximo
+      valor: 500
+    - tipo: '% Regeneração de Mana'
+      valor: 50
+    - tipo: '% Potência de Escudo e Cura'
+      valor: 8
+    passivas:
+    - nome: Harmonia
+      texto: recebe 0,25% do Mana máximo como Potência de Escudo e Cura adicional. Conjurar uma Habilidade restitui 25% do Custo de Mana dela.
+    - nome: Carga de Mana
+      texto: concede 14 de Mana máximo a cada gasto de Mana (ocorre até 3x a cada 10s). Acumula até 700 de Mana máximo. Em seguida, este item
+        se transforma em Diadema de Canções.
+    evolucao:
+      nome: Diadema de Canções
+      status:
+      - tipo: Vida Máxima
+        valor: 200
+      - tipo: Mana Máximo
+        valor: 1200
+      - tipo: '% Regeneração de Mana'
+        valor: 50
+      - tipo: '% Potência de Escudo e Cura'
+        valor: 8
+      passivas:
+      - nome: Harmonia
+        texto: recebe 0,25% do Mana máximo como Potência de Escudo e Cura adicional. Conjurar uma Habilidade restitui 25% do Custo de Mana dela.
+      - nome: Diadema
+        texto: enquanto você ou um aliado ao qual você concedeu cura ou Escudo nos últimos 3s está em combate com Campeões, a cada segundo, cura
+          o aliado com a Vida mais baixa a até 800 unidades de vocês em Vida equivalente a 0,8% do Mana máximo.
+      efeitos:
+      - passiva: Harmonia
+        tipo: '% Potência de Escudo e Cura'
+        ratio: 0.0025
+        ref: Mana Máximo
+        escopo: total
+    receita:
+    - Lágrima da Deusa
+    - Ídolo Proibido
+    - Cristal de Rubi
+    efeitos:
+    - passiva: Harmonia
+      tipo: '% Potência de Escudo e Cura'
+      ratio: 0.0025
+      ref: Mana Máximo
+      escopo: total
+    - passiva: Carga de Mana
+      tipo: Mana Máximo
+      valor: 700
+      condicional: true
+  Redenção:
+    custo: 2450
+    secao: aprimorado
+    ativavel: true
+    abas:
+    - Mágico
+    - Suporte
+    resumo: Cura aliados em uma área
+    marcador: reformulado
+    captura: 2 - Magico, 8 - Suporte.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 40
+    - tipo: '% Regeneração de Mana'
+      valor: 50
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    - tipo: '% Potência de Escudo e Cura'
+      valor: 8
+    passivas:
+    - nome: Intervenção (Ativo)
+      texto: alveja uma área grande. Depois de 2,5s, restaura 150–350 da Vida das unidades aliadas (conforme o nível do aliado) e causa 10% da
+        Vida máxima como Dano Verdadeiro a Campeões inimigos (60s de Tempo de Recarga). Pode ser conjurado mesmo após morrer.
+    receita:
+    - Códex Demoníaco
+    - Ídolo Proibido
+  Mandato Imperial:
+    custo: 2600
+    secao: aprimorado
+    abas:
+    - Mágico
+    - Suporte
+    resumo: CG concede dano adicional a aliados
+    marcador: reformulado
+    captura: 3 - Magico, 16 - Suporte.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 60
+    - tipo: '% Regeneração de Mana'
+      valor: 50
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Controle
+      texto: suas Habilidades de Controle de Grupo recebem 20 de Aceleração de Habilidade.
+    - nome: Comando
+      texto: aplicar Controle de Grupo em um Campeão inimigo o marca por 4s, fazendo-o sofrer 7% de dano a mais.
+    receita:
+    - Espelho de Bandópolis
+    - Varinha Explosiva
+  Tridente da Oceânide:
+    custo: 2600
+    secao: aprimorado
+    abas:
+    - Mágico
+    - Suporte
+    resumo: Reduz os Escudos do inimigo
+    captura: 4 - Magico, 17 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 200
+    - tipo: Poder de Habilidade
+      valor: 80
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Arma Letal
+      texto: causar dano de habilidade a um Campeão inimigo reduz quaisquer Escudos que ele receba por 3s. Habilidades de área de ação aplicam
+        (5% do Poder de Habilidade + 25)% de redução de Escudo, com máximo de 45%; habilidades de alvo único aplicam (5% do Poder de Habilidade
+        + 40)% de redução de Escudo, com máximo de 60%. Causar dano a um inimigo que não esteja afetado por Arma Letal reduz todos os Escudos
+        dele aplicando os mesmos valores.
+    receita:
+    - Códex Demoníaco
+    - Varinha Explosiva
+    - Cristal de Rubi
+  Morellonomicon:
+    custo: 2650
+    secao: aprimorado
+    abas:
+    - Mágico
+    - Suporte
+    resumo: Dano Mágico reduz a cura do inimigo
+    captura: 5 - Magico, 18 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 300
+    - tipo: Poder de Habilidade
+      valor: 75
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Aflição
+      texto: causar Dano Mágico a Campeões inimigos aplica 50% de Feridas Dolorosas por 3s.
+    receita:
+    - Orbe do Oblívio
+    - Gema Ardente
+    - Tomo Amplificador
+  Explocinturão Hextec:
+    custo: 2700
+    secao: aprimorado
+    ativavel: true
+    abas:
+    - Mágico
+    resumo: Avanço curto
+    marcador: reformulado
+    captura: 6 ativavel - Magico.png
+    status:
+    - tipo: Vida Máxima
+      valor: 250
+    - tipo: Poder de Habilidade
+      valor: 70
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Protocinturão (Ativo)
+      texto: avança em linha reta e dispara projéteis numa área cônica, causando 100 mais 10% do Poder de Habilidade de Dano Mágico (30s de Tempo
+        de Recarga). Se algum Campeão ou monstro for atingido por mais de um projétil, os projéteis após o primeiro causarão apenas 10% do dano.
+    receita:
+    - Alternador Hextec
+    - Gema Ardente
+    - Tomo Amplificador
+  Cetro de Cristal de Rylai:
+    custo: 2700
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: As habilidades aplicam redução de velocidade
+    captura: 7 - Magico.png
+    status:
+    - tipo: Vida Máxima
+      valor: 350
+    - tipo: Poder de Habilidade
+      valor: 65
+    passivas:
+    - nome: Gélido
+      texto: habilidades de dano e ataques fortalecidos causam 30% de Lentidão a inimigos por 0,75s.
+    receita:
+    - Varinha Explosiva
+    - Cinto do Gigante
+    - Tomo Amplificador
+  Bastão das Eras:
+    custo: 2700
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: Os atributos aumentam ao longo do tempo
+    captura: 8 - Magico.png
+    status:
+    - tipo: Vida Máxima
+      valor: 350
+    - tipo: Poder de Habilidade
+      valor: 50
+    - tipo: Mana Máximo
+      valor: 400
+    passivas:
+    - nome: Eternidade
+      texto: restaura Mana igual a 15% do dano sofrido vindo de Campeões. Regenera Vida equivalente a 20% do custo de Mana. Limite de 25 de Vida
+        a cada conjuração.
+    - nome: Veterano
+      texto: cada acúmulo fornece 15 de Vida, 30 de Mana e 4 de Poder de Habilidade, acumulando na proporção de 1 a cada 35s. Máximo de 10 acúmulos,
+        fornecendo 150 de Vida, 300 de Mana e 40 de Poder de Habilidade.
+    receita:
+    - Varinha Explosiva
+    - Catalisador das Eras
+    efeitos:
+    - passiva: Veterano
+      tipo: Vida Máxima
+      valor: 150
+      condicional: true
+    - passiva: Veterano
+      tipo: Mana Máximo
+      valor: 300
+      condicional: true
+    - passiva: Veterano
+      tipo: Poder de Habilidade
+      valor: 40
+      condicional: true
+  Foco do Horizonte:
+    custo: 2700
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: Causa dano adicional aos alvos marcados
+    captura: 9 - Magico.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 80
+    - tipo: Aceleração de Habilidade
+      valor: 25
+    passivas:
+    - nome: Hiperdisparo
+      texto: causar dano a um Campeão inimigo com uma habilidade a 600 unidades de distância o revela por 8s e aumenta o dano causado em 10%.
+    - nome: Foco
+      texto: ao acionar Hiperdisparo, revela todos os Campeões inimigos dentro de 1.200 unidade(s) do alvo por 3s (12s de Tempo de Recarga).
+    receita:
+    - item: Códex Demoníaco
+      qtd: 2
+    - Tomo Amplificador
+  Malevolência:
+    custo: 2700
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: Item feito para estilos de jogo focados em usar a ultimate
+    captura: 10 - Magico.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 90
+    - tipo: Mana Máximo
+      valor: 500
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Desprezo
+      texto: suas ultimates recebem 20 de Aceleração de Habilidade.
+    - nome: Névoa Odiosa
+      texto: causar dano a um Campeão com sua ultimate queima o chão debaixo do alvo por 3s, causando Dano Mágico igual a 60 mais 5% do Poder
+        de Habilidade por segundo e reduzindo-lhe a Resistência Mágica em 10. O alcance da queimadura aumenta com o dano, atingindo o máximo de
+        alcance com 800 de dano.
+    receita:
+    - Capítulo Perdido
+    - Varinha Explosiva
+  Ápice da Tempestade:
+    custo: 2800
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: Item poderoso para magos de escalamento
+    captura: 11 - Magico.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 90
+    - tipo: Penetração Mágica
+      valor: 15
+    - tipo: '% Velocidade de Movimento'
+      valor: 6
+    passivas:
+    - nome: Invasor da Tempestade
+      texto: ao causar dano a um Campeão, provocar dano equivalente a 25% da Vida máxima dele dentro de 2,5s aplica Dilúvio ao alvo e concede
+        a você 25% de Velocidade de Movimento adicional por 2,5s (25s de Tempo de Recarga).
+    - nome: Dilúvio
+      texto: golpeia o alvo após 2s, causando Dano Mágico igual a 125 mais 10% do Poder de Habilidade. Se o alvo for abatido antes do golpe, detona
+        imediatamente numa área grande e concede 25 de ouro.
+    receita:
+    - Cintilação Etérea
+    - Alternador Hextec
+  Tocha de Chamas Negras:
+    custo: 2800
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: Causa dano de Queimadura
+    captura: 12 - Magico.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 80
+    - tipo: Mana Máximo
+      valor: 500
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Labareda Nefasta
+      texto: causar dano com Habilidades faz com que os inimigos sofram queimaduras que provocam 20 + 2% do Poder de Habilidade de Dano Mágico
+        por segundo durante 3s. Causa 40 mais 2% do Poder de Habilidade de Dano Mágico por segundo a monstros.
+    - nome: Chamas Negras
+      texto: para cada Campeão inimigo ou monstro afetado pela sua Labareda Nefasta, recebe 4% de Poder de Habilidade.
+    receita:
+    - Cinzas do Destino
+    - Capítulo Perdido
+  Eco de Luden:
+    custo: 2800
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: As habilidades causam dano adicional
+    captura: 13 - Magico.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 100
+    - tipo: Mana Máximo
+      valor: 500
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Eco
+      texto: sua próxima Habilidade de dano ou Ataque fortalecido causa 75 mais 8% do Poder de Habilidade de Dano Mágico ao alvo primário e a
+        até 4 outros inimigos próximos (9s de Tempo de Recarga). Ao atingir menos alvos secundários do que o máximo, para cada um a menos, Eco
+        causará 20 mais 1,2% do Poder de Habilidade de dano adicional ao alvo primário.
+    receita:
+    - Capítulo Perdido
+    - Alternador Hextec
+  Perdição de Lich:
+    custo: 2800
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: Os ataques causam dano adicional após conjurar habilidades
+    captura: 14 - Magico.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 100
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    - tipo: '% Velocidade de Movimento'
+      valor: 5
+    passivas:
+    - nome: Lâmina Arcana
+      texto: usar uma habilidade faz com que o próximo ataque desferido dentro de 10s cause Dano Mágico adicional igual a 75% do Dano de Ataque
+        base + 45% do Poder de Habilidade. (1,5s de Tempo de Recarga) Seu dano é reduzido contra estruturas.
+    receita:
+    - Cintilação Etérea
+    - Fulgor
+    - Tomo Amplificador
+  Maldição Sanguinária:
+    custo: 2900
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: Reduz a Resistência Mágica de um inimigo.
+    captura: 15 - Magico.png
+    status:
+    - tipo: Vida Máxima
+      valor: 350
+    - tipo: Poder de Habilidade
+      valor: 65
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Decadência Vil
+      texto: causar Dano Mágico com habilidades ou passivas a Campeões reduz a Resistência Mágica deles em 7,5% por 6s (até um máximo de 30%).
+    receita:
+    - Códex Demoníaco
+    - Máscara Assustadora
+  Criptoflora:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Mágico
+    - Suporte
+    resumo: Abates de Campeão restauram Vida
+    captura: 19 - Magico, 22 - Suporte.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 75
+    - tipo: '% Penetração Mágica'
+      valor: 30
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Vida na Morte
+      texto: quando um Campeão a quem você tenha causado dano nos últimos 3s é abatido, uma explosão se espalha a partir do cadáver, recuperando
+        100 mais 20% do Poder de Habilidade de Vida dos seus aliados (60s de Tempo de Recarga).
+    receita:
+    - Códex Demoníaco
+    - Ametista do Vazio
+    - Tomo Amplificador
+  Cajado do Vazio:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: Penetração Mágica (%)
+    captura: 20 - Magico.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 95
+    - tipo: '% Penetração Mágica'
+      valor: 40
+    passivas: []
+    receita:
+    - Bastão Desnecessariamente Grande
+    - Ametista do Vazio
+  Tormento de Liandry:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: As habilidades causam dano adicional
+    captura: 22 - Magico.png
+    status:
+    - tipo: Vida Máxima
+      valor: 300
+    - tipo: Poder de Habilidade
+      valor: 70
+    passivas:
+    - nome: Tormento
+      texto: habilidades de dano e ataques fortalecidos queimam inimigos em 2% da Vida máxima como Dano Mágico por segundo durante 3s.
+    - nome: Loucura
+      texto: causa 2% mais dano a cada segundo em combate contra Campeões, com limite de 6% após 3s.
+    receita:
+    - Cinzas do Destino
+    - Máscara Assustadora
+  Cajado do Arcanjo:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: Converte Mana em Poder de Habilidade
+    captura: 23 - Magico.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 60
+    - tipo: Mana Máximo
+      valor: 500
+    - tipo: Aceleração de Habilidade
+      valor: 25
+    passivas:
+    - nome: Fascínio
+      texto: concede Poder de Habilidade igual a 1% do Mana máximo e devolve 25% de todo o Mana usado.
+    - nome: Carga de Mana
+      texto: aumenta o Mana máximo em 14 toda vez que você usa Mana. Atinge o limite ao alcançar 700 de Mana adicional, transformando o Cajado
+        do Arcanjo no Abraço de Seraph. Aciona até 3 vezes a cada 10s. Você só pode carregar um item Lágrima da Deusa por vez.
+    evolucao:
+      nome: Abraço de Seraph
+      status:
+      - tipo: Poder de Habilidade
+        valor: 60
+      - tipo: Mana Máximo
+        valor: 1200
+      - tipo: Aceleração de Habilidade
+        valor: 25
+      passivas:
+      - nome: Fascínio
+        texto: concede Poder de Habilidade igual a 2% do Mana máximo e devolve 25% de todo o Mana usado.
+      - nome: Salva-Vidas
+        texto: qualquer dano que deixe você com menos de 35% de Vida concede um Escudo que absorve dano equivalente a 16% do seu Mana máximo por
+          2s. Você só pode ter 1 item Lágrima da Deusa (70s de Tempo de Recarga).
+      efeitos:
+      - passiva: Fascínio
+        tipo: Poder de Habilidade
+        ratio: 0.02
+        ref: Mana Máximo
+        escopo: total
+    receita:
+    - Lágrima da Deusa
+    - Capítulo Perdido
+    - Códex Demoníaco
+    efeitos:
+    - passiva: Fascínio
+      tipo: Poder de Habilidade
+      ratio: 0.01
+      ref: Mana Máximo
+      escopo: total
+    - passiva: Carga de Mana
+      tipo: Mana Máximo
+      valor: 700
+      condicional: true
+  Ímpeto Cósmico:
+    custo: 3000
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: Causar Dano Não Físico concede Velocidade de Movimento adicional
+    marcador: reformulado
+    captura: 24 - Magico.png
+    status:
+    - tipo: Vida Máxima
+      valor: 300
+    - tipo: Poder de Habilidade
+      valor: 70
+    - tipo: Aceleração de Habilidade
+      valor: 25
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas:
+    - nome: Dança Enfeitiçada
+      texto: causar Dano Mágico ou Dano Verdadeiro a Campeões concede 30 de Velocidade de Movimento por 4s.
+    receita:
+    - Cintilação Etérea
+    - Códex Demoníaco
+    - Gema Ardente
+  Aurora e Crepúsculo:
+    custo: 3100
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: Aplica efeitos de contato
+    marcador: reformulado
+    captura: 25 - Magico.png
+    status:
+    - tipo: Vida Máxima
+      valor: 300
+    - tipo: '% Velocidade de Ataque'
+      valor: 20
+    - tipo: Poder de Habilidade
+      valor: 60
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Lâmina Arcana
+      texto: após usar uma Habilidade, seu próximo Ataque causará (75% do Dano de Ataque base + 10% do Poder de Habilidade) de Dano Mágico adicional
+        e restaurará (3% da Vida adicional + 10% do Poder de Habilidade) de Vida a você. Após um breve intervalo, aplica efeitos de contato ao
+        alvo mais 1x (1,5s de Tempo de Recarga). Causa menos dano a estruturas.
+    receita:
+    - Varinha Explosiva
+    - Fulgor
+    - Gema Ardente
+  Orbe do Infinito:
+    custo: 3100
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: As habilidades causam dano adicional
+    marcador: reformulado
+    captura: 26 - Magico.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 110
+    - tipo: Penetração Mágica
+      valor: 15
+    passivas:
+    - nome: Ruína Inevitável
+      texto: habilidades e ataques fortalecidos causam Acerto Crítico equivalente a 20% de dano adicional contra inimigos que estiverem com menos
+        de 40% de Vida.
+    receita:
+    - Bastão Desnecessariamente Grande
+    - Alternador Hextec
+  Criafendas:
+    custo: 3100
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: Dano crescente
+    marcador: reformulado
+    captura: 27 - Magico.png
+    status:
+    - tipo: Vida Máxima
+      valor: 350
+    - tipo: Poder de Habilidade
+      valor: 70
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    passivas:
+    - nome: Corrupção do Vazio
+      texto: a cada 1s em combate contra Campeões inimigos, causa 2% de dano adicional, podendo chegar a até 8%. Com força máxima, ganha Vampirismo
+        Universal (10% para Campeões de ataque corpo a corpo/6% para Campeões de ataque a distância).
+    - nome: Infusão do Vazio
+      texto: recebe 2% da sua Vida adicional como Poder de Habilidade.
+    receita:
+    - Códex Demoníaco
+    - Máscara Assustadora
+    efeitos:
+    - passiva: Infusão do Vazio
+      tipo: Poder de Habilidade
+      ratio: 0.02
+      ref: Vida Máxima
+      escopo: bonus
+  Capuz da Morte de Rabadon:
+    custo: 3400
+    secao: aprimorado
+    abas:
+    - Mágico
+    resumo: Aumenta o Poder de Habilidade
+    captura: 29 - Magico.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 130
+    passivas:
+    - nome: Excesso
+      texto: aumenta o Poder de Habilidade em 30%.
+    receita:
+    - item: Bastão Desnecessariamente Grande
+      qtd: 2
+    efeitos:
+    - passiva: Excesso
+      tipo: Poder de Habilidade
+      ratio: 0.3
+      ref: Poder de Habilidade
+      escopo: total
+  Ídolo Proibido:
+    custo: 700
+    secao: tier_medio
+    abas:
+    - Mágico
+    - Suporte
+    resumo: Aumenta a Potência de Escudo e Cura
+    marcador: reformulado
+    captura: 17 - Meio item.png
+    status:
+    - tipo: '% Regeneração de Mana'
+      valor: 25
+    - tipo: '% Potência de Escudo e Cura'
+      valor: 6
+    passivas: []
+    receita: []
+    fabrica:
+    - Bênção de Mikael
+    - Cajado Aquafluxo
+    - Redenção
+    - Tiara Sussurrante
+    - Turíbulo Ardente
+  Varinha Explosiva:
+    custo: 800
+    secao: tier_medio
+    abas:
+    - Mágico
+    - Suporte
+    resumo: +40 PdH
+    captura: 18 - Meio item.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 40
+    passivas: []
+    receita:
+    - Tomo Amplificador
+    fabrica:
+    - Aurora e Crepúsculo
+    - Bastão das Eras
+    - Cetro de Cristal de Rylai
+    - Dente de Na'Shor
+    - Malevolência
+    - Mandato Imperial
+    - Tridente da Oceânide
+    - Véu da Banshee
+  Espelho de Bandópolis:
+    custo: 900
+    secao: tier_medio
+    abas:
+    - Mágico
+    - Suporte
+    resumo: +20 PdH, +50% Reg. Mana, +10 Aceleração de Habilidade
+    marcador: novo
+    captura: 19 - Meio item.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 20
+    - tipo: '% Regeneração de Mana'
+      valor: 50
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas: []
+    receita:
+    - Tomo Amplificador
+    - Anel da Revelação
+    fabrica:
+    - Eco Harmônico
+    - Ecos de Helia
+    - Hino Bélico de Shurelya
+    - Mandato Imperial
+  Cinzas do Destino:
+    custo: 900
+    secao: tier_medio
+    abas:
+    - Mágico
+    resumo: Habilidades causam dano ao longo do tempo.
+    captura: 20 - Meio item.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 40
+    passivas:
+    - nome: Inflamar
+      texto: habilidades de dano causam 5 de Dano Mágico adicional ao longo de 3s. Causa 15 de Dano Mágico adicional a monstros.
+    receita:
+    - Tomo Amplificador
+    fabrica:
+    - Tocha de Chamas Negras
+    - Tormento de Liandry
+  Códex Demoníaco:
+    custo: 900
+    secao: tier_medio
+    abas:
+    - Mágico
+    - Suporte
+    resumo: +25 PdH, +10 Aceleração de Habilidade
+    captura: 21 - Meio item.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 25
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas: []
+    receita:
+    - Tomo Amplificador
+    fabrica:
+    - Cajado Aquafluxo
+    - Cajado do Arcanjo
+    - Criafendas
+    - Criptoflora
+    - Dente de Na'Shor
+    - Foco do Horizonte
+    - Maldição Sanguinária
+    - Redenção
+    - Tridente da Oceânide
+    - Ímpeto Cósmico
+  Orbe do Oblívio:
+    custo: 900
+    secao: tier_medio
+    abas:
+    - Mágico
+    - Suporte
+    resumo: Dano Mágico reduz a cura do inimigo.
+    captura: 22 - Meio item.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 35
+    passivas:
+    - nome: Feridas Dolorosas
+      texto: causar Dano Mágico a Campeões inimigos aplica 40% de Feridas Dolorosas por 3s.
+    receita:
+    - Tomo Amplificador
+    fabrica:
+    - Morellonomicon
+  Cintilação Etérea:
+    custo: 950
+    secao: tier_medio
+    abas:
+    - Mágico
+    - Suporte
+    resumo: +35 PdH, +4% VdM
+    marcador: reformulado
+    captura: 23 - Meio item.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 35
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas: []
+    receita:
+    - Tomo Amplificador
+    fabrica:
+    - Faca de Statikk
+    - Hino Bélico de Shurelya
+    - Perdição de Lich
+    - Turíbulo Ardente
+    - Ápice da Tempestade
+    - Ímpeto Cósmico
+  Ametista do Vazio:
+    custo: 1000
+    secao: tier_medio
+    abas:
+    - Mágico
+    - Suporte
+    resumo: +20 PdH, +10% Pen. Mágica
+    captura: 24 - Meio item.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 20
+    - tipo: '% Penetração Mágica'
+      valor: 10
+    passivas: []
+    receita:
+    - Tomo Amplificador
+    fabrica:
+    - Cajado do Vazio
+    - Criptoflora
+  Alternador Hextec:
+    custo: 1100
+    secao: tier_medio
+    abas:
+    - Mágico
+    resumo: As habilidades causam dano adicional
+    captura: 27 - Meio item.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 45
+    passivas:
+    - nome: Entusiasmo
+      texto: habilidades de dano e ataques fortalecidos contra Campeões causam 25–60 de Dano Mágico adicional (20s de Tempo de Recarga).
+    receita:
+    - Tomo Amplificador
+    fabrica:
+    - Eco de Luden
+    - Explocinturão Hextec
+    - Orbe do Infinito
+    - Ápice da Tempestade
+  Capítulo Perdido:
+    custo: 1200
+    secao: tier_medio
+    abas:
+    - Mágico
+    resumo: Restaura Mana ao subir de nível.
+    captura: 28 - Meio item.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 35
+    - tipo: Mana Máximo
+      valor: 200
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    passivas:
+    - nome: Iluminar
+      texto: ao subir de nível, recupera 20% do Mana máximo ao longo de 3s.
+    receita:
+    - Tomo Amplificador
+    - Anel da Revelação
+    fabrica:
+    - Cajado do Arcanjo
+    - Eco de Luden
+    - Malevolência
+    - Tocha de Chamas Negras
+  Máscara Assustadora:
+    custo: 1300
+    secao: tier_medio
+    abas:
+    - Mágico
+    resumo: Aumenta o dano em combate
+    captura: 29 - Meio item.png
+    status:
+    - tipo: Vida Máxima
+      valor: 200
+    - tipo: Poder de Habilidade
+      valor: 30
+    passivas:
+    - nome: Loucura
+      texto: a cada 1s em combate contra Campeões inimigos, causa 2% de dano adicional, podendo chegar a até 6%.
+    receita:
+    - Cristal de Rubi
+    - Tomo Amplificador
+    fabrica:
+    - Criafendas
+    - Maldição Sanguinária
+    - Tormento de Liandry
+  Bastão Desnecessariamente Grande:
+    custo: 1400
+    secao: tier_medio
+    abas:
+    - Mágico
+    resumo: +65 PdH
+    captura: 30 - Meio item.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 65
+    passivas: []
+    receita:
+    - Tomo Amplificador
+    fabrica:
+    - Ampulheta de Zhonya
+    - Cajado do Vazio
+    - Capuz da Morte de Rabadon
+    - Orbe do Infinito
+  Ladrão de Almas de Mejai:
+    custo: 1800
+    secao: tier_medio
+    abas:
+    - Mágico
+    resumo: Eliminações aumentam o Poder de Habilidade
+    captura: 33 - Meio item.png
+    status:
+    - tipo: Vida Máxima
+      valor: 70
+    - tipo: Poder de Habilidade
+      valor: 25
+    passivas:
+    - nome: Glória
+      texto: recebe até 30 acúmulos de Glória depois de eliminar um Campeão. Campeões corpo a corpo recebem 3 acúmulo(s) por abate e 2 acúmulo(s)
+        por assistência; Campeões de ataque a distância recebem 4 acúmulo(s) por abate e 2 acúmulo(s) por assistência. Você perde 10 acúmulo(s)
+        ao morrer.
+    - nome: Temor
+      texto: recebe 5 de Poder de Habilidade por acúmulo de Glória obtido. Com 10 acúmulo(s) de Glória ou mais, recebe 10% de Velocidade de Movimento
+        adicional.
+    receita:
+    - Tomo Amplificador
+    efeitos:
+    - passiva: Temor
+      tipo: Poder de Habilidade
+      valor: 150
+      condicional: true
+    - passiva: Temor
+      tipo: '% Velocidade de Movimento'
+      valor: 10
+      condicional: true
+  Anel da Revelação:
+    custo: 300
+    secao: basico
+    abas:
+    - Mágico
+    resumo: Reduz o Tempo de Recarga das habilidades
+    captura: 7 - Item menor.png
+    status:
+    - tipo: Aceleração de Habilidade
+      valor: 5
+    passivas: []
+    receita: []
+    fabrica:
+    - Botas Ionianas da Lucidez
+    - Brasa de Bami
+    - Capítulo Perdido
+    - Espelho de Bandópolis
+    - Fulgor
+    - Hemodrenário
+  Tomo Amplificador:
+    custo: 500
+    secao: basico
+    abas:
+    - Mágico
+    resumo: +20 PdH
+    captura: 9 - Item menor.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 20
+    passivas: []
+    receita: []
+    fabrica:
+    - Alternador Hextec
+    - Ametista do Vazio
+    - Armaguarda da Caçadora
+    - Barreira Verdejante
+    - Bastão Desnecessariamente Grande
+    - Botas de Mana
+    - Capítulo Perdido
+    - Cetro de Cristal de Rylai
+    - Cintilação Etérea
+    - Cinzas do Destino
+    - Criptoflora
+    - Códex Demoníaco
+    - Espelho de Bandópolis
+    - Explocinturão Hextec
+    - Foco do Horizonte
+    - Ladrão de Almas de Mejai
+    - Lâmina da Fúria de Guinsoo
+    - Morellonomicon
+    - Máscara Assustadora
+    - Orbe do Oblívio
+    - Perdição de Lich
+    - Varinha Explosiva
+  Ecos de Helia:
+    custo: 2400
+    secao: aprimorado
+    abas:
+    - Suporte
+    resumo: Proteja aliados concedendo-lhes mais cura
+    marcador: novo
+    captura: 1 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 200
+    - tipo: Poder de Habilidade
+      valor: 40
+    - tipo: '% Regeneração de Mana'
+      valor: 50
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Sifão da Alma
+      texto: armazena 30% do dano pré-mitigação causado a Campeões inimigos como Fragmentos de Espírito (máximo de 80–250 Fragmentos (por nível)).
+        Conceder cura ou Escudo a um colega de equipe consome todos os Fragmentos de Espírito para curar o alvo no valor correspondente.
+    receita:
+    - Espelho de Bandópolis
+    - Gema Ardente
+  Turíbulo Ardente:
+    custo: 2400
+    secao: aprimorado
+    abas:
+    - Suporte
+    resumo: Aumenta a Velocidade de Ataque dos aliados
+    marcador: reformulado
+    captura: 4 - Suporte.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 50
+    - tipo: '% Regeneração de Mana'
+      valor: 50
+    - tipo: '% Potência de Escudo e Cura'
+      valor: 8
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas:
+    - nome: Turíbulo
+      texto: ao conceder cura ou Escudo a um Campeão aliado, pelos 6s seguintes você e o aliado receberão 30% de Velocidade de Ataque e causarão
+        25 de Dano Mágico adicional sempre que atacarem.
+    receita:
+    - Cintilação Etérea
+    - Ídolo Proibido
+  Cajado Aquafluxo:
+    custo: 2400
+    secao: aprimorado
+    abas:
+    - Suporte
+    resumo: Aumenta o Poder de Habilidade e a Aceleração de Habilidade de aliados
+    marcador: reformulado
+    captura: 5 - Suporte.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 50
+    - tipo: '% Regeneração de Mana'
+      valor: 50
+    - tipo: Aceleração de Habilidade
+      valor: 10
+    - tipo: '% Potência de Escudo e Cura'
+      valor: 8
+    passivas:
+    - nome: Corredeira
+      texto: conceder curas ou Escudos a um aliado concede a vocês dois 15 de Aceleração de Habilidade e 40 de Poder de Habilidade por 6s.
+    receita:
+    - Códex Demoníaco
+    - Ídolo Proibido
+  Bênção de Mikael:
+    custo: 2500
+    secao: aprimorado
+    ativavel: true
+    abas:
+    - Suporte
+    resumo: Dissipa efeitos de Controle de Grupo de um aliado
+    captura: 10 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 300
+    - tipo: '% Regeneração de Mana'
+      valor: 50
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    - tipo: '% Potência de Escudo e Cura'
+      valor: 9
+    passivas:
+    - nome: Purificar (Ativo)
+      texto: dissipa todos os efeitos de Controle de Grupo (exceto Arremesso ao Ar e Supressão) de um Campeão aliado, concede a ele imunidade
+        a Controle de Grupo por 0,2s e cura 150–250 da Vida dele (75s de Tempo de Recarga).
+    receita:
+    - Ídolo Proibido
+    - Gema Ardente
+  Hino Bélico de Shurelya:
+    custo: 2500
+    secao: aprimorado
+    ativavel: true
+    abas:
+    - Suporte
+    resumo: Concede Velocidade de Movimento a aliados
+    marcador: reformulado
+    captura: 11 - Suporte.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 55
+    - tipo: '% Regeneração de Mana'
+      valor: 50
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    - tipo: '% Velocidade de Movimento'
+      valor: 4
+    passivas:
+    - nome: Discurso Inspirador (Ativo)
+      texto: concede a aliados próximos 30% de Velocidade de Movimento por 4s. (60s de Tempo de Recarga)
+    receita:
+    - Espelho de Bandópolis
+    - Cintilação Etérea
+  Eco Harmônico:
+    custo: 2500
+    secao: aprimorado
+    abas:
+    - Suporte
+    resumo: Melhora sua habilidade de proteger colegas de equipe
+    marcador: reformulado
+    captura: 12 - Suporte.png
+    status:
+    - tipo: Vida Máxima
+      valor: 200
+    - tipo: Poder de Habilidade
+      valor: 40
+    - tipo: '% Regeneração de Mana'
+      valor: 50
+    - tipo: Aceleração de Habilidade
+      valor: 20
+    passivas:
+    - nome: Eco Harmônico
+      texto: conceder cura ou Escudo a um colega de equipe propaga o efeito para o colega mais próximo com a menor porcentagem de Vida a até 800
+        unidades de distância, concedendo a ele 30% da cura ou 35% do Escudo. Se não houver Campeões aliados ao alcance, o alvo original receberá
+        a cura ou o Escudo em questão.
+    receita:
+    - Espelho de Bandópolis
+    - Gema Ardente
+  Foice Espectral:
+    custo: 500
+    secao: preparacao
+    abas:
+    - Suporte
+    resumo: Ataque Campeões e estruturas para ganhar ouro adicional
+    captura: 1 - Item menor.png
+    status: []
+    passivas:
+    - nome: null
+      texto: Este é um item para suportes. Quando equipado, ele reduzirá a quantidade de ouro recebida ao abater tropas e monstros. Se a equipe
+        tiver várias cópias deste item, apenas um deles surtirá efeito por vez.
+    - nome: Versátil
+      texto: receba 10 de Dano de Ataque ou 20 de Poder de Habilidade (Adaptativo)
+    - nome: Tributo
+      texto: 'recebe 1 orbe(s) de energia que envolve(m) você a cada 30s (máximo de 3 orbes). Enquanto estiver perto de um aliado, as ações abaixo
+        acionarão Tributo, consumindo 1 orbe(s) de energia que concede(m) 65 de ouro e restaura(m) sua Vida em 20–80: 1. Usa habilidades ou ataques
+        para causar dano a Campeões inimigos ou estruturas. 2. Ataca tropas com menos de 65% de Vida. Isso também as executa, e o ouro das tropas
+        que você abate é concedido ao aliado mais próximo. 3. Uma tropa próxima é abatida quando você tem 3 orbes. Ao acionar Tributo, o aliado
+        mais próximo a você recebe acúmulos de Tributo.'
+    - nome: Azuporim
+      texto: causa 1 a mais de dano a Sentinelas reveladas por Lentes Detectoras, Sentinelas de Controle e Florividentes.
+    - nome: Restrição
+      texto: você não recebe o ouro gerado pelo abate de tropas, mas recebe ouro equivalente a 50% da recompensa. O ouro das tropas que você abate
+        é concedido ao aliado mais próximo. O ouro obtido ao abater monstros é 50% menor.
+    - nome: Missão
+      texto: consiga 750 de ouro com este item para transformá-lo na Foice da Névoa Negra e vincular você ao aliado com mais acúmulos de Tributo,
+        formando uma Parceria Perfeita.
+    - nome: null
+      texto: Você só pode ter um item de suporte por vez.
+    evolucao:
+      nome: Foice da Névoa Negra
+      status:
+      - tipo: Aceleração de Habilidade
+        valor: 10
+      passivas:
+      - nome: Versátil
+        texto: receba 14 de Dano de Ataque ou 28 de Poder de Habilidade (Adaptativo)
+      - nome: Conjuração Anímica
+        texto: a cada 60s, recebe 75 de ouro e 25 de Vida, além de 2 de Dano de Ataque ou 4 de Poder de Habilidade (Adaptativo), até 250 de Vida
+          e 20 de Dano de Ataque ou 40 de Poder de Habilidade (Adaptativo). Causa 2 a mais de dano a sentinelas reveladas por Lentes Detectoras,
+          Sentinelas de Controle e Florividentes. Quando estiver fora de combate, recebe 10% de Velocidade de Movimento ao se mover em direção
+          à sua Parceria Perfeita. Se vocês estiverem a mais de 2.500 unidades de distância, esse valor aumentará para 30%.
+      efeitos:
+      - passiva: Versátil (adaptativo)
+        tipo: Dano de Ataque
+        valor: 14
+      - passiva: Conjuração Anímica
+        tipo: Vida Máxima
+        valor: 250
+        condicional: true
+      - passiva: Conjuração Anímica
+        tipo: Dano de Ataque
+        valor: 20
+        condicional: true
+    receita: []
+    efeitos:
+    - passiva: Versátil (adaptativo)
+      tipo: Dano de Ataque
+      valor: 10
+  Escudo Relicário:
+    custo: 500
+    secao: preparacao
+    abas:
+    - Suporte
+    resumo: Abata tropas para ganhar ouro adicional
+    captura: 2 - Item menor.png
+    status:
+    - tipo: Vida Máxima
+      valor: 125
+    passivas:
+    - nome: null
+      texto: Este é um item para suportes. Quando equipado, ele reduzirá a quantidade de ouro recebida ao abater tropas e monstros. Se a equipe
+        tiver várias cópias deste item, apenas um deles surtirá efeito por vez.
+    - nome: Tributo, Azuporim e Restrição
+      texto: mesmo texto da Foice Espectral.
+    - nome: Missão
+      texto: depois de conseguir 750 de ouro, este item é aprimorado para Bastião da Montanha e vincula você ao aliado com mais acúmulos de Tributo,
+        formando uma Parceria Perfeita.
+    - nome: null
+      texto: Você só pode ter um item de suporte por vez.
+    evolucao:
+      nome: Bastião da Montanha
+      status:
+      - tipo: Vida Máxima
+        valor: 175
+      - tipo: Aceleração de Habilidade
+        valor: 10
+      passivas:
+      - nome: Conjuração Anímica
+        texto: a cada 60s, recebe 75 de ouro e 25 de Vida, além de 2 de Dano de Ataque ou 4 de Poder de Habilidade (Adaptativo), até 250 de Vida
+          e 20 de Dano de Ataque ou 40 de Poder de Habilidade (Adaptativo). Causa 2 a mais de dano a sentinelas reveladas por Lentes Detectoras,
+          Sentinelas de Controle e Florividentes. Quando estiver fora de combate, recebe 10% de Velocidade de Movimento ao se mover em direção
+          à sua Parceria Perfeita. Se vocês estiverem a mais de 2.500 unidades de distância, esse valor aumentará para 30%.
+      efeitos:
+      - passiva: Conjuração Anímica
+        tipo: Vida Máxima
+        valor: 250
+        condicional: true
+      - passiva: Conjuração Anímica
+        tipo: Dano de Ataque
+        valor: 20
+        condicional: true
+    receita: []
+  Botas da Velocidade:
+    custo: 400
+    secao: basico
+    abas:
+    - Botas
+    resumo: Velocidade de Movimento
+    captura: 1 - bota tier 0.png
+    status:
+    - tipo: Velocidade de Movimento
+      valor: 25
+    passivas: []
+    receita: []
+    fabrica:
+    - Botas Galvanizadas de Aço
+    - Botas Ionianas da Lucidez
+    - Botas de Mana
+    - Botas do Dinamismo
+    - Grevas Vorazes
+    - Grevas do Berserker
+    - Passos de Mercúrio
+  Grevas Vorazes:
+    custo: 1000
+    secao: tier_medio
+    abas:
+    - Botas
+    resumo: Força Adaptativa e Vampirismo Universal
+    captura: 1 - bota tier 1.png
+    status:
+    - tipo: Velocidade de Movimento
+      valor: 45
+    passivas:
+    - nome: Equilíbrio de Poder
+      texto: recebe 12 de Dano de Ataque ou 20 de Poder de Habilidade (Adaptativo).
+    - nome: Conversão
+      texto: recebe 5% de Vampirismo Universal. Eliminações de Campeões concedem 0,5% de Vampirismo Universal adicional, até um máximo de 5%.
+    receita:
+    - Botas da Velocidade
+    fabrica:
+    - Passos Imortais
+    efeitos:
+    - passiva: Equilíbrio de Poder (adaptativo)
+      tipo: Dano de Ataque
+      valor: 12
+  Botas Ionianas da Lucidez:
+    custo: 1000
+    secao: tier_medio
+    abas:
+    - Botas
+    resumo: Reduz o Tempo de Recarga das habilidades
+    captura: 2 - bota tier 1.png
+    status:
+    - tipo: '% Regeneração de Mana'
+      valor: 50
+    - tipo: Aceleração de Habilidade
+      valor: 15
+    - tipo: Velocidade de Movimento
+      valor: 45
+    passivas:
+    - nome: Invocação
+      texto: reduz o Tempo de Recarga dos feitiços em 15%.
+    receita:
+    - Botas da Velocidade
+    - Anel da Revelação
+    fabrica:
+    - Lucidez Escarlate
+  Grevas do Berserker:
+    custo: 1200
+    secao: tier_medio
+    abas:
+    - Botas
+    resumo: Aumenta a Velocidade de Ataque
+    captura: 3 - bota tier 1.png
+    status:
+    - tipo: '% Velocidade de Ataque'
+      valor: 35
+    - tipo: Velocidade de Movimento
+      valor: 45
+    passivas:
+    - nome: Lâmina Abençoada
+      texto: os ataques recuperam 10 de Vida ao acertar.
+    receita:
+    - Botas da Velocidade
+    - Adaga
+    fabrica:
+    - Grevas Bélicas
+  Passos de Mercúrio:
+    custo: 1200
+    secao: tier_medio
+    abas:
+    - Botas
+    resumo: Aumenta a Resistência Mágica
+    captura: 4 - bota tier 1.png
+    status:
+    - tipo: Vida Máxima
+      valor: 150
+    - tipo: Resistência Mágica
+      valor: 25
+    - tipo: '% Tenacidade'
+      valor: 30
+    - tipo: Velocidade de Movimento
+      valor: 45
+    passivas: []
+    receita:
+    - Botas da Velocidade
+    - Cristal de Rubi
+    fabrica:
+    - Esmagadores Acorrentados
+  Botas Galvanizadas de Aço:
+    custo: 1200
+    secao: tier_medio
+    abas:
+    - Botas
+    resumo: Reduz o dano de ataques de Campeões
+    captura: 5 - bota tier 1.png
+    status:
+    - tipo: Vida Máxima
+      valor: 150
+    - tipo: Armadura
+      valor: 25
+    - tipo: Velocidade de Movimento
+      valor: 45
+    passivas:
+    - nome: Bloqueio
+      texto: reduz em 10% o dano de ataques de Campeões.
+    receita:
+    - Botas da Velocidade
+    - Cristal de Rubi
+    fabrica:
+    - Mobilização Blindada
+  Botas de Mana:
+    custo: 1200
+    secao: tier_medio
+    abas:
+    - Botas
+    resumo: Poder de Habilidade Pen. Mágica e Regeneração de Mana
+    captura: 6 - bota tier 1.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 25
+    - tipo: Penetração Mágica
+      valor: 8
+    - tipo: '% Regeneração de Mana'
+      valor: 75
+    - tipo: Velocidade de Movimento
+      valor: 45
+    passivas:
+    - nome: Equilíbrio
+      texto: Campeões sem Mana recebem 50% de Regeneração de Vida base.
+    - nome: Opressão
+      texto: ataques e habilidades ativas causam 18 de Dano Verdadeiro adicional a tropas.
+    receita:
+    - Botas da Velocidade
+    - Tomo Amplificador
+    fabrica:
+    - Sapatos Enfeitiçados
+  Botas do Dinamismo:
+    custo: 1200
+    secao: tier_medio
+    abas:
+    - Botas
+    resumo: Dano de Ataque e Pen. Armadura
+    captura: 7 - bota tier 1.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 15
+    - tipo: Penetração de Armadura
+      valor: 10
+    - tipo: Velocidade de Movimento
+      valor: 45
+    passivas: []
+    receita:
+    - Botas da Velocidade
+    - Espada Longa
+    fabrica:
+    - Botas Esmaga-armaduras
+  Passos Imortais:
+    custo: 2000
+    secao: aprimorado
+    abas:
+    - Botas
+    resumo: Causa dano adicional ou recebe mais poder de cura e Escudo
+    captura: 1 - bota tier 3.png
+    status:
+    - tipo: Velocidade de Movimento
+      valor: 45
+    passivas:
+    - nome: Equilíbrio de Poder
+      texto: recebe 12 de Dano de Ataque ou 20 de Poder de Habilidade (Adaptativo).
+    - nome: Conversão
+      texto: recebe 5% de Vampirismo Universal. Eliminações de Campeões concedem 0,5% de Vampirismo Universal adicional, até um máximo de 5%.
+    - nome: Agora e Sempre
+      texto: causa 5% de dano adicional quando você tem mais de 50% de Vida. Abaixo de 50% de Vida, recebe mais 12% de cura e Escudo.
+    receita:
+    - Grevas Vorazes
+    efeitos:
+    - passiva: Equilíbrio de Poder (adaptativo)
+      tipo: Dano de Ataque
+      valor: 12
+  Lucidez Escarlate:
+    custo: 2000
+    secao: aprimorado
+    abas:
+    - Botas
+    resumo: Reduz o Tempo de Recarga das habilidades
+    captura: 2 - bota tier 3.png
+    status:
+    - tipo: '% Regeneração de Mana'
+      valor: 75
+    - tipo: Aceleração de Habilidade
+      valor: 25
+    - tipo: Velocidade de Movimento
+      valor: 45
+    passivas:
+    - nome: Invocação
+      texto: reduz o Tempo de Recarga dos feitiços em 20%.
+    - nome: Aceleração Noxiana
+      texto: conceder cura ou Escudo a Campeões aliados, conjurar um feitiço ou causar dano a inimigos com habilidades concede Velocidade de Movimento
+        (10% para Campeões de ataque corpo a corpo/8% para Campeões de ataque a distância) por 4s. Esse efeito só pode ser acionado uma vez a
+        cada 4s por habilidade.
+    receita:
+    - Botas Ionianas da Lucidez
+  Grevas Bélicas:
+    custo: 2200
+    secao: aprimorado
+    abas:
+    - Botas
+    resumo: Aumenta a Velocidade de Ataque e a Velocidade de Movimento
+    marcador: reformulado
+    captura: 3 - bota tier 3.png
+    status:
+    - tipo: '% Velocidade de Ataque'
+      valor: 50
+    - tipo: Velocidade de Movimento
+      valor: 45
+    - tipo: '% Roubo de Vida'
+      valor: 5
+    passivas:
+    - nome: Marcha Noxiana
+      texto: ataques contra Campeões inimigos concedem Velocidade de Movimento (10% para Campeões de ataque corpo a corpo/7% para Campeões de
+        ataque a distância) que decai ao longo de 2s.
+    - nome: Lâmina Abençoada
+      texto: os ataques recuperam 12 de Vida ao acertar.
+    receita:
+    - Grevas do Berserker
+  Esmagadores Acorrentados:
+    custo: 2200
+    secao: aprimorado
+    abas:
+    - Botas
+    resumo: Recebe um Escudo mágico ao sofrer Dano Mágico
+    captura: 4 - bota tier 3.png
+    status:
+    - tipo: Vida Máxima
+      valor: 150
+    - tipo: Resistência Mágica
+      valor: 30
+    - tipo: '% Tenacidade'
+      valor: 30
+    - tipo: Velocidade de Movimento
+      valor: 45
+    passivas:
+    - nome: Persistência Noxiana
+      texto: depois de sofrer Dano Mágico de um Campeão, recebe um Escudo mágico que absorve dano equivalente a 20–140 mais 5% da Vida máxima
+        por 5s (12s de Tempo de Recarga).
+    receita:
+    - Passos de Mercúrio
+  Mobilização Blindada:
+    custo: 2200
+    secao: aprimorado
+    abas:
+    - Botas
+    resumo: Concede Armadura e um Escudo
+    captura: 5 - bota tier 3.png
+    status:
+    - tipo: Vida Máxima
+      valor: 150
+    - tipo: Armadura
+      valor: 30
+    - tipo: Velocidade de Movimento
+      valor: 45
+    passivas:
+    - nome: Bloqueio
+      texto: reduz em 10% o dano de ataques de Campeões.
+    - nome: Tolerância Noxiana
+      texto: depois de sofrer Dano Físico de um Campeão, recebe um Escudo físico que absorve dano equivalente a 20–140 mais 5% da Vida máxima
+        por 5s (12s de Tempo de Recarga).
+    receita:
+    - Botas Galvanizadas de Aço
+  Sapatos Enfeitiçados:
+    custo: 2200
+    secao: aprimorado
+    abas:
+    - Botas
+    resumo: Causa dano adicional a tropas
+    captura: 6 - bota tier 3.png
+    status:
+    - tipo: Poder de Habilidade
+      valor: 35
+    - tipo: Penetração Mágica
+      valor: 18
+    - tipo: '% Penetração Mágica'
+      valor: 8
+    - tipo: '% Regeneração de Mana'
+      valor: 100
+    - tipo: Velocidade de Movimento
+      valor: 45
+    passivas:
+    - nome: Equilíbrio
+      texto: Campeões sem Mana recebem 50% de Regeneração de Vida base.
+    - nome: Opressão
+      texto: ataques e habilidades ativas causam 18 de Dano Verdadeiro adicional a tropas.
+    receita:
+    - Botas de Mana
+  Botas Esmaga-armaduras:
+    custo: 2200
+    secao: aprimorado
+    abas:
+    - Botas
+    resumo: Recebe Velocidade de Movimento fora de combate
+    captura: 7 - bota tier 3.png
+    status:
+    - tipo: Dano de Ataque
+      valor: 20
+    - tipo: Penetração de Armadura
+      valor: 10
+    - tipo: '% Penetração de Armadura'
+      valor: 6
+    - tipo: Velocidade de Movimento
+      valor: 45
+    passivas:
+    - nome: Andarilho das Nuvens
+      texto: recebe 20 de Velocidade de Movimento fora de combate.
+    receita:
+    - Botas do Dinamismo

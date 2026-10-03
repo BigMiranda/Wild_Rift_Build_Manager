@@ -40,6 +40,8 @@ public class BuildRepository {
         public String unitCode;
         public double goldPerMin;
         public double xpPerMin;
+        /** Count conditional item effects (stacks, in combat, low health...) in the calculation. */
+        public boolean includeConditional = true;
         public List<Long> itemIds = new ArrayList<>();
         public Map<String, RagdollStat> ragdollStats = new LinkedHashMap<>();
         public String createdAt;
@@ -122,8 +124,8 @@ public class BuildRepository {
         KeyHolder kh = new GeneratedKeyHolder();
         jdbc.update(con -> {
             PreparedStatement ps = con.prepareStatement(
-                    "INSERT INTO build (folder_id, name, note, unit_code, gold_per_min, xp_per_min, created_at, updated_at) "
-                            + "VALUES (?,?,?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS);
+                    "INSERT INTO build (folder_id, name, note, unit_code, gold_per_min, xp_per_min, created_at, updated_at, "
+                            + "include_conditional) VALUES (?,?,?,?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS);
             ps.setLong(1, b.folderId);
             ps.setString(2, b.name);
             ps.setString(3, b.note);
@@ -132,6 +134,7 @@ public class BuildRepository {
             ps.setDouble(6, b.xpPerMin);
             ps.setString(7, now);
             ps.setString(8, now);
+            ps.setInt(9, b.includeConditional ? 1 : 0);
             return ps;
         }, kh);
         long id = kh.getKey().longValue();
@@ -141,8 +144,9 @@ public class BuildRepository {
 
     public boolean updateBuild(long id, Build b) {
         int n = jdbc.update("UPDATE build SET folder_id = ?, name = ?, note = ?, unit_code = ?, gold_per_min = ?, "
-                        + "xp_per_min = ?, updated_at = ? WHERE id = ?",
-                b.folderId, b.name, b.note, b.unitCode, b.goldPerMin, b.xpPerMin, Instant.now().toString(), id);
+                        + "xp_per_min = ?, include_conditional = ?, updated_at = ? WHERE id = ?",
+                b.folderId, b.name, b.note, b.unitCode, b.goldPerMin, b.xpPerMin, b.includeConditional ? 1 : 0,
+                Instant.now().toString(), id);
         if (n == 0) {
             return false;
         }
@@ -181,6 +185,7 @@ public class BuildRepository {
         b.unitCode = rs.getString("unit_code");
         b.goldPerMin = rs.getDouble("gold_per_min");
         b.xpPerMin = rs.getDouble("xp_per_min");
+        b.includeConditional = rs.getInt("include_conditional") == 1;
         b.createdAt = rs.getString("created_at");
         b.updatedAt = rs.getString("updated_at");
         return b;

@@ -16,6 +16,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import com.ornnplanner.engine.Stats;
+
 import static com.ornnplanner.engine.Stats.ABILITY_POWER;
 import static com.ornnplanner.engine.Stats.ARMOR;
 import static com.ornnplanner.engine.Stats.MAGIC_RESIST;
@@ -230,5 +232,54 @@ class TimelineEngineTest {
         assertEquals(0.0, r.series.get(0).minute, EPS);
         assertTrue(r.series.get(r.series.size() - 1).minute >= 7);
         assertTrue(r.series.stream().anyMatch(p -> p.stepIndex == 1));
+    }
+
+    @Test
+    void bonusScopeConditionalPassiveLikeTheShopDuplaguarda() {
+        StatLine armor = StatLine.percent(ARMOR, "Tolerância", 0.3, ARMOR, RefScope.BONUS);
+        armor.conditional = true;
+        ItemDef twinguard = item(40, "Duplaguarda de Amaranto", 3200, StatLine.flat(ARMOR, 50), armor);
+
+        TimelineStep on = run(ornn(), 1000, 0, clothArmor.id, twinguard.id).steps.get(1);
+        assertEquals(0.3 * (20 + 50), on.stats.itemPassives.get(ARMOR), EPS); // only bonus armor, never the base 46
+        assertTrue(on.stats.passives.get(0).conditional);
+
+        EngineInput in = new EngineInput();
+        in.unit = ornn();
+        in.goldPerMin = 1000;
+        in.itemIds = List.of(clothArmor.id, twinguard.id);
+        in.includeConditional = false;
+        TimelineStep off = new TimelineEngine(ref).run(in).steps.get(1);
+        assertTrue(off.stats.passives.isEmpty());
+        assertEquals(46 + 70 + 70 * 0.07, off.stats.total.get(ARMOR), EPS);
+    }
+
+    @Test
+    void baseScopeUsesOnlyTheUnitBaseStat() {
+        UnitProfile u = ornn();
+        u.stats.put(Stats.ATTACK_DAMAGE, new StatGrowth(62, 4));
+        ItemDef sword = item(41, "Espada", 500, StatLine.flat(Stats.ATTACK_DAMAGE, 12));
+        ItemDef sterak = item(42, "Sinal de Sterak", 3200,
+                StatLine.percent(Stats.ATTACK_DAMAGE, "Severidade", 0.5, Stats.ATTACK_DAMAGE, RefScope.BASE));
+        TimelineStep s = run(u, 1000, 0, sword.id, sterak.id).steps.get(1);
+        assertEquals(31.0, s.stats.itemPassives.get(Stats.ATTACK_DAMAGE), EPS); // 50% of 62, ignores the +12 bonus
+    }
+
+    @Test
+    void levelRangeIsInterpolatedAndConditionalFlatCanBeTurnedOff() {
+        StatLine lifeline = StatLine.flat(MAX_HEALTH, 200);
+        lifeline.valueMax = 300.0;
+        lifeline.conditional = true;
+        lifeline.passive = "Salva-Vidas";
+        assertEquals(200.0, lifeline.valueAt(1), EPS);
+        assertEquals(250.0, lifeline.valueAt(8), EPS);
+        assertEquals(300.0, lifeline.valueAt(15), EPS);
+
+        ItemDef mantle = item(43, "Manto da Meia-noite", 2550, StatLine.flat(MAX_HEALTH, 600), lifeline);
+        // 2550 gold at 1000/min with 3180 XP/min -> minute 2.05 -> 6519 XP -> level 10
+        TimelineStep s = run(ornn(), 1000, 3180, mantle.id).steps.get(0);
+        assertEquals(10, s.level);
+        double expected = 200 + 100 * 9 / 14.0;
+        assertEquals(600 + expected, s.stats.itemFlat.get(MAX_HEALTH), EPS);
     }
 }

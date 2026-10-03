@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { mmss, n0, pct, statLabel } from '../format.js';
-import { DEFAULT_TAB, TABS, baseName, buildTiles, describeStats, sectionsFor, variantLabel } from '../shopModel.js';
+import { DEFAULT_TAB, MARKERS, TABS, buildTiles, describeStats, sectionsFor, variantLabel } from '../shopModel.js';
 import ItemIcon from './ItemIcon.jsx';
 
 /**
- * Wild Rift style shop: category rail, icon grid and a detail panel.
+ * Wild Rift style shop: tab rail, icon grid and a detail panel.
  * `buildPayload` is the current build as the API expects it (or null when it cannot be calculated yet); it is used
  * to preview what the selected item would be worth if bought next.
  */
@@ -18,36 +18,39 @@ export default function Shop({ items, buildPayload, ownedIds, onAdd }) {
   const tiles = useMemo(() => buildTiles(items), [items]);
   const sections = useMemo(() => sectionsFor(tiles, tab, query), [tiles, tab, query]);
   const itemsById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
-  const ownedBases = useMemo(() => {
+  const ownedByTile = useMemo(() => {
     const counts = new Map();
     for (const id of ownedIds) {
-      const it = itemsById.get(id);
-      if (it) counts.set(baseName(it.name), (counts.get(baseName(it.name)) ?? 0) + 1);
+      const key = itemsById.get(id)?.group;
+      if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
     }
     return counts;
   }, [ownedIds, itemsById]);
 
   const selected = tiles.find((t) => t.key === selectedKey) ?? null;
-  const variant = selected ? selected.variants.find((v) => v.id === variantId) ?? itemsById.get(selected.preferredId) : null;
+  const variant = selected ? selected.variants.find((v) => v.id === variantId) ?? selected.base : null;
 
-  const select = (tile) => {
-    setSelectedKey(tile.key);
-    setVariantId(tile.preferredId);
+  const open = (item) => {
+    const tile = tiles.find((t) => t.key === (item.group ?? item.name));
+    if (tile) {
+      setSelectedKey(tile.key);
+      setVariantId(item.id);
+    }
   };
 
   return (
     <div className="shop">
-      <nav className="shop-rail" aria-label="Categorias da loja">
+      <nav className="shop-rail" aria-label="Abas da loja">
         {TABS.map((t) => (
-          <button key={t.key} className={!query && tab === t.key ? 'active' : ''} onClick={() => { setTab(t.key); setQuery(''); }}>
-            {t.label}
+          <button key={t} className={!query && tab === t ? 'active' : ''} onClick={() => { setTab(t); setQuery(''); }}>
+            {t}
           </button>
         ))}
       </nav>
 
       <div className="shop-grid-wrap">
         <input
-          type="search" className="shop-search" placeholder="Buscar em todas as categorias…" value={query}
+          type="search" className="shop-search" placeholder="Buscar em todas as abas…" value={query}
           onChange={(e) => setQuery(e.target.value)} aria-label="Buscar item"
         />
         <div className="shop-grid-scroll">
@@ -56,22 +59,27 @@ export default function Shop({ items, buildPayload, ownedIds, onAdd }) {
             <section key={s.key}>
               <h4 className="shop-section">{s.label}</h4>
               <div className="shop-grid">
-                {s.tiles.map((t) => (
-                  <button
-                    key={t.key}
-                    className={`tile${t.key === selectedKey ? ' selected' : ''}`}
-                    onClick={() => select(t)}
-                    onDoubleClick={() => onAdd(t.key === selectedKey && variant ? variant.id : t.preferredId)}
-                    title={`${t.name} — duplo clique adiciona à build`}
-                  >
-                    <span className="tile-icon">
-                      <ItemIcon id={t.iconId} size={64} />
-                      <span className="tile-cost">{t.cost}</span>
-                      {ownedBases.has(t.key) && <span className="tile-owned" aria-label="Já está na build">×{ownedBases.get(t.key)}</span>}
-                    </span>
-                    <span className="tile-name">{t.name}</span>
-                  </button>
-                ))}
+                {s.tiles.map((t) => {
+                  const marker = MARKERS[t.base.marker];
+                  return (
+                    <button
+                      key={t.key}
+                      className={`tile${t.key === selectedKey ? ' selected' : ''}`}
+                      onClick={() => { setSelectedKey(t.key); setVariantId(t.preferredId); }}
+                      onDoubleClick={() => onAdd(t.key === selectedKey && variant ? variant.id : t.preferredId)}
+                      title={`${t.name} — duplo clique adiciona à build`}
+                    >
+                      <span className="tile-icon">
+                        <ItemIcon id={t.iconId} size={64} />
+                        <span className="tile-cost">{t.cost}</span>
+                        {ownedByTile.has(t.key) && <span className="tile-owned" aria-label="Já está na build">×{ownedByTile.get(t.key)}</span>}
+                        {t.base.active && <span className="tile-active" title="Item ativável" aria-label="Item ativável">◆</span>}
+                        {marker && <span className={`tile-marker ${t.base.marker}`} title={marker.label} aria-label={marker.label}>{marker.badge}</span>}
+                      </span>
+                      <span className="tile-name">{t.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             </section>
           ))}
@@ -83,8 +91,7 @@ export default function Shop({ items, buildPayload, ownedIds, onAdd }) {
         {selected && variant && (
           <ItemDetail
             tile={selected} variant={variant} items={items} itemsById={itemsById} buildPayload={buildPayload}
-            onVariant={setVariantId} onAdd={() => onAdd(variant.id)}
-            onOpen={(item) => { const tile = tiles.find((t) => t.key === baseName(item.name)); if (tile) { setSelectedKey(tile.key); setVariantId(item.id); } }}
+            onVariant={setVariantId} onAdd={() => onAdd(variant.id)} onOpen={open}
           />
         )}
       </aside>
@@ -93,28 +100,30 @@ export default function Shop({ items, buildPayload, ownedIds, onAdd }) {
 }
 
 function ItemDetail({ tile, variant, items, itemsById, buildPayload, onVariant, onAdd, onOpen }) {
-  const { flat, passives, unstable } = describeStats(variant);
+  const { flat, modeled } = describeStats(variant);
   const components = variant.components.map((c) => ({ item: itemsById.get(c.itemId), quantity: c.quantity })).filter((c) => c.item);
-  const buildsInto = items.filter((i) => i.components.some((c) => c.itemId === variant.id));
+  const buildsInto = items.filter((i) => i.section !== 'evolucao' && i.components.some((c) => c.itemId === tile.base.id));
   const preview = usePurchasePreview(buildPayload, variant.id);
+  const marker = MARKERS[tile.base.marker];
 
   return (
     <>
       <header className="detail-head">
         <ItemIcon id={tile.iconId} size={56} />
         <div>
-          <h3>{tile.name}</h3>
-          <div className="gold">{n0(variant.cost)} de ouro</div>
+          <h3>{variant.name}</h3>
+          <div className="gold">{n0(variant.cost)} de ouro{tile.base.active ? ' · ativável' : ''}</div>
+          {marker && <small className={`marker-text ${tile.base.marker}`}>{marker.label}</small>}
         </div>
       </header>
 
       {tile.variants.length > 1 && (
         <div className="detail-block">
-          <h4>Variante</h4>
+          <h4>Estado</h4>
           <div className="chips">
             {tile.variants.map((v) => (
               <button key={v.id} className={v.id === variant.id ? 'active' : ''} aria-pressed={v.id === variant.id} onClick={() => onVariant(v.id)}>
-                {variantLabel(v.name) ?? 'Sem passiva'}
+                {variantLabel(v)}
               </button>
             ))}
           </div>
@@ -125,18 +134,30 @@ function ItemDetail({ tile, variant, items, itemsById, buildPayload, onVariant, 
         <ul className="stat-list">
           {flat.map((s, i) => <li key={i}><strong>+{n0(s.value)}</strong> {statLabel(s.type)}</li>)}
         </ul>
-        {passives.map((p, i) => (
+        {variant.passives.map((p, i) => (
           <p className="passive" key={i}>
-            <span className="passive-name">{p.name}:</span> {p.text}
-            {p.scope === 'BONUS' && <small> (só status bônus)</small>}
+            {p.name && <span className="passive-name">{p.name}: </span>}{p.text}
           </p>
         ))}
-        {unstable && <small>Tem efeitos condicionais não contabilizados.</small>}
       </div>
+
+      {modeled.length > 0 && (
+        <div className="detail-block modeled">
+          <h4>Considerado no cálculo</h4>
+          <ul>
+            {modeled.map((m, i) => (
+              <li key={i}>
+                <span className="passive-name">{m.name}:</span> {m.text}
+                {m.conditional && <small className="cond"> · condicional</small>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="detail-block">
         <h4>Receita</h4>
-        {components.length === 0 && <small>Receita não cadastrada.</small>}
+        {components.length === 0 && <small>Item básico (sem componentes).</small>}
         <div className="recipe">
           {components.map((c) => (
             <button key={c.item.id} className="recipe-item" onClick={() => onOpen(c.item)} title={c.item.name}>
@@ -147,7 +168,7 @@ function ItemDetail({ tile, variant, items, itemsById, buildPayload, onVariant, 
         </div>
         {buildsInto.length > 0 && (
           <>
-            <h4>Usado em</h4>
+            <h4>Fabrica</h4>
             <div className="recipe">
               {buildsInto.map((i) => (
                 <button key={i.id} className="recipe-item" onClick={() => onOpen(i)} title={i.name}>

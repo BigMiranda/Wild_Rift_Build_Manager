@@ -1,99 +1,86 @@
 import { statLabel } from './format.js';
 
 /**
- * Turns the flat item catalog into the shop layout: category tabs -> sections -> tiles.
+ * Turns the flat item catalog into the shop layout: tabs -> sections -> tiles, following the Wild Rift shop.
  *
- * One tile per base item: catalog variants such as "X (Passive)" or "X (lv15 ...)" are grouped under "X" and picked
- * in the detail panel. Tabs and sections are derived from the catalog `category` (comma separated tags), so they
- * follow whatever the data source provides.
+ * One tile per shop item. Evolutions (Fimbulwinter, Muramana...) are separate catalog items grouped under their base
+ * item (`group`) and picked in the detail panel, since the shop never sells them directly.
  */
 
-/** Tabs in display order. `match` receives the item's category tags. */
-export const TABS = [
-  { key: 'physical', label: 'Físico', match: (t) => t.includes('PHYSICAL DAMAGE ITEMS') },
-  { key: 'magic', label: 'Mágico', match: (t) => t.includes('MAGIC DAMAGE ITEMS') },
-  { key: 'defense', label: 'Defesa', match: (t) => t.includes('DEFENSE ITEMS') },
-  { key: 'support', label: 'Suporte', match: (t) => t.includes('SUPPORT ITEMS') },
-  { key: 'boots', label: 'Botas', match: (t) => t.includes('BOOTS') },
-  { key: 'components', label: 'Componentes', match: (t) => t.includes('MID TIER ITEMS') || t.includes('BASIC ITEMS') },
-];
-
-export const DEFAULT_TAB = 'defense';
+/** Shop tabs in the game's order. */
+export const TABS = ['Lutador', 'Assassino', 'Atirador', 'Mágico', 'Defesa', 'Suporte', 'Botas'];
+export const DEFAULT_TAB = 'Defesa';
 
 const SECTIONS = [
-  { key: 'active', label: 'Ativo', match: (t) => t.includes('ACTIVE ITEMS') },
-  { key: 'mid', label: 'Intermediário', match: (t) => t.includes('MID TIER ITEMS') },
-  { key: 'basic', label: 'Básico', match: (t) => t.includes('BASIC ITEMS') },
-  { key: 'boots', label: 'Botas', match: (t) => t.includes('BOOTS') },
-  { key: 'upgraded', label: 'Aprimorado(a)', match: () => true },
+  { key: 'ativo', label: 'Ativo', match: (i) => i.active && i.section === 'aprimorado' },
+  { key: 'aprimorado', label: 'Aprimorado', match: (i) => i.section === 'aprimorado' },
+  { key: 'preparacao', label: 'Item inicial de suporte', match: (i) => i.section === 'preparacao' },
+  { key: 'tier_medio', label: 'Tier médio', match: (i) => i.section === 'tier_medio' },
+  { key: 'basico', label: 'Básico', match: (i) => i.section === 'basico' },
 ];
+const BOOT_LABELS = { aprimorado: 'Botas aprimoradas', tier_medio: 'Botas', basico: 'Básica' };
 
-const MARKER = "Unstable Passives' Stats";
-
-export const tagsOf = (item) => item.category.split(',').map((s) => s.trim());
-
-/** "Amaranth's Twinguard (Endurance)" -> "Amaranth's Twinguard" */
-export const baseName = (name) => name.replace(/\s*\(.*\)\s*$/, '').trim();
-
-/** Text inside the trailing parentheses, or null for the plain item. */
-export const variantLabel = (name) => {
-  const m = name.match(/\((.*)\)\s*$/);
-  return m ? m[1] : null;
+export const MARKERS = {
+  novo: { badge: 'N', label: 'Novo neste patch' },
+  reformulado: { badge: '⟳', label: 'Reformulado neste patch' },
+  alterado: { badge: '!', label: 'Alterado neste patch' },
 };
 
-const hasPercentPassive = (item) => item.stats.some((s) => s.ratio != null && s.refType);
-
-/** Groups catalog variants under their base item. Returns tiles sorted by cost, then name. */
+/** Groups evolutions under their base item. Returns tiles sorted by cost, then name. */
 export function buildTiles(items) {
-  const byBase = new Map();
+  const byGroup = new Map();
   for (const item of items) {
-    const key = baseName(item.name);
-    if (!byBase.has(key)) byBase.set(key, []);
-    byBase.get(key).push(item);
+    const key = item.group ?? item.name;
+    if (!byGroup.has(key)) byGroup.set(key, []);
+    byGroup.get(key).push(item);
   }
   const tiles = [];
-  for (const [name, variants] of byBase) {
-    variants.sort((a, b) => a.name.length - b.name.length || a.name.localeCompare(b.name));
-    // The variant that models the percentage passive is the one this planner exists for.
-    const preferred = variants.find(hasPercentPassive) ?? variants[0];
-    tiles.push({ key: name, name, cost: variants[0].cost, tags: tagsOf(variants[0]), variants, preferredId: preferred.id, iconId: variants[0].id });
+  for (const [key, variants] of byGroup) {
+    const base = variants.find((v) => v.section !== 'evolucao') ?? variants[0];
+    variants.sort((a, b) => (a === base ? -1 : b === base ? 1 : a.name.localeCompare(b.name)));
+    tiles.push({ key, name: base.name, cost: base.cost, base, variants, preferredId: base.id, iconId: base.id });
   }
   return tiles.sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name));
 }
 
 /** Sections (with their tiles) of one tab; `query` searches every tab at once. */
-export function sectionsFor(tiles, tabKey, query) {
+export function sectionsFor(tiles, tab, query) {
   const q = query.trim().toLowerCase();
-  const tab = TABS.find((t) => t.key === tabKey);
-  const visible = q
-    ? tiles.filter((t) => t.name.toLowerCase().includes(q) || t.variants.some((v) => v.name.toLowerCase().includes(q)))
-    : tiles.filter((t) => tab.match(t.tags));
-  if (q) return visible.length ? [{ key: 'search', label: `Resultado da busca (${visible.length})`, tiles: visible }] : [];
-  const out = SECTIONS.map((s) => ({ key: s.key, label: s.label, tiles: [] }));
+  if (q) {
+    const found = tiles.filter((t) => t.variants.some((v) => v.name.toLowerCase().includes(q)));
+    return found.length ? [{ key: 'search', label: `Resultado da busca (${found.length})`, tiles: found }] : [];
+  }
+  const visible = tiles.filter((t) => t.base.tabs.includes(tab));
+  const out = SECTIONS.map((s) => ({ key: s.key, label: tab === 'Botas' ? BOOT_LABELS[s.key] ?? s.label : s.label, tiles: [] }));
   for (const tile of visible) {
-    const idx = SECTIONS.findIndex((s) => s.match(tile.tags));
-    out[idx].tiles.push(tile);
+    const idx = SECTIONS.findIndex((s) => s.match(tile.base));
+    if (idx >= 0) out[idx].tiles.push(tile);
   }
   return out.filter((s) => s.tiles.length > 0);
 }
 
-/** Human readable stat lines of an item: { flat: [...], passives: [...] }. */
+export const variantLabel = (item) => (item.section === 'evolucao' ? `${item.name} (evoluído)` : 'Ao comprar');
+
+const pctOf = (r) => `${Math.round(r * 10000) / 100}%`;
+const SCOPE_TEXT = { BONUS: 'adicional', BASE: 'base', TOTAL: 'total' };
+
+/** Plain stats of an item and the passive effects the calculation models. */
 export function describeStats(item) {
   const flat = [];
-  const passives = [];
+  const modeled = [];
   for (const s of item.stats) {
-    if (s.type === MARKER) continue;
     if (s.ratio != null && s.refType) {
-      passives.push({ name: s.passive ?? 'Passiva', text: s.refType === s.type
-        ? `+${Math.round(s.ratio * 1000) / 10}% de ${statLabel(s.type)}`
-        : `${Math.round(s.ratio * 1000) / 10}% de ${statLabel(s.refType)} como ${statLabel(s.type)}`, scope: s.refScope });
-    } else if (s.ratio != null) {
-      passives.push({ name: s.passive ?? 'Passiva', text: `+${s.value ?? '?'} ${statLabel(s.type)} (valor fixo da referência)` });
-    } else if (s.value != null && s.passive) {
-      passives.push({ name: s.passive, text: `+${s.value} ${statLabel(s.type)}` });
+      modeled.push({
+        name: s.passive ?? 'Passiva',
+        conditional: s.conditional,
+        text: `${pctOf(s.ratio)} de ${statLabel(s.refType)} (${SCOPE_TEXT[s.refScope] ?? 'total'}) como ${statLabel(s.type)}`,
+      });
+    } else if (s.passive && s.value != null) {
+      const range = s.valueMax != null ? `${s.value}–${s.valueMax} (por nível)` : `${s.value}`;
+      modeled.push({ name: s.passive, conditional: s.conditional, text: `+${range} ${statLabel(s.type)}` });
     } else if (s.value != null) {
       flat.push({ type: s.type, value: s.value });
     }
   }
-  return { flat, passives, unstable: item.stats.some((s) => s.type === MARKER) };
+  return { flat, modeled };
 }

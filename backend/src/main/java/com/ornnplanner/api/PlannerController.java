@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -29,7 +28,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -48,9 +46,8 @@ public class PlannerController {
     // ------------------------------------------------------------ reference (read only)
 
     @GetMapping("/items")
-    public List<ItemView> items(@RequestParam(defaultValue = "false") boolean all) {
-        List<ItemView> views = planner.itemViews();
-        return all ? views : views.stream().filter(v -> v.relevant).collect(Collectors.toList());
+    public List<ItemView> items() {
+        return planner.itemViews();
     }
 
     @GetMapping("/stat-prices")
@@ -69,7 +66,6 @@ public class PlannerController {
         m.put("maxLevel", TimelineEngine.MAX_LEVEL);
         m.put("forgeTiers", reference.findForgeTiers());
         m.put("xpTable", reference.findXpTable());
-        m.put("defaultCategories", PlannerService.DEFAULT_CATEGORIES);
         return m;
     }
 

@@ -1,4 +1,5 @@
--- Schema is idempotent (CREATE ... IF NOT EXISTS) and runs on every start.
+-- Schema is idempotent (CREATE ... IF NOT EXISTS) and runs on every start, after SchemaManager migrations.
+-- Version (PRAGMA user_version) 2: catalog transcribed from the Wild Rift shop (pt-BR).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -15,10 +16,24 @@ CREATE TABLE IF NOT EXISTS item (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     name         TEXT    NOT NULL UNIQUE,
     cost         INTEGER NOT NULL,
-    category     TEXT    NOT NULL,
+    category     TEXT    NOT NULL,           -- shop tabs joined by ", "
     image        TEXT,
     source_patch TEXT,
-    edited       INTEGER NOT NULL DEFAULT 0  -- 1 = corrected by hand, re-import will not overwrite it
+    edited       INTEGER NOT NULL DEFAULT 0, -- 1 = corrected by hand, re-import will not overwrite it
+    section      TEXT,                       -- aprimorado | tier_medio | basico | preparacao | evolucao
+    active       INTEGER NOT NULL DEFAULT 0,
+    marker       TEXT,                       -- novo | reformulado | alterado
+    summary      TEXT,
+    item_group   TEXT,                       -- shop tile the item belongs to (base item for evolutions)
+    capture      TEXT                        -- screenshot the data came from
+);
+
+CREATE TABLE IF NOT EXISTS item_passive (
+    item_id INTEGER NOT NULL REFERENCES item (id) ON DELETE CASCADE,
+    seq     INTEGER NOT NULL,
+    name    TEXT,
+    text    TEXT    NOT NULL,
+    PRIMARY KEY (item_id, seq)
 );
 
 CREATE TABLE IF NOT EXISTS item_stat (
@@ -31,7 +46,9 @@ CREATE TABLE IF NOT EXISTS item_stat (
     ratio     REAL,
     ref       REAL,
     ref_type  TEXT,
-    ref_scope TEXT    NOT NULL DEFAULT 'TOTAL'
+    ref_scope TEXT    NOT NULL DEFAULT 'TOTAL',  -- TOTAL | BONUS | BASE
+    value_max   REAL,                            -- value at level 15 for "X–Y (by level)" ranges
+    conditional INTEGER NOT NULL DEFAULT 0       -- 1 = only counts when the build enables conditional effects
 );
 CREATE INDEX IF NOT EXISTS idx_item_stat_item ON item_stat (item_id);
 
@@ -80,6 +97,7 @@ CREATE TABLE IF NOT EXISTS build (
     unit_code    TEXT    NOT NULL REFERENCES unit (code),
     gold_per_min REAL    NOT NULL,
     xp_per_min   REAL    NOT NULL,
+    include_conditional INTEGER NOT NULL DEFAULT 1,
     created_at   TEXT    NOT NULL,
     updated_at   TEXT    NOT NULL
 );

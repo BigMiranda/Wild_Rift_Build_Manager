@@ -19,7 +19,7 @@ export default function App() {
   // Reference data is reloaded after admin edits so the planner always calculates with the stored values.
   const reload = useCallback(async () => {
     try {
-      const [m, it] = await Promise.all([api.get('/api/meta'), api.get('/api/items?all=true')]);
+      const [m, it] = await Promise.all([api.get('/api/meta'), api.get('/api/items')]);
       setMeta(m);
       setItems(it);
       setError(null);

@@ -48,26 +48,32 @@ export default function Admin({ meta, items, onChanged }) {
 
 // ----------------------------------------------------------------- items
 
-const blankItem = { id: null, name: '', cost: 0, category: 'DEFENSE ITEMS', stats: [], components: [] };
+const blankItem = { id: null, name: '', cost: 0, category: 'Defesa', tabs: ['Defesa'], section: 'aprimorado', active: false, marker: null, summary: '', passives: [], stats: [], components: [] };
+const SECTION_OPTIONS = [['aprimorado', 'Aprimorado'], ['tier_medio', 'Tier médio'], ['basico', 'Básico'], ['preparacao', 'Item inicial de suporte'], ['evolucao', 'Evolução (não aparece na grade)']];
+const num = (v) => (v === '' || v == null ? null : Number(v));
 
 function ItemsAdmin({ items, run }) {
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState(null);
   const statTypes = useMemo(() => [...new Set(items.flatMap((i) => i.stats.map((s) => s.type)))].sort(), [items]);
-  const categories = useMemo(() => [...new Set(items.map((i) => i.category))].sort(), [items]);
   const list = items
     .filter((i) => !query || i.name.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const save = async () => {
+    const tabs = (typeof editing.tabs === 'string' ? editing.tabs.split(',') : editing.tabs ?? []).map((t) => t.trim()).filter(Boolean);
     const body = {
       ...editing,
       cost: Number(editing.cost),
+      tabs,
+      category: tabs.join(', '),
+      marker: editing.marker || null,
       stats: editing.stats.map((s) => ({
         ...s,
-        value: s.value === '' || s.value == null ? null : Number(s.value),
-        ratio: s.ratio === '' || s.ratio == null ? null : Number(s.ratio),
-        ref: s.ref === '' || s.ref == null ? null : Number(s.ref),
+        value: num(s.value),
+        valueMax: num(s.valueMax),
+        ratio: num(s.ratio),
+        ref: num(s.ref),
         refType: s.refType || null,
         passive: s.passive || null,
       })),
@@ -118,38 +124,60 @@ function ItemsAdmin({ items, run }) {
             <div className="fields">
               <label className="field">Nome<input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></label>
               <label className="field">Custo total<input type="number" value={editing.cost} onChange={(e) => setEditing({ ...editing, cost: e.target.value })} /></label>
-              <label className="field">Categoria
-                <input list="categories" value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })} />
+              <label className="field">Abas da loja (separadas por vírgula)
+                <input value={Array.isArray(editing.tabs) ? editing.tabs.join(', ') : editing.tabs ?? ''} onChange={(e) => setEditing({ ...editing, tabs: e.target.value })} />
+              </label>
+              <label className="field">Seção
+                <select value={editing.section ?? 'aprimorado'} onChange={(e) => setEditing({ ...editing, section: e.target.value })}>
+                  {SECTION_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </label>
+              <label className="field">Selo do patch
+                <select value={editing.marker ?? ''} onChange={(e) => setEditing({ ...editing, marker: e.target.value })}>
+                  <option value="">—</option><option value="novo">novo</option><option value="reformulado">reformulado</option><option value="alterado">alterado</option>
+                </select>
+              </label>
+              <label className="check" style={{ alignSelf: 'end' }}>
+                <input type="checkbox" checked={!!editing.active} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} /> ativável
               </label>
             </div>
-            <datalist id="categories">{categories.map((c) => <option key={c} value={c} />)}</datalist>
+            <label className="field" style={{ marginTop: 10 }}>Resumo
+              <input value={editing.summary ?? ''} onChange={(e) => setEditing({ ...editing, summary: e.target.value })} />
+            </label>
+            {editing.passives?.length > 0 && (
+              <details style={{ marginTop: 10 }}>
+                <summary className="muted">Texto das passivas (como na loja{editing.capture ? `, de ${editing.capture}` : ''})</summary>
+                {editing.passives.map((p, i) => <p className="passive" key={i}>{p.name && <strong>{p.name}: </strong>}{p.text}</p>)}
+              </details>
+            )}
             <datalist id="stattypes">{statTypes.map((c) => <option key={c} value={c} />)}</datalist>
 
             <h4 style={{ marginTop: 14 }}>Linhas de status</h4>
             <p className="muted" style={{ marginTop: 0 }}>
-              Linha plana: só <em>valor</em>. Passiva percentual: <em>ratio</em> (0,3 = 30%) + <em>ref_type</em>.
-              Escopo TOTAL = ratio × (base da unidade + bônus); BONUS = ratio × bônus apenas.
-              <em> ref</em> e o <em>valor</em> de linhas com ratio só são usados no cálculo estático.
+              Linha plana: <em>valor</em> (e <em>nv15</em> quando a loja mostra uma faixa por nível). Passiva percentual:
+              <em> ratio</em> (0,3 = 30%) + <em>ref_type</em>. Escopo TOTAL = ratio × (base + bônus); BONUS = só bônus
+              (“adicional” na loja); BASE = só o status base. <em>Cond.</em> = só vale quando a build liga efeitos condicionais.
             </p>
             <div className="table-wrap">
               <table className="data">
                 <thead>
-                  <tr><th className="l">Tipo</th><th>Valor</th><th className="l">Passiva</th><th>Ratio</th><th className="l">ref_type</th><th>ref</th><th>Escopo</th><th /></tr>
+                  <tr><th className="l">Tipo</th><th>Valor</th><th>nv15</th><th className="l">Passiva</th><th>Ratio</th><th className="l">ref_type</th><th>Escopo</th><th>Cond.</th><th /></tr>
                 </thead>
                 <tbody>
                   {editing.stats.map((s, idx) => (
                     <tr key={idx}>
                       <td style={{ minWidth: 170 }}><input list="stattypes" value={s.type ?? ''} onChange={(e) => setStat(idx, { type: e.target.value })} /></td>
                       <td style={{ minWidth: 80 }}><input type="number" value={s.value ?? ''} onChange={(e) => setStat(idx, { value: e.target.value })} /></td>
+                      <td style={{ minWidth: 70 }}><input type="number" value={s.valueMax ?? ''} onChange={(e) => setStat(idx, { valueMax: e.target.value })} aria-label="Valor no nível 15" /></td>
                       <td style={{ minWidth: 110 }}><input value={s.passive ?? ''} onChange={(e) => setStat(idx, { passive: e.target.value })} /></td>
                       <td style={{ minWidth: 70 }}><input type="number" step="0.01" value={s.ratio ?? ''} onChange={(e) => setStat(idx, { ratio: e.target.value })} /></td>
                       <td style={{ minWidth: 150 }}><input list="stattypes" value={s.refType ?? ''} onChange={(e) => setStat(idx, { refType: e.target.value })} /></td>
-                      <td style={{ minWidth: 70 }}><input type="number" value={s.ref ?? ''} onChange={(e) => setStat(idx, { ref: e.target.value })} /></td>
                       <td>
                         <select value={s.refScope ?? 'TOTAL'} onChange={(e) => setStat(idx, { refScope: e.target.value })}>
-                          <option>TOTAL</option><option>BONUS</option>
+                          <option>TOTAL</option><option>BONUS</option><option>BASE</option>
                         </select>
                       </td>
+                      <td><input type="checkbox" checked={!!s.conditional} onChange={(e) => setStat(idx, { conditional: e.target.checked })} aria-label="Condicional" /></td>
                       <td><button className="icon danger" aria-label="Remover linha" onClick={() => setEditing({ ...editing, stats: editing.stats.filter((_, k) => k !== idx) })}>✕</button></td>
                     </tr>
                   ))}
@@ -160,7 +188,7 @@ function ItemsAdmin({ items, run }) {
 
             <h4 style={{ marginTop: 14 }}>Receita (componentes)</h4>
             <p className="muted" style={{ marginTop: 0 }}>
-              Não vem da fonte de dados. Ao comprar este item, componentes já possuídos são consumidos e descontados do preço.
+              Ao comprar este item, componentes já possuídos são consumidos e descontados do preço.
             </p>
             {editing.components.map((c, idx) => (
               <div className="row" key={idx} style={{ marginBottom: 4 }}>

@@ -9,8 +9,18 @@ export const STAT_LABELS = {
   'Max Mana': 'Mana',
   'Mana Regen': 'Regen. de mana (/5s)',
   'Move Speed': 'Vel. de movimento',
-  '% Health Regen': '% Regen. de vida base',
-  '% Mana Regeneration': '% Regen. de mana base',
+  '% Health Regen': '% Regeneração de Vida',
+  '% Mana Regeneration': '% Regeneração de Mana',
+  '% Attack Speed': '% Velocidade de Ataque',
+  '% Critical Rate': '% Taxa de Crítico',
+  '% Move Speed': '% Velocidade de Movimento',
+  '% Lifesteal': '% Roubo de Vida',
+  '% Heal and shield strength': '% Potência de Escudo e Cura',
+  '% Tenacity': '% Tenacidade',
+  'Armor Penetration': 'Penetração de Armadura',
+  '% Armor Penetration': '% Penetração de Armadura',
+  'Magic Penetration': 'Penetração Mágica',
+  '% Magic Penetration': '% Penetração Mágica',
 };
 
 export const SHORT_LABELS = {

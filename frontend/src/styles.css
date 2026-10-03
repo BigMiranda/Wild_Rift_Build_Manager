@@ -239,3 +239,22 @@ table.data td input, table.data td select { width: 100%; }
 
 .item-icon { display: inline-block; flex: none; border-radius: 4px; border: 1px solid var(--border-strong); background: var(--surface-2); object-fit: cover; vertical-align: middle; }
 .with-icon { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+
+/* shop badges */
+.tile-marker, .tile-active {
+  position: absolute; width: 20px; height: 20px; border-radius: 50%; line-height: 20px; font-size: 11px;
+  font-weight: 800; text-align: center; box-shadow: 0 1px 3px #000;
+}
+.tile-marker { right: -6px; bottom: 18px; }
+.tile-marker.novo { background: var(--gold); color: var(--accent-ink); }
+.tile-marker.reformulado { background: #2f8fdc; color: #fff; }
+.tile-marker.alterado { background: #d64545; color: #fff; }
+.tile-active { left: -6px; top: -6px; background: #3a2a0c; color: var(--gold-bright); border: 1px solid var(--gold); font-size: 10px; line-height: 18px; }
+.marker-text { display: block; }
+.marker-text.novo { color: var(--gold-bright); }
+.marker-text.reformulado { color: #6cb8f0; }
+.marker-text.alterado { color: #f08080; }
+.modeled ul { margin: 0; padding-left: 16px; }
+.modeled li { margin: 2px 0; font-size: 13px; }
+.cond { color: #e2b440; font-style: italic; }
+label.check.toggle { font-size: 12px; color: var(--text-2); align-self: center; }

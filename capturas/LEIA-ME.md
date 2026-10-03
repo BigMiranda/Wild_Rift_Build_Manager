@@ -1,33 +1,32 @@
 # Capturas da loja do Wild Rift
 
-Esta pasta recebe os prints da loja do jogo. A partir deles o catálogo do projeto é transcrito para um arquivo de dados
-versionado (os prints em si **não** vão para o git — só este arquivo).
+Esta pasta recebe os prints da loja do jogo. A partir deles o catálogo é transcrito para
+`backend/src/main/resources/seed/loja_<patch>.yml` e os ícones são recortados para `seed/icones/`. Os prints em si
+**não** vão para o git — só este arquivo.
 
-## O que capturar
+## O que capturar (formato usado no patch 7.3)
 
-Para **cada aba** da loja (Lutador, Assassino, Atirador, Mágico, Defesa, Suporte, Botas…):
+Para **cada aba** da loja (Lutador, Assassino, Atirador, Mágico, Defesa, Suporte, Botas):
 
-1. **A grade da aba** — quantos prints forem necessários para mostrar todos os itens (rolando a lista). Serve para
-   saber em que aba e seção (Ativo, Aprimorado…) cada item aparece e a ordem.
+- `Aba <Nome> completa Resumos.png` — a lista em modo resumo, com todos os itens da aba (nome, custo, resumo e selos).
+- `Aba <Nome> completa Enxuta.png` — a grade de ícones da aba.
 
-Para **cada item**:
+Para **cada item**, um único print com o painel de descrição e o de árvore lado a lado (nome, custo, status, passivas,
+"Fabrica" e "Árvore de Construção"). Se o texto não couber, emende a continuação no mesmo arquivo.
 
-2. **Descrição** — o item selecionado, com o painel da direita na aba de descrição (nome, custo, status, passivas).
-   Se o texto não couber na tela, role e tire mais um print.
-3. **Árvore** — o mesmo item com o painel na aba de árvore (receita / em que ele se transforma).
+Nome do arquivo: a posição do item em cada aba onde ele aparece, por exemplo `2 - Lutador, 2 - Assassino, 10 - Atirador.png`
+(`ativavel` quando o item é ativável). Um item que aparece em várias abas só precisa de um print.
 
-Um item que aparece em mais de uma aba só precisa dos prints 2 e 3 uma vez.
+## Patches novos
 
-## Como organizar
+Só os itens com selo (**N** = novo, setas azuis = reformulado, seta vermelha = alterado) e os itens removidos precisam
+de print novo; o resto do catálogo continua valendo. Depois de atualizar o YAML:
 
-- Uma subpasta por patch, por exemplo `capturas/7.3/`.
-- Não precisa renomear os arquivos; a ordem em que foram tirados já ajuda. Se quiser, separe por aba em subpastas
-  (`capturas/7.3/defesa/` …).
-- Print em tela cheia, sem cortar. Evite capturar no meio de uma animação.
+```bash
+python tools/capturas_receitas.py capturas/<patch>
+```
+```bash
+python tools/capturas_icones.py loja_<patch>.yml capturas/<patch>
+```
 
-## Antes de fazer tudo: piloto
-
-Comece com **3 ou 4 itens** (por exemplo, um com passiva percentual, um com ativo, um componente e uma bota) mais o
-print da grade de uma aba. Com isso validamos o que fica legível e fechamos o formato antes de você capturar o resto.
-Vale testar também o modo de **lista** da loja (o botão ao lado da grade, no canto superior direito): se ele mostrar
-nome e status de vários itens por tela, pode poupar muitos prints.
+O primeiro confere as receitas pelos ícones das árvores e das listas "Fabrica"; o segundo recorta os ícones.

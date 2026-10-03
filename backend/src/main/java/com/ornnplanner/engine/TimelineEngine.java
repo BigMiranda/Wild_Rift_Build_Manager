@@ -35,11 +35,13 @@ import static com.ornnplanner.engine.GoldPricing.fmt;
  *
  * <h2>Stat composition (per purchase, over the whole inventory at that point)</h2>
  * <ol>
- *   <li>Flat stats of every owned item are summed ("itemFlat").</li>
+ *   <li>Flat stats of every owned item are summed ("itemFlat"). Ranges shown by the shop as "X–Y (by level)" are
+ *       interpolated linearly between level 1 and 15. Conditional effects (stacks, in combat, low health) only count
+ *       when the build enables them.</li>
  *   <li>Unit base stats at the current level: {@code base + growth * (level - 1)}.</li>
  *   <li>Percentage passives are evaluated <b>in purchase order</b>. For the item at inventory position k, a line
- *       "ratio x ref_type" is worth {@code ratio * (base[ref_type] (only if scope TOTAL) + itemFlat[ref_type]
- *       + passives of items at positions < k contributing to ref_type)}. An item's passive never sees its own
+ *       "ratio x ref_type" is worth {@code ratio * (base[ref_type] + itemFlat[ref_type] + passives of items at
+ *       positions < k contributing to ref_type)} for scope TOTAL; BONUS drops the base term and BASE keeps only it. An item's passive never sees its own
  *       passive lines nor passives of items bought after it. Ratio lines without a ref_type cannot be evaluated
  *       against the build and fall back to the reference data's static value (flagged in the output).</li>
  *   <li>Living Forge (Ornn only) is applied last: {@code pct(level) * bonus} for Max Health, Armor and Magic
@@ -67,6 +69,8 @@ public class TimelineEngine {
     public static final int INVENTORY_SLOTS = 6;
 
     private final ReferenceData ref;
+    /** Set at the start of each run: whether conditional effects count. */
+    private boolean includeConditional = true;
 
     public TimelineEngine(ReferenceData ref) {
         this.ref = ref;
@@ -91,6 +95,7 @@ public class TimelineEngine {
         result.goldPerMin = in.goldPerMin;
         result.xpPerMin = in.xpPerMin;
         result.statPrices = ref.statPrices;
+        includeConditional = in.includeConditional;
 
         if (in.goldPerMin <= 0) {
             result.warnings.add("Ouro por minuto deve ser maior que zero.");
@@ -217,11 +222,11 @@ public class TimelineEngine {
             s.base.put(e.getKey(), e.getValue().at(level));
         }
 
-        // Step 1: flat stats of every owned item.
+        // Step 1: flat stats of every owned item (level ranges interpolated, conditional ones only when enabled).
         for (Owned o : inventory) {
             for (StatLine l : o.item.stats) {
-                if (l.countsAsFlat()) {
-                    s.itemFlat.merge(l.type, l.value, Double::sum);
+                if (l.countsAsFlat() && counts(l)) {
+                    s.itemFlat.merge(l.type, l.valueAt(level), Double::sum);
                 }
             }
         }
@@ -230,7 +235,7 @@ public class TimelineEngine {
         for (Owned o : inventory) {
             Map<String, Double> contributions = new LinkedHashMap<>();
             for (StatLine l : o.item.stats) {
-                if (!l.hasRatio() || l.marker()) {
+                if (!l.hasRatio() || l.marker() || !counts(l)) {
                     continue;
                 }
                 PassiveDetail d = new PassiveDetail();
@@ -241,16 +246,21 @@ public class TimelineEngine {
                 d.ratio = l.ratio;
                 d.refType = l.refType;
                 d.refScope = l.refScope;
+                d.conditional = l.conditional;
                 if (l.dynamicPercent()) {
-                    d.refBase = l.refScope == RefScope.BONUS ? 0 : s.base.getOrDefault(l.refType, 0.0);
-                    d.refItems = s.itemFlat.getOrDefault(l.refType, 0.0);
+                    boolean withBase = l.refScope != RefScope.BONUS;
+                    boolean withBonus = l.refScope != RefScope.BASE;
+                    d.refBase = withBase ? s.base.getOrDefault(l.refType, 0.0) : 0;
+                    d.refItems = withBonus ? s.itemFlat.getOrDefault(l.refType, 0.0) : 0;
                     // itemPassives only holds items bought before this one at this point of the loop
-                    d.refEarlierPassives = s.itemPassives.getOrDefault(l.refType, 0.0);
+                    d.refEarlierPassives = withBonus ? s.itemPassives.getOrDefault(l.refType, 0.0) : 0;
                     d.refTotal = d.refBase + d.refItems + d.refEarlierPassives;
                     d.value = l.ratio * d.refTotal;
-                    d.formula = fmt(l.ratio) + " × (" + (l.refScope == RefScope.BONUS ? "" : fmt(d.refBase) + " base + ")
-                            + fmt(d.refItems) + " itens + " + fmt(d.refEarlierPassives) + " passivas anteriores) = "
-                            + fmt(d.value) + " " + l.type;
+                    String parts = l.refScope == RefScope.BASE ? fmt(d.refBase) + " base"
+                            : (withBase ? fmt(d.refBase) + " base + " : "") + fmt(d.refItems) + " itens + "
+                            + fmt(d.refEarlierPassives) + " passivas anteriores";
+                    d.formula = fmt(l.ratio) + " × (" + parts + ") = " + fmt(d.value) + " " + l.type
+                            + (l.conditional ? " (condicional)" : "");
                 } else {
                     d.staticFallback = true;
                     d.value = l.value != null ? l.value : (l.ref != null ? l.ratio * l.ref : 0);
@@ -294,6 +304,10 @@ public class TimelineEngine {
         return s;
     }
 
+    private boolean counts(StatLine l) {
+        return includeConditional || !l.conditional;
+    }
+
     private static double bonusOf(StatSnapshot s, String stat) {
         return s.itemFlat.getOrDefault(stat, 0.0) + s.itemPassives.getOrDefault(stat, 0.0) + s.forge.getOrDefault(stat, 0.0);
     }
@@ -323,10 +337,10 @@ public class TimelineEngine {
         double worth = 0;
         StringBuilder f = new StringBuilder();
         for (StatLine l : item.stats) {
-            if (l.countsAsFlat()) {
-                double g = goldValue(l.type, l.value);
-                worth += g;
-                appendTerm(f, l.value, l.type);
+            if (l.countsAsFlat() && counts(l)) {
+                double v = l.valueAt(step.level);
+                worth += goldValue(l.type, v);
+                appendTerm(f, v, l.type + (l.passive != null ? " [" + l.passive + "]" : ""));
             }
         }
         for (PassiveDetail p : step.stats.passives) {

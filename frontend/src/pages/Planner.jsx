@@ -17,6 +17,7 @@ const emptyBuild = (folderId) => ({
   xpPerMin: '',
   itemIds: [],
   ragdollStats: {},
+  includeConditional: true,
 });
 
 const numOrNull = (v) => (v === '' || v == null ? null : Number(v));
@@ -225,6 +226,10 @@ export default function Planner({ meta, items }) {
             </label>
             <label className="field narrow">XP/min
               <input type="number" min="0" value={draft.xpPerMin} placeholder="ex.: 450" onChange={(e) => update({ xpPerMin: e.target.value })} />
+            </label>
+            <label className="check toggle" title="Passivas que só valem em certas situações: acúmulos em combate, vida baixa, carga de mana...">
+              <input type="checkbox" checked={draft.includeConditional !== false} onChange={(e) => update({ includeConditional: e.target.checked })} />
+              efeitos condicionais
             </label>
             <div className="row build-actions">
               {dirty && <small>não salva</small>}

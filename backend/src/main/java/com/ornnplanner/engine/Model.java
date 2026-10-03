@@ -20,14 +20,20 @@ public final class Model {
         /** Unit base stat at the current level + all bonus (items and earlier passives). */
         TOTAL,
         /** Only bonus (items and earlier passives), never the unit base stat. */
-        BONUS
+        BONUS,
+        /** Only the unit base stat at the current level (e.g. "50% of base Attack Damage"). */
+        BASE
     }
 
-    /** One stat line of an item, mirroring an entry of `stats:` in the reference YAML. */
+    /** One stat line of an item: a flat stat, or a percentage passive ("ratio x refType"). */
     public static class StatLine {
         public String type;
-        /** Flat value. For ratio lines this is the reference data's static pre-computed value. */
+        /** Flat value at level 1. For ratio lines: optional fixed value used only by the static calculation. */
         public Double value;
+        /** Flat value at level 15 when the shop shows a range ("200–300 by level"); linear in between. */
+        public Double valueMax;
+        /** Only active in some situations (stacks, in combat, low health...); the build decides whether to count it. */
+        public boolean conditional;
         public String passive;
         /** Percentage passive ratio (0.3 = 30%). Null means the line is a flat stat. */
         public Double ratio;
@@ -74,6 +80,18 @@ public final class Model {
         public boolean countsAsFlat() {
             return !marker() && ratio == null && value != null;
         }
+
+        /** Flat value at a level: `value` at level 1, `valueMax` at level 15, linear in between. */
+        public double valueAt(int level) {
+            if (value == null) {
+                return 0;
+            }
+            if (valueMax == null) {
+                return value;
+            }
+            int l = Math.max(1, Math.min(15, level));
+            return value + (valueMax - value) * (l - 1) / 14.0;
+        }
     }
 
     public static class ComponentRef {
@@ -89,14 +107,42 @@ public final class Model {
         }
     }
 
+    /** Passive / active text exactly as the shop shows it. */
+    public static class PassiveText {
+        public String name;
+        public String text;
+
+        public PassiveText() {
+        }
+
+        public PassiveText(String name, String text) {
+            this.name = name;
+            this.text = text;
+        }
+    }
+
     public static class ItemDef {
         public long id;
         public String name;
         public int cost;
+        /** Shop tabs joined by ", " (kept for compatibility with older code paths and the admin screen). */
         public String category;
         public String image;
         public String sourcePatch;
         public boolean edited;
+        /** Shop section: aprimorado | tier_medio | basico | preparacao | evolucao */
+        public String section;
+        /** Shop tabs the item appears in (Lutador, Defesa...). */
+        public List<String> tabs = new ArrayList<>();
+        public boolean active;
+        /** Patch change badge: novo | reformulado | alterado */
+        public String marker;
+        public String summary;
+        /** Item this one belongs to in the shop: itself, or the base item for an evolution (Fimbulwinter -> Aproximação Invernal). */
+        public String group;
+        /** Screenshot the data was transcribed from. */
+        public String capture;
+        public List<PassiveText> passives = new ArrayList<>();
         public List<StatLine> stats = new ArrayList<>();
         public List<ComponentRef> components = new ArrayList<>();
     }
@@ -153,6 +199,8 @@ public final class Model {
 
     public static class EngineInput {
         public UnitProfile unit;
+        /** Count conditional effects (stacks, in combat, low health...) as active. */
+        public boolean includeConditional = true;
         public double goldPerMin;
         public double xpPerMin;
         public List<Long> itemIds = new ArrayList<>();
@@ -175,6 +223,7 @@ public final class Model {
         public double value;
         /** True when the line has no ref_type and the reference data's static value was used. */
         public boolean staticFallback;
+        public boolean conditional;
         public String formula;
     }
 
