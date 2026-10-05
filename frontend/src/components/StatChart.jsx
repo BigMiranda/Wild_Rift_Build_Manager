@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { statLabel, t } from '../i18n.js';
-import { SERIES_COLORS, TABLE_STATS, mmss, n0, n1 } from '../format.js';
+import { CHART_STATS, PERCENT_STATS, SERIES_COLORS, mmss, n0, n1, statOf } from '../format.js';
 import ItemIcon from './ItemIcon.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
 
@@ -44,7 +44,7 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
   return (
     <div>
       <div className="chips" role="group" aria-label={t('chart.statGroup')} style={{ marginBottom: 10 }}>
-        {TABLE_STATS.map((s) => (
+        {CHART_STATS.map((s) => (
           <button key={s} className={`stat-chip${s === stat ? ' active' : ''}`} aria-pressed={s === stat}
             onClick={() => onStatChange(s)} style={s === stat ? { borderColor: statColor(s) } : undefined}>
             <StatIcon stat={s} /><span style={{ color: statColor(s) }}>{statLabel(s)}</span>
@@ -66,12 +66,13 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
               />
               <YAxis
                 stroke="var(--muted)" tick={{ fill: statColor(stat), fontSize: 12 }} width={Y_AXIS_WIDTH}
-                domain={['auto', 'auto']} tickFormatter={(v) => n0(v)}
+                domain={PERCENT_STATS.has(stat) ? [0, 'auto'] : ['auto', 'auto']}
+                tickFormatter={(v) => (PERCENT_STATS.has(stat) ? `${n0(v)}%` : n0(v))}
               />
               <Tooltip
                 contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)' }}
                 labelFormatter={(v) => t('chart.minute', { time: mmss(v) })}
-                formatter={(v, name, p) => [`${n1(v)} ${statLabel(stat)} · ${t('chart.lv', { n: p.payload.level })}`, name]}
+                formatter={(v, name, p) => [`${n1(v)}${PERCENT_STATS.has(stat) ? '%' : ''} ${statLabel(stat)} · ${t('chart.lv', { n: p.payload.level })}`, name]}
                 cursor={{ stroke: 'var(--muted)', strokeDasharray: '3 3' }}
               />
               {lines.length >= 2 && <Legend wrapperStyle={{ color: 'var(--text-2)' }} />}
@@ -80,7 +81,7 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
                 <Line
                   key={s.key}
                   name={s.name}
-                  data={s.result.series.map((p) => ({ minute: p.minute, level: p.level, value: p.total[stat] }))}
+                  data={s.result.series.map((p) => ({ minute: p.minute, level: p.level, value: statOf(p.total, stat) }))}
                   dataKey="value"
                   type="stepAfter"
                   stroke={SERIES_COLORS[s.colorIndex % SERIES_COLORS.length]}

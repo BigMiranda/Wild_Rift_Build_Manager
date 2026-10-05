@@ -26,7 +26,7 @@ export default function FolderTree({ folders, builds, activeId, compareIds, onOp
 
   return (
     <div>
-      <div className="spread" style={{ marginBottom: 10 }}>
+      <div className="spread folders-head" style={{ marginBottom: 10 }}>
         <h3 style={{ margin: 0 }}>{t('folders.title')}</h3>
         <button onClick={createFolder}>{t('folders.new')}</button>
       </div>

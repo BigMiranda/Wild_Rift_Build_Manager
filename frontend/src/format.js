@@ -2,20 +2,39 @@ import { currentLang } from './i18n.js';
 
 export { statLabel, statAbbr } from './i18n.js';
 
-/** Stats shown in the timeline table and selectable in the chart. */
+/** Stats shown in the timeline table. */
 export const TABLE_STATS = ['Max Health', 'Armor', 'Magic Resistance', 'Ability Haste', 'Health Regen', 'Ability Power', 'Attack Damage'];
+
+/**
+ * Damage reduction from a resistance, as in the game: resistance / (100 + resistance).
+ * 100 armor = 50% less physical damage. Negative resistance increases damage: 2 - 100 / (100 - resistance).
+ */
+export const damageReduction = (res) => (res >= 0 ? (res / (100 + res)) * 100 : (1 - 100 / (100 - res)) * 100);
+
+/** Stats computed from others (not returned by the engine). */
+export const DERIVED_STATS = {
+  'Physical Reduction': (totals) => damageReduction(totals.Armor ?? 0),
+  'Magic Reduction': (totals) => damageReduction(totals['Magic Resistance'] ?? 0),
+};
+
+/** Value of a stat from a totals map, including derived ones. */
+export const statOf = (totals, stat) => (DERIVED_STATS[stat] ? DERIVED_STATS[stat](totals) : totals[stat]);
+
+/** Stats selectable in the chart. */
+export const CHART_STATS = [...TABLE_STATS.slice(0, 3), 'Physical Reduction', 'Magic Reduction', ...TABLE_STATS.slice(3)];
 
 /** Stats of the champion sheet (in-game stats tab order). */
 export const SHEET_STATS = [
   'Attack Damage', 'Ability Power', 'Max Health', 'Max Mana',
-  'Armor', 'Magic Resistance', '% Attack Speed', 'Ability Haste',
+  'Armor', 'Magic Resistance', 'Physical Reduction', 'Magic Reduction',
+  '% Attack Speed', 'Ability Haste',
   '% Critical Rate', 'Health Regen', 'Mana Regen', 'Move Speed',
   'Armor Penetration', '% Armor Penetration', 'Magic Penetration', '% Magic Penetration',
   '% Lifesteal', '% Tenacity', '% Heal and shield strength', '% Move Speed',
 ];
 
 /** Stats whose value is a percentage. */
-export const PERCENT_STATS = new Set(['% Attack Speed', '% Critical Rate', '% Armor Penetration', '% Magic Penetration',
+export const PERCENT_STATS = new Set(['Physical Reduction', 'Magic Reduction', '% Attack Speed', '% Critical Rate', '% Armor Penetration', '% Magic Penetration',
   '% Lifesteal', '% Tenacity', '% Heal and shield strength', '% Move Speed', '% Health Regen', '% Mana Regeneration']);
 
 const fmt = (digits) => (v) => {

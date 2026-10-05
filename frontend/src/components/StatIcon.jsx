@@ -45,6 +45,8 @@ export const STAT_META = {
   'Magic Penetration': { icon: 'pierce', color: 'var(--stat-ap)' },
   '% Magic Penetration': { icon: 'pierce', color: 'var(--stat-ap)' },
   '% Heal and shield strength': { icon: 'heal', color: 'var(--stat-hp)' },
+  'Physical Reduction': { icon: 'shield', color: 'var(--stat-armor)' },
+  'Magic Reduction': { icon: 'ring', color: 'var(--stat-mr)' },
 };
 
 export const statColor = (code) => STAT_META[code]?.color ?? 'var(--text-2)';

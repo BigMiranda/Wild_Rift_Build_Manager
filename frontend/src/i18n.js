@@ -55,6 +55,8 @@ const STAT_NAMES = {
   '% Armor Penetration': ['% Pen. de Armadura', '% Armor Pen.'],
   'Magic Penetration': ['Pen. Mágica', 'Magic Pen.'],
   '% Magic Penetration': ['% Pen. Mágica', '% Magic Pen.'],
+  'Physical Reduction': ['Redução de Dano Físico', 'Physical Damage Reduction'],
+  'Magic Reduction': ['Redução de Dano Mágico', 'Magic Damage Reduction'],
 };
 
 /** Abbreviations: [pt, en] (pt follows the game's own: DdA, PdH, RM, VdA, VdM). */
@@ -81,6 +83,8 @@ const STAT_ABBR = {
   '% Armor Penetration': ['PenA%', 'ArPen%'],
   'Magic Penetration': ['PenM', 'MPen'],
   '% Magic Penetration': ['PenM%', 'MPen%'],
+  'Physical Reduction': ['RedF', 'PhysDR'],
+  'Magic Reduction': ['RedM', 'MagDR'],
 };
 
 export const statLabel = (code) => (STAT_NAMES[code] ? STAT_NAMES[code][state.lang === 'en' ? 1 : 0] : code);
@@ -291,6 +295,9 @@ const EN = {
   'slots.empty': 'empty slot',
   'slots.finished': 'completed item',
   'sheet.inventory': 'Inventory',
+  'dr.title': '{stat}: {res} → takes {pct} less damage (resistance ÷ (100 + resistance), before enemy penetration)',
+  'sidebar.collapse': 'Collapse the builds panel',
+  'sidebar.expand': 'Expand the builds panel',
   // misc
   'compare.calculating': 'Calculating…',
   'warn.ragdoll': 'Ragdoll without stats: every blank field counts as 0.',
@@ -491,6 +498,9 @@ const PT = {
   'slots.empty': 'espaço vazio',
   'slots.finished': 'item finalizado',
   'sheet.inventory': 'Inventário',
+  'dr.title': '{stat}: {res} → recebe {pct} menos dano (resistência ÷ (100 + resistência), antes da penetração inimiga)',
+  'sidebar.collapse': 'Recolher o painel de builds',
+  'sidebar.expand': 'Expandir o painel de builds',
   'compare.calculating': 'Calculando…',
   'warn.ragdoll': 'Boneco de pano sem status definidos: todos os campos em branco contam como 0.',
 };

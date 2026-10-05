@@ -1,5 +1,5 @@
 import { statLabel, t } from '../i18n.js';
-import { PERCENT_STATS, SHEET_STATS, mmss, n0, n1, pct, statValue } from '../format.js';
+import { DERIVED_STATS, PERCENT_STATS, SHEET_STATS, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
 import ItemIcon from './ItemIcon.jsx';
 import InventorySlots from './InventorySlots.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
@@ -29,12 +29,13 @@ export function StatSheet({ point, itemsById }) {
       </div>
       <div className="stat-sheet">
         {SHEET_STATS.map((s) => {
-          const total = point.total[s] ?? 0;
-          const base = point.base[s];
+          const total = statOf(point.total, s) ?? 0;
+          const base = DERIVED_STATS[s] ? undefined : point.base[s];
           const bonus = base != null ? total - base : total;
           const showSplit = base != null && !PERCENT_STATS.has(s);
           return (
-            <div key={s} className="sheet-row">
+            <div key={s} className={`sheet-row${DERIVED_STATS[s] ? ' derived' : ''}`}
+              title={DERIVED_STATS[s] ? t('dr.title', { stat: statLabel(s === 'Physical Reduction' ? 'Armor' : 'Magic Resistance'), res: n0(point.total[s === 'Physical Reduction' ? 'Armor' : 'Magic Resistance']), pct: pct(total) }) : undefined}>
               <span className="sheet-label" style={{ color: statColor(s) }}>
                 <StatIcon stat={s} />{statLabel(s)}
               </span>

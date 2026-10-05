@@ -23,6 +23,15 @@ const emptyBuild = (folderId) => ({
   ragdollStats: {},
 });
 
+const SIDEBAR_KEY = 'ornn-planner-sidebar';
+const loadSidebar = () => {
+  try {
+    return localStorage.getItem(SIDEBAR_KEY) !== 'collapsed';
+  } catch {
+    return true;
+  }
+};
+
 const numOrNull = (v) => (v === '' || v == null ? null : Number(v));
 
 /** Converts the editor state to the API payload (numbers, blanks as null). */
@@ -54,6 +63,17 @@ export default function Planner({ meta, items }) {
   const [chartStat, setChartStat] = useState('Max Health');
   const [selectedMinute, setSelectedMinute] = useState(null);
   const [message, setMessage] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(loadSidebar);
+  const toggleSidebar = () => {
+    setSidebarOpen((open) => {
+      try {
+        localStorage.setItem(SIDEBAR_KEY, open ? 'collapsed' : 'open');
+      } catch {
+        /* storage unavailable: keep it for this session only */
+      }
+      return !open;
+    });
+  };
 
   const itemsById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const evoPairs = useMemo(() => evolutionPairs(items), [items]);
@@ -212,9 +232,16 @@ export default function Planner({ meta, items }) {
   const point = result && moment != null ? pointAt(result.series, moment) : null;
 
   return (
-    <div className="layout">
-      <aside className="sidebar">
-        <FolderTree
+    <div className={`layout${sidebarOpen ? '' : ' collapsed'}`}>
+      <aside className="sidebar" aria-label={t('folders.title')}>
+        <button
+          className="sidebar-toggle icon" onClick={toggleSidebar} aria-expanded={sidebarOpen}
+          title={t(sidebarOpen ? 'sidebar.collapse' : 'sidebar.expand')} aria-label={t(sidebarOpen ? 'sidebar.collapse' : 'sidebar.expand')}
+        >
+          {sidebarOpen ? '«' : '»'}
+        </button>
+        {!sidebarOpen && <span className="sidebar-rail-label">{t('folders.title')}</span>}
+        {sidebarOpen && <FolderTree
           folders={folders}
           builds={builds}
           activeId={draft.id}
@@ -224,7 +251,7 @@ export default function Planner({ meta, items }) {
           onToggleCompare={toggleCompare}
           onChanged={loadTree}
           onError={setMessage}
-        />
+        />}
       </aside>
 
       <main className="main">

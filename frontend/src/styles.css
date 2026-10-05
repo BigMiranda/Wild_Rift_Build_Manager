@@ -363,3 +363,24 @@ tr.violating td { background: rgba(180, 35, 24, .12); }
 .preview .violation { margin: 0 0 6px; font-size: 13px; }
 
 .sheet-inventory { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
+
+/* damage reduction */
+table.timeline td small.dr { display: block; font-size: 10px; color: var(--muted); line-height: 1.1; }
+.sheet-row.derived { background: rgba(255, 255, 255, .02); }
+
+/* collapsible builds sidebar */
+.layout.collapsed { grid-template-columns: 40px minmax(0, 1fr); }
+.sidebar { position: relative; }
+.sidebar-toggle { position: absolute; top: 10px; right: 8px; z-index: 1; padding: 1px 7px; }
+.layout:not(.collapsed) .sidebar .folders-head { padding-right: 34px; }
+.layout.collapsed .sidebar { padding: 10px 4px; overflow: hidden; }
+.layout.collapsed .sidebar-toggle { position: static; display: block; margin: 0 auto; }
+.sidebar-rail-label {
+  display: block; margin: 14px auto 0; writing-mode: vertical-rl; transform: rotate(180deg); color: var(--muted);
+  font-size: 11px; text-transform: uppercase; letter-spacing: .12em;
+}
+@media (max-width: 900px) {
+  .layout.collapsed { grid-template-columns: 1fr; }
+  .layout.collapsed .sidebar-rail-label { writing-mode: horizontal-tb; transform: none; display: inline; margin: 0 0 0 8px; }
+  .layout.collapsed .sidebar-toggle { display: inline-block; margin: 0; }
+}

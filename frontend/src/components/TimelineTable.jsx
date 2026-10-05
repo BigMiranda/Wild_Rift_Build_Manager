@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react';
 import { statAbbr, statLabel, t, violationText } from '../i18n.js';
-import { TABLE_STATS, mmss, n0, n1, pct } from '../format.js';
+import { TABLE_STATS, damageReduction, mmss, n0, n1, pct } from '../format.js';
 import ItemIcon from './ItemIcon.jsx';
 import InventorySlots from './InventorySlots.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
@@ -75,11 +75,17 @@ export default function TimelineTable({ result, itemsById, compact = false }) {
                   <td>{mmss(s.minute)}</td>
                   <td>{s.level}</td>
                   {!compact && <td className="l"><InventorySlots ids={s.inventoryIds ?? []} itemsById={itemsById} /></td>}
-                  {stats.map((st, i) => (
-                    <td key={st} className={i === 0 ? 'group-start' : ''} style={{ color: statColor(st) }}>
-                      {st === 'Health Regen' ? n1(s.stats.total[st]) : n0(s.stats.total[st])}
-                    </td>
-                  ))}
+                  {stats.map((st, i) => {
+                    const v = s.stats.total[st];
+                    const dr = st === 'Armor' || st === 'Magic Resistance' ? damageReduction(v ?? 0) : null;
+                    return (
+                      <td key={st} className={i === 0 ? 'group-start' : ''} style={{ color: statColor(st) }}
+                        title={dr != null ? t('dr.title', { stat: statLabel(st), res: n0(v), pct: pct(dr) }) : undefined}>
+                        {st === 'Health Regen' ? n1(v) : n0(v)}
+                        {dr != null && <small className="dr">{pct(dr)}</small>}
+                      </td>
+                    );
+                  })}
                   {!compact && <td className="group-start">{pct(e.staticPct)}</td>}
                   <td className={`${up ? 'eff-up' : ''} ${compact ? 'group-start' : ''}`}>{pct(e.dynamicPct)}</td>
                   {!compact && <td>{pct(e.marginalPct)}</td>}
