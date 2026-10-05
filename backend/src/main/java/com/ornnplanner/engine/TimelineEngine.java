@@ -39,21 +39,23 @@ import static com.ornnplanner.engine.GoldPricing.fmt;
  *       interpolated linearly between level 1 and 15. Conditional effects (stacks, in combat, low health) only count
  *       when the build enables them.</li>
  *   <li>Unit base stats at the current level: {@code base + growth * (level - 1)}.</li>
- *   <li>Percentage passives are evaluated <b>in purchase order</b>. For the item at inventory position k, a line
- *       "ratio x ref_type" is worth {@code ratio * (base[ref_type] + itemFlat[ref_type] + passives of items at
- *       positions < k contributing to ref_type)} for scope TOTAL; BONUS drops the base term and BASE keeps only it. An item's passive never sees its own
- *       passive lines nor passives of items bought after it. Ratio lines without a ref_type cannot be evaluated
- *       against the build and fall back to the reference data's static value (flagged in the output).</li>
- *   <li>Living Forge (Ornn only) is applied last: {@code pct(level) * bonus} for Max Health, Armor and Magic
- *       Resistance, where bonus = itemFlat + itemPassives. Base stats are never multiplied.</li>
+ *   <li><b>Conversions</b> (a line "ratio x ref_type" whose target stat differs from ref_type, e.g. Mana -> Health,
+ *       bonus Health -> AD) read the <i>final</i> value of their source stat, so stats are resolved in dependency
+ *       order (Mana before Health before AD/AP...). Scope TOTAL = base + bonus, BONUS = bonus only, BASE = base only.</li>
+ *   <li><b>Multipliers</b> (target stat = ref_type, e.g. +30% bonus armor, +30% total AP) and Ornn's Living Forge
+ *       (+pct(level) of bonus health / armor / MR) are each computed on the stat <i>before</i> multipliers
+ *       (base + flat + conversions) and then summed: percentage increases of the same stat stack additively.</li>
+ *   <li>The result never depends on purchase order, only on what is held. Reference: League of Legends wiki,
+ *       Rabadon's Deathcap notes ("multiplier stacks additively with Infernal Might" / "stacks recursively with other
+ *       sources of ability power"). Ratio lines without a ref_type fall back to the reference data's static value.</li>
  *   <li>Gold value of any stat amount = amount * gold price of the stat (see {@link GoldPricing}).</li>
  * </ol>
  *
  * <h2>Efficiencies of the purchased item</h2>
  * <ul>
  *   <li>static: reference-site formula, context free.</li>
- *   <li>dynamic: (gold value of its flat stats + gold value of its passive lines as evaluated in step 3 at this
- *       point of the build) / item cost.</li>
+ *   <li>dynamic: (gold value of its flat stats + gold value of its passive lines as evaluated with the whole
+ *       inventory at this point of the build) / item cost.</li>
  *   <li>marginal (extra): gold value of all bonus stats (incl. Living Forge and other items' passives) after the
  *       purchase minus before it, both at the purchase level, / gold actually paid.</li>
  * </ul>
@@ -289,64 +291,8 @@ public class TimelineEngine {
             }
         }
 
-        // Step 3: percentage passives, composed in purchase order.
-        for (Owned o : inventory) {
-            Map<String, Double> contributions = new LinkedHashMap<>();
-            List<Model.PassivePart> passiveParts = new ArrayList<>();
-            for (StatLine l : o.item.stats) {
-                if (!l.hasRatio() || l.marker() || !o.counts(l)) {
-                    continue;
-                }
-                PassiveDetail d = new PassiveDetail();
-                d.purchaseIndex = o.purchaseIndex;
-                d.itemName = o.item.name;
-                d.passive = l.passive;
-                d.stat = l.type;
-                d.ratio = l.ratio;
-                d.refType = l.refType;
-                d.refScope = l.refScope;
-                d.conditional = l.conditional;
-                if (l.dynamicPercent()) {
-                    boolean withBase = l.refScope != RefScope.BONUS;
-                    boolean withBonus = l.refScope != RefScope.BASE;
-                    d.refBase = withBase ? s.base.getOrDefault(l.refType, 0.0) : 0;
-                    d.refItems = withBonus ? s.itemFlat.getOrDefault(l.refType, 0.0) : 0;
-                    // itemPassives only holds items bought before this one at this point of the loop
-                    d.refEarlierPassives = withBonus ? s.itemPassives.getOrDefault(l.refType, 0.0) : 0;
-                    d.refTotal = d.refBase + d.refItems + d.refEarlierPassives;
-                    d.value = l.ratio * d.refTotal;
-                    String parts = l.refScope == RefScope.BASE ? fmt(d.refBase) + " base"
-                            : (withBase ? fmt(d.refBase) + " base + " : "") + fmt(d.refItems) + " itens + "
-                            + fmt(d.refEarlierPassives) + " passivas anteriores";
-                    d.formula = fmt(l.ratio) + " × (" + parts + ") = " + fmt(d.value) + " " + l.type
-                            + (l.conditional ? " (condicional)" : "");
-                } else {
-                    d.staticFallback = true;
-                    d.value = l.value != null ? l.value : (l.ref != null ? l.ratio * l.ref : 0);
-                    d.formula = "valor estático da referência = " + fmt(d.value) + " " + l.type;
-                }
-                contributions.merge(l.type, d.value, Double::sum);
-                passiveParts.add(part(d.passive, d.stat, d.value, l.conditional));
-                s.passives.add(d);
-            }
-            // Added only after the whole item was evaluated: an item never compounds on itself.
-            contributions.forEach((k, v) -> s.itemPassives.merge(k, v, Double::sum));
-            s.contributions.add(contribution(o, level, passiveParts));
-        }
-
-        // Step 4: Living Forge on bonus health / armor / MR.
-        s.forgePct = unit.livingForge ? forgePct(level) : 0;
-        if (unit.livingForge) {
-            for (String stat : Stats.LIVING_FORGE_STATS) {
-                ForgeDetail f = new ForgeDetail();
-                f.stat = stat;
-                f.bonus = s.itemFlat.getOrDefault(stat, 0.0) + s.itemPassives.getOrDefault(stat, 0.0);
-                f.pct = s.forgePct;
-                f.value = f.bonus * f.pct;
-                s.forge.put(stat, f.value);
-                s.forgeDetails.add(f);
-            }
-        }
+        // Steps 3-4: conversions, multipliers and Living Forge, independent of purchase order.
+        new Resolver(s, inventory, level, unit.livingForge ? forgePct(level) : 0, unit.livingForge).run();
 
         // Totals.
         Set<String> keys = new LinkedHashSet<>(Stats.DISPLAY_STATS);
@@ -363,6 +309,178 @@ public class TimelineEngine {
         s.total.put(Stats.MANA_REGEN, s.base.getOrDefault(Stats.MANA_REGEN, 0.0)
                 * (1 + bonusOf(s, Stats.PCT_MANA_REGEN) / 100.0));
         return s;
+    }
+
+    /** A ratio line of an owned item. */
+    private static final class RatioLine {
+        final Owned owner;
+        final StatLine line;
+        PassiveDetail detail;
+
+        RatioLine(Owned owner, StatLine line) {
+            this.owner = owner;
+            this.line = line;
+        }
+
+        boolean conversion() {
+            return !line.type.equals(line.refType);
+        }
+    }
+
+    /**
+     * Resolves every stat of a snapshot: total(stat) = base + bonusPre + multipliers + forge, where
+     * bonusPre = flat + conversions into the stat (each reading the final value of its source stat) and each
+     * multiplier / the Living Forge is a percentage of the pre-multiplier value (added, not compounded).
+     */
+    private final class Resolver {
+        private final StatSnapshot s;
+        private final List<Owned> inventory;
+        private final int level;
+        private final double forgePct;
+        private final boolean forge;
+        private final List<RatioLine> lines = new ArrayList<>();
+        private final Map<String, Double> finalTotal = new LinkedHashMap<>();
+        private final Set<String> resolving = new LinkedHashSet<>();
+
+        Resolver(StatSnapshot s, List<Owned> inventory, int level, double forgePct, boolean forge) {
+            this.s = s;
+            this.inventory = inventory;
+            this.level = level;
+            this.forgePct = forgePct;
+            this.forge = forge;
+        }
+
+        void run() {
+            s.forgePct = forgePct;
+            for (Owned o : inventory) {
+                for (StatLine l : o.item.stats) {
+                    if (l.hasRatio() && !l.marker() && o.counts(l)) {
+                        lines.add(new RatioLine(o, l));
+                    }
+                }
+            }
+            // Lines without ref_type: fixed value from the reference data.
+            for (RatioLine r : lines) {
+                if (!r.line.dynamicPercent()) {
+                    PassiveDetail d = detail(r);
+                    d.staticFallback = true;
+                    d.value = r.line.value != null ? r.line.value : (r.line.ref != null ? r.line.ratio * r.line.ref : 0);
+                    d.formula = "valor estático da referência = " + fmt(d.value) + " " + r.line.type;
+                    s.itemPassives.merge(r.line.type, d.value, Double::sum);
+                }
+            }
+            Set<String> stats = new LinkedHashSet<>(s.base.keySet());
+            stats.addAll(s.itemFlat.keySet());
+            for (RatioLine r : lines) {
+                if (r.line.dynamicPercent()) {
+                    stats.add(r.line.type);
+                    stats.add(r.line.refType);
+                }
+            }
+            if (forge) {
+                stats.addAll(Stats.LIVING_FORGE_STATS);
+            }
+            for (String stat : stats) {
+                resolve(stat);
+            }
+            // Keep the purchase order in the breakdown, and one contribution per owned item.
+            lines.sort(java.util.Comparator.comparingInt(r -> r.owner.purchaseIndex));
+            for (RatioLine r : lines) {
+                s.passives.add(r.detail);
+            }
+            for (Owned o : inventory) {
+                List<Model.PassivePart> parts = new ArrayList<>();
+                for (RatioLine r : lines) {
+                    if (r.owner == o) {
+                        parts.add(part(r.detail.passive, r.detail.stat, r.detail.value, r.line.conditional));
+                    }
+                }
+                s.contributions.add(contribution(o, level, parts));
+            }
+        }
+
+        /** Final total of a stat (base + every bonus). */
+        double resolve(String stat) {
+            Double done = finalTotal.get(stat);
+            if (done != null) {
+                return done;
+            }
+            double base = s.base.getOrDefault(stat, 0.0);
+            if (!resolving.add(stat)) {
+                // Conversion cycle (none in the catalog): fall back to the stat without conversions.
+                return base + s.itemFlat.getOrDefault(stat, 0.0);
+            }
+            double pre = s.itemFlat.getOrDefault(stat, 0.0);
+            for (RatioLine r : lines) {
+                if (r.line.dynamicPercent() && r.conversion() && r.line.type.equals(stat)) {
+                    double source = resolve(r.line.refType);
+                    double sourceBase = s.base.getOrDefault(r.line.refType, 0.0);
+                    double ref = r.line.refScope == RefScope.BONUS ? source - sourceBase
+                            : r.line.refScope == RefScope.BASE ? sourceBase : source;
+                    PassiveDetail d = detail(r);
+                    d.refBase = r.line.refScope == RefScope.BONUS ? 0 : sourceBase;
+                    d.refItems = r.line.refScope == RefScope.BASE ? 0 : source - sourceBase;
+                    d.refTotal = ref;
+                    d.value = r.line.ratio * ref;
+                    d.formula = fmt(r.line.ratio) + " × " + fmt(ref) + " " + r.line.refType + " ("
+                            + scopeLabel(r.line.refScope) + ", valor final) = " + fmt(d.value) + " " + stat
+                            + (r.line.conditional ? " (condicional)" : "");
+                    pre += d.value;
+                    s.itemPassives.merge(stat, d.value, Double::sum);
+                }
+            }
+            double multipliers = 0;
+            for (RatioLine r : lines) {
+                if (r.line.dynamicPercent() && !r.conversion() && r.line.type.equals(stat)) {
+                    double ref = r.line.refScope == RefScope.BONUS ? pre
+                            : r.line.refScope == RefScope.BASE ? base : base + pre;
+                    PassiveDetail d = detail(r);
+                    d.refBase = r.line.refScope == RefScope.BONUS ? 0 : base;
+                    d.refItems = r.line.refScope == RefScope.BASE ? 0 : pre;
+                    d.refTotal = ref;
+                    d.value = r.line.ratio * ref;
+                    String parts = r.line.refScope == RefScope.BASE ? fmt(base) + " base"
+                            : (r.line.refScope == RefScope.TOTAL ? fmt(base) + " base + " : "") + fmt(pre) + " adicional";
+                    d.formula = fmt(r.line.ratio) + " × (" + parts + ", antes dos multiplicadores) = " + fmt(d.value)
+                            + " " + stat + (r.line.conditional ? " (condicional)" : "");
+                    multipliers += d.value;
+                    s.itemPassives.merge(stat, d.value, Double::sum);
+                }
+            }
+            double forgeValue = 0;
+            if (forge && Stats.LIVING_FORGE_STATS.contains(stat)) {
+                ForgeDetail f = new ForgeDetail();
+                f.stat = stat;
+                f.bonus = pre;
+                f.pct = forgePct;
+                f.value = pre * forgePct;
+                forgeValue = f.value;
+                s.forge.put(stat, f.value);
+                s.forgeDetails.add(f);
+            }
+            double total = base + pre + multipliers + forgeValue;
+            resolving.remove(stat);
+            finalTotal.put(stat, total);
+            return total;
+        }
+
+        private PassiveDetail detail(RatioLine r) {
+            PassiveDetail d = new PassiveDetail();
+            d.purchaseIndex = r.owner.purchaseIndex;
+            d.itemName = r.owner.item.name;
+            d.passive = r.line.passive;
+            d.stat = r.line.type;
+            d.ratio = r.line.ratio;
+            d.refType = r.line.refType;
+            d.refScope = r.line.refScope;
+            d.conditional = r.line.conditional;
+            r.detail = d;
+            return d;
+        }
+    }
+
+    private static String scopeLabel(RefScope scope) {
+        return scope == RefScope.BONUS ? "adicional" : scope == RefScope.BASE ? "base" : "total";
     }
 
     private Model.PassivePart part(String passive, String stat, double amount, boolean conditional) {

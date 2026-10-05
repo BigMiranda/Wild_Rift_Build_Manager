@@ -130,11 +130,16 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
 - **Por compra**, sobre o inventário inteiro naquele momento:
   1. soma dos status planos de todos os itens;
   2. status base da unidade no nível do minuto da compra;
-  3. **passivas percentuais na ordem de compra**: `ratio × (base + status planos de todos os itens + passivas de itens
-     comprados ANTES)` no escopo TOTAL; BONUS tira a base, BASE usa só a base. Um item nunca compõe sobre a própria
-     passiva nem sobre itens comprados depois. Faixas por nível (“200–300”) são interpoladas entre o nível 1 e o 15;
-  4. **Forja Viva** por último: % do nível × (vida/armadura/RM **bônus** = itens + passivas). A base nunca é multiplicada;
-  5. valor em ouro = quantidade × preço por ponto do status.
+  3. **conversões** (um status vira outro: Mana → Vida, Vida adicional → DdA…) leem o valor **final** do status de
+     origem; por isso os status são resolvidos em ordem de dependência (Mana antes de Vida, Vida antes de DdA/PdH);
+  4. **multiplicadores** do mesmo status (ex.: +30% da armadura adicional, +30% do PdH total) e a **Forja Viva**
+     (% do nível sobre vida/armadura/RM adicionais) são calculados sobre o valor **antes dos multiplicadores** e
+     **somados** entre si. A base nunca recebe a Forja. Faixas por nível (“200–300”) são interpoladas entre o nível 1
+     e o 15. Escopos: TOTAL = base + adicional, BONUS = só adicional, BASE = só a base;
+  5. o resultado **não depende da ordem de compra**, só do que está no inventário. Referência: wiki do League of
+     Legends, notas do Capuz da Morte de Rabadon (o multiplicador “stacks additively” com outros e “stacks recursively
+     with other sources of ability power”);
+  6. valor em ouro = quantidade × preço por ponto do status.
 - **Eficiências** da compra:
   - *estática*: fórmula do site changchiyou (passiva só sobre os status do próprio item) — o teste
     `GoldPricingReferenceTest` garante que a implementação reproduz os valores publicados por eles;

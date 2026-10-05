@@ -139,7 +139,7 @@ class TimelineEngineTest {
         assertEquals(armorPassive, s.stats.itemPassives.get(ARMOR), EPS);
         assertEquals(mrPassive, s.stats.itemPassives.get(MAGIC_RESIST), EPS);
 
-        double forgeArmor = (flatArmor + armorPassive) * 0.07; // Living Forge last, bonus only
+        double forgeArmor = flatArmor * 0.07; // Living Forge: % of the bonus before multipliers, added to them
         assertEquals(forgeArmor, s.stats.forge.get(ARMOR), EPS);
         assertEquals(46 + flatArmor + armorPassive + forgeArmor, s.stats.total.get(ARMOR), EPS);
 
@@ -157,23 +157,61 @@ class TimelineEngineTest {
     }
 
     @Test
-    void percentagePassivesComposeInPurchaseOrder() {
+    void multipliersOfTheSameStatAddUpAndPurchaseOrderDoesNotMatter() {
         StatLine a = StatLine.percent(ABILITY_POWER, "A", 0.3, ABILITY_POWER, RefScope.TOTAL);
         StatLine b = StatLine.percent(ABILITY_POWER, "B", 0.1, ABILITY_POWER, RefScope.TOTAL);
         ItemDef first = item(10, "First", 1000, StatLine.flat(ABILITY_POWER, 100), a);
         ItemDef second = item(11, "Second", 1000, StatLine.flat(ABILITY_POWER, 100), b);
 
+        // Each multiplier is a % of the 200 AP before multipliers; they add (200 x 1.4), never compound.
         TimelineStep s = run(ragdoll(0), 1000, 0, first.id, second.id).steps.get(1);
-        // First: 30% of the 200 flat AP (does not see Second's passive, bought later)
         assertEquals(60.0, s.stats.passives.get(0).value, EPS);
-        // Second: 10% of 200 flat + 60 from First's passive (bought earlier)
-        assertEquals(26.0, s.stats.passives.get(1).value, EPS);
-        assertEquals(286.0, s.stats.total.get(ABILITY_POWER), EPS);
+        assertEquals(20.0, s.stats.passives.get(1).value, EPS);
+        assertEquals(280.0, s.stats.total.get(ABILITY_POWER), EPS);
 
         TimelineStep swapped = run(ragdoll(0), 1000, 0, second.id, first.id).steps.get(1);
-        assertEquals(20.0, swapped.stats.passives.get(0).value, EPS);   // Second first: 10% of 200
-        assertEquals(66.0, swapped.stats.passives.get(1).value, EPS);   // First: 30% of 200 + 20
-        assertEquals(286.0, swapped.stats.total.get(ABILITY_POWER), EPS);
+        assertEquals(280.0, swapped.stats.total.get(ABILITY_POWER), EPS);
+    }
+
+    @Test
+    void tankItemsGiveTheSameResistancesInAnyOrder() {
+        StatLine twinArmor = StatLine.percent(ARMOR, "Tolerância", 0.3, ARMOR, RefScope.BONUS);
+        StatLine twinMr = StatLine.percent(MAGIC_RESIST, "Tolerância", 0.3, MAGIC_RESIST, RefScope.BONUS);
+        StatLine dawnArmor = StatLine.percent(ARMOR, "Emissário da Aurora", 0.2, ARMOR, RefScope.TOTAL);
+        StatLine dawnMr = StatLine.percent(MAGIC_RESIST, "Emissário da Aurora", 0.2, MAGIC_RESIST, RefScope.TOTAL);
+        ItemDef twin = item(12, "Duplaguarda", 3200, StatLine.flat(ARMOR, 50), StatLine.flat(MAGIC_RESIST, 50), twinArmor, twinMr);
+        ItemDef dawn = item(13, "Manto da Aurora", 2700, StatLine.flat(ARMOR, 50), StatLine.flat(MAGIC_RESIST, 30), dawnArmor, dawnMr);
+
+        TimelineStep ab = run(ornn(), 1000, 0, twin.id, dawn.id).steps.get(1);
+        TimelineStep ba = run(ornn(), 1000, 0, dawn.id, twin.id).steps.get(1);
+        double bonus = 100;  // armor before multipliers: 50 + 50
+        double expected = 46 + bonus + 0.3 * bonus + 0.2 * (46 + bonus) + 0.07 * bonus;
+        assertEquals(expected, ab.stats.total.get(ARMOR), EPS);
+        assertEquals(expected, ba.stats.total.get(ARMOR), EPS);
+        assertEquals(ab.stats.total.get(MAGIC_RESIST), ba.stats.total.get(MAGIC_RESIST), EPS);
+    }
+
+    @Test
+    void conversionsReadTheFinalValueOfTheirSourceStat() {
+        UnitProfile u = ornn();
+        u.stats.put(Stats.MAX_MANA, new StatGrowth(380, 0));
+        u.stats.put(Stats.ATTACK_DAMAGE, new StatGrowth(62, 0));
+        // Mana -> Health (15% of total mana), then bonus Health -> AD (2.5%), with Living Forge on bonus health.
+        ItemDef winters = item(14, "Aproximação Invernal", 2600, StatLine.flat(MAX_HEALTH, 500),
+                StatLine.flat(Stats.MAX_MANA, 500),
+                StatLine.percent(MAX_HEALTH, "Fascínio", 0.15, Stats.MAX_MANA, RefScope.TOTAL));
+        ItemDef bloodmail = item(15, "Armadura Sangrenta", 3200, StatLine.flat(MAX_HEALTH, 450),
+                StatLine.percent(Stats.ATTACK_DAMAGE, "Tirania", 0.025, MAX_HEALTH, RefScope.BONUS));
+
+        double mana = 380 + 500;
+        double healthPre = 500 + 450 + 0.15 * mana;     // flat + Mana conversion
+        double bonusHealth = healthPre * 1.07;           // + Living Forge (level 1)
+        double ad = 62 + 0.025 * bonusHealth;
+        for (Long[] order : new Long[][] {{winters.id, bloodmail.id}, {bloodmail.id, winters.id}}) {
+            TimelineStep s = run(u, 1000, 0, order).steps.get(1);
+            assertEquals(720 + bonusHealth, s.stats.total.get(MAX_HEALTH), EPS);
+            assertEquals(ad, s.stats.total.get(Stats.ATTACK_DAMAGE), EPS);
+        }
     }
 
     @Test
