@@ -134,12 +134,12 @@ class TimelineEngineTest {
         assertEquals(1, s.level);
 
         double flatArmor = 20 + 50;
-        double armorPassive = 0.3 * (46 + flatArmor);          // base + all item armor
-        double mrPassive = 0.3 * (40 + 50);
+        double armorPassive = 0.3 * (46 + flatArmor * 1.07);   // base + all bonus armor, Living Forge included
+        double mrPassive = 0.3 * (40 + 50 * 1.07);
         assertEquals(armorPassive, s.stats.itemPassives.get(ARMOR), EPS);
         assertEquals(mrPassive, s.stats.itemPassives.get(MAGIC_RESIST), EPS);
 
-        double forgeArmor = flatArmor * 0.07; // Living Forge: % of the bonus before multipliers, added to them
+        double forgeArmor = flatArmor * 0.07; // a % of total buff is not amplified by the Forge
         assertEquals(forgeArmor, s.stats.forge.get(ARMOR), EPS);
         assertEquals(46 + flatArmor + armorPassive + forgeArmor, s.stats.total.get(ARMOR), EPS);
 
@@ -153,7 +153,7 @@ class TimelineEngineTest {
     void bonusScopeIgnoresUnitBaseStats() {
         amaranth.stats.get(3).refScope = RefScope.BONUS;
         TimelineStep s = run(ornn(), 1000, 0, amaranth.id).steps.get(0);
-        assertEquals(0.3 * 50, s.stats.itemPassives.get(ARMOR), EPS);
+        assertEquals(0.3 * 50 * 1.07, s.stats.itemPassives.get(ARMOR), EPS); // bonus armor with Living Forge
     }
 
     @Test
@@ -184,8 +184,11 @@ class TimelineEngineTest {
 
         TimelineStep ab = run(ornn(), 1000, 0, twin.id, dawn.id).steps.get(1);
         TimelineStep ba = run(ornn(), 1000, 0, dawn.id, twin.id).steps.get(1);
-        double bonus = 100;  // armor before multipliers: 50 + 50
-        double expected = 46 + bonus + 0.3 * bonus + 0.2 * (46 + bonus) + 0.07 * bonus;
+        double forged = 100 * 1.07;                          // (50 + 50) with Living Forge
+        double totalAtActivation = 46 + forged + 0.3 * forged * 1.07;
+        double dawnGain = 0.2 * totalAtActivation;           // snapshot buff, not amplified by the Forge
+        double twinGain = 0.3 * (forged + dawnGain);         // continuous, sees the Aurora buff
+        double expected = 46 + forged + dawnGain + twinGain * 1.07;
         assertEquals(expected, ab.stats.total.get(ARMOR), EPS);
         assertEquals(expected, ba.stats.total.get(ARMOR), EPS);
         assertEquals(ab.stats.total.get(MAGIC_RESIST), ba.stats.total.get(MAGIC_RESIST), EPS);
@@ -279,7 +282,7 @@ class TimelineEngineTest {
         ItemDef twinguard = item(40, "Duplaguarda de Amaranto", 3200, StatLine.flat(ARMOR, 50), armor);
 
         TimelineStep on = run(ornn(), 1000, 0, clothArmor.id, twinguard.id).steps.get(1);
-        assertEquals(0.3 * (20 + 50), on.stats.itemPassives.get(ARMOR), EPS); // only bonus armor, never the base 46
+        assertEquals(0.3 * (20 + 50) * 1.07, on.stats.itemPassives.get(ARMOR), EPS); // bonus armor only, never the base
         assertTrue(on.stats.passives.get(0).conditional);
 
         EngineInput in = new EngineInput();
@@ -336,10 +339,10 @@ class TimelineEngineTest {
 
         assertEquals(1, s.stats.passives.size());              // only the first copy's passive counts
         assertEquals(0, s.stats.passives.get(0).purchaseIndex);
-        assertEquals(0.3 * 100, s.stats.passives.get(0).value, EPS);
+        assertEquals(0.3 * 100 * 1.07, s.stats.passives.get(0).value, EPS);
         assertEquals(2, s.stats.contributions.size());
         assertTrue(s.stats.contributions.get(0).conditionalIncluded);
-        assertEquals(30 * 25.0, s.stats.contributions.get(0).passiveGold, EPS);
+        assertEquals(0.3 * 100 * 1.07 * 25.0, s.stats.contributions.get(0).passiveGold, EPS);
         assertEquals(0.0, s.stats.contributions.get(1).passiveGold, EPS);
     }
 
@@ -406,5 +409,46 @@ class TimelineEngineTest {
         assertTrue(r.steps.get(5).violations.isEmpty());          // boots + 5 items: a full, legal inventory
         assertEquals("slots", r.steps.get(6).violations.get(0).code);
         assertEquals(7, r.steps.get(6).inventoryIds.size());
+    }
+
+    @Test
+    void matchesTheInGameTankBuildAtLevel15() {
+        // "Soldado v1" (05/10/2026): Desespero Eterno, Armadura de Espinhos, Máscara Abissal, Manto da Aurora, Duplaguarda de
+        // Amaranto, Esmagadores Acorrentados -> 215 flat armor / 195 flat MR. In-game tooltips at level 15 (base 116
+        // armor / 68 MR, Living Forge 22%): 379 / 306 without passives, 475 / 393 with Duplaguarda stacked,
+        // 603 / 499 with Duplaguarda + Manto da Aurora.
+        UnitProfile u = ornn();
+        u.stats.put(ARMOR, new StatGrowth(116, 0));
+        u.stats.put(MAGIC_RESIST, new StatGrowth(68, 0));
+        double[] xp = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
+        for (int k = 0; k < xp.length; k++) {
+            ref.xpTable.put(k + 1, xp[k]);
+        }
+        StatLine twinA = StatLine.percent(ARMOR, "Tolerância", 0.3, ARMOR, RefScope.BONUS);
+        StatLine twinM = StatLine.percent(MAGIC_RESIST, "Tolerância", 0.3, MAGIC_RESIST, RefScope.BONUS);
+        StatLine dawnA = StatLine.percent(ARMOR, "Emissário da Aurora", 0.2, ARMOR, RefScope.TOTAL);
+        StatLine dawnM = StatLine.percent(MAGIC_RESIST, "Emissário da Aurora", 0.2, MAGIC_RESIST, RefScope.TOTAL);
+        for (StatLine l : List.of(twinA, twinM, dawnA, dawnM)) {
+            l.conditional = true;                          // stacks / immobilize: switched per purchase below
+        }
+        ItemDef others = item(80, "Outros quatro itens", 600, StatLine.flat(ARMOR, 115), StatLine.flat(MAGIC_RESIST, 115));
+        ItemDef twin = item(81, "Duplaguarda", 0, StatLine.flat(ARMOR, 50), StatLine.flat(MAGIC_RESIST, 50), twinA, twinM);
+        ItemDef dawn = item(82, "Manto da Aurora", 0, StatLine.flat(ARMOR, 50), StatLine.flat(MAGIC_RESIST, 30), dawnA, dawnM);
+
+        // cases: no passives, Duplaguarda, Duplaguarda + Aurora (Aurora triggered after the stacks), Aurora only
+        double[][] expected = {{379, 306}, {475, 393}, {603, 499}, {454, 368}};
+        boolean[][] active = {{false, false}, {true, false}, {true, true}, {false, true}};
+        for (int c = 0; c < expected.length; c++) {
+            EngineInput in = new EngineInput();
+            in.unit = u;
+            in.goldPerMin = 1000;
+            in.xpPerMin = 1000;                            // level 15 from the first minute
+            in.itemIds = List.of(others.id, twin.id, dawn.id);
+            in.conditional = java.util.Arrays.asList(true, active[c][0], active[c][1]);
+            TimelineStep s = new TimelineEngine(ref).run(in).steps.get(2);
+            assertEquals(15, s.level);
+            assertEquals(expected[c][0], s.stats.total.get(ARMOR), 1.5, "armor, case " + c);
+            assertEquals(expected[c][1], s.stats.total.get(MAGIC_RESIST), 1.5, "MR, case " + c);
+        }
     }
 }

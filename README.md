@@ -132,10 +132,17 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
   2. status base da unidade no nível do minuto da compra;
   3. **conversões** (um status vira outro: Mana → Vida, Vida adicional → DdA…) leem o valor **final** do status de
      origem; por isso os status são resolvidos em ordem de dependência (Mana antes de Vida, Vida antes de DdA/PdH);
-  4. **multiplicadores** do mesmo status (ex.: +30% da armadura adicional, +30% do PdH total) e a **Forja Viva**
-     (% do nível sobre vida/armadura/RM adicionais) são calculados sobre o valor **antes dos multiplicadores** e
-     **somados** entre si. A base nunca recebe a Forja. Faixas por nível (“200–300”) são interpoladas entre o nível 1
-     e o 15. Escopos: TOTAL = base + adicional, BONUS = só adicional, BASE = só a base;
+  4. multiplicadores de itens e **Forja Viva**, regra ajustada a 8 dicas de status medidas no jogo (Ornn nível 15
+     com 6 itens de tanque, todas batendo dentro de ~1 ponto):
+     - a **Forja** multiplica planos + conversões + o ganho dos percentuais **de adicional**;
+     - **% do adicional** (ex.: Duplaguarda) é contínuo: lê todo o adicional, inclusive a Forja e os bônus de % do
+       total, e a Forja amplifica o ganho;
+     - **% do total** (ex.: Manto da Aurora, Rabadon) lê o total já com a Forja e o ganho dos percentuais de
+       adicional (sem contar o bônus de % do total que eles recebem depois) e **não** é amplificado pela Forja.
+       No jogo o resultado é o mesmo ativando o Manto antes ou depois de a Duplaguarda acumular (testado em
+       06/10/2026): o jogo recalcula numa ordem fixa, independente do momento da ativação;
+     - **% da base** (ex.: Sterak): proporção × base.
+     Faixas por nível (“200–300”) são interpoladas entre o nível 1 e o 15;
   5. o resultado **não depende da ordem de compra**, só do que está no inventário. Referência: wiki do League of
      Legends, notas do Capuz da Morte de Rabadon (o multiplicador “stacks additively” com outros e “stacks recursively
      with other sources of ability power”);

@@ -42,9 +42,12 @@ import static com.ornnplanner.engine.GoldPricing.fmt;
  *   <li><b>Conversions</b> (a line "ratio x ref_type" whose target stat differs from ref_type, e.g. Mana -> Health,
  *       bonus Health -> AD) read the <i>final</i> value of their source stat, so stats are resolved in dependency
  *       order (Mana before Health before AD/AP...). Scope TOTAL = base + bonus, BONUS = bonus only, BASE = base only.</li>
- *   <li><b>Multipliers</b> (target stat = ref_type, e.g. +30% bonus armor, +30% total AP) and Ornn's Living Forge
- *       (+pct(level) of bonus health / armor / MR) are each computed on the stat <i>before</i> multipliers
- *       (base + flat + conversions) and then summed: percentage increases of the same stat stack additively.</li>
+ *   <li><b>Living Forge</b> (Ornn) multiplies flat + conversions + the gains of continuous % of bonus multipliers.
+ *       <b>% of bonus</b> multipliers (Duplaguarda) are continuous: they read all bonus (Forge and buffs included) and
+ *       the Forge amplifies their gain. <b>% of total</b> multipliers (Manto da Aurora, Rabadon) read the total after
+ *       a first pass of the % of bonus ones and are not amplified by the Forge. In game the result does not depend on
+ *       when each effect was activated (the game recomputes in a fixed order). Fitted to 8 in-game
+ *       tooltips (Ornn level 15, six tank items), all matched within ~1 point.</li>
  *   <li>The result never depends on purchase order, only on what is held. Reference: League of Legends wiki,
  *       Rabadon's Deathcap notes ("multiplier stacks additively with Infernal Might" / "stacks recursively with other
  *       sources of ability power"). Ratio lines without a ref_type fall back to the reference data's static value.</li>
@@ -429,39 +432,88 @@ public class TimelineEngine {
                     s.itemPassives.merge(stat, d.value, Double::sum);
                 }
             }
-            double multipliers = 0;
-            for (RatioLine r : lines) {
-                if (r.line.dynamicPercent() && !r.conversion() && r.line.type.equals(stat)) {
-                    double ref = r.line.refScope == RefScope.BONUS ? pre
-                            : r.line.refScope == RefScope.BASE ? base : base + pre;
-                    PassiveDetail d = detail(r);
-                    d.refBase = r.line.refScope == RefScope.BONUS ? 0 : base;
-                    d.refItems = r.line.refScope == RefScope.BASE ? 0 : pre;
-                    d.refTotal = ref;
-                    d.value = r.line.ratio * ref;
-                    String parts = r.line.refScope == RefScope.BASE ? fmt(base) + " base"
-                            : (r.line.refScope == RefScope.TOTAL ? fmt(base) + " base + " : "") + fmt(pre) + " adicional";
-                    d.formula = fmt(r.line.ratio) + " × (" + parts + ", antes dos multiplicadores) = " + fmt(d.value)
-                            + " " + stat + (r.line.conditional ? " (condicional)" : "");
-                    multipliers += d.value;
-                    s.itemPassives.merge(stat, d.value, Double::sum);
-                }
+            // Multipliers (target = ref_type), fitted to in-game values (Ornn level 15, Duplaguarda de Amaranto and
+            // Manto da Aurora, 8 tooltips matched within ~1 point):
+            //  - % of BONUS (e.g. Duplaguarda): reads all bonus of the stat (Living Forge and % of total gains
+            //    included, its own gain excluded) and its gain is amplified by the Forge.
+            //  - % of TOTAL (e.g. Manto da Aurora, Rabadon): reads the total after a first pass of the % of bonus
+            //    ones; added as bonus but NOT amplified by the Forge. Activation timing does not change the result in
+            //    game (Aurora activated before and after Duplaguarda stacks gave the same tooltip).
+            //  - % of BASE (e.g. Sterak): ratio x base.
+            // Sequence: bonus multipliers (1st pass) -> total multipliers -> bonus multipliers again (now seeing them).
+            double f = forge && Stats.LIVING_FORGE_STATS.contains(stat) ? forgePct : 0;
+            double forged = pre * (1 + f);
+            double bonusFirst = 0;
+            for (RatioLine r : multiplierLines(stat, RefScope.BONUS)) {
+                bonusFirst += r.line.ratio * forged;
             }
+            double totalBeforeBuffs = base + forged + bonusFirst * (1 + f);
+            double totalGains = 0;
+            for (RatioLine r : multiplierLines(stat, RefScope.TOTAL)) {
+                PassiveDetail d = detail(r);
+                d.refBase = base;
+                d.refItems = totalBeforeBuffs - base;
+                d.refTotal = totalBeforeBuffs;
+                d.value = r.line.ratio * totalBeforeBuffs;
+                d.formula = fmt(r.line.ratio) + " × " + fmt(totalBeforeBuffs) + " " + stat
+                        + " (total" + (f > 0 ? ", com Forja; não é amplificado por ela" : "") + ") = "
+                        + fmt(d.value) + (r.line.conditional ? " (condicional)" : "");
+                totalGains += d.value;
+                s.itemPassives.merge(stat, d.value, Double::sum);
+            }
+            double bonusGains = 0;
+            for (RatioLine r : multiplierLines(stat, RefScope.BONUS)) {
+                double ref = forged + totalGains;
+                PassiveDetail d = detail(r);
+                d.refBase = 0;
+                d.refItems = ref;
+                d.refTotal = ref;
+                d.value = r.line.ratio * ref;
+                d.formula = fmt(r.line.ratio) + " × (" + fmt(forged) + " adicional" + (f > 0 ? " com Forja" : "")
+                        + (totalGains > 0 ? " + " + fmt(totalGains) + " de bônus de % do total" : "") + ") = "
+                        + fmt(d.value) + " " + stat + (f > 0 ? " (+" + fmt(d.value * f) + " da Forja Viva)" : "")
+                        + (r.line.conditional ? " (condicional)" : "");
+                bonusGains += d.value;
+                s.itemPassives.merge(stat, d.value, Double::sum);
+            }
+            double baseGains = 0;
+            for (RatioLine r : multiplierLines(stat, RefScope.BASE)) {
+                PassiveDetail d = detail(r);
+                d.refBase = base;
+                d.refTotal = base;
+                d.value = r.line.ratio * base;
+                d.formula = fmt(r.line.ratio) + " × " + fmt(base) + " base = " + fmt(d.value) + " " + stat
+                        + (r.line.conditional ? " (condicional)" : "");
+                baseGains += d.value;
+                s.itemPassives.merge(stat, d.value, Double::sum);
+            }
+            double gains = bonusGains;   // the only gains the Forge amplifies
+            double multipliers = totalGains + bonusGains + baseGains;
             double forgeValue = 0;
-            if (forge && Stats.LIVING_FORGE_STATS.contains(stat)) {
-                ForgeDetail f = new ForgeDetail();
-                f.stat = stat;
-                f.bonus = pre;
-                f.pct = forgePct;
-                f.value = pre * forgePct;
-                forgeValue = f.value;
-                s.forge.put(stat, f.value);
-                s.forgeDetails.add(f);
+            if (f > 0) {
+                ForgeDetail fd = new ForgeDetail();
+                fd.stat = stat;
+                fd.bonus = pre + gains;
+                fd.pct = f;
+                fd.value = (pre + gains) * f;
+                forgeValue = fd.value;
+                s.forge.put(stat, fd.value);
+                s.forgeDetails.add(fd);
             }
             double total = base + pre + multipliers + forgeValue;
             resolving.remove(stat);
             finalTotal.put(stat, total);
             return total;
+        }
+
+        private List<RatioLine> multiplierLines(String stat, RefScope scope) {
+            List<RatioLine> out = new ArrayList<>();
+            for (RatioLine r : lines) {
+                if (r.line.dynamicPercent() && !r.conversion() && r.line.type.equals(stat) && r.line.refScope == scope) {
+                    out.add(r);
+                }
+            }
+            return out;
         }
 
         private PassiveDetail detail(RatioLine r) {

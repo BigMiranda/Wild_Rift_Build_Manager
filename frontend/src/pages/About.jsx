@@ -34,7 +34,7 @@ export default function About() {
               <li>Evolving items (e.g. Aproximação Invernal → Fimbulwinter) can be counted in either state for each purchase.</li>
               <li>Adaptive stats (e.g. Grevas Vorazes) are modeled as Attack Damage, which is what Ornn gets.</li>
               <li>Purchase time only considers accumulated gold (it does not model going back to base).</li>
-              <li>Stats depend only on the items held, never on purchase order: conversions (e.g. Mana → Health) read the final value of their source, and percentage increases of the same stat (item passives and Living Forge) are each taken from the value before multipliers and added up, as documented on the League of Legends wiki. Click a timeline row to see the breakdown.</li>
+              <li>Stats depend only on the items held, never on purchase order: conversions (e.g. Mana → Health) read the final value of their source, Living Forge multiplies flat bonus and continuous % of bonus passives (e.g. Duplaguarda); % of total passives (e.g. Manto da Aurora) read the total and are not amplified by the Forge; activation order does not matter (fitted to 8 values measured in game). Click a timeline row to see the breakdown.</li>
             </>
           ) : (
             <>
@@ -44,7 +44,7 @@ export default function About() {
               <li>Itens que evoluem (ex.: Aproximação Invernal → Fimbulwinter) podem ser contados em qualquer dos dois estados em cada compra.</li>
               <li>Status adaptativos (ex.: Grevas Vorazes) foram modelados como Dano de Ataque, que é o que o Ornn recebe.</li>
               <li>O tempo de compra considera apenas o ouro acumulado (não modela a volta à base).</li>
-              <li>Os status dependem só dos itens que você tem, nunca da ordem de compra: conversões (ex.: Mana → Vida) leem o valor final do status de origem, e aumentos percentuais do mesmo status (passivas de itens e Forja Viva) são calculados sobre o valor antes dos multiplicadores e somados, como documenta a wiki do League of Legends. O detalhamento aparece ao clicar numa linha da linha do tempo.</li>
+              <li>Os status dependem só dos itens que você tem, nunca da ordem de compra: conversões (ex.: Mana → Vida) leem o valor final do status de origem, a Forja Viva multiplica o adicional plano e o ganho das passivas contínuas de % do adicional (ex.: Duplaguarda); as passivas de % do total (ex.: Manto da Aurora) leem o total e não são amplificadas pela Forja; a ordem de ativação não importa (regra ajustada a 8 valores medidos no jogo). O detalhamento aparece ao clicar numa linha da linha do tempo.</li>
             </>
           )}
         </ul>

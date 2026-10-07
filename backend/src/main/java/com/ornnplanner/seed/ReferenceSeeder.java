@@ -83,8 +83,9 @@ public class ReferenceSeeder implements ApplicationRunner {
     /**
      * Ornn, Wild Rift, measured in game (stats tab at levels 1 and 15, 03/10/2026): growth = (level 15 - level 1) / 14.
      * value(L) = base + growth * (L - 1). Health and AD come out exact (132 and 4 per level), confirming linear growth;
-     * the other fractions come from the in-game rounding. Move speed was not measurable (the tab showed 548 at both
-     * levels) and keeps the wiki value.
+     * the other fractions come from the in-game rounding. Armor and MR: the level 15 tooltip (05/10/2026) shows base
+     * 116 / 68; the earlier totals (120 / 71 at 15, 48 / 42 at 1) included a rune, so level 1 is taken as 44 / 39 with
+     * the same growth (to be confirmed with a level 1 tooltip). Move speed was not measurable (548 at both levels).
      */
     static UnitProfile ornn() {
         UnitProfile u = new UnitProfile();
@@ -95,8 +96,8 @@ public class ReferenceSeeder implements ApplicationRunner {
         u.stats.put(Stats.MAX_MANA, new StatGrowth(380, 60));
         u.stats.put(Stats.HEALTH_REGEN, new StatGrowth(17, 17.0 / 14));
         u.stats.put(Stats.MANA_REGEN, new StatGrowth(12, 12.0 / 14));
-        u.stats.put(Stats.ARMOR, new StatGrowth(48, 72.0 / 14));
-        u.stats.put(Stats.MAGIC_RESIST, new StatGrowth(42, 29.0 / 14));
+        u.stats.put(Stats.ARMOR, new StatGrowth(44, 72.0 / 14));
+        u.stats.put(Stats.MAGIC_RESIST, new StatGrowth(39, 29.0 / 14));
         u.stats.put(Stats.ATTACK_DAMAGE, new StatGrowth(62, 4));
         u.stats.put(Stats.ABILITY_POWER, new StatGrowth(0, 0));
         u.stats.put(Stats.ABILITY_HASTE, new StatGrowth(0, 0));
