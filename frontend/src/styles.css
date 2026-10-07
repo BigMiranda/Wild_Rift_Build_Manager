@@ -440,14 +440,23 @@ tr.moment-row td { padding: 2px 8px; background: rgba(200, 170, 110, .08); borde
 .passive-entry { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 6px 6px; }
 .passive-block { width: 12px; height: 18px; border-radius: 2px; flex: none; margin-top: 2px; }
 .passive-text { margin: 2px 0 0; font-size: 12px; color: var(--text-2); }
-/* tooltip of the bar charts: stays while the mouse is over it, scrolls */
+/* tooltip of the bar charts: light summary following the mouse, details pinned by a click */
 .sticky-host { position: relative; }
-.sticky-tip {
-  position: absolute; top: 4px; z-index: 30; max-height: min(60vh, 560px); overflow: auto;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .5);
-}
-.sticky-tip.frozen { border-color: var(--gold); }
-.sticky-tip-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; position: sticky; top: -8px;
+.light-tip, .details-tip { position: absolute; top: 4px; z-index: 30; box-shadow: 0 6px 18px rgba(0, 0, 0, .5); }
+.light-tip { pointer-events: none; }
+.light-tip.wide, .details-tip.wide { max-width: none; }
+.tip-more { display: block; margin-top: 4px; color: var(--gold); }
+.light-cols { display: flex; gap: 14px; align-items: flex-start; }
+.light-col { min-width: 150px; max-width: 240px; }
+.light-col + .light-col { border-left: 1px solid var(--border); padding-left: 14px; }
+.light-build { display: flex; align-items: center; gap: 6px; font-weight: 600; margin-top: 2px; }
+.light-col ul { list-style: none; margin: 4px 0 0; padding: 0; }
+.light-col li { display: flex; align-items: center; gap: 6px; }
+.light-col .swatch, .light-build .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.light-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.light-val { white-space: nowrap; color: var(--text-2); }
+.details-tip { max-height: min(60vh, 560px); overflow: auto; overscroll-behavior: contain; border-color: var(--gold); }
+.details-tip-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; position: sticky; top: -8px;
   margin: -8px -10px 4px; padding: 8px 10px 4px; background: var(--surface); z-index: 1; }
 /* effective gold */
 .align-toggle { align-items: center; margin: 0 0 8px; }

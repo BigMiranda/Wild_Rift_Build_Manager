@@ -36,3 +36,22 @@ export default function PassiveCompare({ columns, compact = false }) {
     </div>
   );
 }
+
+/** Light summary for the chart tooltip: each build's passives by name, side by side. */
+export function PassiveLight({ columns }) {
+  return (
+    <div className="light-cols">
+      {columns.map((c) => (
+        <div key={c.key} className="light-col">
+          {columns.length > 1 && <div className="light-build"><span className="swatch" style={{ background: c.color }} />{c.name}</div>}
+          <div className="muted">{t('passives.total', { n: c.list.length, gold: n0(c.list.reduce((a, x) => a + x.gold, 0)) })}</div>
+          <ul>
+            {c.list.map((x) => (
+              <li key={x.key}><span className="swatch" style={{ background: passiveColor(x.key) }} />{x.name}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}

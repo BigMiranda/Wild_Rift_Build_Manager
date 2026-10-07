@@ -4,8 +4,8 @@ import { statLabel, t } from '../i18n.js';
 import { CHART_STATS, PERCENT_STATS, SERIES_COLORS, mmss, n0, n1, statOf } from '../format.js';
 import { PASSIVES_VIEW, acquiredPassives, passiveColor, pointItemIds } from '../passives.js';
 import ItemIcon from './ItemIcon.jsx';
-import PassiveCompare from './PassiveCompare.jsx';
-import EffectiveBreakdown, { AlignToggle } from './EffectiveBreakdown.jsx';
+import PassiveCompare, { PassiveLight } from './PassiveCompare.jsx';
+import EffectiveBreakdown, { AlignToggle, EffectiveLight } from './EffectiveBreakdown.jsx';
 import { ALIGN_SLOT, EFFECTIVE_VIEW, FORGE_COLOR, effectiveGold, itemColor, itemPassiveColor } from '../effective.js';
 import { StatIcon, statColor } from './StatIcon.jsx';
 
@@ -168,15 +168,18 @@ function PassiveBars({ lines, itemsById, maxMinute, plotWidth, selectedMinute, o
   const names = new Map();
   for (const list of held.values()) for (const x of list) names.set(x.key, x);
   const barSize = Math.max(2, Math.min(18, (plotWidth / Math.max(1, minutes.length) / lines.length) * 0.75));
-  const tip = useStickyTip();
+  const tip = useChartTip(onSelectMinute);
+  const columns = (label) => lines.map((s) => ({
+    key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length],
+    list: held.get(`${s.key}|${label}`) ?? [],
+  }));
 
   return (
-    <div ref={tip.ref} className="sticky-host" style={{ width: '100%', height: 300 }} role="figure" aria-label={t('chart.passivesAria')}>
+    <div ref={tip.host} className="sticky-host" style={{ width: '100%', height: 300 }} role="figure" aria-label={t('chart.passivesAria')}>
       <ResponsiveContainer>
         <BarChart
           data={data} margin={MARGIN} barGap={1} barSize={barSize}
-          onClick={(e) => { if (e && e.activeLabel != null) onSelectMinute(Number(e.activeLabel)); }}
-          onMouseMove={tip.onMove} onMouseLeave={tip.onLeave}
+          onClick={tip.onClick} onMouseMove={tip.onMove} onMouseLeave={tip.onLeave}
           style={{ cursor: 'crosshair' }}
         >
           <CartesianGrid stroke="var(--grid)" vertical={false} />
@@ -186,7 +189,7 @@ function PassiveBars({ lines, itemsById, maxMinute, plotWidth, selectedMinute, o
           />
           <YAxis stroke="var(--muted)" tick={{ fill: 'var(--gold)', fontSize: 12 }} width={Y_AXIS_WIDTH} tickFormatter={(v) => n0(v)} />
           <Tooltip cursor={{ fill: 'rgba(200, 170, 110, .08)' }} content={() => null} />
-          {tip.state?.frozen && <ReferenceLine x={tip.state.label} stroke="var(--gold-bright)" strokeDasharray="3 3" />}
+          {tip.state?.detailed && <ReferenceLine x={tip.state.label} stroke="var(--gold-bright)" strokeDasharray="3 3" />}
           {selectedMinute != null && <ReferenceLine x={selectedMinute} stroke="var(--gold)" strokeWidth={1.5} />}
           {lines.flatMap((s) => order.get(s.key).map((key) => (
             <Bar
@@ -196,79 +199,115 @@ function PassiveBars({ lines, itemsById, maxMinute, plotWidth, selectedMinute, o
           )))}
         </BarChart>
       </ResponsiveContainer>
-      <StickyTip tip={tip} wide={lines.length > 1}>
-        {(label) => (
-          <PassiveCompare
-            compact
-            columns={lines.map((s) => ({
-              key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length],
-              list: held.get(`${s.key}|${label}`) ?? [],
-            }))}
-          />
-        )}
-      </StickyTip>
+      <ChartTip
+        tip={tip} wide={lines.length > 1}
+        light={(label) => <PassiveLight columns={columns(label)} />}
+        details={(label) => <PassiveCompare compact columns={columns(label)} />}
+      />
     </div>
   );
 }
 
 /**
- * Tooltip that follows the bar under the mouse and stays put while the mouse is over it, so it can be scrolled to the
- * end and read; it closes when the mouse leaves it (or leaves the chart without going into it).
+ * Tooltip of the bar charts, in two modes:
+ * - light: a small summary that follows the bar under the mouse and disappears when the mouse leaves the chart (it
+ *   cannot be hovered);
+ * - details: opened by clicking a bar. It stays (the chart no longer moves it) until "see fewer details" or a click
+ *   outside it. While the mouse is inside it, the wheel only scrolls it: the page stays still.
  */
-function useStickyTip() {
-  const ref = useRef(null);
-  const [state, setState] = useState(null);  // { label, x, frozen }
-  const over = useRef(false);
-  const timer = useRef(null);
-  const clear = () => { clearTimeout(timer.current); timer.current = null; };
-  useEffect(() => clear, []);
+function useChartTip(onSelectMinute) {
+  const host = useRef(null);
+  const panel = useRef(null);
+  const [state, setState] = useState(null);  // { label, x, detailed }
+  const detailed = useRef(false);
+  const skipClick = useRef(false);
+  detailed.current = !!state?.detailed;
+
+  // Details close on a click anywhere outside them (a click on the chart then does not reopen them).
+  useEffect(() => {
+    if (!state?.detailed) return undefined;
+    const onDown = (e) => {
+      if (panel.current?.contains(e.target)) return;
+      skipClick.current = !!host.current?.contains(e.target);
+      setState(null);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [state?.detailed]);
+
+  // Mouse inside the details: the wheel scrolls them only, and the page is held where it is (wheel, keys, touchpad).
+  useEffect(() => {
+    const el = panel.current;
+    if (!state?.detailed || !el) return undefined;
+    let lockedY = null;
+    const hold = () => { if (lockedY != null && window.scrollY !== lockedY) window.scrollTo(window.scrollX, lockedY); };
+    const onWheel = (e) => {
+      e.preventDefault();
+      el.scrollTop += e.deltaY;
+    };
+    const onEnter = () => { lockedY = window.scrollY; window.addEventListener('scroll', hold); };
+    const onLeave = () => { lockedY = null; window.removeEventListener('scroll', hold); };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('mouseenter', onEnter);
+    el.addEventListener('mouseleave', onLeave);
+    if (el.matches(':hover')) onEnter();
+    return () => {
+      onLeave();
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('mouseenter', onEnter);
+      el.removeEventListener('mouseleave', onLeave);
+    };
+  }, [state?.detailed]);
+
   return {
-    ref,
+    host,
+    panel,
     state,
     onMove: (e) => {
-      if (over.current || !e || e.activeLabel == null) return;
-      clear();
-      setState({ label: Number(e.activeLabel), x: e.chartX, frozen: false });
+      if (detailed.current || !e || e.activeLabel == null) return;
+      setState({ label: Number(e.activeLabel), x: e.chartX, detailed: false });
     },
-    onLeave: () => {
-      clear();
-      timer.current = setTimeout(() => { if (!over.current) setState(null); }, 300);
+    onLeave: () => { if (!detailed.current) setState(null); },
+    onClick: (e) => {
+      if (skipClick.current) { skipClick.current = false; return; }
+      if (!e || e.activeLabel == null) return;
+      onSelectMinute(Number(e.activeLabel));
+      setState({ label: Number(e.activeLabel), x: e.chartX, detailed: true });
     },
-    enter: () => { over.current = true; clear(); setState((st) => (st ? { ...st, frozen: true } : st)); },
-    leave: () => { over.current = false; setState(null); },
+    // Back to the light summary; it goes away as soon as the mouse is somewhere else than the chart.
+    lessDetails: () => {
+      setState((st) => (st ? { ...st, detailed: false } : st));
+      const onMove = (e) => {
+        if (!host.current?.contains(e.target)) setState((st) => (st && !st.detailed ? null : st));
+        document.removeEventListener('mousemove', onMove);
+      };
+      document.addEventListener('mousemove', onMove);
+    },
   };
 }
 
-function StickyTip({ tip, wide, children }) {
+function ChartTip({ tip, wide, light, details }) {
   const st = tip.state;
-  const box = useRef(null);
-  // The wheel scrolls the tooltip first; once it reaches its end the page scrolls (the tooltip stays while hovered).
-  useEffect(() => {
-    const el = box.current;
-    if (!el) return undefined;
-    const onWheel = (e) => {
-      const room = e.deltaY > 0 ? el.scrollHeight - el.clientHeight - el.scrollTop : el.scrollTop;
-      if (room <= 0) return;
-      e.preventDefault();
-      el.scrollTop += Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), room);
-    };
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, [st != null]);
   if (!st) return null;
-  const width = tip.ref.current?.clientWidth ?? 0;
-  // Right next to the cursor (on the side with more room), so it can be reached without crossing other bars.
-  const side = st.x > width / 2 ? { right: Math.max(0, width - st.x + 4) } : { left: st.x + 4 };
-  return (
-    <div
-      ref={box} className={`chart-tip sticky-tip${wide ? ' wide' : ''}${st.frozen ? ' frozen' : ''}`} style={side}
-      onMouseEnter={tip.enter} onMouseLeave={tip.leave}
-    >
-      <div className="sticky-tip-head">
+  const width = tip.host.current?.clientWidth ?? 0;
+  const side = st.x > width / 2 ? { right: Math.max(0, width - st.x + 12) } : { left: st.x + 12 };
+  if (!st.detailed) {
+    return (
+      <div className={`chart-tip light-tip${wide ? ' wide' : ''}`} style={side}>
         <strong>{t('chart.minute', { time: mmss(st.label) })}</strong>
-        <small className="muted">{st.frozen ? t('chart.tipFrozen') : t('chart.tipHint')}</small>
+        {light(st.label)}
+        <small className="tip-more">{t('chart.tipClick')}</small>
       </div>
-      {children(st.label)}
+    );
+  }
+  return (
+    <div ref={tip.panel} className={`chart-tip details-tip${wide ? ' wide' : ''}`} style={side} role="dialog"
+      aria-label={t('chart.minute', { time: mmss(st.label) })}>
+      <div className="details-tip-head">
+        <strong>{t('chart.minute', { time: mmss(st.label) })}</strong>
+        <button className="link" onClick={tip.lessDetails}>{t('chart.tipLess')}</button>
+      </div>
+      {details(st.label)}
     </div>
   );
 }
@@ -319,15 +358,18 @@ function EffectiveBars({ lines, itemsById, maxMinute, plotWidth, align, selected
     return row;
   });
   const barSize = Math.max(2, Math.min(18, (plotWidth / Math.max(1, minutes.length) / lines.length) * 0.75));
-  const tip = useStickyTip();
+  const tip = useChartTip(onSelectMinute);
+  const columns = (label) => lines.map((s) => ({
+    key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length],
+    eff: at.get(`${s.key}|${label}`),
+  }));
 
   return (
-    <div ref={tip.ref} className="sticky-host" style={{ width: '100%', height: 340 }} role="figure" aria-label={t('chart.effectiveAria')}>
+    <div ref={tip.host} className="sticky-host" style={{ width: '100%', height: 340 }} role="figure" aria-label={t('chart.effectiveAria')}>
       <ResponsiveContainer>
         <BarChart
           data={data} margin={MARGIN} barGap={1} barSize={barSize}
-          onClick={(e) => { if (e && e.activeLabel != null) onSelectMinute(Number(e.activeLabel)); }}
-          onMouseMove={tip.onMove} onMouseLeave={tip.onLeave}
+          onClick={tip.onClick} onMouseMove={tip.onMove} onMouseLeave={tip.onLeave}
           style={{ cursor: 'crosshair' }}
         >
           <CartesianGrid stroke="var(--grid)" vertical={false} />
@@ -337,7 +379,7 @@ function EffectiveBars({ lines, itemsById, maxMinute, plotWidth, align, selected
           />
           <YAxis stroke="var(--muted)" tick={{ fill: 'var(--gold)', fontSize: 12 }} width={Y_AXIS_WIDTH} tickFormatter={(v) => n0(v)} />
           <Tooltip cursor={{ fill: 'rgba(200, 170, 110, .08)' }} content={() => null} />
-          {tip.state?.frozen && <ReferenceLine x={tip.state.label} stroke="var(--gold-bright)" strokeDasharray="3 3" />}
+          {tip.state?.detailed && <ReferenceLine x={tip.state.label} stroke="var(--gold-bright)" strokeDasharray="3 3" />}
           {selectedMinute != null && <ReferenceLine x={selectedMinute} stroke="var(--gold)" strokeWidth={1.5} />}
           {lines.flatMap((s) => [
             ...order.get(s.key).flatMap((x) => [
@@ -350,17 +392,11 @@ function EffectiveBars({ lines, itemsById, maxMinute, plotWidth, align, selected
           ])}
         </BarChart>
       </ResponsiveContainer>
-      <StickyTip tip={tip} wide>
-        {(label) => (
-          <EffectiveBreakdown
-            compact align={align}
-            columns={lines.map((s) => ({
-              key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length],
-              eff: at.get(`${s.key}|${label}`),
-            }))}
-          />
-        )}
-      </StickyTip>
+      <ChartTip
+        tip={tip} wide={lines.length > 1}
+        light={(label) => <EffectiveLight columns={columns(label)} align={align} />}
+        details={(label) => <EffectiveBreakdown compact align={align} columns={columns(label)} />}
+      />
     </div>
   );
 }

@@ -126,3 +126,37 @@ export function AlignToggle({ value, onChange }) {
     </div>
   );
 }
+
+/** Light summary for the chart tooltip: per build, gold spent vs worth and one line per item. */
+export function EffectiveLight({ columns, align }) {
+  return (
+    <div className="light-cols">
+      {columns.map((c) => {
+        const items = align === ALIGN_SLOT ? [...c.eff.items.filter((x) => !x.boots), ...c.eff.items.filter((x) => x.boots)] : c.eff.items;
+        return (
+          <div key={c.key} className="light-col">
+            {columns.length > 1 && <div className="light-build"><span className="swatch" style={{ background: c.color }} />{c.name}</div>}
+            <div className="muted">{t('eff.spentVsWorth', { spent: n0(c.eff.spent), worth: n0(c.eff.effective) })}</div>
+            <div>{t('eff.profit')}: <Profit value={c.eff.profit} pctValue={c.eff.profitPct} /></div>
+            <ul>
+              {items.map((x) => (
+                <li key={x.key}>
+                  <span className="swatch" style={{ background: itemColor(x.itemName) }} />
+                  <span className="light-name">{x.itemName}</span>
+                  <span className="light-val">{n0(x.effective)} <Profit value={x.profit} pctValue={null} /></span>
+                </li>
+              ))}
+              {c.eff.forge.gold > 0 && (
+                <li>
+                  <span className="swatch" style={{ background: FORGE_COLOR }} />
+                  <span className="light-name">{t('eff.forge', { pct: pct(c.eff.forge.pct * 100) })}</span>
+                  <span className="light-val">{n0(c.eff.forge.gold)}</span>
+                </li>
+              )}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
