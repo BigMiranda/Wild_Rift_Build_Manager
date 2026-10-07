@@ -18,15 +18,52 @@ function Th({ label, title, className = '' }) {
 /** Timeline of one build. `compact` hides some columns for side-by-side comparison. */
 export default function TimelineTable({ result, itemsById, compact = false }) {
   const [open, setOpen] = useState(null);
+  // Assumed purchases are listed under the build purchase they lead to; each group can be collapsed.
+  const [collapsed, setCollapsed] = useState(() => new Set());
   if (!result || result.steps.length === 0) return <p className="muted">{t('timeline.empty')}</p>;
 
   const stats = compact ? TABLE_STATS.slice(0, 4) : TABLE_STATS;
-  const purchaseCols = compact ? 6 : 7;
+  const purchaseCols = compact ? 7 : 8;
   const effCols = compact ? 1 : 3;
   const cols = purchaseCols + stats.length + effCols;
 
+  const groups = [];
+  const byBuild = new Map();
+  for (const s of result.steps) {
+    let g = byBuild.get(s.buildIndex);
+    if (!g) {
+      g = { buildIndex: s.buildIndex, official: null, implied: [] };
+      byBuild.set(s.buildIndex, g);
+      groups.push(g);
+    }
+    if (s.implied) g.implied.push(s); else g.official = s;
+  }
+  const withImplied = groups.filter((g) => g.implied.length > 0).map((g) => g.buildIndex);
+  const allCollapsed = withImplied.length > 0 && withImplied.every((b) => collapsed.has(b));
+  const toggleGroup = (b) => setCollapsed((c) => {
+    const next = new Set(c);
+    if (next.has(b)) next.delete(b); else next.add(b);
+    return next;
+  });
+  const rows = [];
+  const moments = [...(result.moments ?? [])];
+  for (const g of groups) {
+    while (moments.length && moments[0].position < g.buildIndex) rows.push({ moment: moments.shift() });
+    const hidden = collapsed.has(g.buildIndex);
+    if (g.official) rows.push({ step: g.official, children: g.implied.length, hidden });
+    if (!hidden || !g.official) g.implied.forEach((s) => rows.push({ step: s }));
+  }
+  moments.forEach((m) => rows.push({ moment: m }));
+
   return (
     <div className="table-wrap">
+      {withImplied.length > 0 && (
+        <div className="timeline-tools">
+          <button className="link" onClick={() => setCollapsed(allCollapsed ? new Set() : new Set(withImplied))}>
+            {allCollapsed ? t('timeline.expandImplied') : t('timeline.collapseImplied')}
+          </button>
+        </div>
+      )}
       <table className="data timeline">
         <thead>
           <tr className="group-row">
@@ -40,6 +77,7 @@ export default function TimelineTable({ result, itemsById, compact = false }) {
             <Th label={t('col.paid')} title={t('col.paidTitle')} />
             <Th label={t('col.cum')} title={t('col.cumTitle')} />
             <Th label={t('col.time')} title={t('col.timeTitle')} />
+            <Th label={t('col.bag')} title={t('col.bagTitle')} />
             <Th label={t('col.level')} title={t('col.levelTitle')} />
             {!compact && <Th label={t('col.inventory')} title={t('col.inventoryTitle')} className="l" />}
             {stats.map((s, i) => (
@@ -53,17 +91,38 @@ export default function TimelineTable({ result, itemsById, compact = false }) {
           </tr>
         </thead>
         <tbody>
-          {result.steps.map((s) => {
+          {rows.map(({ step: s, moment, children, hidden }) => {
+            if (moment) {
+              return (
+                <tr key={`m${moment.position}`} className="moment-row">
+                  <td colSpan={cols}>
+                    <span className="moment-line">{t('moment.row', { time: mmss(moment.minute), gold: n0(moment.gold) })}</span>
+                  </td>
+                </tr>
+              );
+            }
             const e = s.efficiency;
             const up = e.dynamicPct != null && e.staticPct != null && e.dynamicPct - e.staticPct > 0.05;
             return (
               <Fragment key={s.index}>
-                <tr className={`clickable${s.violations?.length ? ' violating' : ''}`} onClick={() => setOpen(open === s.index ? null : s.index)} aria-expanded={open === s.index}>
-                  <td>{s.index + 1}</td>
+                <tr className={`clickable${s.violations?.length ? ' violating' : ''}${s.implied ? ' implied' : ''}`} onClick={() => setOpen(open === s.index ? null : s.index)} aria-expanded={open === s.index}>
+                  <td title={s.implied ? t('timeline.impliedTitle') : undefined}>
+                    {s.implied ? '↳' : s.number}
+                    {children > 0 && (
+                      <button
+                        className="icon group-toggle" aria-expanded={!hidden}
+                        title={t(hidden ? 'timeline.expandGroup' : 'timeline.collapseGroup', { n: children })}
+                        onClick={(ev) => { ev.stopPropagation(); toggleGroup(s.buildIndex); }}
+                      >
+                        {hidden ? `▸${children}` : '▾'}
+                      </button>
+                    )}
+                  </td>
                   <td className="l">
                     <span className="with-icon">
                       <ItemIcon id={s.itemId} size={22} />
                       {s.itemName}
+                      {s.implied && <small className="implied-tag">{t('timeline.implied')}</small>}
                       {s.warnings.length > 0 && <span title={s.warnings.join('\n')}>⚠</span>}
                       {s.violations?.length > 0 && (
                         <span className="violation" title={`${t('rule.title')}: ${s.violations.map(violationText).join(' · ')}`}>⛔</span>
@@ -73,6 +132,7 @@ export default function TimelineTable({ result, itemsById, compact = false }) {
                   <td>{n0(s.paidCost)}</td>
                   <td>{n0(s.cumulativeGold)}</td>
                   <td>{mmss(s.minute)}</td>
+                  <td className="bag">{n0(s.goldLeft)}</td>
                   <td>{s.level}</td>
                   {!compact && <td className="l"><InventorySlots ids={s.inventoryIds ?? []} itemsById={itemsById} /></td>}
                   {stats.map((st, i) => {
@@ -165,7 +225,7 @@ function StepDetail({ step }) {
         <ul>
           {st.passives.map((p, i) => (
             <li key={i} className={p.purchaseIndex === step.index ? 'eff-up' : ''}>
-              <StatIcon stat={p.stat} />#{p.purchaseIndex + 1} {p.itemName} — {p.passive}
+              <StatIcon stat={p.stat} />#{p.number}{p.implied ? '↳' : ''} {p.itemName} — {p.passive}
               {p.refScope === 'BONUS' && <small> {t('detail.bonusOnly')}</small>}
               <div className="formula">{p.formula}</div>
             </li>

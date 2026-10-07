@@ -20,6 +20,8 @@ const emptyBuild = (folderId) => ({
   goldPerMin: '',
   xpPerMin: '',
   steps: [],
+  assumeHalfItems: false,
+  assumeSmallItems: false,
   ragdollStats: {},
 });
 
@@ -62,6 +64,8 @@ export default function Planner({ meta, items }) {
   const [compareResults, setCompareResults] = useState({});
   const [chartStat, setChartStat] = useState('Max Health');
   const [selectedMinute, setSelectedMinute] = useState(null);
+  /** Purchase selected in the sequence (index in draft.steps), shown in the shop's detail panel. */
+  const [selectedIdx, setSelectedIdx] = useState(null);
   const [message, setMessage] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(loadSidebar);
   const toggleSidebar = () => {
@@ -141,6 +145,7 @@ export default function Planner({ meta, items }) {
       setDraft(fromApi(b));
       setDirty(false);
       setSelectedMinute(null);
+      setSelectedIdx(null);
       setCompareIds((c) => c.filter((x) => x !== id));
     } catch (e) {
       setMessage(e.message);
@@ -152,6 +157,7 @@ export default function Planner({ meta, items }) {
     setDraft(emptyBuild(folderId));
     setDirty(false);
     setSelectedMinute(null);
+    setSelectedIdx(null);
   };
 
   const save = async () => {
@@ -184,22 +190,50 @@ export default function Planner({ meta, items }) {
     }
   };
 
-  const moveStep = (idx, delta) =>
+  /** Moves the purchase at `from` to position `to`; the selection follows the purchase it was on. */
+  const moveStepTo = (from, to) => {
+    if (to < 0 || to >= draft.steps.length || from === to) return;
     update((d) => {
       const steps = [...d.steps];
-      const j = idx + delta;
-      if (j < 0 || j >= steps.length) return {};
-      [steps[idx], steps[j]] = [steps[j], steps[idx]];
+      const [moved] = steps.splice(from, 1);
+      steps.splice(to, 0, moved);
       return { steps };
     });
+    setSelectedIdx((sel) => {
+      if (sel == null) return sel;
+      if (sel === from) return to;
+      if (from < sel && sel <= to) return sel - 1;
+      if (to <= sel && sel < from) return sel + 1;
+      return sel;
+    });
+  };
 
-  /** Adds a purchase unless the game would not allow it (checked by the engine on the resulting inventory). */
+  /** Adds a purchase moment before the selected purchase (or at the end): by default 2 minutes after the previous one. */
+  const addMoment = () => {
+    const at = selectedIdx ?? draft.steps.length;
+    update((d) => {
+      const steps = [...d.steps];
+      steps.splice(at, 0, { kind: 'moment', atMinute: null, afterMinutes: 2 });
+      return { steps };
+    });
+    if (selectedIdx != null) setSelectedIdx(selectedIdx + 1);
+  };
+
+  const removeStep = (idx) => {
+    update((d) => ({ steps: d.steps.filter((_, k) => k !== idx) }));
+    setSelectedIdx((sel) => (sel == null || sel < idx ? sel : sel === idx ? null : sel - 1));
+  };
+
+  /**
+   * Adds a purchase unless the game would not allow it (checked by the engine on the resulting inventory).
+   * Over the item limit it is still added: the engine leaves it out of the calculation and the sequence marks it.
+   */
   const addItem = async (id) => {
     const steps = [...draft.steps, { itemId: id, includeConditional: true }];
     if (canCalculate) {
       try {
         const r = await api.post('/api/calculate', { ...payload, steps });
-        const last = r.steps[r.steps.length - 1];
+        const last = r.steps.find((x) => x.buildIndex === steps.length - 1 && !x.implied);
         if (last?.violations?.length) {
           setMessage(t('rule.blocked', { name: itemsById.get(id)?.name ?? id, reason: last.violations.map(violationText).join(' · ') }));
           return;
@@ -293,6 +327,16 @@ export default function Planner({ meta, items }) {
               <button className="primary" onClick={save} disabled={!dirty && draft.id != null}>{t('build.save')}</button>
             </div>
           </div>
+          <div className="row assume-opts">
+            <label className="check" title={t('build.assumeHalfTitle')}>
+              <input type="checkbox" checked={!!draft.assumeHalfItems} onChange={(e) => update({ assumeHalfItems: e.target.checked })} />
+              {t('build.assumeHalf')}
+            </label>
+            <label className="check" title={t('build.assumeSmallTitle')}>
+              <input type="checkbox" checked={!!draft.assumeSmallItems} onChange={(e) => update({ assumeSmallItems: e.target.checked })} />
+              {t('build.assumeSmall')}
+            </label>
+          </div>
           <details className="build-extra" open={isRagdoll || undefined}>
             <summary>{isRagdoll ? t('build.noteAndRagdoll') : t('build.note')}{draft.note ? ' •' : ''}</summary>
             <textarea rows={2} value={draft.note} placeholder={t('build.notePlaceholder')} aria-label={t('build.note')} onChange={(e) => update({ note: e.target.value })} />
@@ -306,7 +350,16 @@ export default function Planner({ meta, items }) {
           <Shop
             items={items}
             buildPayload={canCalculate ? payload : null}
-            ownedIds={draft.steps.map((s) => s.itemId)}
+            ownedIds={draft.steps.filter((s) => s.kind !== 'moment').map((s) => s.itemId)}
+            purchase={selectedIdx != null && draft.steps[selectedIdx] && draft.steps[selectedIdx].kind !== 'moment' ? {
+              index: selectedIdx,
+              number: draft.steps.slice(0, selectedIdx + 1).filter((s) => s.kind !== 'moment').length,
+              itemId: draft.steps[selectedIdx].itemId,
+              step: result?.steps.find((x) => x.buildIndex === selectedIdx && !x.implied) ?? null,
+              ignored: result?.ignored?.find((x) => x.buildIndex === selectedIdx) ?? null,
+              implied: result?.steps.filter((x) => x.buildIndex === selectedIdx && x.implied) ?? [],
+            } : null}
+            onPurchaseClear={() => setSelectedIdx(null)}
             onAdd={addItem}
           />
           <BuildBar
@@ -314,9 +367,16 @@ export default function Planner({ meta, items }) {
             itemsById={itemsById}
             evoPairs={evoPairs}
             timeline={result?.steps}
-            onMove={moveStep}
-            onRemove={(idx) => update((d) => ({ steps: d.steps.filter((_, k) => k !== idx) }))}
-            onClear={() => update({ steps: [] })}
+            ignored={result?.ignored}
+            moments={result?.moments}
+            onAddMoment={addMoment}
+            onUpdateMoment={(idx, patch) => updateStep(idx, (s) => ({ ...s, ...patch }))}
+            selectedIdx={selectedIdx}
+            onSelect={setSelectedIdx}
+            onMove={(idx, delta) => moveStepTo(idx, idx + delta)}
+            onMoveTo={moveStepTo}
+            onRemove={removeStep}
+            onClear={() => { update({ steps: [] }); setSelectedIdx(null); }}
             onToggleCond={(idx) => updateStep(idx, (s) => ({ ...s, includeConditional: !s.includeConditional }))}
             onToggleEvolved={(idx) => updateStep(idx, (s) => ({ ...s, itemId: evoPairs.get(s.itemId)?.id ?? s.itemId }))}
           />

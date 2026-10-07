@@ -127,7 +127,7 @@ function EventLane({ build, x, plotLeft, plotWidth, levels, onSelectMinute, sele
       ))}
       {build.result.steps.map((s) => (
         <button
-          key={`buy${s.index}`} className="lane-item" style={{ left: x(s.minute) }}
+          key={`buy${s.index}`} className={`lane-item${s.implied ? ' implied' : ''}`} style={{ left: x(s.minute) }}
           title={t('chart.lanePurchase', { time: mmss(s.minute), name: s.itemName, paid: n0(s.paidCost) })}
           onClick={() => onSelectMinute(s.minute)}
         >

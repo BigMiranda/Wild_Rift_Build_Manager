@@ -10,8 +10,10 @@ import { StatIcon, statColor } from './StatIcon.jsx';
  * Wild Rift style shop: tab rail, icon grid and a detail panel.
  * `buildPayload` is the current build as the API expects it (or null when it cannot be calculated yet); it is used
  * to preview what the selected item would be worth if bought next.
+ * `purchase` is the purchase selected in the sequence ({ index, itemId, step, ignored }): the shop opens its item and
+ * shows what that purchase adds to the build instead of the preview. Picking another item clears it (`onPurchaseClear`).
  */
-export default function Shop({ items, buildPayload, ownedIds, onAdd }) {
+export default function Shop({ items, buildPayload, ownedIds, purchase, onPurchaseClear, onAdd }) {
   const [tab, setTab] = useState(DEFAULT_TAB);
   const [query, setQuery] = useState('');
   const [selectedKey, setSelectedKey] = useState(null);
@@ -32,13 +34,25 @@ export default function Shop({ items, buildPayload, ownedIds, onAdd }) {
   const selected = tiles.find((x) => x.key === selectedKey) ?? null;
   const variant = selected ? selected.variants.find((v) => v.id === variantId) ?? selected.base : null;
 
-  const open = (item) => {
+  const show = (item) => {
     const tile = tiles.find((x) => x.key === (item.group ?? item.name));
     if (tile) {
       setSelectedKey(tile.key);
       setVariantId(item.id);
     }
   };
+  const open = (item) => {
+    onPurchaseClear();
+    show(item);
+  };
+
+  // Selecting a purchase in the sequence opens its item here.
+  const purchaseKey = purchase ? `${purchase.index}:${purchase.itemId}` : null;
+  useEffect(() => {
+    const item = purchase && itemsById.get(purchase.itemId);
+    if (item) show(item);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [purchaseKey]);
 
   return (
     <div className="shop">
@@ -67,7 +81,7 @@ export default function Shop({ items, buildPayload, ownedIds, onAdd }) {
                     <button
                       key={x.key}
                       className={`tile${x.key === selectedKey ? ' selected' : ''}`}
-                      onClick={() => { setSelectedKey(x.key); setVariantId(x.preferredId); }}
+                      onClick={() => { onPurchaseClear(); setSelectedKey(x.key); setVariantId(x.preferredId); }}
                       onDoubleClick={() => onAdd(x.key === selectedKey && variant ? variant.id : x.preferredId)}
                       title={t('shop.dblclick', { name: x.name })}
                     >
@@ -93,7 +107,8 @@ export default function Shop({ items, buildPayload, ownedIds, onAdd }) {
         {selected && variant && (
           <ItemDetail
             tile={selected} variant={variant} items={items} itemsById={itemsById} buildPayload={buildPayload}
-            onVariant={setVariantId} onAdd={() => onAdd(variant.id)} onOpen={open}
+            purchase={purchase && purchase.itemId === variant.id ? purchase : null}
+            onVariant={(id) => { onPurchaseClear(); setVariantId(id); }} onAdd={() => onAdd(variant.id)} onOpen={open}
           />
         )}
       </aside>
@@ -101,12 +116,14 @@ export default function Shop({ items, buildPayload, ownedIds, onAdd }) {
   );
 }
 
-function ItemDetail({ tile, variant, items, itemsById, buildPayload, onVariant, onAdd, onOpen }) {
+function ItemDetail({ tile, variant, items, itemsById, buildPayload, purchase, onVariant, onAdd, onOpen }) {
   const { flat, modeled } = describeStats(variant);
   const components = variant.components.map((c) => ({ item: itemsById.get(c.itemId), quantity: c.quantity })).filter((c) => c.item);
   const buildsInto = items.filter((i) => i.section !== 'evolucao' && i.components.some((c) => c.itemId === tile.base.id));
-  const preview = usePurchasePreview(buildPayload, variant.id);
-  const blocked = preview && preview.itemId === variant.id ? preview.violations ?? [] : [];
+  const preview = usePurchasePreview(purchase ? null : buildPayload, variant.id);
+  const current = preview && preview.itemId === variant.id ? preview : null;
+  // Over the item limit the purchase is allowed (and left out of the calculation); other rules block it.
+  const blocked = current && !current.ignored ? current.violations ?? [] : [];
 
   return (
     <>
@@ -188,25 +205,20 @@ function ItemDetail({ tile, variant, items, itemsById, buildPayload, onVariant, 
         )}
       </div>
 
-      <div className="detail-block preview">
-        <h4>{t('shop.preview')}</h4>
-        {!buildPayload && <small>{t('shop.previewHint')}</small>}
-        {buildPayload && !preview && <small>{t('shop.calculating')}</small>}
-        {blocked.length > 0 && (
-          <div className="violation">
-            {blocked.map((v, i) => <p key={i}>⛔ {violationText(v)}</p>)}
-          </div>
-        )}
-        {preview && preview.itemId === variant.id && (
-          <dl>
-            <dt>{t('shop.boughtAt')}</dt><dd>{mmss(preview.minute)} · {t('bar.lv', { n: preview.level })}</dd>
-            <dt>{t('shop.paid')}</dt><dd>{n0(preview.paidCost)}</dd>
-            <dt>{t('detail.static')}</dt><dd>{pct(preview.efficiency.staticPct)}</dd>
-            <dt>{t('detail.dynamic')}</dt><dd className="strong">{pct(preview.efficiency.dynamicPct)}</dd>
-            <dt>{t('detail.marginal')}</dt><dd>{pct(preview.efficiency.marginalPct)}</dd>
-          </dl>
-        )}
-      </div>
+      {purchase ? <PurchaseValue purchase={purchase} /> : (
+        <div className="detail-block preview">
+          <h4>{t('shop.preview')}</h4>
+          {!buildPayload && <small>{t('shop.previewHint')}</small>}
+          {buildPayload && !current && <small>{t('shop.calculating')}</small>}
+          {current?.ignored && <p className="ignored-note">⊘ {t('shop.wouldBeIgnored')}</p>}
+          {blocked.length > 0 && (
+            <div className="violation">
+              {blocked.map((v, i) => <p key={i}>⛔ {violationText(v)}</p>)}
+            </div>
+          )}
+          {current && !current.ignored && <StepNumbers step={current} />}
+        </div>
+      )}
 
       <button className="primary add" onClick={onAdd} disabled={blocked.length > 0} title={blocked.length ? t('rule.title') : undefined}>
         {t('shop.add')}
@@ -215,7 +227,51 @@ function ItemDetail({ tile, variant, items, itemsById, buildPayload, onVariant, 
   );
 }
 
-/** Timeline step the item would get if appended to the current build. */
+/** What a purchase of the sequence adds to the build, at its place in the order. */
+function PurchaseValue({ purchase }) {
+  const { number, step, ignored, implied } = purchase;
+  return (
+    <div className="detail-block preview">
+      <h4>{t('shop.purchaseValue', { n: number })}</h4>
+      {!step && !ignored && <small>{t('shop.previewHint')}</small>}
+      {ignored && <p className="ignored-note">{t('bar.ignored', { reason: ignored.violations.map(violationText).join(' · ') })}</p>}
+      {step?.violations?.length > 0 && (
+        <div className="violation">
+          {step.violations.map((v, i) => <p key={i}>⛔ {violationText(v)}</p>)}
+        </div>
+      )}
+      {step && <StepNumbers step={step} gold />}
+      {implied?.length > 0 && (
+        <div className="implied-list">
+          <small>{t('bar.impliedTitle')}</small>
+          <ul>
+            {implied.map((x) => (
+              <li key={x.index}>
+                <ItemIcon id={x.itemId} size={18} /> {mmss(x.minute)} · {x.itemName} · {n0(x.paidCost)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StepNumbers({ step, gold }) {
+  return (
+    <dl>
+      <dt>{t('shop.boughtAt')}</dt><dd>{mmss(step.minute)} · {t('bar.lv', { n: step.level })}</dd>
+      <dt>{t('shop.paid')}</dt><dd>{n0(step.paidCost)}</dd>
+      <dt>{t('shop.bag')}</dt><dd>{n0(step.goldLeft)}</dd>
+      {gold && step.efficiency.marginalGold != null && <><dt>{t('shop.addedGold')}</dt><dd className="strong">{n0(step.efficiency.marginalGold)}</dd></>}
+      <dt>{t('detail.static')}</dt><dd>{pct(step.efficiency.staticPct)}</dd>
+      <dt>{t('detail.dynamic')}</dt><dd className={gold ? undefined : 'strong'}>{pct(step.efficiency.dynamicPct)}</dd>
+      <dt>{t('detail.marginal')}</dt><dd>{pct(step.efficiency.marginalPct)}</dd>
+    </dl>
+  );
+}
+
+/** Timeline step the item would get if appended to the current build (flagged `ignored` when over the item limit). */
 function usePurchasePreview(buildPayload, itemId) {
   const [preview, setPreview] = useState(null);
   const key = buildPayload ? JSON.stringify(buildPayload) : null;
@@ -229,7 +285,8 @@ function usePurchasePreview(buildPayload, itemId) {
           ...buildPayload,
           steps: [...buildPayload.steps, { itemId, includeConditional: true }],
         });
-        if (!cancelled) setPreview(r.steps[r.steps.length - 1] ?? null);
+        const index = buildPayload.steps.length;
+        if (!cancelled) setPreview(r.steps.find((x) => x.buildIndex === index && !x.implied) ?? r.ignored?.find((x) => x.buildIndex === index) ?? null);
       } catch {
         /* preview is best effort */
       }

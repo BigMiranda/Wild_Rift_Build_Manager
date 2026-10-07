@@ -181,6 +181,11 @@ public class PlannerController {
         if (b.goldPerMin <= 0 || b.xpPerMin < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ouro/min deve ser > 0 e XP/min >= 0.");
         }
+        for (com.ornnplanner.repo.BuildRepository.Step s : b.steps) {
+            if (!s.moment() && s.itemId == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Compra sem item.");
+            }
+        }
     }
 
     private static String requireName(String name) {

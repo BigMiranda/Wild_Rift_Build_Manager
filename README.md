@@ -126,6 +126,17 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
 
 - **Tempo**: ouro no minuto *t* = 500 + ouro/min × *t*. A compra *i* acontece quando o ouro acumulado cobre o total
   pago até ela. **Nível**: XP = XP/min × *t*, comparado com a tabela de XP acumulado (máximo nível 15).
+- **Supor meios itens / itens menores comprados instantaneamente** (opções da build): antes de cada item da
+  sequência, o motor compra sozinho os componentes que faltam para ele (meios itens e/ou itens básicos, na ordem da
+  receita), cada um assim que o ouro alcança o seu preço. O ouro total não muda; os status dos componentes entram
+  antes. Na linha do tempo elas aparecem como "suposto" (↳) logo abaixo do item a que levam, e podem ser recolhidas
+  por item (▾) ou todas de uma vez; não entram na sequência. Uma compra suposta que quebraria uma regra da loja
+  (ex.: sem espaço no inventário) não é feita.
+- **Momento de compra** (marcador fino na sequência, "+ momento de compra"): volta à base num minuto exato ou um tempo
+  depois da compra anterior. Os itens depois do marcador só são comprados a partir desse minuto (ou mais tarde, se o
+  ouro ainda não der); os componentes supostos continuam instantâneos. Sem marcador, cada item sai assim que o ouro
+  dá. A sequência, a linha do tempo (coluna **Mochila**) e o painel da compra mostram o ouro que sobrou na mochila
+  depois de cada compra; o marcador mostra o ouro na mochila ao voltar à base.
 - **Status do Ornn** no nível L: `base + crescimento × (L − 1)`.
 - **Por compra**, sobre o inventário inteiro naquele momento:
   1. soma dos status planos de todos os itens;
@@ -158,7 +169,11 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
   nenhum item finalizado repetido; só um item por grupo exclusivo (penetração de armadura %, penetração mágica %,
   Lâmina Arcana, Lágrima da Deusa, Salva-Vidas, item de suporte — campo `exclusivo` do catálogo; botas ficam fora dos
   grupos de penetração); só um item ativável; 5 itens + 1 bota. A interface não deixa adicionar uma compra que quebre
-  uma regra, e a linha do tempo mostra os 6 espaços do inventário a cada compra, com os itens finalizados em destaque.
+  uma regra, exceto o limite de itens: uma compra sem espaço no inventário naquele ponto da ordem é mantida na
+  sequência, mas **desconsiderada** (sem ouro, tempo nem status) e aparece esmaecida com ⊘. A linha do tempo mostra os
+  6 espaços do inventário a cada compra, com os itens finalizados em destaque.
+- **Sequência de compras**: arraste os itens para reordenar; clique num item para selecioná-lo, e o painel da loja
+  mostra o que aquela compra traz à build (minuto, ouro pago, valor em ouro somado e eficiências).
 - Clique numa linha da linha do tempo para ver o **detalhamento**: base/itens/passivas/forja por status, fórmula de
   cada passiva e de cada eficiência.
 - No gráfico, a faixa de eventos mostra cada compra (ícone do item) e cada subida de nível. Clicar no gráfico ou num

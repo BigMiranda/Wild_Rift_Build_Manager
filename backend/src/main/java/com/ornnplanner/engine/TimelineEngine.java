@@ -85,11 +85,19 @@ public class TimelineEngine {
     private static final class Owned {
         final ItemDef item;
         final int purchaseIndex;
+        /** Purchase of the build it belongs to, and whether the engine assumed it (component bought towards it). */
+        final int buildIndex;
+        /** Number of the build's item purchase (1, 2...; purchase moments not counted). */
+        final int number;
+        final boolean implied;
         final boolean conditional;
 
-        Owned(ItemDef item, int purchaseIndex, boolean conditional) {
+        Owned(ItemDef item, int purchaseIndex, int buildIndex, int number, boolean implied, boolean conditional) {
             this.item = item;
             this.purchaseIndex = purchaseIndex;
+            this.buildIndex = buildIndex;
+            this.number = number;
+            this.implied = implied;
             this.conditional = conditional;
         }
 
@@ -120,63 +128,189 @@ public class TimelineEngine {
         List<Owned> inventory = new ArrayList<>();
         List<List<Owned>> inventoryAfterStep = new ArrayList<>();
         int cumulative = 0;
+        double lastMinute = 0;       // purchases happen in sequence order: never before the previous one
+        double lastBuildMinute = 0;  // minute of the previous purchase of the build (for "x minutes after")
+        double gate = 0;             // earliest minute of the build's items: the last purchase moment passed
+        int nextMoment = 0;
+        List<Model.Moment> moments = new ArrayList<>(in.moments);
+        moments.sort(java.util.Comparator.comparingInt(m -> m.position));
 
         for (int i = 0; i < in.itemIds.size(); i++) {
+            int position = i < in.positions.size() ? in.positions.get(i) : i;
+            while (nextMoment < moments.size() && moments.get(nextMoment).position < position) {
+                Model.Moment m = moments.get(nextMoment++);
+                m.minute = Math.max(lastMinute, m.atMinute != null ? m.atMinute
+                        : lastBuildMinute + (m.afterMinutes == null ? 0 : m.afterMinutes));
+                gate = m.minute;
+                result.moments.add(m);
+            }
             ItemDef item = ref.items.get(in.itemIds.get(i));
             if (item == null) {
-                result.warnings.add("Compra #" + (i + 1) + ": item id " + in.itemIds.get(i) + " não existe no catálogo.");
+                result.warnings.add("Compra #" + (position + 1) + ": item id " + in.itemIds.get(i) + " não existe no catálogo.");
                 inventoryAfterStep.add(new ArrayList<>(inventory));
                 continue;
             }
-            TimelineStep step = new TimelineStep();
-            step.index = i;
-            step.itemId = item.id;
-            step.itemName = item.name;
-            step.category = item.category;
-            step.itemCost = item.cost;
-
-            List<Owned> before = new ArrayList<>(inventory);
-            List<Owned> consumed = new ArrayList<>();
-            int discount = 0;
-            for (ComponentRef c : item.components) {
-                for (int q = 0; q < c.quantity; q++) {
-                    discount += consume(c.itemId, inventory, consumed);
-                }
-            }
-            for (Owned o : consumed) {
-                step.consumedComponents.add(o.item.name);
-            }
-            step.paidCost = Math.max(0, item.cost - discount);
-            cumulative += step.paidCost;
-            step.cumulativeGold = cumulative;
-            step.minute = Math.max(0, (cumulative - STARTING_GOLD) / in.goldPerMin);
-            step.xp = in.xpPerMin * step.minute;
-            step.level = levelForXp(step.xp);
-
             boolean cond = i < in.conditional.size() && in.conditional.get(i) != null
                     ? in.conditional.get(i) : in.includeConditional;
-            Owned bought = new Owned(item, i, cond);
-            inventory.add(bought);
-            inventoryAfterStep.add(new ArrayList<>(inventory));
-            for (Owned o : inventory) {
-                step.inventory.add(o.item.name);
-                step.inventoryIds.add(o.item.id);
-            }
-            step.violations = violations(item, inventory);
+            // Build options: the missing components are bought first, one by one as gold allows, towards this item.
+            List<ItemDef> queue = impliedComponents(item, inventory, in.assumeHalfItems, in.assumeSmallItems);
+            queue.add(item);
+            for (int q = 0; q < queue.size(); q++) {
+                ItemDef buy = queue.get(q);
+                boolean implied = q < queue.size() - 1;
+                int pos = inventoryAfterStep.size();
+                TimelineStep step = new TimelineStep();
+                step.index = pos;
+                step.buildIndex = position;
+                step.number = i + 1;
+                step.implied = implied;
+                step.itemId = buy.id;
+                step.itemName = buy.name;
+                step.category = buy.category;
+                step.itemCost = buy.cost;
 
-            step.stats = snapshot(in.unit, inventory, step.level);
-            StatSnapshot beforeSnap = snapshot(in.unit, before, step.level);
-            step.efficiency = efficiency(bought, step, beforeSnap);
-            for (PassiveDetail p : step.stats.passives) {
-                if (p.purchaseIndex == i && p.staticFallback) {
-                    step.warnings.add("Passiva '" + p.passive + "' não tem ref_type: usado valor estático " + fmt(p.value) + ".");
+                List<Owned> before = new ArrayList<>(inventory);
+                List<Owned> consumed = new ArrayList<>();
+                int discount = 0;
+                for (ComponentRef c : buy.components) {
+                    for (int k = 0; k < c.quantity; k++) {
+                        discount += consume(c.itemId, inventory, consumed);
+                    }
+                }
+                for (Owned o : consumed) {
+                    step.consumedComponents.add(o.item.name);
+                }
+                step.paidCost = Math.max(0, buy.cost - discount);
+                cumulative += step.paidCost;
+                step.cumulativeGold = cumulative;
+                // As soon as the gold covers it, never before the previous purchase; the build's own items also wait
+                // for the last purchase moment (assumed components are bought instantly).
+                step.minute = Math.max(Math.max(0, (cumulative - STARTING_GOLD) / in.goldPerMin), lastMinute);
+                if (!implied) {
+                    step.minute = Math.max(step.minute, gate);
+                }
+                step.goldLeft = goldAt(step.minute, in.goldPerMin) - cumulative;
+                step.xp = in.xpPerMin * step.minute;
+                step.level = levelForXp(step.xp);
+
+                Owned bought = new Owned(buy, pos, position, i + 1, implied, cond);
+                inventory.add(bought);
+                inventoryAfterStep.add(new ArrayList<>(inventory));
+                for (Owned o : inventory) {
+                    step.inventory.add(o.item.name);
+                    step.inventoryIds.add(o.item.id);
+                }
+                step.violations = violations(buy, inventory);
+                if (implied && !step.violations.isEmpty()) {
+                    // An assumed component that would break a shop rule (e.g. no free slot) is simply not bought.
+                    inventory.clear();
+                    inventory.addAll(before);
+                    cumulative -= step.paidCost;
+                    inventoryAfterStep.remove(inventoryAfterStep.size() - 1);
+                    continue;
+                }
+                if (exceedsLimit(step.violations)) {
+                    // No free slot: the purchase is impossible at this point of the order, so it is left out entirely
+                    // (no gold, no stats, components not consumed) and reported apart.
+                    inventory.clear();
+                    inventory.addAll(before);
+                    cumulative -= step.paidCost;
+                    inventoryAfterStep.set(inventoryAfterStep.size() - 1, new ArrayList<>(before));
+                    step.ignored = true;
+                    step.inventory.clear();
+                    step.inventoryIds.clear();
+                    for (Owned o : before) {
+                        step.inventory.add(o.item.name);
+                        step.inventoryIds.add(o.item.id);
+                    }
+                    result.ignored.add(step);
+                    continue;
+                }
+
+                step.stats = snapshot(in.unit, inventory, step.level);
+                StatSnapshot beforeSnap = snapshot(in.unit, before, step.level);
+                step.efficiency = efficiency(bought, step, beforeSnap);
+                for (PassiveDetail p : step.stats.passives) {
+                    if (p.purchaseIndex == pos && p.staticFallback) {
+                        step.warnings.add("Passiva '" + p.passive + "' não tem ref_type: usado valor estático " + fmt(p.value) + ".");
+                    }
+                }
+                result.steps.add(step);
+                lastMinute = step.minute;
+                if (!implied) {
+                    lastBuildMinute = step.minute;
                 }
             }
-            result.steps.add(step);
+        }
+        while (nextMoment < moments.size()) {  // moments after the last item: shown, nothing bought
+            Model.Moment m = moments.get(nextMoment++);
+            m.minute = Math.max(lastMinute, m.atMinute != null ? m.atMinute
+                    : lastBuildMinute + (m.afterMinutes == null ? 0 : m.afterMinutes));
+            result.moments.add(m);
+        }
+        // Gold in the bag at each moment, before the first item it releases: earned minus everything bought until then
+        // in sequence order (the assumed components of that item, bought instantly, included).
+        for (Model.Moment m : result.moments) {
+            double spent = 0;
+            for (TimelineStep s : result.steps) {
+                if (!s.implied && s.buildIndex > m.position) {
+                    break;
+                }
+                spent += s.paidCost;
+            }
+            m.gold = goldAt(m.minute, in.goldPerMin) - spent;
         }
 
         buildSeries(in, result, inventoryAfterStep);
         return result;
+    }
+
+    /**
+     * Components of {@code item} that are missing from the inventory and assumed bought before it, in recipe order
+     * (sub-components before the half item they build). Smaller items = basic ones (section "basico", or no
+     * recipe); half items = the other components (mid tier, or a boots upgrade's boots). With only smaller items assumed, a missing half item is replaced by its basic parts.
+     * Owned components are reserved as the recipe would consume them, so they are never bought again.
+     */
+    List<ItemDef> impliedComponents(ItemDef item, List<Owned> inventory, boolean half, boolean small) {
+        List<ItemDef> out = new ArrayList<>();
+        if (!half && !small) {
+            return out;
+        }
+        List<Long> owned = new ArrayList<>();
+        for (Owned o : inventory) {
+            owned.add(o.item.id);
+        }
+        expand(item, owned, half, small, out);
+        return out;
+    }
+
+    private void expand(ItemDef item, List<Long> owned, boolean half, boolean small, List<ItemDef> out) {
+        for (ComponentRef c : item.components) {
+            for (int q = 0; q < c.quantity; q++) {
+                if (owned.remove(Long.valueOf(c.itemId))) {
+                    continue;
+                }
+                ItemDef comp = ref.items.get(c.itemId);
+                if (comp == null) {
+                    continue;
+                }
+                boolean basic = "basico".equals(comp.section) || comp.components.isEmpty() && !"tier_medio".equals(comp.section);
+                if (basic) {
+                    if (small) {
+                        out.add(comp);
+                    }
+                } else {
+                    expand(comp, owned, half, small, out);
+                    if (half) {
+                        out.add(comp);
+                    }
+                }
+            }
+        }
+    }
+
+    private static double goldAt(double minute, double goldPerMin) {
+        return STARTING_GOLD + goldPerMin * minute;
     }
 
     /**
@@ -242,6 +376,16 @@ public class TimelineEngine {
             }
         }
         return out;
+    }
+
+    /** Slot limits (five items + one boots): a purchase breaking them is ignored instead of counted. */
+    static boolean exceedsLimit(List<Model.Violation> violations) {
+        for (Model.Violation v : violations) {
+            if ("slots".equals(v.code) || "boots".equals(v.code)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static List<String> names(List<Owned> inventory, java.util.function.Predicate<ItemDef> filter) {
@@ -519,6 +663,9 @@ public class TimelineEngine {
         private PassiveDetail detail(RatioLine r) {
             PassiveDetail d = new PassiveDetail();
             d.purchaseIndex = r.owner.purchaseIndex;
+            d.buildIndex = r.owner.buildIndex;
+            d.number = r.owner.number;
+            d.implied = r.owner.implied;
             d.itemName = r.owner.item.name;
             d.passive = r.line.passive;
             d.stat = r.line.type;
@@ -552,6 +699,9 @@ public class TimelineEngine {
     private Model.ItemContribution contribution(Owned o, int level, List<Model.PassivePart> ratioParts) {
         Model.ItemContribution c = new Model.ItemContribution();
         c.purchaseIndex = o.purchaseIndex;
+        c.buildIndex = o.buildIndex;
+        c.number = o.number;
+        c.implied = o.implied;
         c.itemId = o.item.id;
         c.itemName = o.item.name;
         c.conditionalIncluded = o.conditional;

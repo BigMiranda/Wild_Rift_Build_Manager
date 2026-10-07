@@ -218,12 +218,55 @@ public final class Model {
         public double goldPerMin;
         public double xpPerMin;
         public List<Long> itemIds = new ArrayList<>();
+        /** Assume the missing half items (tier_medio and other non-basic components) are bought before each item. */
+        public boolean assumeHalfItems;
+        /** Assume the missing smaller (basic) components are bought before each item. */
+        public boolean assumeSmallItems;
+        /**
+         * Position of each item (same order as itemIds) in the build's sequence, which also holds purchase moments.
+         * Empty = 0, 1, 2...
+         */
+        public List<Integer> positions = new ArrayList<>();
+        /** Purchase moments of the sequence. */
+        public List<Moment> moments = new ArrayList<>();
+    }
+
+    /**
+     * Purchase moment ("back to base"): the items after it in the sequence are bought from its minute on (or later, when
+     * the gold is not there yet). Assumed components are bought instantly, as soon as the gold allows.
+     */
+    public static class Moment {
+        /** Position in the build's sequence. */
+        public int position;
+        /** Exact game minute... */
+        public Double atMinute;
+        /** ...or minutes after the previous purchase of the build. */
+        public Double afterMinutes;
+        /** Resolved game minute. */
+        public double minute;
+        /** Gold in the bag at that minute, before buying. */
+        public double gold;
+
+        public Moment() {
+        }
+
+        public Moment(int position, Double atMinute, Double afterMinutes) {
+            this.position = position;
+            this.atMinute = atMinute;
+            this.afterMinutes = afterMinutes;
+        }
     }
 
     // ----------------------------------------------------------------- results
 
     public static class PassiveDetail {
+        /** Timeline position of the purchase (see TimelineStep.index). */
         public int purchaseIndex;
+        /** Build purchase it belongs to, and whether it is a component the engine assumed bought. */
+        public int buildIndex;
+        /** Number of the build's item purchase (1, 2...), as shown to the user. */
+        public int number;
+        public boolean implied;
         public String itemName;
         public String passive;
         public String stat;
@@ -272,7 +315,13 @@ public final class Model {
 
     /** What one owned item adds at a point of the timeline (before Living Forge). */
     public static class ItemContribution {
+        /** Timeline position of the purchase (see TimelineStep.index). */
         public int purchaseIndex;
+        /** Build purchase it belongs to, and whether it is a component the engine assumed bought. */
+        public int buildIndex;
+        /** Number of the build's item purchase (1, 2...), as shown to the user. */
+        public int number;
+        public boolean implied;
         public long itemId;
         public String itemName;
         public boolean conditionalIncluded;
@@ -315,7 +364,14 @@ public final class Model {
     }
 
     public static class TimelineStep {
+        /** Position in the timeline (purchases assumed by the engine included). */
         public int index;
+        /** Purchase of the build this step belongs to (for an assumed component: the item it is bought towards). */
+        public int buildIndex;
+        /** Number of the build's item purchase (1, 2...; purchase moments not counted). */
+        public int number;
+        /** Component bought automatically towards the next item (build options "assume half / smaller items"). */
+        public boolean implied;
         public long itemId;
         public String itemName;
         public String category;
@@ -324,6 +380,8 @@ public final class Model {
         public List<String> consumedComponents = new ArrayList<>();
         public int cumulativeGold;
         public double minute;
+        /** Gold left in the bag right after the purchase (earned until its minute minus everything paid). */
+        public double goldLeft;
         public double xp;
         public int level;
         public List<String> inventory = new ArrayList<>();
@@ -331,6 +389,8 @@ public final class Model {
         public List<Long> inventoryIds = new ArrayList<>();
         /** Shop rules this purchase breaks (the build would not be possible in game). */
         public List<Violation> violations = new ArrayList<>();
+        /** Purchase left out because the inventory had no free slot for it (it is listed in TimelineResult.ignored). */
+        public boolean ignored;
         public StatSnapshot stats;
         public Efficiency efficiency;
         public List<String> warnings = new ArrayList<>();
@@ -356,6 +416,10 @@ public final class Model {
         public double goldPerMin;
         public double xpPerMin;
         public List<TimelineStep> steps = new ArrayList<>();
+        /** Purchases over the item limit at their place in the order: not counted (no gold, time or stats). */
+        public List<TimelineStep> ignored = new ArrayList<>();
+        /** Purchase moments of the build, with their resolved minute. */
+        public List<Moment> moments = new ArrayList<>();
         public List<MinutePoint> series = new ArrayList<>();
         public List<String> warnings = new ArrayList<>();
         public Map<String, Double> statPrices = new LinkedHashMap<>();

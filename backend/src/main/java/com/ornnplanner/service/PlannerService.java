@@ -61,10 +61,18 @@ public class PlannerService {
         in.unit = resolveUnit(build);
         in.goldPerMin = build.goldPerMin;
         in.xpPerMin = build.xpPerMin;
+        in.assumeHalfItems = build.assumeHalfItems;
+        in.assumeSmallItems = build.assumeSmallItems;
         if (build.steps != null) {
-            for (com.ornnplanner.repo.BuildRepository.Step s : build.steps) {
-                in.itemIds.add(s.itemId);
-                in.conditional.add(s.includeConditional);
+            for (int p = 0; p < build.steps.size(); p++) {
+                com.ornnplanner.repo.BuildRepository.Step s = build.steps.get(p);
+                if (s.moment()) {
+                    in.moments.add(new com.ornnplanner.engine.Model.Moment(p, s.atMinute, s.afterMinutes));
+                } else if (s.itemId != null) {
+                    in.itemIds.add(s.itemId);
+                    in.conditional.add(s.includeConditional);
+                    in.positions.add(p);
+                }
             }
         }
         TimelineResult result = new TimelineEngine(ref).run(in);

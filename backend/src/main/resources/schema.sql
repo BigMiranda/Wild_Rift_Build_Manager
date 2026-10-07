@@ -2,6 +2,7 @@
 -- Version (PRAGMA user_version) 2: catalog transcribed from the Wild Rift shop (pt-BR).
 -- Version 3: conditional effects chosen per purchase (build_step.include_conditional).
 -- Version 4: exclusive item groups (item.exclusive_groups).
+-- Version 5: build options assume_half_items / assume_small_items; purchase moments (build_moment).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -101,6 +102,8 @@ CREATE TABLE IF NOT EXISTS build (
     gold_per_min REAL    NOT NULL,
     xp_per_min   REAL    NOT NULL,
     include_conditional INTEGER NOT NULL DEFAULT 1, -- unused since v3 (kept for old databases)
+    assume_half_items  INTEGER NOT NULL DEFAULT 0,
+    assume_small_items INTEGER NOT NULL DEFAULT 0,
     created_at   TEXT    NOT NULL,
     updated_at   TEXT    NOT NULL
 );
@@ -110,6 +113,17 @@ CREATE TABLE IF NOT EXISTS build_step (
     seq      INTEGER NOT NULL,
     item_id  INTEGER NOT NULL REFERENCES item (id),
     include_conditional INTEGER NOT NULL DEFAULT 1, -- count this purchase's conditional effects
+    PRIMARY KEY (build_id, seq)
+);
+
+-- Purchase moments ("back to base"): markers in the purchase sequence. seq shares the numbering of build_step, so
+-- the two tables merged by seq give the sequence. The items after a moment are bought from its minute on: either
+-- at_minute (exact game time) or after_minutes after the previous purchase.
+CREATE TABLE IF NOT EXISTS build_moment (
+    build_id      INTEGER NOT NULL REFERENCES build (id) ON DELETE CASCADE,
+    seq           INTEGER NOT NULL,
+    at_minute     REAL,
+    after_minutes REAL,
     PRIMARY KEY (build_id, seq)
 );
 

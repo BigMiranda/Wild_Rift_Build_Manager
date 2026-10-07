@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 4;
+    static final int VERSION = 5;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -62,6 +62,11 @@ public class SchemaManager {
             // v4: exclusive groups come from the catalog file; ReferenceSeeder re-imports it (edited items are kept).
             jdbc.execute("ALTER TABLE item ADD COLUMN exclusive_groups TEXT");
             catalogReimportNeeded = true;
+        }
+        if (version < 5 && tableExists("build") && !columnExists("build", "assume_half_items")) {
+            // v5: per-build options to assume the purchase of missing half / smaller items.
+            jdbc.execute("ALTER TABLE build ADD COLUMN assume_half_items INTEGER NOT NULL DEFAULT 0");
+            jdbc.execute("ALTER TABLE build ADD COLUMN assume_small_items INTEGER NOT NULL DEFAULT 0");
         }
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {

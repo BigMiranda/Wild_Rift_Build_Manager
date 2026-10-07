@@ -398,7 +398,10 @@ class TimelineEngineTest {
         ItemDef boots2 = shopItem(68, "Passos de Mercúrio", "tier_medio");
         boots1.tabs = new java.util.ArrayList<>(List.of("Botas"));
         boots2.tabs = new java.util.ArrayList<>(List.of("Botas"));
-        assertEquals("boots", lastViolations(boots1.id, boots2.id).get(0).code);
+        TimelineResult twoBoots = run(ornn(), 1000, 0, boots1.id, boots2.id);
+        assertEquals(1, twoBoots.steps.size());                   // the second boots is left out...
+        assertEquals("boots", twoBoots.ignored.get(0).violations.get(0).code);
+        assertEquals(1, twoBoots.ignored.get(0).index);
 
         Long[] six = new Long[7];
         six[0] = boots1.id;
@@ -407,8 +410,122 @@ class TimelineEngineTest {
         }
         TimelineResult r = run(ornn(), 1000, 0, six);
         assertTrue(r.steps.get(5).violations.isEmpty());          // boots + 5 items: a full, legal inventory
-        assertEquals("slots", r.steps.get(6).violations.get(0).code);
-        assertEquals(7, r.steps.get(6).inventoryIds.size());
+        assertEquals(6, r.steps.size());                          // the sixth item has no slot: not counted
+        TimelineStep extra = r.ignored.get(0);
+        assertTrue(extra.ignored);
+        assertEquals(6, extra.index);
+        assertEquals("slots", extra.violations.get(0).code);
+        assertEquals(6, extra.inventoryIds.size());               // inventory unchanged
+        assertEquals(r.steps.get(5).stats.total.get(ARMOR), r.series.get(r.series.size() - 1).total.get(ARMOR), EPS);
+        assertEquals(6000, r.steps.get(5).cumulativeGold);
+    }
+
+    // ------------------------------------------------------------------ assumed components
+
+    private TimelineResult runAssuming(boolean half, boolean small, Long... ids) {
+        EngineInput in = new EngineInput();
+        in.unit = ornn();
+        in.goldPerMin = 100;
+        in.xpPerMin = 0;
+        in.itemIds = List.of(ids);
+        in.assumeHalfItems = half;
+        in.assumeSmallItems = small;
+        return new TimelineEngine(ref).run(in);
+    }
+
+    @Test
+    void assumedComponentsAreBoughtBeforeTheItemAsGoldAllows() {
+        // Final (1000) = Half (600 = 2x Small 200 + 200) + Small (200) + 200.
+        ItemDef small = shopItem(90, "Pequeno", "basico");
+        small.cost = 200;
+        ItemDef half = shopItem(91, "Meio", "tier_medio");
+        half.cost = 600;
+        half.components.add(new ComponentRef(small.id, 2));
+        ItemDef fin = shopItem(92, "Final", "aprimorado");
+        fin.cost = 1000;
+        fin.components.add(new ComponentRef(half.id, 1));
+        fin.components.add(new ComponentRef(small.id, 1));
+
+        TimelineResult none = runAssuming(false, false, fin.id);
+        assertEquals(1, none.steps.size());
+
+        TimelineResult both = runAssuming(true, true, fin.id);
+        List<String> order = new java.util.ArrayList<>();
+        for (TimelineStep s : both.steps) {
+            order.add(s.itemName + (s.implied ? "*" : ""));
+            assertEquals(0, s.buildIndex);
+        }
+        assertEquals(List.of("Pequeno*", "Pequeno*", "Meio*", "Pequeno*", "Final"), order);
+        assertEquals(1000, both.steps.get(4).cumulativeGold);     // same total gold, spread over time
+        assertEquals(200, both.steps.get(4).paidCost);            // only the recipe cost is left
+        assertEquals(0.0, both.steps.get(1).minute, EPS);         // 400 gold: covered by the 500 starting gold
+        assertEquals(1.0, both.steps.get(2).minute, EPS);         // Meio completes at 600 gold
+        assertEquals(5.0, both.steps.get(4).minute, EPS);         // the item itself still lands at 1000 gold
+        assertEquals(List.of("Final"), both.steps.get(4).inventory);
+
+        TimelineResult halfOnly = runAssuming(true, false, fin.id);
+        assertEquals(List.of("Meio", "Final"), List.of(halfOnly.steps.get(0).itemName, halfOnly.steps.get(1).itemName));
+        assertEquals(600, halfOnly.steps.get(0).paidCost);
+
+        TimelineResult smallOnly = runAssuming(false, true, fin.id);
+        assertEquals(4, smallOnly.steps.size());                  // three Pequeno, then Final consumes them all
+        assertEquals(400, smallOnly.steps.get(3).paidCost);
+
+        // Components already owned are not bought again.
+        TimelineResult owned = runAssuming(true, true, half.id, fin.id);
+        assertEquals(1, owned.steps.stream().filter(s -> s.buildIndex == 1 && s.implied).count());
+    }
+
+    @Test
+    void assumedComponentsWithoutAFreeSlotAreSkipped() {
+        ItemDef small = shopItem(93, "Pequeno", "basico");
+        ItemDef fin = shopItem(94, "Final", "aprimorado");
+        fin.components.add(new ComponentRef(small.id, 2));
+        Long[] ids = new Long[5];
+        for (int k = 0; k < 4; k++) {
+            ids[k] = shopItem(95 + k, "Item " + k, "aprimorado").id;
+        }
+        ids[4] = fin.id;
+        TimelineResult r = runAssuming(false, true, ids);
+        // 4 items + 1 Pequeno fills the five slots; the second Pequeno has no room and is bought with the item.
+        assertEquals(6, r.steps.size());
+        assertTrue(r.ignored.isEmpty());
+        assertEquals(5, r.steps.get(5).inventory.size());
+    }
+
+    // ------------------------------------------------------------------ purchase moments
+
+    @Test
+    void itemsAfterAPurchaseMomentWaitForItAndTheGoldStaysInTheBag() {
+        // Sequence: A (1000) | moment at 10:00 | B (1000) | moment 3 min after the previous purchase | C (1000)
+        ItemDef a = shopItem(110, "A", "aprimorado");
+        ItemDef b = shopItem(111, "B", "aprimorado");
+        ItemDef c = shopItem(112, "C", "aprimorado");
+        EngineInput in = new EngineInput();
+        in.unit = ornn();
+        in.goldPerMin = 400;
+        in.xpPerMin = 0;
+        in.itemIds = List.of(a.id, b.id, c.id);
+        in.positions = List.of(0, 2, 4);
+        in.moments = List.of(new Model.Moment(1, 10.0, null), new Model.Moment(3, null, 3.0));
+        TimelineResult r = new TimelineEngine(ref).run(in);
+
+        assertEquals(1.25, r.steps.get(0).minute, EPS);           // A: as soon as the gold covers it
+        assertEquals(0.0, r.steps.get(0).goldLeft, EPS);
+        assertEquals(10.0, r.steps.get(1).minute, EPS);           // B: gold at 3:45, but it waits for the 10:00 moment
+        assertEquals(500 + 400 * 10.0 - 2000, r.steps.get(1).goldLeft, EPS);
+        assertEquals(2, r.steps.get(1).buildIndex);
+        assertEquals(10.0, r.moments.get(0).minute, EPS);
+        assertEquals(13.0, r.moments.get(1).minute, EPS);         // 3 minutes after B
+        assertEquals(500 + 400 * 13.0 - 2000, r.moments.get(1).gold, EPS);
+        assertEquals(500 + 400 * 10.0 - 1000, r.moments.get(0).gold, EPS);
+        assertEquals(13.0, r.steps.get(2).minute, EPS);
+        assertEquals(500 + 400 * 13.0 - 3000, r.steps.get(2).goldLeft, EPS);
+
+        in.goldPerMin = 100;                                       // not enough gold at the moment: bought when it is
+        TimelineResult poor = new TimelineEngine(ref).run(in);
+        assertEquals(15.0, poor.steps.get(1).minute, EPS);
+        assertEquals(0.0, poor.steps.get(1).goldLeft, EPS);
     }
 
     @Test

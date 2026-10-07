@@ -91,7 +91,7 @@ export function RelevanceReport({ point, prices, itemsById }) {
                   <tr key={`i${r.purchaseIndex}`} className="report-item">
                     <td className="l">
                       <span className="with-icon">
-                        <ItemIcon id={r.itemId} size={24} />#{r.purchaseIndex + 1} {r.itemName}
+                        <ItemIcon id={r.itemId} size={24} />#{r.number}{r.implied ? '↳' : ''} {r.itemName}
                         {!r.conditionalIncluded && r.passiveParts.length === 0 && itemsById.get(r.itemId)?.stats.some((s) => s.conditional)
                           && <small className="cond">{t('report.condOff')}</small>}
                       </span>
