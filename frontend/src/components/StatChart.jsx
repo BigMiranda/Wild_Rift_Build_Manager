@@ -5,8 +5,8 @@ import { CHART_STATS, PERCENT_STATS, SERIES_COLORS, mmss, n0, n1, statOf } from 
 import { PASSIVES_VIEW, acquiredPassives, passiveColor, pointItemIds } from '../passives.js';
 import ItemIcon from './ItemIcon.jsx';
 import PassiveCompare from './PassiveCompare.jsx';
-import EffectiveBreakdown from './EffectiveBreakdown.jsx';
-import { EFFECTIVE_VIEW, FORGE_COLOR, effectiveGold, itemColor, itemPassiveColor } from '../effective.js';
+import EffectiveBreakdown, { AlignToggle } from './EffectiveBreakdown.jsx';
+import { ALIGN_SLOT, EFFECTIVE_VIEW, FORGE_COLOR, effectiveGold, itemColor, itemPassiveColor } from '../effective.js';
 import { StatIcon, statColor } from './StatIcon.jsx';
 
 const MARGIN = { top: 8, right: 16, bottom: 4, left: 8 };
@@ -28,7 +28,7 @@ export function levelUps(xpTable, xpPerMin, untilMinute) {
  * The "passives" view shows the passives held instead: stacked bars, one block per passive (its gold estimate), one
  * stack per build.
  */
-export default function StatChart({ series, stat, onStatChange, xpTable, selectedMinute, onSelectMinute, itemsById }) {
+export default function StatChart({ series, stat, onStatChange, xpTable, selectedMinute, onSelectMinute, itemsById, align, onAlignChange }) {
   const lines = series.filter((s) => s.result && s.result.series.length > 0);
   const maxMinute = Math.ceil(Math.max(1, ...lines.map((s) => s.result.series[s.result.series.length - 1].minute)));
   const wrapRef = useRef(null);
@@ -67,10 +67,13 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
       </div>
       <div ref={wrapRef}>
         {stat === EFFECTIVE_VIEW ? (
-          <EffectiveBars
-            lines={lines} itemsById={itemsById} maxMinute={maxMinute} plotWidth={plotWidth}
-            selectedMinute={selectedMinute} onSelectMinute={onSelectMinute}
-          />
+          <>
+            <AlignToggle value={align} onChange={onAlignChange} />
+            <EffectiveBars
+              lines={lines} itemsById={itemsById} maxMinute={maxMinute} plotWidth={plotWidth} align={align}
+              selectedMinute={selectedMinute} onSelectMinute={onSelectMinute}
+            />
+          </>
         ) : stat === PASSIVES_VIEW ? (
           <PassiveBars
             lines={lines} itemsById={itemsById} maxMinute={maxMinute} plotWidth={plotWidth}
@@ -165,13 +168,15 @@ function PassiveBars({ lines, itemsById, maxMinute, plotWidth, selectedMinute, o
   const names = new Map();
   for (const list of held.values()) for (const x of list) names.set(x.key, x);
   const barSize = Math.max(2, Math.min(18, (plotWidth / Math.max(1, minutes.length) / lines.length) * 0.75));
+  const tip = useStickyTip();
 
   return (
-    <div style={{ width: '100%', height: 300 }} role="img" aria-label={t('chart.passivesAria')}>
+    <div ref={tip.ref} className="sticky-host" style={{ width: '100%', height: 300 }} role="figure" aria-label={t('chart.passivesAria')}>
       <ResponsiveContainer>
         <BarChart
           data={data} margin={MARGIN} barGap={1} barSize={barSize}
           onClick={(e) => { if (e && e.activeLabel != null) onSelectMinute(Number(e.activeLabel)); }}
+          onMouseMove={tip.onMove} onMouseLeave={tip.onLeave}
           style={{ cursor: 'crosshair' }}
         >
           <CartesianGrid stroke="var(--grid)" vertical={false} />
@@ -180,21 +185,8 @@ function PassiveBars({ lines, itemsById, maxMinute, plotWidth, selectedMinute, o
             tickFormatter={(v) => `${v}m`} stroke="var(--muted)" tick={{ fill: 'var(--text-2)', fontSize: 12 }}
           />
           <YAxis stroke="var(--muted)" tick={{ fill: 'var(--gold)', fontSize: 12 }} width={Y_AXIS_WIDTH} tickFormatter={(v) => n0(v)} />
-          <Tooltip
-            cursor={{ fill: 'rgba(200, 170, 110, .08)' }}
-            content={({ active, label }) => (active && label != null ? (
-              <div className={`chart-tip${lines.length > 1 ? ' wide' : ''}`}>
-                <strong>{t('chart.minute', { time: mmss(label) })}</strong>
-                <PassiveCompare
-                  compact
-                  columns={lines.map((s) => ({
-                    key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length],
-                    list: held.get(`${s.key}|${label}`) ?? [],
-                  }))}
-                />
-              </div>
-            ) : null)}
-          />
+          <Tooltip cursor={{ fill: 'rgba(200, 170, 110, .08)' }} content={() => null} />
+          {tip.state?.frozen && <ReferenceLine x={tip.state.label} stroke="var(--gold-bright)" strokeDasharray="3 3" />}
           {selectedMinute != null && <ReferenceLine x={selectedMinute} stroke="var(--gold)" strokeWidth={1.5} />}
           {lines.flatMap((s) => order.get(s.key).map((key) => (
             <Bar
@@ -204,6 +196,79 @@ function PassiveBars({ lines, itemsById, maxMinute, plotWidth, selectedMinute, o
           )))}
         </BarChart>
       </ResponsiveContainer>
+      <StickyTip tip={tip} wide={lines.length > 1}>
+        {(label) => (
+          <PassiveCompare
+            compact
+            columns={lines.map((s) => ({
+              key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length],
+              list: held.get(`${s.key}|${label}`) ?? [],
+            }))}
+          />
+        )}
+      </StickyTip>
+    </div>
+  );
+}
+
+/**
+ * Tooltip that follows the bar under the mouse and stays put while the mouse is over it, so it can be scrolled to the
+ * end and read; it closes when the mouse leaves it (or leaves the chart without going into it).
+ */
+function useStickyTip() {
+  const ref = useRef(null);
+  const [state, setState] = useState(null);  // { label, x, frozen }
+  const over = useRef(false);
+  const timer = useRef(null);
+  const clear = () => { clearTimeout(timer.current); timer.current = null; };
+  useEffect(() => clear, []);
+  return {
+    ref,
+    state,
+    onMove: (e) => {
+      if (over.current || !e || e.activeLabel == null) return;
+      clear();
+      setState({ label: Number(e.activeLabel), x: e.chartX, frozen: false });
+    },
+    onLeave: () => {
+      clear();
+      timer.current = setTimeout(() => { if (!over.current) setState(null); }, 300);
+    },
+    enter: () => { over.current = true; clear(); setState((st) => (st ? { ...st, frozen: true } : st)); },
+    leave: () => { over.current = false; setState(null); },
+  };
+}
+
+function StickyTip({ tip, wide, children }) {
+  const st = tip.state;
+  const box = useRef(null);
+  // The wheel scrolls the tooltip first; once it reaches its end the page scrolls (the tooltip stays while hovered).
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return undefined;
+    const onWheel = (e) => {
+      const room = e.deltaY > 0 ? el.scrollHeight - el.clientHeight - el.scrollTop : el.scrollTop;
+      if (room <= 0) return;
+      e.preventDefault();
+      el.scrollTop += Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), room);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [st != null]);
+  if (!st) return null;
+  const width = tip.ref.current?.clientWidth ?? 0;
+  // Right next to the cursor (on the side with more room), so it can be reached without crossing other bars.
+  const side = st.x > width / 2 ? { right: Math.max(0, width - st.x + 4) } : { left: st.x + 4 };
+  return (
+    <div
+      ref={box} className={`chart-tip sticky-tip${wide ? ' wide' : ''}${st.frozen ? ' frozen' : ''}`} style={side}
+      onMouseEnter={tip.enter} onMouseLeave={tip.leave}
+    >
+      <div className="sticky-tip-head">
+        <strong>{t('chart.minute', { time: mmss(st.label) })}</strong>
+        <small className="muted">{st.frozen ? t('chart.tipFrozen') : t('chart.tipHint')}</small>
+      </div>
+      {children(st.label)}
     </div>
   );
 }
@@ -224,37 +289,45 @@ function statesByMinute(lines, fn) {
 }
 
 /**
- * Effective gold over time as stacked bars, one stack per build: a block per item held (gold of its stats) with a
- * lighter block on top for its passives, and Ornn's Living Forge at the top.
+ * Effective gold over time as stacked bars, one stack per build: one block per item held -- as many as the inventory
+ * slots in use -- (gold of its stats, its passives in a lighter tone on top of the same block), plus one block for the
+ * champion's passive (Ornn's Living Forge) at the top.
  */
-function EffectiveBars({ lines, itemsById, maxMinute, plotWidth, selectedMinute, onSelectMinute }) {
+function EffectiveBars({ lines, itemsById, maxMinute, plotWidth, align, selectedMinute, onSelectMinute }) {
   const { minutes, at } = statesByMinute(lines, (s, p) => effectiveGold(p, itemsById, s.result.statPrices));
-  const order = new Map();  // build -> [{ key, name }] items in purchase order
+  // Stack order (bottom to top): purchase order; in build order the boots go last, right below the champion's passive.
+  const order = new Map();  // build -> [{ key, name }]
   for (const s of lines) {
     const seen = new Map();
-    for (const m of minutes) for (const x of at.get(`${s.key}|${m}`).items) seen.set(x.purchaseIndex, x.itemName);
-    order.set(s.key, [...seen.entries()].sort((a, b) => a[0] - b[0]).map(([k, name]) => ({ key: String(k), name })));
+    for (const m of minutes) for (const x of at.get(`${s.key}|${m}`).items) seen.set(x.purchaseIndex, x);
+    const rank = (x) => (align === ALIGN_SLOT && x.boots ? 1 : 0);
+    order.set(s.key, [...seen.values()]
+      .sort((a, b) => rank(a) - rank(b) || a.purchaseIndex - b.purchaseIndex)
+      .map((x) => ({ key: x.key, name: x.itemName })));
   }
   const data = minutes.map((m) => {
     const row = { minute: m };
     for (const s of lines) {
       const e = at.get(`${s.key}|${m}`);
+      // Only values above zero: a zero-height segment would still draw a line and look like an extra block.
       for (const x of e.items) {
-        row[`${s.key}|${x.key}|s`] = x.statGold;
-        row[`${s.key}|${x.key}|p`] = x.passiveGold;
+        if (x.statGold > 0) row[`${s.key}|${x.key}|s`] = x.statGold;
+        if (x.passiveGold > 0) row[`${s.key}|${x.key}|p`] = x.passiveGold;
       }
       if (e.forge.gold > 0) row[`${s.key}|forge`] = e.forge.gold;
     }
     return row;
   });
   const barSize = Math.max(2, Math.min(18, (plotWidth / Math.max(1, minutes.length) / lines.length) * 0.75));
+  const tip = useStickyTip();
 
   return (
-    <div style={{ width: '100%', height: 340 }} role="img" aria-label={t('chart.effectiveAria')}>
+    <div ref={tip.ref} className="sticky-host" style={{ width: '100%', height: 340 }} role="figure" aria-label={t('chart.effectiveAria')}>
       <ResponsiveContainer>
         <BarChart
           data={data} margin={MARGIN} barGap={1} barSize={barSize}
           onClick={(e) => { if (e && e.activeLabel != null) onSelectMinute(Number(e.activeLabel)); }}
+          onMouseMove={tip.onMove} onMouseLeave={tip.onLeave}
           style={{ cursor: 'crosshair' }}
         >
           <CartesianGrid stroke="var(--grid)" vertical={false} />
@@ -263,34 +336,31 @@ function EffectiveBars({ lines, itemsById, maxMinute, plotWidth, selectedMinute,
             tickFormatter={(v) => `${v}m`} stroke="var(--muted)" tick={{ fill: 'var(--text-2)', fontSize: 12 }}
           />
           <YAxis stroke="var(--muted)" tick={{ fill: 'var(--gold)', fontSize: 12 }} width={Y_AXIS_WIDTH} tickFormatter={(v) => n0(v)} />
-          <Tooltip
-            cursor={{ fill: 'rgba(200, 170, 110, .08)' }}
-            wrapperStyle={{ zIndex: 30 }}
-            content={({ active, label }) => (active && label != null ? (
-              <div className="chart-tip wide">
-                <strong>{t('chart.minute', { time: mmss(label) })}</strong>
-                <EffectiveBreakdown
-                  compact
-                  columns={lines.map((s) => ({
-                    key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length],
-                    eff: at.get(`${s.key}|${label}`),
-                  }))}
-                />
-              </div>
-            ) : null)}
-          />
+          <Tooltip cursor={{ fill: 'rgba(200, 170, 110, .08)' }} content={() => null} />
+          {tip.state?.frozen && <ReferenceLine x={tip.state.label} stroke="var(--gold-bright)" strokeDasharray="3 3" />}
           {selectedMinute != null && <ReferenceLine x={selectedMinute} stroke="var(--gold)" strokeWidth={1.5} />}
           {lines.flatMap((s) => [
             ...order.get(s.key).flatMap((x) => [
               <Bar key={`${s.key}|${x.key}|s`} dataKey={`${s.key}|${x.key}|s`} stackId={String(s.key)} name={x.name}
                 fill={itemColor(x.name)} isAnimationActive={false} />,
               <Bar key={`${s.key}|${x.key}|p`} dataKey={`${s.key}|${x.key}|p`} stackId={String(s.key)} name={x.name}
-                fill={itemPassiveColor(x.name)} stroke="var(--surface)" strokeWidth={1} isAnimationActive={false} />,
+                fill={itemPassiveColor(x.name)} isAnimationActive={false} />,
             ]),
             <Bar key={`${s.key}|forge`} dataKey={`${s.key}|forge`} stackId={String(s.key)} fill={FORGE_COLOR} isAnimationActive={false} />,
           ])}
         </BarChart>
       </ResponsiveContainer>
+      <StickyTip tip={tip} wide>
+        {(label) => (
+          <EffectiveBreakdown
+            compact align={align}
+            columns={lines.map((s) => ({
+              key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length],
+              eff: at.get(`${s.key}|${label}`),
+            }))}
+          />
+        )}
+      </StickyTip>
     </div>
   );
 }

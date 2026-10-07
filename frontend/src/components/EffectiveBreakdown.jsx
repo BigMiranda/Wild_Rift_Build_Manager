@@ -1,6 +1,6 @@
 import { statAbbr, statLabel, t } from '../i18n.js';
 import { n0, n1, pct, statValue } from '../format.js';
-import { FORGE_COLOR, UNKNOWN_PASSIVE_GOLD, itemColor, itemPassiveColor } from '../effective.js';
+import { ALIGN_SLOT, FORGE_COLOR, UNKNOWN_PASSIVE_GOLD, itemColor, itemPassiveColor } from '../effective.js';
 import ItemIcon from './ItemIcon.jsx';
 import { statColor } from './StatIcon.jsx';
 
@@ -20,21 +20,33 @@ function Profit({ value, pctValue }) {
  * Effective gold of the items of one or more builds, side by side (one column per build, the same item on the same
  * line): what each stat and passive of each item is worth, gold spent vs gold worth, and profit per item.
  * columns: [{ key, name, color, eff: effectiveGold(...) }]
+ * align: ALIGN_ITEM (same item on the same row) or ALIGN_SLOT (build order: 1st item, 2nd item... and the boots last,
+ * so every build has the same rows).
  */
-export default function EffectiveBreakdown({ columns, compact = false }) {
+export default function EffectiveBreakdown({ columns, compact = false, align }) {
   const label = compact ? statAbbr : statLabel;
-  // Rows: same item name on the same row (2nd copy of an item -> its own row).
   const rows = new Map();
-  columns.forEach((c, ci) => {
-    const count = new Map();
-    for (const x of c.eff.items) {
-      const n = (count.get(x.itemName) ?? 0) + 1;
-      count.set(x.itemName, n);
-      const key = `${x.itemName}#${n}`;
-      if (!rows.has(key)) rows.set(key, columns.map(() => null));
-      rows.get(key)[ci] = x;
-    }
-  });
+  const put = (key, ci, x) => {
+    if (!rows.has(key)) rows.set(key, columns.map(() => null));
+    rows.get(key)[ci] = x;
+  };
+  if (align === ALIGN_SLOT) {
+    const most = (pick) => Math.max(0, ...columns.map((c) => c.eff.items.filter(pick).length));
+    const items = (x) => !x.boots;
+    const boots = (x) => x.boots;
+    for (let i = 0; i < most(items); i++) columns.forEach((c, ci) => put(`slot${i}`, ci, c.eff.items.filter(items)[i] ?? null));
+    for (let i = 0; i < most(boots); i++) columns.forEach((c, ci) => put(`boots${i}`, ci, c.eff.items.filter(boots)[i] ?? null));
+  } else {
+    // Same item name on the same row (2nd copy of an item -> its own row).
+    columns.forEach((c, ci) => {
+      const count = new Map();
+      for (const x of c.eff.items) {
+        const n = (count.get(x.itemName) ?? 0) + 1;
+        count.set(x.itemName, n);
+        put(`${x.itemName}#${n}`, ci, x);
+      }
+    });
+  }
   const hasForge = columns.some((c) => c.eff.forge.gold > 0);
   const template = `repeat(${columns.length}, ${compact ? 'minmax(190px, 290px)' : 'minmax(0, 1fr)'})`;
 
@@ -95,6 +107,21 @@ export default function EffectiveBreakdown({ columns, compact = false }) {
             ))}
           </div>
         </div>
+      ))}
+    </div>
+  );
+}
+
+/** Choice of how compared builds are lined up. */
+export function AlignToggle({ value, onChange }) {
+  return (
+    <div className="chips align-toggle" role="group" aria-label={t('eff.align')}>
+      <small className="muted">{t('eff.align')}:</small>
+      {['item', 'slot'].map((k) => (
+        <button key={k} className={value === k ? 'active' : ''} aria-pressed={value === k} onClick={() => onChange(k)}
+          title={t(`eff.align.${k}Title`)}>
+          {t(`eff.align.${k}`)}
+        </button>
       ))}
     </div>
   );

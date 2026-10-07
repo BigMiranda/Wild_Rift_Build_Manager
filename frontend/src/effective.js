@@ -41,6 +41,7 @@ export function effectiveGold(point, itemsById, prices) {
     const effective = statGold + passiveGold;
     return {
       key: String(c.purchaseIndex), purchaseIndex: c.purchaseIndex, number: c.number, implied: c.implied,
+      boots: !!item?.tabs?.includes('Botas'),
       itemId: c.itemId, itemName: c.itemName, cost, stats, passives, statGold, passiveGold, effective,
       profit: effective - cost, profitPct: cost > 0 ? (effective / cost - 1) * 100 : null,
     };
@@ -56,6 +57,10 @@ export function effectiveGold(point, itemsById, prices) {
     profit: effective - spent, profitPct: spent > 0 ? (effective / spent - 1) * 100 : null,
   };
 }
+
+/** How items of compared builds are lined up: same item on the same row, or by place in the build. */
+export const ALIGN_ITEM = 'item';
+export const ALIGN_SLOT = 'slot';
 
 /** Item color (same item, same hue in every build) and the lighter tone of its passives. */
 export function itemHue(name) {

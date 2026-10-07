@@ -8,8 +8,8 @@ import TimelineTable from '../components/TimelineTable.jsx';
 import StatChart from '../components/StatChart.jsx';
 import { PassivesPanel, RelevanceReport, StatSheet, pointAt } from '../components/MomentPanels.jsx';
 import { PASSIVES_VIEW } from '../passives.js';
-import { EFFECTIVE_VIEW, UNKNOWN_PASSIVE_GOLD, effectiveGold } from '../effective.js';
-import EffectiveBreakdown from '../components/EffectiveBreakdown.jsx';
+import { ALIGN_ITEM, EFFECTIVE_VIEW, UNKNOWN_PASSIVE_GOLD, effectiveGold } from '../effective.js';
+import EffectiveBreakdown, { AlignToggle } from '../components/EffectiveBreakdown.jsx';
 import { StatIcon } from '../components/StatIcon.jsx';
 import { SERIES_COLORS, mmss, n0 } from '../format.js';
 import { evolutionPairs } from '../shopModel.js';
@@ -68,6 +68,8 @@ export default function Planner({ meta, items }) {
   const [chartStat, setChartStat] = useState('Max Health');
   /** Tab of the moment panel next to the stat sheet: item relevance or passives held. */
   const [momentTab, setMomentTab] = useState('relevance');
+  /** Effective gold of compared builds: same item on the same row, or by place in the build. */
+  const [effAlign, setEffAlign] = useState(ALIGN_ITEM);
   const [selectedMinute, setSelectedMinute] = useState(null);
   /** Purchase selected in the sequence (index in draft.steps), shown in the shop's detail panel. */
   const [selectedIdx, setSelectedIdx] = useState(null);
@@ -420,6 +422,7 @@ export default function Planner({ meta, items }) {
             <StatChart
               series={chartSeries} stat={chartStat} onStatChange={setChartStat} xpTable={meta.xpTable}
               selectedMinute={moment} onSelectMinute={setSelectedMinute} itemsById={itemsById}
+              align={effAlign} onAlignChange={setEffAlign}
             />
           </section>
         )}
@@ -440,7 +443,9 @@ export default function Planner({ meta, items }) {
                 <section className="panel">
                   <h3>{t('eff.title', { time: mmss(point.minute), level: point.level })}</h3>
                   <p className="muted" style={{ marginTop: 0 }}>{t('eff.help', { gold: n0(UNKNOWN_PASSIVE_GOLD) })}</p>
+                  {compareIds.length > 0 && <AlignToggle value={effAlign} onChange={setEffAlign} />}
                   <EffectiveBreakdown
+                    align={effAlign}
                     columns={chartSeries.filter((s) => s.result).map((s) => ({
                       key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length],
                       eff: effectiveGold(pointAt(s.result.series, point.minute), itemsById, s.result.statPrices),
