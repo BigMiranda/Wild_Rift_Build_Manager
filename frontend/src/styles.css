@@ -17,6 +17,7 @@
   --warn-bg: #2e2610;
   --warn-border: #8a6d1f;
   --error: #ff8f85;
+  --ok: #6fcf97;
   --grid: #1a2d44;
   /* stat colors (Wild Rift style) */
   --stat-hp: #6fd486;
@@ -409,6 +410,59 @@ tr.moment-row td { padding: 2px 8px; background: rgba(200, 170, 110, .08); borde
 .moment-line { font-size: 12px; color: var(--gold-bright); }
 .timeline-tools { display: flex; justify-content: flex-end; margin-bottom: 4px; }
 .group-toggle { margin-left: 4px; padding: 0 4px; font-size: 11px; line-height: 16px; }
+/* passives view */
+.passive-chip-icon { color: var(--gold); }
+.chart-tip {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: var(--text);
+  font-size: 12px; max-width: 320px;
+}
+.chart-tip.wide { max-width: none; }
+.passive-compare { display: grid; column-gap: 14px; row-gap: 3px; margin-top: 6px; }
+.passive-compare.compact { min-width: 0; font-size: 12px; }
+.pc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border); font-weight: 600; }
+.pc-head .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.pc-head small { flex-basis: 100%; font-weight: 400; }
+.pc-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-cell { display: flex; align-items: flex-start; gap: 6px; min-width: 0; }
+.pc-cell.missing { color: var(--muted); padding-left: 18px; }
+.pc-text { min-width: 0; }
+.compact .passive-block { height: 12px; width: 10px; }
+.chart-tip ul { list-style: none; margin: 4px 0 6px; padding: 0; }
+.chart-tip li { display: flex; align-items: center; gap: 6px; }
+.chart-tip .swatch, .tip-build .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.tip-build { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-weight: 600; }
+.moment-tabbed { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.moment-tabs { margin: 0; }
+.passives-total { margin: 0 0 8px; color: var(--gold-bright); font-weight: 600; }
+.passive-groups, .passive-groups ul { list-style: none; margin: 0; padding: 0; }
+.passive-groups > li { margin-bottom: 10px; }
+.passive-item { font-weight: 600; margin-bottom: 4px; }
+.passive-entry { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 6px 6px; }
+.passive-block { width: 12px; height: 18px; border-radius: 2px; flex: none; margin-top: 2px; }
+.passive-text { margin: 2px 0 0; font-size: 12px; color: var(--text-2); }
+/* effective gold */
+.eff-grid { display: grid; column-gap: 14px; row-gap: 6px; margin-top: 6px; }
+.eff-grid.compact { font-size: 11px; width: max-content; }
+.eff-head { padding-bottom: 4px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.eff-build { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.eff-build .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.eff-cell {
+  min-width: 0; padding: 5px 8px 6px; border: 1px solid var(--border); border-left: 3px solid var(--item-color, var(--border));
+  border-radius: 5px; background: rgba(255, 255, 255, .025);
+}
+.eff-cell.missing { color: var(--muted); padding-left: 16px; border: 1px dashed var(--border); background: none; }
+.eff-item { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.eff-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eff-swatch { display: inline-flex; flex-direction: column; width: 10px; flex: none; }
+.eff-swatch span { display: block; height: 6px; }
+.eff-swatch span:only-child { height: 12px; }
+.eff-line { color: var(--text-2); }
+.eff-parts { display: flex; flex-wrap: wrap; gap: 0 8px; color: var(--text-2); }
+.eff-passive { color: var(--gold-bright); }
+.eff-passive.unknown { color: var(--text-2); font-style: italic; }
+.eff-forge { border-style: dashed; border-left-style: solid; }
+.profit-up { color: var(--ok); font-weight: 600; }
+.profit-down { color: var(--error); font-weight: 600; }
 .preview .ignored-note { color: var(--text-2); font-size: 13px; margin: 0 0 6px; }
 .buildbar-item.blocked .item-icon { border-color: var(--error); box-shadow: 0 0 0 2px rgba(255, 143, 133, .4); }
 tr.violating td { background: rgba(180, 35, 24, .12); }

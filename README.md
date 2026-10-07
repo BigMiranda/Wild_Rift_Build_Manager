@@ -176,6 +176,16 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
   mostra o que aquela compra traz à build (minuto, ouro pago, valor em ouro somado e eficiências).
 - Clique numa linha da linha do tempo para ver o **detalhamento**: base/itens/passivas/forja por status, fórmula de
   cada passiva e de cada eficiência.
+- **Passivas adquiridas**: no gráfico, o chip "Passivas" troca as linhas por barras empilhadas (um bloco por passiva
+  que você tem, uma pilha por build); no painel do momento, a aba "Passivas" lista as passivas por item, desde quando
+  você as tem. Por enquanto cada passiva vale 400 de ouro (estimativa provisória, `PASSIVE_GOLD` em
+  `frontend/src/passives.js`); passivas únicas com o mesmo nome contam uma vez.
+- **Ouro efetivo**: no gráfico, o chip "Ouro efetivo" mostra barras empilhadas por build, um bloco por item (ouro dos
+  status dele pelo preço por ponto) com um bloco mais claro em cima para as passivas, e a Forja Viva no topo. Passivas
+  já modeladas valem o ouro do que dão; as ainda não catalogadas valem 100 de ouro por enquanto (`UNKNOWN_PASSIVE_GOLD`
+  em `frontend/src/effective.js`). A legenda e a aba "Ouro efetivo" do painel do momento mostram, lado a lado por
+  build, o valor de cada status e passiva de cada item, o ouro gasto contra o aproveitado e o lucro (ouro e %) por item
+  e da build.
 - No gráfico, a faixa de eventos mostra cada compra (ícone do item) e cada subida de nível. Clicar no gráfico ou num
   evento escolhe o momento exibido no **painel de status do campeão** (total com base + adicional, como na aba de
   status do jogo) e no **relatório de relevância** (valor em ouro de cada item e de cada passiva, mais a Forja Viva).

@@ -6,9 +6,12 @@ import Shop from '../components/Shop.jsx';
 import BuildBar from '../components/BuildBar.jsx';
 import TimelineTable from '../components/TimelineTable.jsx';
 import StatChart from '../components/StatChart.jsx';
-import { RelevanceReport, StatSheet, pointAt } from '../components/MomentPanels.jsx';
+import { PassivesPanel, RelevanceReport, StatSheet, pointAt } from '../components/MomentPanels.jsx';
+import { PASSIVES_VIEW } from '../passives.js';
+import { EFFECTIVE_VIEW, UNKNOWN_PASSIVE_GOLD, effectiveGold } from '../effective.js';
+import EffectiveBreakdown from '../components/EffectiveBreakdown.jsx';
 import { StatIcon } from '../components/StatIcon.jsx';
-import { SERIES_COLORS } from '../format.js';
+import { SERIES_COLORS, mmss, n0 } from '../format.js';
 import { evolutionPairs } from '../shopModel.js';
 
 const emptyBuild = (folderId) => ({
@@ -63,6 +66,8 @@ export default function Planner({ meta, items }) {
   const [compareIds, setCompareIds] = useState([]);
   const [compareResults, setCompareResults] = useState({});
   const [chartStat, setChartStat] = useState('Max Health');
+  /** Tab of the moment panel next to the stat sheet: item relevance or passives held. */
+  const [momentTab, setMomentTab] = useState('relevance');
   const [selectedMinute, setSelectedMinute] = useState(null);
   /** Purchase selected in the sequence (index in draft.steps), shown in the shop's detail panel. */
   const [selectedIdx, setSelectedIdx] = useState(null);
@@ -406,12 +411,15 @@ export default function Planner({ meta, items }) {
         {result && (
           <section className="panel">
             <div className="spread">
-              <h3><StatIcon stat={chartStat} size={16} />{t('chart.title', { stat: statLabel(chartStat) })}</h3>
+              <h3>
+                {chartStat === EFFECTIVE_VIEW ? t('chart.effectiveTitle') : chartStat === PASSIVES_VIEW ? t('chart.passivesTitle')
+                  : <><StatIcon stat={chartStat} size={16} />{t('chart.title', { stat: statLabel(chartStat) })}</>}
+              </h3>
               <small>{t('chart.compareHint')}</small>
             </div>
             <StatChart
               series={chartSeries} stat={chartStat} onStatChange={setChartStat} xpTable={meta.xpTable}
-              selectedMinute={moment} onSelectMinute={setSelectedMinute}
+              selectedMinute={moment} onSelectMinute={setSelectedMinute} itemsById={itemsById}
             />
           </section>
         )}
@@ -419,7 +427,36 @@ export default function Planner({ meta, items }) {
         {point && (
           <div className="grid-2 moment-panels">
             <StatSheet point={point} itemsById={itemsById} />
-            <RelevanceReport point={point} prices={result.statPrices} itemsById={itemsById} />
+            <div className="moment-tabbed">
+              <div className="chips moment-tabs" role="tablist" aria-label={t('moment.tabs')}>
+                {['relevance', 'passives', 'effective'].map((k) => (
+                  <button key={k} role="tab" aria-selected={momentTab === k} className={momentTab === k ? 'active' : ''} onClick={() => setMomentTab(k)}>
+                    {t(`moment.tab.${k}`)}
+                  </button>
+                ))}
+              </div>
+              {momentTab === 'relevance' && <RelevanceReport point={point} prices={result.statPrices} itemsById={itemsById} />}
+              {momentTab === 'effective' && (
+                <section className="panel">
+                  <h3>{t('eff.title', { time: mmss(point.minute), level: point.level })}</h3>
+                  <p className="muted" style={{ marginTop: 0 }}>{t('eff.help', { gold: n0(UNKNOWN_PASSIVE_GOLD) })}</p>
+                  <EffectiveBreakdown
+                    columns={chartSeries.filter((s) => s.result).map((s) => ({
+                      key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length],
+                      eff: effectiveGold(pointAt(s.result.series, point.minute), itemsById, s.result.statPrices),
+                    }))}
+                  />
+                </section>
+              )}
+              {momentTab === 'passives' && (
+                  <PassivesPanel
+                    point={point} series={result.series} itemsById={itemsById}
+                    builds={chartSeries.filter((s) => s.result).map((s) => ({
+                      key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length], series: s.result.series,
+                    }))}
+                  />
+                )}
+            </div>
           </div>
         )}
       </main>

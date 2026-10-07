@@ -3,6 +3,8 @@ import { DERIVED_STATS, PERCENT_STATS, SHEET_STATS, mmss, n0, n1, pct, statOf, s
 import ItemIcon from './ItemIcon.jsx';
 import InventorySlots from './InventorySlots.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
+import PassiveCompare from './PassiveCompare.jsx';
+import { PASSIVE_GOLD, acquiredPassives, passiveColor, passiveSince, pointItemIds } from '../passives.js';
 
 /** Series point at (or right before) a minute. */
 export function pointAt(series, minute) {
@@ -158,5 +160,63 @@ function ShareBar({ value, thin = false }) {
       <span className={`share-bar${thin ? ' thin' : ''}`} style={{ width: `${Math.min(100, value)}%` }} />
       <span className="share-text">{n1(value)}%</span>
     </span>
+  );
+}
+
+/**
+ * Passives held at a moment, grouped by item, each with its gold estimate and since when it is held. With compared
+ * builds (`builds`: [{ key, name, color, series }], the active one first) they are shown side by side instead.
+ */
+export function PassivesPanel({ point, series, itemsById, builds = [] }) {
+  if (!point) return null;
+  if (builds.length > 1) {
+    const columns = builds.map((b) => ({
+      key: b.key, name: b.name, color: b.color,
+      list: acquiredPassives(pointItemIds(pointAt(b.series, point.minute)), itemsById),
+      since: passiveSince(b.series, itemsById),
+    }));
+    return (
+      <section className="panel">
+        <h3>{t('passives.title', { time: mmss(point.minute), level: point.level })}</h3>
+        <p className="muted" style={{ marginTop: 0 }}>{t('passives.help', { gold: n0(PASSIVE_GOLD) })}</p>
+        <PassiveCompare columns={columns} />
+      </section>
+    );
+  }
+  const list = acquiredPassives(pointItemIds(point), itemsById);
+  const since = passiveSince(series, itemsById);
+  const byItem = [];
+  for (const x of list) {
+    const last = byItem[byItem.length - 1];
+    if (last && last.itemId === x.itemId) last.passives.push(x);
+    else byItem.push({ itemId: x.itemId, itemName: x.itemName, passives: [x] });
+  }
+  const gold = list.reduce((a, x) => a + x.gold, 0);
+  return (
+    <section className="panel">
+      <h3>{t('passives.title', { time: mmss(point.minute), level: point.level })}</h3>
+      <p className="muted" style={{ marginTop: 0 }}>{t('passives.help', { gold: n0(PASSIVE_GOLD) })}</p>
+      <p className="passives-total">{t('passives.total', { n: list.length, gold: n0(gold) })}</p>
+      {list.length === 0 && <p className="muted">{t('passives.none')}</p>}
+      <ul className="passive-groups">
+        {byItem.map((g) => (
+          <li key={g.itemId}>
+            <div className="with-icon passive-item"><ItemIcon id={g.itemId} size={24} />{g.itemName}</div>
+            <ul>
+              {g.passives.map((x) => (
+                <li key={x.key} className="passive-entry">
+                  <span className="passive-block" style={{ background: passiveColor(x.key) }} aria-hidden="true" />
+                  <div>
+                    <span className="passive-name">{x.name}</span>
+                    <small className="muted"> · {n0(x.gold)} · {t('passives.since', { time: mmss(since.get(x.key) ?? point.minute) })}</small>
+                    {x.text && <p className="passive-text">{x.text}</p>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
