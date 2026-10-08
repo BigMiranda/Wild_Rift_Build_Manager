@@ -18,7 +18,7 @@ function Th({ label, title, className = '' }) {
 /** Timeline of one build. `compact` hides some columns for side-by-side comparison. */
 export default function TimelineTable({ result, itemsById, compact = false }) {
   const [open, setOpen] = useState(null);
-  // Assumed purchases are listed under the build purchase they lead to; each group can be collapsed.
+  // Assumed purchases are listed right above the build purchase they lead to; each group can be collapsed.
   const [collapsed, setCollapsed] = useState(() => new Set());
   if (!result || result.steps.length === 0) return <p className="muted">{t('timeline.empty')}</p>;
 
@@ -49,9 +49,10 @@ export default function TimelineTable({ result, itemsById, compact = false }) {
   const moments = [...(result.moments ?? [])];
   for (const g of groups) {
     while (moments.length && moments[0].position < g.buildIndex) rows.push({ moment: moments.shift() });
+    // Chronological: the assumed components first, then the item they build into (which holds the collapse toggle).
     const hidden = collapsed.has(g.buildIndex);
-    if (g.official) rows.push({ step: g.official, children: g.implied.length, hidden });
     if (!hidden || !g.official) g.implied.forEach((s) => rows.push({ step: s }));
+    if (g.official) rows.push({ step: g.official, children: g.implied.length, hidden });
   }
   moments.forEach((m) => rows.push({ moment: m }));
 
@@ -107,14 +108,14 @@ export default function TimelineTable({ result, itemsById, compact = false }) {
               <Fragment key={s.index}>
                 <tr className={`clickable${s.violations?.length ? ' violating' : ''}${s.implied ? ' implied' : ''}`} onClick={() => setOpen(open === s.index ? null : s.index)} aria-expanded={open === s.index}>
                   <td title={s.implied ? t('timeline.impliedTitle') : undefined}>
-                    {s.implied ? '↳' : s.number}
+                    {s.implied ? '↴' : s.number}
                     {children > 0 && (
                       <button
                         className="icon group-toggle" aria-expanded={!hidden}
                         title={t(hidden ? 'timeline.expandGroup' : 'timeline.collapseGroup', { n: children })}
                         onClick={(ev) => { ev.stopPropagation(); toggleGroup(s.buildIndex); }}
                       >
-                        {hidden ? `▸${children}` : '▾'}
+                        {hidden ? `+${children}` : '−'}
                       </button>
                     )}
                   </td>
