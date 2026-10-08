@@ -83,6 +83,7 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
         <div style={{ width: '100%', height: 300 }} role="img" aria-label={t('chart.aria', { stat: statLabel(stat) })}>
           <ResponsiveContainer>
             <LineChart
+              data={lineData(lines, stat)}
               margin={MARGIN}
               onClick={(e) => { if (e && e.activeLabel != null) onSelectMinute(Number(e.activeLabel)); }}
               style={{ cursor: 'crosshair' }}
@@ -100,7 +101,7 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
               <Tooltip
                 contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)' }}
                 labelFormatter={(v) => t('chart.minute', { time: mmss(v) })}
-                formatter={(v, name, p) => [`${n1(v)}${PERCENT_STATS.has(stat) ? '%' : ''} ${statLabel(stat)} · ${t('chart.lv', { n: p.payload.level })}`, name]}
+                formatter={(v, name, p) => [`${n1(v)}${PERCENT_STATS.has(stat) ? '%' : ''} ${statLabel(stat)} · ${t('chart.lv', { n: p.payload[`lv${p.dataKey.slice(1)}`] })}`, name]}
                 cursor={{ stroke: 'var(--muted)', strokeDasharray: '3 3' }}
               />
               {lines.length >= 2 && <Legend wrapperStyle={{ color: 'var(--text-2)' }} />}
@@ -109,8 +110,7 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
                 <Line
                   key={s.key}
                   name={s.name}
-                  data={s.result.series.map((p) => ({ minute: p.minute, level: p.level, value: statOf(p.total, stat) }))}
-                  dataKey="value"
+                  dataKey={`v${s.key}`}
                   type="stepAfter"
                   stroke={SERIES_COLORS[s.colorIndex % SERIES_COLORS.length]}
                   strokeWidth={2}
@@ -310,6 +310,30 @@ function ChartTip({ tip, wide, light, details }) {
       {details(st.label)}
     </div>
   );
+}
+
+/**
+ * One row per minute any build has a point, with every build's value there (its last point at or before that minute,
+ * up to its own last point), so the tooltip always lists every compared build.
+ */
+function lineData(lines, stat) {
+  const minutes = [...new Set(lines.flatMap((s) => s.result.series.map((p) => p.minute)))].sort((a, b) => a - b);
+  return minutes.map((m) => {
+    const row = { minute: m };
+    for (const s of lines) {
+      const series = s.result.series;
+      if (m > series[series.length - 1].minute + 1e-9) continue;
+      let p = null;
+      for (const q of series) {
+        if (q.minute <= m + 1e-9) p = q; else break;
+      }
+      if (p) {
+        row[`v${s.key}`] = statOf(p.total, stat);
+        row[`lv${s.key}`] = p.level;
+      }
+    }
+    return row;
+  });
 }
 
 /** State of every build at every minute any build has a point (its last point at or before that minute). */
