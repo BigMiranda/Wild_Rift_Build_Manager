@@ -109,6 +109,8 @@ public class TimelineEngine {
 
     /** Runes of the run in progress (purchase index -1, -2...). */
     private final List<Owned> runes = new ArrayList<>();
+    /** Extra gold events of the run in progress, by minute. */
+    private final List<double[]> extraGold = new ArrayList<>();
 
     public TimelineResult run(EngineInput in) {
         TimelineResult result = new TimelineResult();
@@ -128,6 +130,14 @@ public class TimelineEngine {
             return result;
         }
 
+        result.matchEnd = in.matchEnd;
+        extraGold.clear();
+        for (double[] e : in.extraGold) {
+            if (e != null && e.length >= 2 && e[0] >= 0) {
+                extraGold.add(new double[] {e[0], e[1]});
+            }
+        }
+        extraGold.sort(java.util.Comparator.comparingDouble(e -> e[0]));
         runes.clear();
         for (int k = 0; k < in.runes.size(); k++) {
             boolean cond = k >= in.runeConditional.size() || !Boolean.FALSE.equals(in.runeConditional.get(k));
@@ -193,7 +203,7 @@ public class TimelineEngine {
                 step.cumulativeGold = cumulative;
                 // As soon as the gold covers it, never before the previous purchase; the build's own items also wait
                 // for the last purchase moment (assumed components are bought instantly).
-                step.minute = Math.max(Math.max(0, (cumulative - STARTING_GOLD) / in.goldPerMin), lastMinute);
+                step.minute = Math.max(minuteFor(cumulative, in.goldPerMin), lastMinute);
                 if (!implied) {
                     step.minute = Math.max(step.minute, gate);
                 }
@@ -235,8 +245,8 @@ public class TimelineEngine {
                     continue;
                 }
 
-                step.stats = snapshot(in.unit, inventory, step.level);
-                StatSnapshot beforeSnap = snapshot(in.unit, before, step.level);
+                step.stats = snapshot(in.unit, inventory, step.level, step.minute);
+                StatSnapshot beforeSnap = snapshot(in.unit, before, step.level, step.minute);
                 step.efficiency = efficiency(bought, step, beforeSnap);
                 for (PassiveDetail p : step.stats.passives) {
                     if (p.purchaseIndex == pos && p.staticFallback) {
@@ -317,8 +327,30 @@ public class TimelineEngine {
         }
     }
 
-    private static double goldAt(double minute, double goldPerMin) {
-        return STARTING_GOLD + goldPerMin * minute;
+    /** Gold earned by a minute: starting gold + gold/min, plus the extra gold events up to it. */
+    private double goldAt(double minute, double goldPerMin) {
+        double extra = 0;
+        for (double[] e : extraGold) {
+            if (e[0] <= minute + 1e-9) {
+                extra += e[1];
+            }
+        }
+        return STARTING_GOLD + goldPerMin * minute + extra;
+    }
+
+    /** First minute the gold earned covers {@code gold} (extra gold events make it a step function). */
+    private double minuteFor(double gold, double goldPerMin) {
+        double start = 0;
+        double extra = 0;
+        for (double[] e : extraGold) {
+            double t = (gold - STARTING_GOLD - extra) / goldPerMin;
+            if (t <= e[0] + 1e-9) {
+                return Math.max(start, Math.max(0, t));
+            }
+            extra += e[1];
+            start = e[0];
+        }
+        return Math.max(start, Math.max(0, (gold - STARTING_GOLD - extra) / goldPerMin));
     }
 
     /**
@@ -428,7 +460,7 @@ public class TimelineEngine {
         return pct;
     }
 
-    private StatSnapshot snapshot(Model.UnitProfile unit, List<Owned> items, int level) {
+    private StatSnapshot snapshot(Model.UnitProfile unit, List<Owned> items, int level, double minute) {
         // The build's runes count like items held from the start (they never use a slot or cost gold).
         List<Owned> inventory = new ArrayList<>(runes);
         inventory.addAll(items);
@@ -443,14 +475,15 @@ public class TimelineEngine {
         // Step 1: flat stats of every owned item (level ranges interpolated, conditional ones only when enabled).
         for (Owned o : inventory) {
             for (StatLine l : o.item.stats) {
-                if (l.countsAsFlat() && o.counts(l) && (l.minLevel == null || level >= l.minLevel)) {
-                    s.itemFlat.merge(l.type, l.valueAt(level), Double::sum);
+                if (l.countsAsFlat() && o.counts(l) && (l.minLevel == null || level >= l.minLevel)
+                        && (l.minMinute == null || minute >= l.minMinute - 1e-9)) {
+                    s.itemFlat.merge(l.type, l.valueAt(level, minute), Double::sum);
                 }
             }
         }
 
         // Steps 3-4: conversions, multipliers and Living Forge, independent of purchase order.
-        new Resolver(s, inventory, level, unit.livingForge ? forgePct(level) : 0, unit.livingForge).run();
+        new Resolver(s, inventory, level, minute, unit.livingForge ? forgePct(level) : 0, unit.livingForge).run();
 
         // Totals.
         Set<String> keys = new LinkedHashSet<>(Stats.DISPLAY_STATS);
@@ -494,16 +527,18 @@ public class TimelineEngine {
         private final StatSnapshot s;
         private final List<Owned> inventory;
         private final int level;
+        private final double minute;
         private final double forgePct;
         private final boolean forge;
         private final List<RatioLine> lines = new ArrayList<>();
         private final Map<String, Double> finalTotal = new LinkedHashMap<>();
         private final Set<String> resolving = new LinkedHashSet<>();
 
-        Resolver(StatSnapshot s, List<Owned> inventory, int level, double forgePct, boolean forge) {
+        Resolver(StatSnapshot s, List<Owned> inventory, int level, double minute, double forgePct, boolean forge) {
             this.s = s;
             this.inventory = inventory;
             this.level = level;
+            this.minute = minute;
             this.forgePct = forgePct;
             this.forge = forge;
         }
@@ -512,7 +547,7 @@ public class TimelineEngine {
             s.forgePct = forgePct;
             for (Owned o : inventory) {
                 for (StatLine l : o.item.stats) {
-                    if (l.hasRatio() && !l.marker() && o.counts(l)) {
+                    if (l.hasRatio() && !l.marker() && o.counts(l) && (l.minMinute == null || minute >= l.minMinute - 1e-9)) {
                         lines.add(new RatioLine(o, l));
                     }
                 }
@@ -811,13 +846,17 @@ public class TimelineEngine {
     /** One point per minute (plus every purchase instant) so builds can be charted and overlaid. */
     private void buildSeries(EngineInput in, TimelineResult result, List<List<Owned>> inventoryAfterStep) {
         double lastPurchase = result.steps.isEmpty() ? 0 : result.steps.get(result.steps.size() - 1).minute;
-        int horizon = (int) Math.ceil(lastPurchase) + 3;
+        // Up to the end of the match when given (stats that grow with time keep growing), else a bit after the build.
+        double end = in.matchEnd != null && in.matchEnd > 0 ? in.matchEnd : Math.ceil(lastPurchase) + 3;
         List<Double> times = new ArrayList<>();
-        for (int m = 0; m <= horizon; m++) {
+        for (int m = 0; m <= Math.floor(end + 1e-9); m++) {
             times.add((double) m);
         }
+        times.add(end);
         for (TimelineStep s : result.steps) {
-            times.add(s.minute);
+            if (s.minute <= end + 1e-9) {
+                times.add(s.minute);
+            }
         }
         times.sort(Double::compare);
 
@@ -836,7 +875,7 @@ public class TimelineEngine {
                 }
             }
             int level = levelForXp(in.xpPerMin * t);
-            StatSnapshot snap = snapshot(in.unit, inv, level);
+            StatSnapshot snap = snapshot(in.unit, inv, level, t);
             MinutePoint p = new MinutePoint();
             p.minute = t;
             p.level = level;

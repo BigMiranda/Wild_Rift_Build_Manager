@@ -60,6 +60,12 @@ public class BuildRepository {
         }
     }
 
+    /** Gold earned at a game minute. */
+    public static class GoldEvent {
+        public double minute;
+        public double gold;
+    }
+
     /** Rune page: 1 keystone, one rune per row of the primary tree, one rune of the secondary tree. */
     public static class RunePage {
         public String primary;
@@ -72,6 +78,10 @@ public class BuildRepository {
         public Map<String, Integer> options = new LinkedHashMap<>();
         /** Rune name -> count its conditional effects (default true). */
         public Map<String, Boolean> conditional = new LinkedHashMap<>();
+        /** Rune name -> activations / stacks per minute (runes that scale without limit). */
+        public Map<String, Double> rates = new LinkedHashMap<>();
+        /** Rune name -> gold it earned, at given minutes (runes that earn gold). */
+        public Map<String, List<GoldEvent>> gold = new LinkedHashMap<>();
 
         /** Chosen runes, keystone first. */
         public List<String> chosen() {
@@ -105,6 +115,8 @@ public class BuildRepository {
         public boolean assumeSmallItems;
         public List<Step> steps = new ArrayList<>();
         public RunePage runePage;
+        /** Game minute the match ended (optional): the timeline goes up to it. */
+        public Double matchEnd;
         /** Two summoner spells (names). */
         public List<String> spells = new ArrayList<>();
         public Map<String, RagdollStat> ragdollStats = new LinkedHashMap<>();
@@ -200,7 +212,7 @@ public class BuildRepository {
         jdbc.update(con -> {
             PreparedStatement ps = con.prepareStatement(
                     "INSERT INTO build (folder_id, name, note, unit_code, gold_per_min, xp_per_min, created_at, updated_at, "
-                            + "assume_half_items, assume_small_items, rune_page, spells) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                            + "assume_half_items, assume_small_items, rune_page, spells, match_end) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setLong(1, b.folderId);
             ps.setString(2, b.name);
@@ -214,6 +226,11 @@ public class BuildRepository {
             ps.setInt(10, b.assumeSmallItems ? 1 : 0);
             ps.setString(11, json(b.runePage));
             ps.setString(12, json(b.spells));
+            if (b.matchEnd == null) {
+                ps.setNull(13, java.sql.Types.REAL);
+            } else {
+                ps.setDouble(13, b.matchEnd);
+            }
             return ps;
         }, kh);
         long id = kh.getKey().longValue();
@@ -224,9 +241,9 @@ public class BuildRepository {
     public boolean updateBuild(long id, Build b) {
         int n = jdbc.update("UPDATE build SET folder_id = ?, name = ?, note = ?, unit_code = ?, gold_per_min = ?, "
                         + "xp_per_min = ?, assume_half_items = ?, assume_small_items = ?, rune_page = ?, spells = ?, "
-                        + "updated_at = ? WHERE id = ?",
+                        + "match_end = ?, updated_at = ? WHERE id = ?",
                 b.folderId, b.name, b.note, b.unitCode, b.goldPerMin, b.xpPerMin, b.assumeHalfItems ? 1 : 0,
-                b.assumeSmallItems ? 1 : 0, json(b.runePage), json(b.spells), Instant.now().toString(), id);
+                b.assumeSmallItems ? 1 : 0, json(b.runePage), json(b.spells), b.matchEnd, Instant.now().toString(), id);
         if (n == 0) {
             return false;
         }
@@ -285,6 +302,7 @@ public class BuildRepository {
         b.xpPerMin = rs.getDouble("xp_per_min");
         b.assumeHalfItems = rs.getInt("assume_half_items") != 0;
         b.assumeSmallItems = rs.getInt("assume_small_items") != 0;
+        b.matchEnd = CatalogRepository.nullableDouble(rs, "match_end");
         try {
             String page = rs.getString("rune_page");
             b.runePage = page == null ? null : JSON.readValue(page, RunePage.class);

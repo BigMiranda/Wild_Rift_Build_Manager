@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 6;
+    static final int VERSION = 7;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -72,6 +72,9 @@ public class SchemaManager {
             // v6: rune page and summoner spells, stored as JSON.
             jdbc.execute("ALTER TABLE build ADD COLUMN rune_page TEXT");
             jdbc.execute("ALTER TABLE build ADD COLUMN spells TEXT");
+        }
+        if (version < 7 && tableExists("build") && !columnExists("build", "match_end")) {
+            jdbc.execute("ALTER TABLE build ADD COLUMN match_end REAL"); // v7: end of the match
         }
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {

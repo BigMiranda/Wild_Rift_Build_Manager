@@ -34,6 +34,23 @@ public class RuneCatalog {
         public int defaultValue;
     }
 
+    /**
+     * Rune that scales without limit with the player's actions: the build gives a rate (activations / stacks per
+     * minute), like gold/min and XP/min. Each one is worth {@code perStack} of {@code stat}; {@code bonusRatio} of
+     * {@code bonusRef} is added once {@code bonusStacks} are reached.
+     */
+    public static class Rate {
+        public String name;
+        public String stat;
+        public double perStack;
+        /** Name of the matching value in the game's end-of-match rune report (to convert from it). */
+        public String report;
+        public Integer bonusStacks;
+        public Double bonusRatio;
+        public String bonusRef;
+        transient RefScope bonusScope;
+    }
+
     public static class Rune {
         public String name;
         /** Tree of the rune; null for keystones (any keystone goes with any tree). */
@@ -50,6 +67,10 @@ public class RuneCatalog {
         public boolean hasConditional;
         /** Its effects enter the stat calculation. */
         public boolean modeled;
+        /** Scales without limit: the build gives a rate per minute. */
+        public Rate rate;
+        /** Earns gold: the build gives how much and when. */
+        public boolean extraGold;
         transient List<Map<String, Object>> statusRaw = new ArrayList<>();
         transient List<Map<String, Object>> effectsRaw = new ArrayList<>();
     }
@@ -140,7 +161,23 @@ public class RuneCatalog {
         }
         r.statusRaw = (List<Map<String, Object>>) v.getOrDefault("status", List.of());
         r.effectsRaw = (List<Map<String, Object>>) v.getOrDefault("efeitos", List.of());
-        r.modeled = !r.statusRaw.isEmpty() || !r.effectsRaw.isEmpty();
+        Map<String, Object> rate = (Map<String, Object>) v.get("por_minuto");
+        if (rate != null) {
+            r.rate = new Rate();
+            r.rate.name = str(rate.get("nome"));
+            r.rate.stat = code(str(rate.get("tipo")));
+            r.rate.perStack = num(rate.get("valor"));
+            r.rate.report = str(rate.get("relatorio"));
+            Map<String, Object> bonus = (Map<String, Object>) rate.get("bonus");
+            if (bonus != null) {
+                r.rate.bonusStacks = ((Number) bonus.get("acumulos")).intValue();
+                r.rate.bonusRatio = num(bonus.get("ratio"));
+                r.rate.bonusRef = code(str(bonus.get("ref")));
+                r.rate.bonusScope = "bonus".equals(bonus.get("escopo")) ? RefScope.BONUS : RefScope.TOTAL;
+            }
+        }
+        r.extraGold = Boolean.TRUE.equals(v.get("ouro_extra"));
+        r.modeled = !r.statusRaw.isEmpty() || !r.effectsRaw.isEmpty() || r.rate != null || r.extraGold;
         r.hasConditional = r.effectsRaw.stream().anyMatch(e -> Boolean.TRUE.equals(e.get("condicional")));
         byName.put(name, r);
         return r;
@@ -159,6 +196,14 @@ public class RuneCatalog {
      * {@code ratio + ratio_por_opcao x opcao}; lines with {@code opcao_min} only count from that option on).
      */
     public Optional<ItemDef> toItem(String name, Integer option, long id) {
+        return toItem(name, option, id, null);
+    }
+
+    /**
+     * Same, plus the rate (activations / stacks per minute) of a rune that scales without limit: a line growing by
+     * {@code rate x perStack} per minute, and its bonus from the minute the stacks are reached.
+     */
+    public Optional<ItemDef> toItem(String name, Integer option, long id, Double rate) {
         Rune r = byName.get(name);
         if (r == null) {
             return Optional.empty();
@@ -187,7 +232,16 @@ public class RuneCatalog {
             if (e.get("nivel_min") != null) {
                 l.minLevel = ((Number) e.get("nivel_min")).intValue();
             }
-            if (e.get("ratio") != null) {
+            Map<String, Object> steps = (Map<String, Object>) e.get("por_tempo");
+            if (steps != null) {
+                l.value = 0.0;
+                l.stepStart = num(steps.get("inicio"));
+                l.stepEvery = num(steps.get("a_cada"));
+                l.stepValues = new ArrayList<>();
+                for (Object x : (List<Object>) steps.get("valores")) {
+                    l.stepValues.add(num(x));
+                }
+            } else if (e.get("ratio") != null) {
                 l.ratio = num(e.get("ratio")) + orZero(e.get("ratio_por_opcao")) * opt;
                 l.refType = code(str(e.get("ref")));
                 l.refScope = "bonus".equals(e.get("escopo")) ? RefScope.BONUS
@@ -201,6 +255,19 @@ public class RuneCatalog {
                 }
             }
             item.stats.add(l);
+        }
+        if (r.rate != null && rate != null && rate > 0) {
+            StatLine l = new StatLine();
+            l.type = r.rate.stat;
+            l.passive = r.name;
+            l.value = 0.0;
+            l.perMinute = rate * r.rate.perStack;
+            item.stats.add(l);
+            if (r.rate.bonusStacks != null) {
+                StatLine b = StatLine.percent(r.rate.stat, r.name, r.rate.bonusRatio, r.rate.bonusRef, r.rate.bonusScope);
+                b.minMinute = r.rate.bonusStacks / rate;
+                item.stats.add(b);
+            }
         }
         return Optional.of(item);
     }

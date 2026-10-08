@@ -15,6 +15,7 @@ import { SERIES_COLORS, mmss, n0 } from '../format.js';
 import { evolutionPairs } from '../shopModel.js';
 import { emptyRunePage, setRuneCatalog } from '../runes.js';
 import PrepPanel from '../components/PrepPanel.jsx';
+import MinuteInput from '../components/MinuteInput.jsx';
 import RuneEditor from '../components/RuneEditor.jsx';
 import SpellEditor from '../components/SpellEditor.jsx';
 
@@ -340,6 +341,9 @@ export default function Planner({ meta, items }) {
             <label className="field narrow">{t('build.xpm')}
               <input type="number" min="0" value={draft.xpPerMin} placeholder="450" onChange={(e) => update({ xpPerMin: e.target.value })} />
             </label>
+            <label className="field narrow" title={t('build.matchEndTitle')}>{t('build.matchEnd')}
+              <MinuteInput value={draft.matchEnd ?? null} onChange={(matchEnd) => update({ matchEnd })} />
+            </label>
             <div className="row build-actions">
               {dirty && <small>{t('build.unsaved')}</small>}
               {draft.id && <button onClick={saveAsCopy}>{t('build.duplicate')}</button>}
@@ -491,7 +495,7 @@ export default function Planner({ meta, items }) {
         )}
       </main>
       {prepEditor === 'runes' && (
-        <RuneEditor page={draft.runePage} onChange={(runePage) => update({ runePage })} onClose={() => setPrepEditor(null)} />
+        <RuneEditor page={draft.runePage} matchEnd={draft.matchEnd} onChange={(runePage) => update({ runePage })} onClose={() => setPrepEditor(null)} />
       )}
       {prepEditor === 'spells' && (
         <SpellEditor spells={draft.spells} onChange={(spells) => update({ spells })} onClose={() => setPrepEditor(null)} />

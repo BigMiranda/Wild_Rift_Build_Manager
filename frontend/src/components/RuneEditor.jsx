@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { t } from '../i18n.js';
+import { statLabel, t } from '../i18n.js';
 import { findRune, findTree, runeCatalog, runeIcon, treeIcon, treeRow } from '../runes.js';
+import { mmss, n0, n1 } from '../format.js';
+import MinuteInput from './MinuteInput.jsx';
 
 const VIEW_KEY = 'ornn-planner-rune-view';
 
@@ -23,7 +25,7 @@ const tip = (r) => (r ? `${r.name}${r.tags ? ` — ${r.tags}` : ''}\n${r.text ??
  * choices) and a grid view (every keystone and the rows of both trees). 1 keystone + 1 rune per row of the primary
  * tree + 1 rune of the secondary tree.
  */
-export default function RuneEditor({ page, onChange, onClose }) {
+export default function RuneEditor({ page, onChange, onClose, matchEnd }) {
   const [view, setView] = useState(() => {
     try { return localStorage.getItem(VIEW_KEY) || 'list'; } catch { return 'list'; }
   });
@@ -66,7 +68,7 @@ export default function RuneEditor({ page, onChange, onClose }) {
         ? <ListView page={page} picking={picking} setPicking={setPicking} set={set} setPrimaryRune={setPrimaryRune}
             setPrimaryTree={setPrimaryTree} setSecondaryTree={setSecondaryTree} />
         : <GridView page={page} set={set} setPrimaryRune={setPrimaryRune} setPrimaryTree={setPrimaryTree} setSecondaryTree={setSecondaryTree} />}
-      <RuneOptions page={page} set={set} />
+      <RuneOptions page={page} set={set} matchEnd={matchEnd} />
     </div>
   );
 }
@@ -255,9 +257,14 @@ function GridView({ page, set, setPrimaryRune, setPrimaryTree, setSecondaryTree 
   );
 }
 
-/** Values of the chosen runes that enter the calculation: option (enemies nearby, stacks...) and conditional effects. */
-function RuneOptions({ page, set }) {
-  const chosen = [page.keystone, ...page.primaryRunes, page.secondaryRune].map(findRune).filter((r) => r && (r.option || r.hasConditional));
+/**
+ * Values of the chosen runes that enter the calculation: option (enemies nearby, stacks...), conditional effects, the
+ * end-of-match report of runes that scale without limit (spread over the match, with the estimate shown below) and the
+ * gold earned by runes that give gold (at given minutes).
+ */
+function RuneOptions({ page, set, matchEnd }) {
+  const chosen = [page.keystone, ...page.primaryRunes, page.secondaryRune].map(findRune)
+    .filter((r) => r && (r.option || r.hasConditional || r.rate || r.extraGold));
   if (!chosen.length) return null;
   return (
     <div className="rune-options">
@@ -265,26 +272,101 @@ function RuneOptions({ page, set }) {
       {chosen.map((r) => {
         const value = page.options?.[r.name] ?? r.option?.defaultValue;
         const cond = page.conditional?.[r.name] !== false;
+        const rate = page.rates?.[r.name];
+        const events = page.gold?.[r.name] ?? [];
+        const setEvents = (list) => set({ gold: { ...page.gold, [r.name]: list } });
         return (
-          <span key={r.name} className="rune-option">
-            <img src={runeIcon(r)} alt="" width={22} height={22} />
-            <strong>{r.name}</strong>
-            {r.option && (
-              <label>
-                {r.option.name}
-                <input type="number" min={r.option.min} max={r.option.max} value={value}
-                  onChange={(e) => set({ options: { ...page.options, [r.name]: Math.max(r.option.min, Math.min(r.option.max, Number(e.target.value))) } })} />
-              </label>
+          <div key={r.name} className="rune-option">
+            <div className="rune-option-head">
+              <img src={runeIcon(r)} alt="" width={22} height={22} />
+              <strong>{r.name}</strong>
+              {r.option && (
+                <label>
+                  {r.option.name}
+                  <input type="number" min={r.option.min} max={r.option.max} value={value}
+                    onChange={(e) => set({ options: { ...page.options, [r.name]: Math.max(r.option.min, Math.min(r.option.max, Number(e.target.value))) } })} />
+                </label>
+              )}
+              {r.rate && (
+                <label title={t('runes.rateTitle')}>
+                  {r.rate.name}
+                  <input type="number" min={0} step={0.1} value={rate ?? ''} placeholder="0"
+                    onChange={(e) => set({ rates: { ...page.rates, [r.name]: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) } })} />
+                </label>
+              )}
+              {r.hasConditional && (
+                <button className={`opt${cond ? ' on' : ''}`} aria-pressed={cond} title={t('bar.condTitle')}
+                  onClick={() => set({ conditional: { ...page.conditional, [r.name]: !cond } })}>
+                  ◐ {t('bar.cond')}
+                </button>
+              )}
+            </div>
+            {r.rate && (
+              <RateEstimate rune={r} rate={rate} matchEnd={matchEnd}
+                onUse={(v) => set({ rates: { ...page.rates, [r.name]: v } })} />
             )}
-            {r.hasConditional && (
-              <button className={`opt${cond ? ' on' : ''}`} aria-pressed={cond} title={t('bar.condTitle')}
-                onClick={() => set({ conditional: { ...page.conditional, [r.name]: !cond } })}>
-                ◐ {t('bar.cond')}
-              </button>
+            {r.extraGold && (
+              <div className="rune-gold">
+                <small className="muted">{t('runes.goldHelp')}</small>
+                {events.map((g, i) => (
+                  <span key={i} className="rune-gold-row">
+                    <MinuteInput value={g.minute} placeholder="8:30" aria-label={t('runes.goldMinute')}
+                      onChange={(m) => setEvents(events.map((x, k) => (k === i ? { ...x, minute: m ?? 0 } : x)))} />
+                    <input type="number" min={0} value={g.gold} aria-label={t('runes.goldValue')}
+                      onChange={(e) => setEvents(events.map((x, k) => (k === i ? { ...x, gold: Math.max(0, Number(e.target.value)) } : x)))} />
+                    <small>{t('runes.goldUnit')}</small>
+                    <button className="icon danger" onClick={() => setEvents(events.filter((_, k) => k !== i))} aria-label={t('runes.goldRemove')}>✕</button>
+                  </span>
+                ))}
+                <button className="link" onClick={() => setEvents([...events, { minute: events.length ? events[events.length - 1].minute + 3 : 5, gold: 0 }])}>
+                  {t('runes.goldAdd')}
+                </button>
+              </div>
             )}
-          </span>
+          </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * What a rate means over the match (like gold/min): the stat per minute and at a few moments, when the stack bonus
+ * kicks in, and a converter from the end-of-match rune report ("Aumento de Vida: 410" in 22:00).
+ */
+function RateEstimate({ rune, rate, matchEnd, onUse }) {
+  const [reported, setReported] = useState('');
+  const { stat, perStack, bonusStacks, bonusRatio, report } = rune.rate;
+  const per = (rate ?? 0) * perStack;
+  const until = matchEnd > 0 ? matchEnd : 30;
+  const marks = [5, 10, 15, 20, 25, 30].filter((m) => m < until);
+  const fromReport = Number(reported) > 0 && matchEnd > 0 ? Number(reported) / perStack / matchEnd : null;
+  return (
+    <div className="rune-estimate">
+      {per > 0 ? (
+        <small>
+          {t('runes.rateEstimate', { per: n1(per), stat: statLabel(stat) })}
+          {marks.map((m) => ` · ${mmss(m)} → ${n0(per * m)}`).join('')}
+          {matchEnd > 0 && ` · ${mmss(matchEnd)} → ${n0(per * matchEnd)}`}
+          {bonusStacks && ` · ${t('runes.rateBonus', { pct: n0(bonusRatio * 100), stat: statLabel(stat), time: mmss(bonusStacks / rate), n: bonusStacks })}`}
+        </small>
+      ) : (
+        <small className="muted">{t('runes.rateHint', { per: n0(perStack), stat: statLabel(stat) })}</small>
+      )}
+      {report && (
+        <small className="rune-convert">
+          {t('runes.rateFromReport', { report })}
+          <input type="number" min={0} value={reported} placeholder="410" onChange={(e) => setReported(e.target.value)} aria-label={report} />
+          {matchEnd > 0
+            ? fromReport != null && (
+              <>
+                {` ÷ ${n0(perStack)} ÷ ${mmss(matchEnd)} = ${n1(fromReport)}/min `}
+                <button className="link" onClick={() => onUse(Math.round(fromReport * 100) / 100)}>{t('runes.rateUse')}</button>
+              </>
+            )
+            : <span className="warn"> {t('runes.rateNeedsEnd')}</span>}
+        </small>
+      )}
     </div>
   );
 }

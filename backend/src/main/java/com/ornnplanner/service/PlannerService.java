@@ -66,6 +66,7 @@ public class PlannerService {
         in.xpPerMin = build.xpPerMin;
         in.assumeHalfItems = build.assumeHalfItems;
         in.assumeSmallItems = build.assumeSmallItems;
+        in.matchEnd = build.matchEnd;
         if (build.steps != null) {
             for (int p = 0; p < build.steps.size(); p++) {
                 com.ornnplanner.repo.BuildRepository.Step s = build.steps.get(p);
@@ -82,7 +83,13 @@ public class PlannerService {
             long id = -1;
             for (String name : build.runePage.chosen()) {
                 Integer opt = build.runePage.options == null ? null : build.runePage.options.get(name);
-                runes.toItem(name, opt, id--).ifPresent(item -> {
+                Double rate = build.runePage.rates == null ? null : build.runePage.rates.get(name);
+                if (build.runePage.gold != null && build.runePage.gold.get(name) != null) {
+                    for (com.ornnplanner.repo.BuildRepository.GoldEvent g : build.runePage.gold.get(name)) {
+                        in.extraGold.add(new double[] {g.minute, g.gold});
+                    }
+                }
+                runes.toItem(name, opt, id--, rate).ifPresent(item -> {
                     in.runes.add(item);
                     in.runeConditional.add(build.runePage.conditional == null
                             || !Boolean.FALSE.equals(build.runePage.conditional.get(name)));

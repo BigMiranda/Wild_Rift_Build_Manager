@@ -27,6 +27,8 @@ export const emptyRunePage = () => ({
   secondaryRune: null,
   options: {},
   conditional: {},
+  rates: {},
+  gold: {},
 });
 
 /** The page's 5 slots in game order: keystone, primary rows 1..3, secondary rune. */

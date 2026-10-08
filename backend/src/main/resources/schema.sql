@@ -4,6 +4,7 @@
 -- Version 4: exclusive item groups (item.exclusive_groups).
 -- Version 5: build options assume_half_items / assume_small_items; purchase moments (build_moment).
 -- Version 6: rune page and summoner spells of a build (build.rune_page, build.spells).
+-- Version 7: end of the match (build.match_end).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -107,6 +108,7 @@ CREATE TABLE IF NOT EXISTS build (
     assume_small_items INTEGER NOT NULL DEFAULT 0,
     rune_page    TEXT,      -- JSON: primary/secondary tree, keystone, runes, options (v6)
     spells       TEXT,      -- JSON: two summoner spell names (v6)
+    match_end    REAL,      -- game minute the match ended (v7)
     created_at   TEXT    NOT NULL,
     updated_at   TEXT    NOT NULL
 );

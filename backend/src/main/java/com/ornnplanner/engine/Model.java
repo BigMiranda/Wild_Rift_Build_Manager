@@ -44,6 +44,17 @@ public final class Model {
         public RefScope refScope = RefScope.TOTAL;
         /** Flat line that only counts from this level on (e.g. rune Transcendência: +5 AH at level 5). */
         public Integer minLevel;
+        /** Flat line growing with game time: perMinute x minute (e.g. a rune's "Aumento de Vida" over the match). */
+        public Double perMinute;
+        /** Line that only counts from this game minute on (e.g. +3% health once a rune reaches 30 stacks). */
+        public Double minMinute;
+        /**
+         * Flat line in steps of game time: values[k] from stepStart + k x stepEvery on; past the list, the increments keep
+         * growing as in the list's last two (e.g. rune Tempestade Crescente: 2, 5, 9, 14... every 3 min from 6 min).
+         */
+        public Double stepStart;
+        public Double stepEvery;
+        public List<Double> stepValues;
 
         public StatLine() {
         }
@@ -80,7 +91,33 @@ public final class Model {
 
         /** Line that contributes a fixed amount (flat stat, or a ratio line we must fall back to its static value). */
         public boolean countsAsFlat() {
-            return !marker() && ratio == null && value != null;
+            return !marker() && ratio == null && (value != null || perMinute != null || stepValues != null);
+        }
+
+        /** Flat value at a level and game minute. */
+        public double valueAt(int level, double minute) {
+            if (perMinute != null) {
+                return perMinute * Math.max(0, minute);
+            }
+            if (stepValues != null && !stepValues.isEmpty()) {
+                if (minute < stepStart - 1e-9) {
+                    return 0;
+                }
+                int k = (int) Math.floor((minute - stepStart) / stepEvery + 1e-9);
+                int n = stepValues.size();
+                if (k < n) {
+                    return stepValues.get(k);
+                }
+                double v = stepValues.get(n - 1);
+                double inc = n >= 2 ? stepValues.get(n - 1) - stepValues.get(n - 2) : 0;
+                double grow = n >= 3 ? inc - (stepValues.get(n - 2) - stepValues.get(n - 3)) : 0;
+                for (int j = n; j <= k; j++) {
+                    inc += grow;
+                    v += inc;
+                }
+                return v;
+            }
+            return valueAt(level);
         }
 
         /** Flat value at a level: `value` at level 1, `valueMax` at level 15, linear in between. */
@@ -231,6 +268,10 @@ public final class Model {
         public List<Integer> positions = new ArrayList<>();
         /** Purchase moments of the sequence. */
         public List<Moment> moments = new ArrayList<>();
+        /** Game minute the match ends (null = a few minutes after the last purchase). */
+        public Double matchEnd;
+        /** Extra gold earned at given minutes (e.g. runes Demolir, Primeiro Ataque): {minute, gold}. */
+        public List<double[]> extraGold = new ArrayList<>();
         /** Runes of the build: held from the start, no cost, no inventory slot. */
         public List<ItemDef> runes = new ArrayList<>();
         /** Per rune (same order): count its conditional effects. */
@@ -420,6 +461,8 @@ public final class Model {
     }
 
     public static class TimelineResult {
+        /** Game minute the match ends, when given. */
+        public Double matchEnd;
         public String unitCode;
         public String unitName;
         public double startingGold;

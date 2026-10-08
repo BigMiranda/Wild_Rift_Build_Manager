@@ -610,7 +610,17 @@ table.timeline td small.dr { display: block; font-size: 10px; color: var(--muted
   border: 1px solid var(--border); border-radius: 6px; background: rgba(0, 0, 0, .25); font-size: 13px;
 }
 .rune-options-title { color: var(--gold-bright); font-weight: 600; }
-.rune-option { display: inline-flex; align-items: center; gap: 8px; }
+.rune-option { display: flex; flex-direction: column; gap: 4px; flex-basis: 100%; }
+.rune-option-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.rune-estimate { margin-left: 30px; color: var(--text-2); display: flex; flex-direction: column; gap: 3px; }
+.rune-convert { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rune-convert input { width: 80px; }
+.rune-convert .warn { color: var(--gold); }
+.rune-estimate.warn { color: var(--gold); }
+.rune-gold { display: flex; flex-direction: column; gap: 4px; margin-left: 30px; }
+.rune-gold-row { display: inline-flex; align-items: center; gap: 6px; }
+.rune-gold-row input { width: 80px; }
+input[aria-invalid="true"] { border-color: var(--error); }
 .rune-option img { border-radius: 50%; }
 .rune-option label { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); }
 .rune-option input { width: 64px; }

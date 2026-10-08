@@ -528,6 +528,77 @@ class TimelineEngineTest {
         assertEquals(0.0, poor.steps.get(1).goldLeft, EPS);
     }
 
+    // ------------------------------------------------------------------ game time: runes that scale, extra gold
+
+    private com.ornnplanner.seed.RuneCatalog runeCatalog() {
+        return new com.ornnplanner.seed.RuneCatalog(
+                new org.springframework.core.io.ClassPathResource("seed/runas_7_3.yml"),
+                new org.springframework.core.io.ClassPathResource("seed/feiticos_7_3.yml"),
+                new org.springframework.core.io.ClassPathResource("seed/precos_status.yml"));
+    }
+
+    @Test
+    void runesThatScaleWithGameTime() {
+        com.ornnplanner.seed.RuneCatalog runes = runeCatalog();
+        ItemDef cheap = item(120, "Barato", 100, StatLine.flat(ARMOR, 1));
+        EngineInput in = new EngineInput();
+        in.unit = ornn();
+        in.unit.stats.put(MAX_HEALTH, new StatGrowth(1000, 0));
+        in.unit.stats.put(Stats.ATTACK_DAMAGE, new StatGrowth(0, 0));
+        in.unit.livingForge = false;                              // (the Forge would amplify the rune's health too)
+        in.goldPerMin = 100;
+        in.xpPerMin = 0;
+        in.itemIds = List.of(cheap.id);
+        in.matchEnd = 20.0;
+        // 2.05 activations per minute x 10 health -> 20.5 health per minute (410 over a 20:00 match).
+        in.runes.add(runes.toItem("Aperto dos Mortos-Vivos", null, -1, 2.05).orElseThrow());
+        in.runes.add(runes.toItem("Tempestade Crescente", null, -2).orElseThrow());
+        TimelineResult r = new TimelineEngine(ref).run(in);
+
+        Model.MinutePoint last = r.series.get(r.series.size() - 1);
+        assertEquals(20.0, last.minute, EPS);                     // the timeline goes up to the end of the match
+        assertEquals(1000 + 410, last.total.get(MAX_HEALTH), EPS);
+        java.util.function.DoubleFunction<Model.MinutePoint> at = m -> r.series.stream()
+                .filter(p -> Math.abs(p.minute - m) < 1e-9).findFirst().orElseThrow();
+        assertEquals(1000 + 205, at.apply(10).total.get(MAX_HEALTH), EPS);
+        double[][] storm = {{5, 0}, {6, 2}, {8, 2}, {9, 5}, {12, 9}, {15, 14}, {18, 20}};   // 2, 5, 9, 14, 20...
+        for (double[] m : storm) {
+            assertEquals(m[1], at.apply(m[0]).total.get(Stats.ATTACK_DAMAGE), EPS, "Tempestade at " + m[0]);
+        }
+
+        // Crescimento Excessivo: 3 stacks per minute x 3 health; +3% max health once 30 stacks are reached (10:00).
+        EngineInput g = new EngineInput();
+        g.unit = in.unit;
+        g.goldPerMin = 100;
+        g.xpPerMin = 0;
+        g.itemIds = List.of(cheap.id);
+        g.matchEnd = 20.0;
+        g.runes.add(runes.toItem("Crescimento Excessivo", null, -1, 3.0).orElseThrow());
+        TimelineResult gr = new TimelineEngine(ref).run(g);
+        java.util.function.DoubleFunction<Double> hp = m -> gr.series.stream()
+                .filter(p -> Math.abs(p.minute - m) < 1e-9).findFirst().orElseThrow().total.get(MAX_HEALTH);
+        assertEquals(1000 + 81, hp.apply(9), EPS);                                  // 27 stacks, no bonus yet
+        assertEquals((1000 + 90) * 1.03, hp.apply(10), 0.5);                        // 30 stacks: +3% of the total
+    }
+
+    @Test
+    void extraGoldMakesPurchasesEarlier() {
+        ItemDef thousand = item(121, "Mil", 1000, StatLine.flat(ARMOR, 1));
+        java.util.function.Function<List<double[]>, TimelineResult> run = extra -> {
+            EngineInput in = new EngineInput();
+            in.unit = ornn();
+            in.goldPerMin = 100;
+            in.xpPerMin = 0;
+            in.itemIds = List.of(thousand.id);
+            in.extraGold = new java.util.ArrayList<>(extra);
+            return new TimelineEngine(ref).run(in);
+        };
+        assertEquals(5.0, run.apply(List.of()).steps.get(0).minute, EPS);
+        assertEquals(2.0, run.apply(List.<double[]>of(new double[] {2, 300})).steps.get(0).minute, EPS);   // 500+200+300
+        assertEquals(4.0, run.apply(List.<double[]>of(new double[] {4, 100})).steps.get(0).minute, EPS);   // 500+400+100
+        assertEquals(4.5, run.apply(List.<double[]>of(new double[] {7, 900}, new double[] {1, 50})).steps.get(0).minute, EPS);
+    }
+
     @Test
     void matchesTheInGameTankBuildAtLevel15() {
         // "Soldado v1" (05/10/2026): Desespero Eterno, Armadura de Espinhos, Máscara Abissal, Manto da Aurora, Duplaguarda de
