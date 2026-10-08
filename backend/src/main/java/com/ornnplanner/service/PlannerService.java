@@ -34,10 +34,13 @@ public class PlannerService {
 
     private final CatalogRepository catalog;
     private final ReferenceRepository reference;
+    private final com.ornnplanner.seed.RuneCatalog runes;
 
-    public PlannerService(CatalogRepository catalog, ReferenceRepository reference) {
+    public PlannerService(CatalogRepository catalog, ReferenceRepository reference,
+                          com.ornnplanner.seed.RuneCatalog runes) {
         this.catalog = catalog;
         this.reference = reference;
+        this.runes = runes;
     }
 
     public ReferenceData referenceData() {
@@ -73,6 +76,17 @@ public class PlannerService {
                     in.conditional.add(s.includeConditional);
                     in.positions.add(p);
                 }
+            }
+        }
+        if (build.runePage != null) {
+            long id = -1;
+            for (String name : build.runePage.chosen()) {
+                Integer opt = build.runePage.options == null ? null : build.runePage.options.get(name);
+                runes.toItem(name, opt, id--).ifPresent(item -> {
+                    in.runes.add(item);
+                    in.runeConditional.add(build.runePage.conditional == null
+                            || !Boolean.FALSE.equals(build.runePage.conditional.get(name)));
+                });
             }
         }
         TimelineResult result = new TimelineEngine(ref).run(in);

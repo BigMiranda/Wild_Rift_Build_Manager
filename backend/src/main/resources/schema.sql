@@ -3,6 +3,7 @@
 -- Version 3: conditional effects chosen per purchase (build_step.include_conditional).
 -- Version 4: exclusive item groups (item.exclusive_groups).
 -- Version 5: build options assume_half_items / assume_small_items; purchase moments (build_moment).
+-- Version 6: rune page and summoner spells of a build (build.rune_page, build.spells).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -104,6 +105,8 @@ CREATE TABLE IF NOT EXISTS build (
     include_conditional INTEGER NOT NULL DEFAULT 1, -- unused since v3 (kept for old databases)
     assume_half_items  INTEGER NOT NULL DEFAULT 0,
     assume_small_items INTEGER NOT NULL DEFAULT 0,
+    rune_page    TEXT,      -- JSON: primary/secondary tree, keystone, runes, options (v6)
+    spells       TEXT,      -- JSON: two summoner spell names (v6)
     created_at   TEXT    NOT NULL,
     updated_at   TEXT    NOT NULL
 );

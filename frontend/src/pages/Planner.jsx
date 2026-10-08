@@ -13,6 +13,10 @@ import EffectiveBreakdown, { AlignToggle } from '../components/EffectiveBreakdow
 import { StatIcon } from '../components/StatIcon.jsx';
 import { SERIES_COLORS, mmss, n0 } from '../format.js';
 import { evolutionPairs } from '../shopModel.js';
+import { emptyRunePage, setRuneCatalog } from '../runes.js';
+import PrepPanel from '../components/PrepPanel.jsx';
+import RuneEditor from '../components/RuneEditor.jsx';
+import SpellEditor from '../components/SpellEditor.jsx';
 
 const emptyBuild = (folderId) => ({
   id: null,
@@ -25,6 +29,8 @@ const emptyBuild = (folderId) => ({
   steps: [],
   assumeHalfItems: false,
   assumeSmallItems: false,
+  runePage: emptyRunePage(),
+  spells: [],
   ragdollStats: {},
 });
 
@@ -53,7 +59,7 @@ function fromApi(b) {
   for (const [k, v] of Object.entries(b.ragdollStats ?? {})) {
     ragdollStats[k] = { base: v.base ?? '', growth: v.growth ?? '' };
   }
-  return { ...b, note: b.note ?? '', steps: b.steps ?? [], ragdollStats };
+  return { ...b, note: b.note ?? '', steps: b.steps ?? [], ragdollStats, runePage: b.runePage ?? emptyRunePage(), spells: b.spells ?? [] };
 }
 
 export default function Planner({ meta, items }) {
@@ -68,6 +74,13 @@ export default function Planner({ meta, items }) {
   const [chartStat, setChartStat] = useState('Max Health');
   /** Tab of the moment panel next to the stat sheet: item relevance or passives held. */
   const [momentTab, setMomentTab] = useState('relevance');
+  /** Rune / spell catalog loaded, and which "Preparações" editor is open (runes | spells). */
+  const [runesReady, setRunesReady] = useState(false);
+  const [prepEditor, setPrepEditor] = useState(null);
+  const shopRef = useRef(null);
+  useEffect(() => {
+    api.get('/api/runes').then((c) => { setRuneCatalog(c); setRunesReady(true); }).catch(() => {});
+  }, []);
   /** Effective gold of compared builds: same item on the same row, or by place in the build. */
   const [effAlign, setEffAlign] = useState(ALIGN_ITEM);
   const [selectedMinute, setSelectedMinute] = useState(null);
@@ -353,7 +366,19 @@ export default function Planner({ meta, items }) {
           </details>
         </section>
 
-        <section className="panel shop-panel">
+        {runesReady && (
+          <PrepPanel
+            inventoryIds={result?.steps?.[result.steps.length - 1]?.inventoryIds ?? []}
+            itemsById={itemsById}
+            runePage={draft.runePage}
+            spells={draft.spells}
+            onItems={() => shopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            onRunes={() => setPrepEditor('runes')}
+            onSpells={() => setPrepEditor('spells')}
+          />
+        )}
+
+        <section className="panel shop-panel" ref={shopRef}>
           <Shop
             items={items}
             buildPayload={canCalculate ? payload : null}
@@ -465,6 +490,12 @@ export default function Planner({ meta, items }) {
           </div>
         )}
       </main>
+      {prepEditor === 'runes' && (
+        <RuneEditor page={draft.runePage} onChange={(runePage) => update({ runePage })} onClose={() => setPrepEditor(null)} />
+      )}
+      {prepEditor === 'spells' && (
+        <SpellEditor spells={draft.spells} onChange={(spells) => update({ spells })} onClose={() => setPrepEditor(null)} />
+      )}
     </div>
   );
 }

@@ -1,0 +1,69 @@
+# Feitiços do Wild Rift, patch 7.3 (pt-BR), transcritos da tela de feitiços do jogo em 08/10/2026
+# (capturas em capturas/runas-7.3; ícones em seed/feiticos/<slug>.png). Cada build leva 2 feitiços.
+# Na ordem da grade do jogo (3 x 3). Nenhum altera status permanentes: só texto, sem efeitos no cálculo.
+patch: "7.3"
+feiticos:
+  Fantasma:
+    icone: fantasma.png
+    mapas: Wild Rift, Howling Abyss
+    recarga: 90
+    texto: >-
+      Recebe um grande impulso de Velocidade de Movimento que decai para 25% de Velocidade de Movimento adicional por
+      8s. A duração de Fantasma é aumentada em 6s a cada eliminação, redefinindo seus efeitos e podendo chegar até sua
+      duração original.
+  Curar:
+    icone: curar.png
+    mapas: Wild Rift, Howling Abyss
+    recarga: 100
+    texto: >-
+      Restaura 110 de Vida (110–400, nível) e concede 30% de Velocidade de Movimento adicional por 2s para você e para
+      o Campeão aliado próximo mais ferido.
+  Barreira:
+    icone: barreira.png
+    mapas: Wild Rift, Howling Abyss
+    recarga: 100
+    texto: Recebe um Escudo capaz de absorver 120 de dano (120–560, nível) por 2,5s.
+  Exaustão:
+    icone: exaustao.png
+    mapas: Wild Rift, Howling Abyss
+    recarga: 100
+    texto: >-
+      Exaure o Campeão inimigo designado, provocando 35% de Lentidão e reduzindo em 40% o dano que ele causa por 2,5s.
+      A Lentidão decai ao longo da duração.
+  Purificar:
+    icone: purificar.png
+    mapas: Wild Rift, Howling Abyss
+    recarga: 110
+    texto: >-
+      Remove desarmes (incluindo efeitos negativos de Feitiços) no seu Campeão e concede imunidade a desarmes por
+      0,25s.
+  Flash:
+    icone: flash.png
+    mapas: Wild Rift, Howling Abyss
+    recarga: 150
+    texto: Teleporta você por uma curta distância para frente ou em direção à área designada.
+  Incendiar:
+    icone: incendiar.png
+    mapas: Wild Rift, Howling Abyss
+    recarga: 100
+    texto: >-
+      Incendeia o Campeão inimigo alvo, causando 72 de Dano Verdadeiro (72–380, nível) dentro de 5s. Causa Feridas
+      Dolorosas e revela o alvo.
+  Golpear:
+    icone: golpear.png
+    mapas: Wild Rift
+    recarga: 10
+    texto: >-
+      Proficiência na selva: ao ser conjurado, Golpear causa 600 de Dano Verdadeiro a tropas e monstros e faz com que
+      seus Ataques contra um monstro causem 22 de Dano Verdadeiro (nível) por segundo em uma área ao redor dele.
+      Causa 10% a mais de dano contra monstros. Recurso de Caça: ganha acúmulos de Recurso de Caça ao longo do tempo.
+      Após terminar um acampamento da selva, consumirá 1 acúmulo(s) para conceder 40 de ouro adicional. Restaura 5–35
+      de Vida por segundo (nível) ao atacar monstros. A Vida restaurada depende da sua Vida perdida.
+  Teleporte:
+    icone: teleporte.png
+    mapas: Rift
+    recarga: 150
+    texto: >-
+      Após canalizar por 3,5s, teleporta-se até um Campeão, uma estrutura ou uma sentinela aliado (exceto áreas no
+      alcance dos inibidores inimigos). Só é possível teleportar-se até estruturas durante os primeiros 6min de
+      partida.

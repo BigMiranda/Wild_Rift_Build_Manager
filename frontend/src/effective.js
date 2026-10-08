@@ -17,7 +17,8 @@ const norm = (s) => (s ?? '').trim().toLowerCase();
 export function effectiveGold(point, itemsById, prices) {
   const price = (stat) => prices?.[stat] ?? 0;
   const seenUnknown = new Set();
-  const items = (point?.contributions ?? []).map((c) => {
+  const contributions = point?.contributions ?? [];
+  const items = contributions.filter((c) => !c.rune).map((c) => {
     const item = itemsById.get(c.itemId);
     const stats = Object.entries(c.flat ?? {}).map(([stat, amount]) => ({ stat, amount, gold: amount * price(stat) }));
     const known = new Map();
@@ -49,7 +50,18 @@ export function effectiveGold(point, itemsById, prices) {
   const forgeStats = Object.entries(point?.forge ?? {})
     .filter(([, amount]) => amount > 0)
     .map(([stat, amount]) => ({ stat, amount, gold: amount * price(stat) }));
-  const forge = { stats: forgeStats, gold: forgeStats.reduce((a, s) => a + s.gold, 0), pct: point?.forgePct ?? 0 };
+  // Runes belong to the champion, like the Living Forge: one block for both.
+  const runes = contributions.filter((c) => c.rune).map((c) => ({
+    name: c.itemName,
+    stats: Object.entries(c.flat ?? {}).map(([stat, amount]) => ({ stat, amount, gold: amount * price(stat) })),
+    parts: (c.passiveParts ?? []).map((p) => ({ stat: p.stat, amount: p.amount, gold: p.gold })),
+  })).map((r) => ({ ...r, gold: r.stats.reduce((a, s) => a + s.gold, 0) + r.parts.reduce((a, p) => a + p.gold, 0) }))
+    .filter((r) => r.gold > 0); // runes that only do damage, shields... add no stats
+  const forgeGold = forgeStats.reduce((a, s) => a + s.gold, 0);
+  const forge = {
+    stats: forgeStats, forgeGold, runes, pct: point?.forgePct ?? 0,
+    gold: forgeGold + runes.reduce((a, r) => a + r.gold, 0),
+  };
   const spent = items.reduce((a, x) => a + x.cost, 0);
   const effective = items.reduce((a, x) => a + x.effective, 0) + forge.gold;
   return {

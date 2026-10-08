@@ -226,7 +226,7 @@ function StepDetail({ step }) {
         <ul>
           {st.passives.map((p, i) => (
             <li key={i} className={p.purchaseIndex === step.index ? 'eff-up' : ''}>
-              <StatIcon stat={p.stat} />#{p.number}{p.implied ? '↳' : ''} {p.itemName} — {p.passive}
+              <StatIcon stat={p.stat} />{p.rune ? t('runes.rune') : `#${p.number}${p.implied ? '↳' : ''}`} {p.itemName} — {p.passive}
               {p.refScope === 'BONUS' && <small> {t('detail.bonusOnly')}</small>}
               <div className="formula">{p.formula}</div>
             </li>

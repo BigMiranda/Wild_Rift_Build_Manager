@@ -176,6 +176,13 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
   mostra o que aquela compra traz à build (minuto, ouro pago, valor em ouro somado e eficiências).
 - Clique numa linha da linha do tempo para ver o **detalhamento**: base/itens/passivas/forja por status, fórmula de
   cada passiva e de cada eficiência.
+- **Preparações (itens, runas e feitiços)**: no topo da build, como a tela de Preparações do jogo. Runas: página com
+  1 fundamental + 1 runa por linha da árvore principal + 1 runa de outra árvore, editável em lista (com descrição) ou
+  em grade, como no jogo. Catálogo transcrito do jogo (patch 7.3) em `seed/runas_7_3.yml`, ícones coloridos e apagados
+  em `seed/runas`. As runas com efeito de status entram no cálculo como "itens" presentes desde o início (sem custo nem
+  espaço), com opção por build (ex.: Inabalável, 3% + 2% por campeão inimigo próximo da Armadura/RM adicionais) e efeitos
+  condicionais ligáveis; no ouro efetivo elas se somam à Forja Viva no bloco do campeão. Feitiços (2 por build) em
+  `seed/feiticos_7_3.yml`, só texto.
 - **Passivas adquiridas**: no gráfico, o chip "Passivas" troca as linhas por barras empilhadas (um bloco por passiva
   que você tem, uma pilha por build); no painel do momento, a aba "Passivas" lista as passivas por item, desde quando
   você as tem. Por enquanto cada passiva vale 400 de ouro (estimativa provisória, `PASSIVE_GOLD` em

@@ -98,10 +98,17 @@ export default function EffectiveBreakdown({ columns, compact = false, align }) 
         <div key={`f${c.key}`} className="eff-cell eff-forge" style={{ '--item-color': FORGE_COLOR }}>
           <div className="eff-item">
             <span className="eff-swatch" aria-hidden="true"><span style={{ background: FORGE_COLOR }} /></span>
-            <span className="eff-item-name">{t('eff.forge', { pct: pct(c.eff.forge.pct * 100) })}</span>
+            <span className="eff-item-name">
+              {c.eff.forge.runes.length ? t('eff.champion', { pct: pct(c.eff.forge.pct * 100) }) : t('eff.forge', { pct: pct(c.eff.forge.pct * 100) })}
+            </span>
           </div>
           <div className="eff-line">{n0(c.eff.forge.gold)}</div>
           <div className="eff-parts">
+            {c.eff.forge.runes.map((r) => (
+              <span key={r.name} className="eff-passive">
+                ✦ {r.name}: {[...r.stats, ...r.parts].map((q) => `${label(q.stat)} +${n1(q.amount)}`).join(', ')} = {n0(r.gold)}
+              </span>
+            ))}
             {c.eff.forge.stats.map((s) => (
               <span key={s.stat} style={{ color: statColor(s.stat) }}>{label(s.stat)} +{n1(s.amount)} = {n0(s.gold)}</span>
             ))}
@@ -149,7 +156,7 @@ export function EffectiveLight({ columns, align }) {
               {c.eff.forge.gold > 0 && (
                 <li>
                   <span className="swatch" style={{ background: FORGE_COLOR }} />
-                  <span className="light-name">{t('eff.forge', { pct: pct(c.eff.forge.pct * 100) })}</span>
+                  <span className="light-name">{c.eff.forge.runes.length ? t('eff.champion', { pct: pct(c.eff.forge.pct * 100) }) : t('eff.forge', { pct: pct(c.eff.forge.pct * 100) })}</span>
                   <span className="light-val">{n0(c.eff.forge.gold)}</span>
                 </li>
               )}

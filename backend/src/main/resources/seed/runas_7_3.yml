@@ -1,0 +1,464 @@
+# Runas do Wild Rift, patch 7.3 (pt-BR), transcritas da tela de runas do jogo em 08/10/2026
+# (capturas em capturas/runas-7.3; ícones em seed/runas, colorido = <slug>.png, apagado = <slug>-cinza.png).
+#
+# Página de runas: 1 fundamental (qualquer uma) + 1 runa de cada linha da árvore principal + 1 runa de outra árvore
+# (de qualquer linha).
+#
+# Campos:
+#   tags       subtítulo amarelo do jogo
+#   texto      descrição completa (os "(nível)" do jogo viram "1–15" como no texto original)
+#   marcador   N = nova, refresh = reformulada (selos dos ícones)
+#   opcao      valor escolhido por build que entra nas contas (inimigos próximos, acúmulos...)
+#   status     status fixos, como nos itens
+#   efeitos    como nos itens; extras: valor_por_opcao / ratio_por_opcao (somados x opcao), nivel_min
+# Status de Força Adaptativa foram modelados como Dano de Ataque (o que o Ornn recebe).
+patch: "7.3"
+
+arvores:
+  Dominação: {resumo: "Dano explosivo imediato", icone: arvore-dominacao.png}
+  Precisão: {resumo: "Fortalecimento através de combate contínuo", icone: arvore-precisao.png}
+  Determinação: {resumo: "Aumenta a capacidade de sobrevivência", icone: arvore-determinacao.png}
+  Feitiçaria: {resumo: "Habilidades fortalecidas e manipulação de recursos", icone: arvore-feiticaria.png}
+
+# Ordem do jogo (visão em grade, da esquerda para a direita).
+fundamentais:
+  Eletrocutar:
+    tags: Dano Explosivo
+    texto: >-
+      Dentro de 3s, atinja o mesmo Campeão inimigo com 3 ataques básicos ou habilidades para causar Dano Adaptativo
+      adicional ao alvo. Valor do dano: 40–210 (nível) + 10% de dano adicional + 5% do Poder de Habilidade.
+      Tempo de Recarga: 20–13s (nível).
+  Colheita Sombria:
+    tags: Dano adicional, amplificação de acúmulos
+    texto: >-
+      Causar dano a um Campeão que está com menos de 50% de Vida causa Dano Adaptativo e ceifa a alma dele,
+      aumentando permanentemente o dano de Colheita Sombria em 11. Dano da Colheita Sombria: 35 + 11 por alma + 10%
+      do Dano de Ataque adicional + 5% do Poder de Habilidade (20s de Tempo de Recarga. Redefine para 1s ao conseguir
+      uma eliminação.)
+  Fortalecimento:
+    tags: Dano maior contra Campeões
+    texto: >-
+      Acertar um Campeão inimigo com 3 ataques consecutivos causa Dano Adaptativo adicional e amplifica o dano causado
+      por você em 8% até você sair de combate contra Campeões. Dano Adaptativo: 40–165 (nível). Tempo de Recarga: 4s.
+      A Amplificação de Dano só surtirá efeito contra Campeões.
+  Ritmo Fatal:
+    tags: Velocidade de Ataque
+    marcador: refresh
+    texto: >-
+      Recebe Velocidade de Ataque ao atacar Campeões inimigos. Acumula até 6x. Com o máximo de acúmulos, causa dano
+      adicional com seus Ataques. Cada acúmulo aumenta a Velocidade de Ataque em 6% (4,8% para Campeões de Ataque a
+      distância) por 6s. Efeito com o máximo de acúmulos: Ataques contra unidades que não sejam torres disparam um
+      projétil ao contato, causando 9–30 de Dano Adaptativo (6–20 para Campeões de Ataque a distância). A cada 1% de
+      Velocidade de Ataque adicional que você tiver, o dano aumentará em 0,5% (0,33% para Campeões de Ataque a
+      distância).
+    efeitos:
+    - {passiva: Ritmo Fatal, tipo: "% Velocidade de Ataque", valor: 36, condicional: true}  # 6 acúmulos x 6% (corpo a corpo)
+  Agilidade nos Pés:
+    tags: Mobilidade, Cura
+    texto: >-
+      Ao atacar, conjurar habilidades ou se mover, você ganha acúmulos de Energia. Com 100 acúmulo(s), seu próximo
+      ataque receberá Velocidade de Ataque, curará você e concederá Velocidade de Movimento adicional. Se o ataque for
+      contra um Campeão, ele também restaurará Mana ou Energia. Velocidade de Ataque adicional: 40%. Vida restaurada:
+      15–110 (nível) + 15% do Dano de Ataque adicional + 10% do Poder de Habilidade. Velocidade de Movimento
+      adicional: 20% por 1s. Ao atacar um Campeão, restaura 8% do Mana perdido ou 8% da Energia perdida. Ao atacar
+      tropas ou monstros, cura-se em 35% (Campeões corpo a corpo) ou 15% (Campeões de ataque a distância) do valor
+      original da cura.
+  Conquistador:
+    tags: Dano Acumulado, Vampirismo
+    texto: >-
+      Ganhe acúmulos de Força Adaptativa ao atingir um Campeão com ataques ou habilidades diferentes. Acumula até 6
+      vezes. Com o máximo de acúmulos, recebe Vampirismo Universal adicional. Por acúmulo: 3–5 de Dano de Ataque ou
+      5–8 de Poder de Habilidade adicionais por 6s. Adicional por acúmulo máximo: corpo a corpo – 9% | a distância –
+      5% de Vampirismo Universal adicional.
+    efeitos:
+    - {passiva: Conquistador, tipo: Dano de Ataque, valor: 18, valor_nv15: 30, condicional: true}  # 6 acúmulos
+  Aperto dos Mortos-Vivos:
+    tags: Tanque, Cura
+    texto: >-
+      A cada 3s em combate, seu próximo ataque contra um Campeão será fortalecido. Dano Mágico adicional: 3,3% da Vida
+      máxima. Cura: 1,3% da Vida máxima. Aumento de Vida permanente: 10. Para Campeões de ataque a distância, os
+      efeitos são 60% menores.
+    opcao: {nome: Ativações (Vida permanente), min: 0, max: 200, padrao: 0}
+    efeitos:
+    - {passiva: Aperto dos Mortos-Vivos, tipo: Vida Máxima, valor: 0, valor_por_opcao: 10}
+  Guardião:
+    tags: Proteção, Escudo
+    texto: >-
+      Protege os aliados a até 350 unidades de distância de você e aliados nos quais você tenha conjurado habilidades
+      por 2,5s. Durante a proteção, se você ou o aliado sofrerem mais do que uma determinada quantidade de dano, ambos
+      ganharão um Escudo por 1,5s. Tempo de Recarga: 55–25s (nível). Escudo: 40–165 (nível) + 6% da Vida adicional +
+      15% do Poder de Habilidade. Limite de dano: 70–240 de dano sofrido (nível).
+  Aery:
+    tags: Cutucar, Proteger
+    texto: >-
+      Seus ataques e habilidades enviam Aery até um alvo, causando dano a inimigos ou protegendo aliados com um
+      escudo. Dano: 15–70 (nível) + 10% do Dano de Ataque adicional + 5% do Poder de Habilidade. Escudo: 25–120
+      (nível) + 10% do Dano de Ataque adicional + 5% do Poder de Habilidade. Aery não pode ser enviada novamente antes
+      de retornar para você.
+  Cometa Arcano:
+    tags: Poke, aumento de acúmulos
+    texto: >-
+      Causar dano a um Campeão com uma habilidade lançará um cometa onde ele estiver. Quando um cometa atinge um
+      Campeão inimigo, o próximo cometa causa mais dano. Dano: (de 15 a 100) + (2 × total de acertos em Campeões
+      inimigos) + 10% do Dano de Ataque adicional + 5% do Poder de Habilidade. Tempo de Recarga: 16–8s (nível).
+  Ímpeto Gradual:
+    tags: Mobilidade, Aceleração de Habilidade
+    texto: >-
+      Atingir um Campeão inimigo com ataques ou habilidades 3x em 4s concede Velocidade de Movimento e Aceleração de
+      Habilidade Básica, além de reduzir os Tempos de Recarga restantes das habilidades básicas em 20%. Duração: 3s.
+      Velocidade de Movimento: 40%–60% (nível) para Campeões de ataque corpo a corpo; 20%–35% (nível) para Campeões
+      de ataque à distância. Aceleração de Habilidade Básica: 10. Tempo de Recarga: 21s - 7s (nível).
+  Primeiro Ataque:
+    tags: Iniciação, Amplificação de Dano, ouro adicional
+    texto: >-
+      Entrar em combate com um Campeão inimigo ou causar dano a ele nos primeiros 0,25s de combate concede 10s de ouro
+      e Primeiro Ataque por 3s, permitindo que você cause 7% de Dano Verdadeiro adicional a ele. Terminado o efeito,
+      recebe ouro extra de acordo com o dano adicional causado durante o efeito. Se você não causar dano ao Campeão
+      inimigo nos primeiros 0,25s após o início do combate, o Primeiro Ataque entrará em um Tempo de Recarga de 10s.
+      Ouro adicional: Atacante corpo a corpo: 60% de dano adicional. Atacante a distância: 45% de dano adicional.
+      Tempo de Recarga: 20–13s (nível).
+  Suserano do Gelo:
+    tags: Controle, Lentidão
+    texto: >-
+      Imobilizar um Campeão inimigo faz com que 3 feixes se formem ao redor dele, criando gelo sob seus pés por 3s e
+      causando Lentidão aos inimigos na área. A Lentidão permanece nos inimigos por 1,5s depois que eles saem da zona
+      de gelo. Recebe uma camada protetora de gelo, aumentando suas defesas. Após um breve intervalo, o gelo explode,
+      causando uma explosão de Dano Mágico ao seu redor. Lentidão: (1% da sua Vida adicional + 15)%. Defesas: 35 +
+      75% da Armadura e Resistência Mágica adicionais. Dura 2,5s. Dano Mágico: 15–100 (nível) + 5% da Vida
+      adicional. Tempo de Recarga: 20s.
+    efeitos:
+    - {passiva: Suserano do Gelo, tipo: Armadura, valor: 35, condicional: true}
+    - {passiva: Suserano do Gelo, tipo: Resistência Mágica, valor: 35, condicional: true}
+    - {passiva: Suserano do Gelo, tipo: Armadura, ratio: 0.75, ref: Armadura, escopo: bonus, condicional: true}
+    - {passiva: Suserano do Gelo, tipo: Resistência Mágica, ratio: 0.75, ref: Resistência Mágica, escopo: bonus, condicional: true}
+
+# Runas das árvores: linha 1, 2 e 3, na ordem do jogo.
+runas:
+  # ---------------------------------------------------------------- Dominação
+  Golpe Desleal:
+    arvore: Dominação
+    linha: 1
+    tags: Alveja inimigos com movimento debilitado
+    texto: Causa 10–45 de Dano Verdadeiro adicional a inimigos com movimento debilitado (7s de Tempo de Recarga).
+  Impacto Repentino:
+    arvore: Dominação
+    linha: 1
+    tags: Ativa ao avançar ou entrar em furtividade
+    texto: >-
+      Depois de usar um avanço, salto, teleporte ou sair de Furtividade, seu próximo ataque ou habilidade contra um
+      Campeão inimigo dentro de 4s causará 10–65 de Dano Verdadeiro adicional (15s de Tempo de Recarga). Esse efeito
+      fica mais forte em níveis mais altos: Nível 5: causa 5 de Dano Verdadeiro adicional. Nível 9: causa 5 de Dano
+      Verdadeiro adicional e recebe 10% de Velocidade de Movimento por 1,5s após causar o dano.
+  Ataque Fortalecido:
+    arvore: Dominação
+    linha: 1
+    tags: Ativa ao atacar
+    texto: >-
+      A cada 8s, o próximo ataque será fortalecido, causando 20–60 de Dano Adaptativo adicional (nível) a Campeões
+      inimigos. 80% para Campeões de ataque a distância.
+  Ataque em Sequência:
+    arvore: Dominação
+    linha: 2
+    tags: Ativa ao atacar após atingir um alvo com uma habilidade
+    texto: >-
+      Causar dano a um Campeão inimigo com uma habilidade ativa aplica uma marca, fazendo com que seus próximos 2
+      ataques ou habilidades ativas contra ele causem Dano Adaptativo adicional igual a (12–38 (nível) + 3% do Dano de
+      Ataque adicional + 1,5% do Poder de Habilidade). 15s de Tempo de Recarga.
+  Tirano:
+    arvore: Dominação
+    linha: 2
+    tags: Causa dano a inimigos com a Vida baixa
+    texto: >-
+      Causar dano a um Campeão com menos de 50% de Vida causa (20–70 (nível) + 6% do Dano de Ataque adicional + 3% do
+      Poder de Habilidade) de Dano Adaptativo adicional (10s de Tempo de Recarga).
+  Húbris:
+    arvore: Dominação
+    linha: 2
+    tags: Abates aumentam temporariamente o Dano de Ataque/Poder de Habilidade
+    texto: >-
+      Eliminar um Campeão inimigo até 3s depois de causar dano a ele concede (5 + 1 a cada Campeão abatido por você)
+      de Força Adaptativa por 30s.
+  Coleção de Olhos:
+    arvore: Dominação
+    linha: 3
+    tags: Abates aumentam o Dano de Ataque/Poder de Habilidade
+    texto: >-
+      Recebe 1,5 de Dano de Ataque ou 3 de Poder de Habilidade ao eliminar um Campeão ou monstro épico, acumulando
+      até 8x.
+    opcao: {nome: Acúmulos, min: 0, max: 8, padrao: 8}
+    efeitos:
+    - {passiva: Coleção de Olhos, tipo: Dano de Ataque, valor: 0, valor_por_opcao: 1.5}
+  Caça Incansável:
+    arvore: Dominação
+    linha: 3
+    tags: Abates concedem Velocidade de Movimento fora de combate
+    texto: >-
+      Recebe 10 de Velocidade de Movimento fora de combate. A cada eliminação de monstro épico ou de Campeão, recebe 2
+      de Velocidade de Movimento fora de combate. Acumula até 5x.
+  Sentinela Zumbi:
+    arvore: Dominação
+    linha: 3
+    tags: Controlar a visão aumenta o Dano de Ataque/Poder de Habilidade
+    texto: >-
+      Eliminar sentinelas inimigas faz surgir uma Sentinela Zumbi no lugar delas, concedendo visão da área ao redor por
+      120s. Além disso, recebe 3 de Dano de Ataque ou 6 de Poder de Habilidade. Máx. de 5 acúmulos (assistências em
+      sentinelas inimigas também concedem acúmulos e geram Sentinelas Zumbis).
+    opcao: {nome: Acúmulos, min: 0, max: 5, padrao: 5}
+    efeitos:
+    - {passiva: Sentinela Zumbi, tipo: Dano de Ataque, valor: 0, valor_por_opcao: 3}
+
+  # ---------------------------------------------------------------- Precisão
+  Brutal:
+    arvore: Precisão
+    linha: 1
+    tags: Os ataques causam dano de contato
+    texto: Ataques causam (6 + 8% do Dano de Ataque adicional) de Dano Adaptativo adicional a Campeões inimigos.
+  Triunfo:
+    arvore: Precisão
+    linha: 1
+    tags: Eliminar Campeões restaura Vida
+    texto: >-
+      Eliminar Campeões restaura 10% da Vida perdida e 10% da Energia e do Mana máximos, além de conceder 35 de
+      Velocidade de Movimento por 2s.
+  Zelo de Combate:
+    arvore: Precisão
+    linha: 1
+    tags: Aumenta o dano de habilidade em combate
+    texto: >-
+      Receberá 1,4% de Amplificação de Dano de habilidade básica cumulativa a cada 1s enquanto estiver em combate com
+      um Campeão. Acumula até 3x e só funciona contra Campeões inimigos.
+  Até a Morte:
+    arvore: Precisão
+    linha: 2
+    tags: Aumenta o dano causado quando sua Vida está baixa
+    texto: >-
+      Quando você está com menos de 60% de Vida, seus ataques contra Campeões inimigos causam 5%–11% de dano
+      adicional. Concede o dano adicional máx. quando a Vida está abaixo de 30%.
+  Dilacerar:
+    arvore: Precisão
+    linha: 2
+    tags: Causa mais dano a inimigos com muita Vida
+    texto: Seus ataques causam 6,5% de dano adicional a Campeões inimigos com mais de 60% de Vida.
+  Golpe de Misericórdia:
+    arvore: Precisão
+    linha: 2
+    tags: Aumenta o dano contra inimigos com Vida baixa
+    texto: Causa 8% de dano adicional a Campeões inimigos com menos de 40% de Vida.
+  "Lenda: Espontaneidade":
+    arvore: Precisão
+    linha: 3
+    tags: Aumenta a Velocidade de Ataque adicional
+    texto: >-
+      Recebe 3% de Velocidade de Ataque. Elimine monstros, Campeões inimigos ou tropas para receber até 18% de
+      Velocidade de Ataque adicional.
+    status:
+    - {tipo: "% Velocidade de Ataque", valor: 3}
+    efeitos:
+    - {passiva: "Lenda: Espontaneidade", tipo: "% Velocidade de Ataque", valor: 18, condicional: true}
+  "Lenda: Aceleração":
+    arvore: Precisão
+    linha: 3
+    tags: Aceleração de Habilidade adicional
+    marcador: N
+    texto: >-
+      No começo da partida, recebe 0 de Aceleração de Habilidade. Abater monstros, Campeões inimigos ou tropas concede
+      mais bônus de Aceleração de Habilidade. O limite de bônus é de 15 de Aceleração de Habilidade.
+    efeitos:
+    - {passiva: "Lenda: Aceleração", tipo: Aceleração de Habilidade, valor: 15, condicional: true}
+  "Lenda: Linhagem":
+    arvore: Precisão
+    linha: 3
+    tags: Aumenta o Vampirismo Universal
+    texto: >-
+      Recebe 1% de Vampirismo Universal. Elimine monstros, Campeões inimigos ou tropas para receber até 7% de
+      Vampirismo Universal adicional.
+
+  # ---------------------------------------------------------------- Determinação
+  Demolir:
+    arvore: Determinação
+    linha: 1
+    tags: Destrua torres mais rápido
+    marcador: refresh
+    texto: >-
+      Seu terceiro Ataque contra uma torre causa Dano Físico adicional (85 + 28% da Vida máxima para Campeões de ataque
+      corpo a corpo; 50 + 20% da Vida máxima para Campeões de ataque a distância). 30s de Tempo de Recarga.
+  Fonte da Vida:
+    arvore: Determinação
+    linha: 1
+    tags: Cura de equipe
+    texto: >-
+      Quando seus ataques ou habilidades atingem um Campeão inimigo, você cura a si e ao Campeão aliado próximo com a
+      Vida mais baixa. Aliado: cura 1,5% da sua Vida máxima + 5% do seu Poder de Habilidade. Você: cura 1% da sua Vida
+      máxima + 5% do seu Poder de Habilidade. Tempo de Recarga: 20s. A cura terá 130% de eficácia se você for um
+      Campeão de ataque corpo a corpo (não acionará se você ou os aliados próximos estiverem com a Vida cheia, ou se
+      não houver aliados por perto).
+  Coragem do Colosso:
+    arvore: Determinação
+    linha: 1
+    tags: Imobilize inimigos para receber Escudos
+    texto: >-
+      Recebe um Escudo que absorve dano equivalente a 25–45 (nível) + 1% da Vida máxima por 3s ao imobilizar um
+      Campeão inimigo (18s de Tempo de Recarga).
+  Inabalável:
+    arvore: Determinação
+    linha: 1
+    tags: Aumenta a Armadura, a Resistência Mágica e a Resistência a Lentidão
+    texto: >-
+      Recebe 3% de Armadura e Resistência Mágica. A cada 1 Campeão(ões) inimigo(s) próximo(s), recebe 2% de Armadura
+      e Resistência Mágica adicionais. Se o número máximo de Campeões inimigos estiver próximo (máx.: 3), você também
+      receberá 20% de Resistência a Lentidão.
+    # % da Armadura / RM adicionais, contínuo como a Duplaguarda (amplificado pela Forja Viva). Conferido no jogo
+    # (08/10/2026): Soldado v1 com botas de armadura, Duplaguarda + Aurora, 2 inimigos próximos -> 711 / 465.
+    opcao: {nome: Campeões inimigos próximos, min: 0, max: 3, padrao: 2}
+    efeitos:
+    - {passiva: Inabalável, tipo: Armadura, ratio: 0.03, ratio_por_opcao: 0.02, ref: Armadura, escopo: bonus}
+    - {passiva: Inabalável, tipo: Resistência Mágica, ratio: 0.03, ratio_por_opcao: 0.02, ref: Resistência Mágica, escopo: bonus}
+  Ventos Revigorantes:
+    arvore: Determinação
+    linha: 2
+    tags: Aumenta a sustentação
+    texto: >-
+      Ganha 5 de Vida a cada 5s. Depois de sofrer dano de um Campeão inimigo, regenera 3 + 1,5% da sua Vida perdida
+      ao longo dos próximos 5s. O efeito é dobrado para Campeões corpo a corpo.
+  Orbe Anulador:
+    arvore: Determinação
+    linha: 2
+    tags: Concede um Escudo protetor
+    texto: >-
+      Caso você sofra dano de um Campeão e fique com menos de 35% da sua Vida máxima, recebe um Escudo que absorve
+      60–180 (nível) de dano por 4s (60s de Tempo de Recarga).
+  Osso Revestido:
+    arvore: Determinação
+    linha: 2
+    tags: Anti-dano súbito
+    texto: >-
+      Ao sofrer dano de um Campeão, a fonte de dano atual e os próximos 3 ataques ou habilidades de Campeão contra
+      você dentro de 1,5s causarão 30–60 (nível) a menos de dano (40s de Tempo de Recarga).
+  Crescimento Excessivo:
+    arvore: Determinação
+    linha: 3
+    tags: Aumenta a Vida máxima
+    texto: >-
+      Para cada 3 tropas inimigas ou 3 monstro(s) próximo(s) abatido(s), ganha 3 de Vida máxima permanentemente. É
+      possível aumentar a Vida máxima infinitamente dessa forma. Recebe 3% de Vida máxima adicional ao conseguir 30
+      acúmulos.
+    opcao: {nome: Acúmulos, min: 0, max: 200, padrao: 30}
+    efeitos:
+    - {passiva: Crescimento Excessivo, tipo: Vida Máxima, valor: 0, valor_por_opcao: 3}
+    - {passiva: Crescimento Excessivo, tipo: Vida Máxima, ratio: 0.03, ref: Vida Máxima, escopo: total, opcao_min: 30}
+  Revitalizar:
+    arvore: Determinação
+    linha: 3
+    tags: Curas e Escudos potencializados
+    texto: >-
+      Recebe um efeito de amplificação de 5% ao conceder curas ou Escudos. Se a Vida do alvo estiver abaixo de 40%, o
+      efeito amplificará em mais 10%.
+    status:
+    - {tipo: "% Potência de Escudo e Cura", valor: 5}
+  Perseverança:
+    arvore: Determinação
+    linha: 3
+    tags: Aumenta a capacidade de sobrevivência ao sofrer Controle de Grupo
+    texto: >-
+      Recebe 10% de Tenacidade. Recebe 10–15 de Armadura e Resistência Mágica (nível) por 1,5s ao sofrer
+      imobilização. A duração é redefinida ao sofrer imobilização várias vezes.
+    status:
+    - {tipo: "% Tenacidade", valor: 10}
+    efeitos:
+    - {passiva: Perseverança, tipo: Armadura, valor: 10, valor_nv15: 15, condicional: true}
+    - {passiva: Perseverança, tipo: Resistência Mágica, valor: 10, valor_nv15: 15, condicional: true}
+
+  # ---------------------------------------------------------------- Feitiçaria
+  Arcanista do Axioma:
+    arvore: Feitiçaria
+    linha: 1
+    tags: Ultimate fortalecida
+    texto: >-
+      Sua ultimate causa/concede 10% a mais de dano, cura e Escudo (o aumento do dano em área de ação é reduzido a
+      5%). Eliminar um Campeão inimigo reduz o Tempo de Recarga restante da sua ultimate em 7%.
+  Faixa de Fluxo de Mana:
+    arvore: Feitiçaria
+    linha: 1
+    tags: Aumenta o Mana
+    texto: >-
+      Acertar um Campeão inimigo com uma habilidade ou um ataque fortalecido aumenta permanentemente seu Mana Máximo
+      em 30, até 300 de Mana.
+    opcao: {nome: Acúmulos, min: 0, max: 10, padrao: 10}
+    efeitos:
+    - {passiva: Faixa de Fluxo de Mana, tipo: Mana Máximo, valor: 0, valor_por_opcao: 30}
+  Especialista em Botânica:
+    arvore: Feitiçaria
+    linha: 1
+    tags: Efeitos fortalecidos de plantas
+    texto: >-
+      Recebe 10 de ouro e efeitos fortalecidos da respectiva planta ao destruir uma planta. Frutomel: aumenta a cura
+      em 20% ao consumir. Florividente: a Visão concedida dura 20% mais ao destruir. Pinstouro: recebe 40% de
+      Velocidade de Movimento por 2,5s após o empurrão.
+  Flash Hextec:
+    arvore: Feitiçaria
+    linha: 1
+    tags: Recebe um movimento de curto alcance enquanto o Flash está recarregando
+    texto: >-
+      O Flash em Tempo de Recarga é substituído pelo Flash Hextec. Canalize por até 2s para se teletransportar a um
+      novo local. A distância depende do tempo de canalização (18s de Tempo de Recarga). Entra em um Tempo de Recarga
+      de 6s ao entrar em combate com um Campeão.
+  Transcendência:
+    arvore: Feitiçaria
+    linha: 2
+    tags: Reduz o Tempo de Recarga das habilidades
+    texto: >-
+      Recebe efeitos adicionais nos seguintes níveis: No nível 1, recebe 5 de Aceleração de Habilidade; no nível 5,
+      recebe 5 de Aceleração de Habilidade; no nível 9, ao atingir o alvo com uma habilidade básica, reduz o Tempo de
+      Recarga da habilidade em 8% (8s de Tempo de Recarga).
+    status:
+    - {tipo: Aceleração de Habilidade, valor: 5}
+    efeitos:
+    - {passiva: Transcendência, tipo: Aceleração de Habilidade, valor: 5, nivel_min: 5}
+  Celeridade:
+    arvore: Feitiçaria
+    linha: 2
+    tags: Aumenta a Velocidade de Movimento
+    texto: >-
+      Recebe 2% de Velocidade de Movimento. Todos os seus adicionais de Velocidade de Movimento também aumentam em 7%.
+    status:
+    - {tipo: "% Velocidade de Movimento", valor: 2}
+  Foco Absoluto:
+    arvore: Feitiçaria
+    linha: 2
+    tags: Recebe Dano de Ataque/Poder de Habilidade com a Vida alta
+    texto: >-
+      Enquanto estiver com mais de 65% de Vida, receberá mais 2–20 de Dano de Ataque (nível) ou 4–40 de Poder de
+      Habilidade (nível) (Adaptativo).
+    efeitos:
+    - {passiva: Foco Absoluto, tipo: Dano de Ataque, valor: 2, valor_nv15: 20, condicional: true}
+  Chamuscar:
+    arvore: Feitiçaria
+    linha: 3
+    tags: As habilidades causam dano adicional
+    texto: >-
+      Causar dano a um Campeão inimigo com uma habilidade provoca queimaduras, causando 21–49 de Dano Mágico adicional
+      (com base no nível) após 1s (8s de Tempo de Recarga).
+  Manto de Nimbus:
+    arvore: Feitiçaria
+    linha: 3
+    tags: Feitiços aumentam a Velocidade de Movimento
+    texto: >-
+      Após usar um Feitiço (Flash, Incendiar etc.), você receberá 10–40% de Velocidade de Movimento adicional por 3s.
+      O efeito de velocidade dependerá do Tempo de Recarga do Feitiço.
+  Tempestade Crescente:
+    arvore: Feitiçaria
+    linha: 3
+    tags: Aumenta o Dano de Ataque/Poder de Habilidade ao longo do tempo
+    texto: >-
+      A partir de 6min de partida, recebe 2 de Dano de Ataque ou 4 de Poder de Habilidade (Adaptativo) que aumenta a
+      cada 3min para 5 ou 10, 9 ou 18, 14 ou 28 etc.
+  Fertilizador Ixtalense:
+    arvore: Feitiçaria
+    linha: 3
+    tags: Planta frutas depois de destruir uma
+    texto: >-
+      Após destruir uma planta, você ganha imediatamente uma semente que substitui seu Amuleto por 60s. A semente
+      amadurece e se autodestrói logo após ser plantada em um local-alvo (sementes que você pode apanhar também
+      surgirão quando um aliado destruir uma planta). As sementes ficam disponíveis 2min após o início da partida.
+      Cada planta tem o próprio Tempo de Recarga de 30s. Pinstouros que você planta arremessam seu Campeão mais longe
+      ao serem detonados.

@@ -107,6 +107,9 @@ public class TimelineEngine {
         }
     }
 
+    /** Runes of the run in progress (purchase index -1, -2...). */
+    private final List<Owned> runes = new ArrayList<>();
+
     public TimelineResult run(EngineInput in) {
         TimelineResult result = new TimelineResult();
         result.unitCode = in.unit.code;
@@ -125,6 +128,11 @@ public class TimelineEngine {
             return result;
         }
 
+        runes.clear();
+        for (int k = 0; k < in.runes.size(); k++) {
+            boolean cond = k >= in.runeConditional.size() || !Boolean.FALSE.equals(in.runeConditional.get(k));
+            runes.add(new Owned(in.runes.get(k), -1 - k, -1, 0, false, cond));
+        }
         List<Owned> inventory = new ArrayList<>();
         List<List<Owned>> inventoryAfterStep = new ArrayList<>();
         int cumulative = 0;
@@ -420,7 +428,10 @@ public class TimelineEngine {
         return pct;
     }
 
-    private StatSnapshot snapshot(Model.UnitProfile unit, List<Owned> inventory, int level) {
+    private StatSnapshot snapshot(Model.UnitProfile unit, List<Owned> items, int level) {
+        // The build's runes count like items held from the start (they never use a slot or cost gold).
+        List<Owned> inventory = new ArrayList<>(runes);
+        inventory.addAll(items);
         StatSnapshot s = new StatSnapshot();
         s.level = level;
 
@@ -432,7 +443,7 @@ public class TimelineEngine {
         // Step 1: flat stats of every owned item (level ranges interpolated, conditional ones only when enabled).
         for (Owned o : inventory) {
             for (StatLine l : o.item.stats) {
-                if (l.countsAsFlat() && o.counts(l)) {
+                if (l.countsAsFlat() && o.counts(l) && (l.minLevel == null || level >= l.minLevel)) {
                     s.itemFlat.merge(l.type, l.valueAt(level), Double::sum);
                 }
             }
@@ -665,6 +676,7 @@ public class TimelineEngine {
             d.purchaseIndex = r.owner.purchaseIndex;
             d.buildIndex = r.owner.buildIndex;
             d.number = r.owner.number;
+            d.rune = r.owner.purchaseIndex < 0;
             d.implied = r.owner.implied;
             d.itemName = r.owner.item.name;
             d.passive = r.line.passive;
@@ -701,6 +713,7 @@ public class TimelineEngine {
         c.purchaseIndex = o.purchaseIndex;
         c.buildIndex = o.buildIndex;
         c.number = o.number;
+        c.rune = o.purchaseIndex < 0;
         c.implied = o.implied;
         c.itemId = o.item.id;
         c.itemName = o.item.name;

@@ -4,6 +4,7 @@ import ItemIcon from './ItemIcon.jsx';
 import InventorySlots from './InventorySlots.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
 import PassiveCompare from './PassiveCompare.jsx';
+import { findRune, runeIcon } from '../runes.js';
 import { PASSIVE_GOLD, acquiredPassives, passiveColor, passiveSince, pointItemIds } from '../passives.js';
 
 /** Series point at (or right before) a minute. */
@@ -27,7 +28,7 @@ export function StatSheet({ point, itemsById }) {
       </p>
       <div className="sheet-inventory">
         <span className="muted">{t('sheet.inventory')}</span>
-        <InventorySlots ids={(point.contributions ?? []).map((c) => c.itemId)} itemsById={itemsById} size={30} />
+        <InventorySlots ids={(point.contributions ?? []).filter((c) => !c.rune).map((c) => c.itemId)} itemsById={itemsById} size={30} />
       </div>
       <div className="stat-sheet">
         {SHEET_STATS.map((s) => {
@@ -93,7 +94,9 @@ export function RelevanceReport({ point, prices, itemsById }) {
                   <tr key={`i${r.purchaseIndex}`} className="report-item">
                     <td className="l">
                       <span className="with-icon">
-                        <ItemIcon id={r.itemId} size={24} />#{r.number}{r.implied ? '↳' : ''} {r.itemName}
+                        {r.rune
+                          ? <><img src={runeIcon(findRune(r.itemName))} alt="" width={24} height={24} className="rune-img on" />{t('runes.rune')} {r.itemName}</>
+                          : <><ItemIcon id={r.itemId} size={24} />#{r.number}{r.implied ? '↳' : ''} {r.itemName}</>}
                         {!r.conditionalIncluded && r.passiveParts.length === 0 && itemsById.get(r.itemId)?.stats.some((s) => s.conditional)
                           && <small className="cond">{t('report.condOff')}</small>}
                       </span>

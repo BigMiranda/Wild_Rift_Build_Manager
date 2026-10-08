@@ -385,7 +385,13 @@ tr.implied td:first-child { text-align: center; }
 .implied-list ul { list-style: none; margin: 4px 0 0; padding: 0; font-size: 12px; color: var(--text-2); }
 .implied-list li { display: flex; align-items: center; gap: 6px; }
 /* purchase moments */
-.buildbar-moment { position: relative; display: flex; flex: none; align-self: stretch; cursor: grab; border-radius: 4px; }
+.buildbar-moment {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; flex: none; align-self: stretch;
+  cursor: grab; border-radius: 4px;
+}
+.buildbar-moment .moment-mark { flex: 1; }
+.moment-remove { padding: 0 5px; font-size: 12px; line-height: 16px; background: none; border-color: transparent; }
+.moment-remove:hover:not(:disabled) { border-color: var(--border-strong); }
 .buildbar-moment.dragging { opacity: .4; }
 .buildbar-moment.drop-before { box-shadow: -3px 0 0 var(--gold-bright); }
 .buildbar-moment.drop-after { box-shadow: 3px 0 0 var(--gold-bright); }
@@ -509,4 +515,104 @@ table.timeline td small.dr { display: block; font-size: 10px; color: var(--muted
   .layout.collapsed { grid-template-columns: 1fr; }
   .layout.collapsed .sidebar-rail-label { writing-mode: horizontal-tb; transform: none; display: inline; margin: 0 0 0 8px; }
   .layout.collapsed .sidebar-toggle { display: inline-block; margin: 0; }
+}
+
+/* ---------------------------------------------------------------- Preparações (items, runes, spells) */
+.prep-panel { display: flex; flex-direction: column; padding: 4px 16px; }
+.prep-row {
+  display: grid; grid-template-columns: 110px 1fr 28px; align-items: center; gap: 12px; width: 100%; padding: 10px 4px;
+  background: none; border: none; border-bottom: 1px solid var(--border); border-radius: 0; text-align: left; cursor: pointer;
+}
+.prep-row:last-child { border-bottom: none; }
+.prep-row:hover:not(:disabled) { background: rgba(200, 170, 110, .06); border-color: var(--border); }
+.prep-label { font-weight: 700; letter-spacing: .08em; color: var(--text); }
+.prep-icons { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.prep-go { font-size: 26px; color: var(--gold-bright); text-align: right; }
+.rune-img { border-radius: 50%; display: inline-block; flex: none; background: var(--surface-2); }
+.rune-img.on { box-shadow: 0 0 0 2px rgba(200, 170, 110, .35); }
+.rune-img.empty, .spell-img.empty { border: 1px dashed var(--border-strong); background: rgba(255, 255, 255, .03); }
+.spell-img { display: inline-block; flex: none; border: 1px solid var(--border-strong); border-radius: 3px; }
+.spell-img.empty { width: 56px; height: 56px; }
+
+.prep-overlay {
+  position: fixed; inset: 0; z-index: 100; overflow: auto; padding: 16px 24px 24px;
+  background: radial-gradient(ellipse at 30% 20%, #13253a 0%, #070d16 70%);
+}
+.prep-overlay-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.prep-back { background: none; border: none; font-size: 20px; font-weight: 700; letter-spacing: .06em; color: var(--text); padding: 4px 6px; }
+.prep-back span { color: var(--gold-bright); font-size: 26px; margin-right: 6px; }
+.view-toggle { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 18px; overflow: hidden; }
+.view-toggle button { border: none; border-radius: 0; padding: 4px 14px; background: none; font-size: 16px; }
+.view-toggle button.active { background: #2a6db3; color: #fff; }
+
+.rune-list-view { display: grid; grid-template-columns: 170px 1fr; gap: 24px; max-width: 1200px; margin: 0 auto; }
+.rune-rail { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 6px; }
+.rail-rune, .rail-diamond, .rail-spell { background: none; border: none; padding: 2px; border-radius: 50%; }
+.rail-rune.picking .rune-img, .rail-spell.picking img { outline: 2px solid var(--gold-bright); outline-offset: 2px; }
+.rail-diamond.picking .tree-img { filter: drop-shadow(0 0 6px var(--gold-bright)); }
+.rail-tree { display: grid; grid-template-columns: 50px 60px; align-items: center; gap: 6px; }
+.rail-col { display: flex; flex-direction: column; gap: 10px; border-left: 2px solid rgba(200, 170, 110, .25); padding-left: 6px; }
+.rune-panel { min-width: 0; }
+.rune-summary, .rune-choices { list-style: none; margin: 0; padding: 0; }
+.rune-summary li.group-start { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 6px; }
+.rune-row, .rune-choice {
+  display: flex; gap: 14px; align-items: flex-start; width: 100%; padding: 10px 12px; text-align: left;
+  background: none; border: none; border-radius: 4px;
+}
+.rune-row:hover:not(:disabled), .rune-choice:hover:not(:disabled) { background: rgba(255, 255, 255, .04); border-color: transparent; }
+.rune-choice { border-bottom: 1px solid var(--border); border-radius: 0; }
+.rune-choice.selected { background: rgba(42, 109, 179, .22); }
+.rune-row-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.rune-name { font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text); }
+.rune-tags { color: var(--gold); font-size: 13px; }
+.rune-desc { color: var(--text-2); font-size: 13px; line-height: 1.45; }
+.rune-desc.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rune-modeled { font-size: 11px; color: var(--ok); }
+.tree-preview { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 6px; }
+.tree-preview-row { display: inline-flex; gap: 4px; padding-right: 18px; border-right: 1px solid var(--border); }
+.tree-preview-row:last-child { border-right: none; }
+.rune-pick-title { font-size: 15px; letter-spacing: .05em; margin: 4px 12px 10px; color: var(--text); }
+.rune-hl { color: var(--gold-bright); }
+.rune-marker {
+  display: inline-block; margin-left: 6px; min-width: 16px; padding: 0 4px; border-radius: 8px; font-size: 10px; line-height: 16px;
+  text-align: center; vertical-align: middle; background: #2a6db3; color: #fff;
+}
+.rune-marker.N { background: var(--gold); color: var(--accent-ink); }
+
+.rune-grid-view { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.grid-keystones { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.grid-rune { position: relative; background: none; border: none; padding: 2px; border-radius: 50%; }
+.grid-rune .rune-marker { position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%); margin: 0; }
+.grid-rune:hover:not(:disabled) .rune-img { filter: brightness(1.25); }
+.grid-trees { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.grid-tree { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.grid-tabs { display: flex; gap: 18px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.grid-tab { background: none; border: none; padding: 0; }
+.grid-tab:disabled { opacity: .3; }
+.grid-row { display: flex; justify-content: center; gap: 28px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, .06); }
+.grid-row:last-child { border-bottom: none; }
+
+.rune-options {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; max-width: 1200px; margin: 20px auto 0; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: 6px; background: rgba(0, 0, 0, .25); font-size: 13px;
+}
+.rune-options-title { color: var(--gold-bright); font-weight: 600; }
+.rune-option { display: inline-flex; align-items: center; gap: 8px; }
+.rune-option img { border-radius: 50%; }
+.rune-option label { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); }
+.rune-option input { width: 64px; }
+.rune-option .opt { font-size: 11px; padding: 0 6px; }
+.rune-option .opt.on { color: var(--accent-ink); background: var(--gold); border-color: var(--gold-bright); }
+
+.spell-rail { gap: 22px; }
+.rail-spell { display: flex; flex-direction: column; align-items: center; gap: 4px; border-radius: 4px; }
+.rail-spell img { border-radius: 3px; border: 1px solid var(--border-strong); }
+.rail-spell small { color: var(--text-2); }
+.spell-slot-tag { margin-left: 8px; font-size: 11px; color: var(--gold); text-transform: none; letter-spacing: 0; }
+
+@media (max-width: 760px) {
+  .rune-list-view { grid-template-columns: 1fr; }
+  .rune-rail { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+  .grid-trees { grid-template-columns: 1fr; }
+  .prep-row { grid-template-columns: 80px 1fr 20px; }
 }

@@ -24,7 +24,7 @@ export function acquiredPassives(itemIds, itemsById) {
 }
 
 /** Item ids held at a series point. */
-export const pointItemIds = (point) => (point?.contributions ?? []).map((c) => c.itemId);
+export const pointItemIds = (point) => (point?.contributions ?? []).filter((c) => !c.rune).map((c) => c.itemId);
 
 /** Minute at which each passive key first appears in a series. */
 export function passiveSince(series, itemsById) {

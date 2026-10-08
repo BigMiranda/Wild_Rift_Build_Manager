@@ -1,5 +1,7 @@
 package com.ornnplanner.repo;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -58,6 +60,37 @@ public class BuildRepository {
         }
     }
 
+    /** Rune page: 1 keystone, one rune per row of the primary tree, one rune of the secondary tree. */
+    public static class RunePage {
+        public String primary;
+        public String secondary;
+        public String keystone;
+        /** Rows 1..3 of the primary tree (null = not chosen). */
+        public List<String> primaryRunes = new ArrayList<>();
+        public String secondaryRune;
+        /** Rune name -> option value (enemies nearby, stacks...). */
+        public Map<String, Integer> options = new LinkedHashMap<>();
+        /** Rune name -> count its conditional effects (default true). */
+        public Map<String, Boolean> conditional = new LinkedHashMap<>();
+
+        /** Chosen runes, keystone first. */
+        public List<String> chosen() {
+            List<String> out = new ArrayList<>();
+            if (keystone != null) {
+                out.add(keystone);
+            }
+            for (String r : primaryRunes) {
+                if (r != null) {
+                    out.add(r);
+                }
+            }
+            if (secondaryRune != null) {
+                out.add(secondaryRune);
+            }
+            return out;
+        }
+    }
+
     public static class Build {
         public Long id;
         public long folderId;
@@ -71,6 +104,9 @@ public class BuildRepository {
         /** Assume the missing smaller (basic) items of each purchase are bought before it. */
         public boolean assumeSmallItems;
         public List<Step> steps = new ArrayList<>();
+        public RunePage runePage;
+        /** Two summoner spells (names). */
+        public List<String> spells = new ArrayList<>();
         public Map<String, RagdollStat> ragdollStats = new LinkedHashMap<>();
         public String createdAt;
         public String updatedAt;
@@ -164,7 +200,7 @@ public class BuildRepository {
         jdbc.update(con -> {
             PreparedStatement ps = con.prepareStatement(
                     "INSERT INTO build (folder_id, name, note, unit_code, gold_per_min, xp_per_min, created_at, updated_at, "
-                            + "assume_half_items, assume_small_items) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                            + "assume_half_items, assume_small_items, rune_page, spells) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setLong(1, b.folderId);
             ps.setString(2, b.name);
@@ -176,6 +212,8 @@ public class BuildRepository {
             ps.setString(8, now);
             ps.setInt(9, b.assumeHalfItems ? 1 : 0);
             ps.setInt(10, b.assumeSmallItems ? 1 : 0);
+            ps.setString(11, json(b.runePage));
+            ps.setString(12, json(b.spells));
             return ps;
         }, kh);
         long id = kh.getKey().longValue();
@@ -185,9 +223,10 @@ public class BuildRepository {
 
     public boolean updateBuild(long id, Build b) {
         int n = jdbc.update("UPDATE build SET folder_id = ?, name = ?, note = ?, unit_code = ?, gold_per_min = ?, "
-                        + "xp_per_min = ?, assume_half_items = ?, assume_small_items = ?, updated_at = ? WHERE id = ?",
+                        + "xp_per_min = ?, assume_half_items = ?, assume_small_items = ?, rune_page = ?, spells = ?, "
+                        + "updated_at = ? WHERE id = ?",
                 b.folderId, b.name, b.note, b.unitCode, b.goldPerMin, b.xpPerMin, b.assumeHalfItems ? 1 : 0,
-                b.assumeSmallItems ? 1 : 0, Instant.now().toString(), id);
+                b.assumeSmallItems ? 1 : 0, json(b.runePage), json(b.spells), Instant.now().toString(), id);
         if (n == 0) {
             return false;
         }
@@ -225,6 +264,16 @@ public class BuildRepository {
         }
     }
 
+    private static final ObjectMapper JSON = new ObjectMapper();
+
+    private static String json(Object o) {
+        try {
+            return o == null ? null : JSON.writeValueAsString(o);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
     private static Build mapBuild(ResultSet rs) throws SQLException {
         Build b = new Build();
         b.id = rs.getLong("id");
@@ -236,6 +285,15 @@ public class BuildRepository {
         b.xpPerMin = rs.getDouble("xp_per_min");
         b.assumeHalfItems = rs.getInt("assume_half_items") != 0;
         b.assumeSmallItems = rs.getInt("assume_small_items") != 0;
+        try {
+            String page = rs.getString("rune_page");
+            b.runePage = page == null ? null : JSON.readValue(page, RunePage.class);
+            String spells = rs.getString("spells");
+            b.spells = spells == null ? new ArrayList<>()
+                    : JSON.readValue(spells, JSON.getTypeFactory().constructCollectionType(List.class, String.class));
+        } catch (JsonProcessingException e) {
+            throw new SQLException("Página de runas inválida na build " + b.id, e);
+        }
         b.createdAt = rs.getString("created_at");
         b.updatedAt = rs.getString("updated_at");
         return b;

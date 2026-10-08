@@ -42,6 +42,8 @@ public final class Model {
         /** Stat the ratio is applied to. Null together with a ratio = cannot be evaluated dynamically. */
         public String refType;
         public RefScope refScope = RefScope.TOTAL;
+        /** Flat line that only counts from this level on (e.g. rune Transcendência: +5 AH at level 5). */
+        public Integer minLevel;
 
         public StatLine() {
         }
@@ -229,6 +231,10 @@ public final class Model {
         public List<Integer> positions = new ArrayList<>();
         /** Purchase moments of the sequence. */
         public List<Moment> moments = new ArrayList<>();
+        /** Runes of the build: held from the start, no cost, no inventory slot. */
+        public List<ItemDef> runes = new ArrayList<>();
+        /** Per rune (same order): count its conditional effects. */
+        public List<Boolean> runeConditional = new ArrayList<>();
     }
 
     /**
@@ -267,6 +273,8 @@ public final class Model {
         /** Number of the build's item purchase (1, 2...), as shown to the user. */
         public int number;
         public boolean implied;
+        /** From a rune of the build (not an item). */
+        public boolean rune;
         public String itemName;
         public String passive;
         public String stat;
@@ -322,6 +330,8 @@ public final class Model {
         /** Number of the build's item purchase (1, 2...), as shown to the user. */
         public int number;
         public boolean implied;
+        /** From a rune of the build (not an item). */
+        public boolean rune;
         public long itemId;
         public String itemName;
         public boolean conditionalIncluded;

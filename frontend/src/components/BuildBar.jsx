@@ -70,6 +70,12 @@ export default function BuildBar({
                   <span className="moment-dash" aria-hidden="true" />
                   {m && <span className="moment-gold">{n0(m.gold)}</span>}
                 </button>
+                <button
+                  className="icon danger moment-remove" onClick={() => { setEditing(null); onRemove(idx); }}
+                  title={t('moment.remove')} aria-label={t('moment.remove')}
+                >
+                  ✕
+                </button>
                 {editing === idx && (
                   <MomentEditor
                     step={s} onChange={(patch) => onUpdateMoment(idx, patch)}

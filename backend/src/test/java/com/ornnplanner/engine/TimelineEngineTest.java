@@ -567,5 +567,33 @@ class TimelineEngineTest {
             assertEquals(expected[c][0], s.stats.total.get(ARMOR), 1.5, "armor, case " + c);
             assertEquals(expected[c][1], s.stats.total.get(MAGIC_RESIST), 1.5, "MR, case " + c);
         }
+
+        // Same build with the armor boots (Mobilização Blindada: +30 armor instead of +30 MR), measured 08/10/2026:
+        // 415 / 270 nothing, 525 / 343 Duplaguarda, 498 / 324 Aurora, 666 / 436 both, and 711 / 465 both + rune
+        // Inabalável with 2 enemy champions nearby (3% + 2 x 2% of bonus armor / MR).
+        ItemDef armorOthers = item(83, "Outros quatro itens (botas de armadura)", 600, StatLine.flat(ARMOR, 145),
+                StatLine.flat(MAGIC_RESIST, 85));
+        double[][] armorBoots = {{415, 270}, {525, 343}, {666, 436}, {498, 324}};
+        com.ornnplanner.seed.RuneCatalog runes = new com.ornnplanner.seed.RuneCatalog(
+                new org.springframework.core.io.ClassPathResource("seed/runas_7_3.yml"),
+                new org.springframework.core.io.ClassPathResource("seed/feiticos_7_3.yml"),
+                new org.springframework.core.io.ClassPathResource("seed/precos_status.yml"));
+        for (int c = 0; c <= armorBoots.length; c++) {
+            boolean withRune = c == armorBoots.length;
+            int a = withRune ? 2 : c;
+            EngineInput in = new EngineInput();
+            in.unit = u;
+            in.goldPerMin = 1000;
+            in.xpPerMin = 1000;
+            in.itemIds = List.of(armorOthers.id, twin.id, dawn.id);
+            in.conditional = java.util.Arrays.asList(true, active[a][0], active[a][1]);
+            if (withRune) {
+                in.runes.add(runes.toItem("Inabalável", 2, -1).orElseThrow());
+            }
+            TimelineStep s = new TimelineEngine(ref).run(in).steps.get(2);
+            double[] want = withRune ? new double[] {711, 465} : armorBoots[c];
+            assertEquals(want[0], s.stats.total.get(ARMOR), 2, "armor boots, case " + c);
+            assertEquals(want[1], s.stats.total.get(MAGIC_RESIST), 2, "armor boots MR, case " + c);
+        }
     }
 }

@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 5;
+    static final int VERSION = 6;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -67,6 +67,11 @@ public class SchemaManager {
             // v5: per-build options to assume the purchase of missing half / smaller items.
             jdbc.execute("ALTER TABLE build ADD COLUMN assume_half_items INTEGER NOT NULL DEFAULT 0");
             jdbc.execute("ALTER TABLE build ADD COLUMN assume_small_items INTEGER NOT NULL DEFAULT 0");
+        }
+        if (version < 6 && tableExists("build") && !columnExists("build", "rune_page")) {
+            // v6: rune page and summoner spells, stored as JSON.
+            jdbc.execute("ALTER TABLE build ADD COLUMN rune_page TEXT");
+            jdbc.execute("ALTER TABLE build ADD COLUMN spells TEXT");
         }
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {
