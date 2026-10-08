@@ -102,53 +102,39 @@ function ListView({ page, picking, setPicking, set, setPrimaryRune, setPrimaryTr
   const selectedName = picking === 'keystone' ? page.keystone : picking === 'secondary' ? page.secondaryRune
     : picking?.startsWith('p') ? page.primaryRunes[Number(picking.slice(1))] : null;
 
-  return (
-    <div className="rune-list-view">
-      <div className="rune-rail">
-        <button className={`rail-rune${picking === 'keystone' ? ' picking' : ''}`} onClick={() => setPicking('keystone')} title={tip(slots[0].rune) || t('runes.keystone')}>
-          <RuneImg rune={slots[0].rune} on size={64} />
+  // The page: one column like the game's, each slot with its icon and full description (click to change it).
+  if (!picking) {
+    const row = (s, label) => (
+      <button key={s.key} className="page-row" onClick={() => setPicking(s.key)} title={t('runes.change')}>
+        <RuneImg rune={s.rune} on size={s.key === 'keystone' ? 72 : 60} />
+        <span className="rune-row-text">
+          <span className="rune-name">{s.rune ? s.rune.name : label}{s.rune?.marker && <Marker m={s.rune.marker} />}</span>
+          {s.rune?.tags && <span className="rune-tags">{s.rune.tags}</span>}
+          {s.rune && <span className="rune-desc">{s.rune.text}</span>}
+        </span>
+      </button>
+    );
+    const group = (tree, which, rows) => (
+      <div className="page-group">
+        <button className="page-diamond" onClick={() => setPicking(which)} title={t('runes.changeTree')}>
+          <TreeImg tree={tree} on size={52} />
+          <small>{tree?.name}</small>
         </button>
-        <div className="rail-tree">
-          <button className={`rail-diamond${picking === 'primaryTree' ? ' picking' : ''}`} onClick={() => setPicking('primaryTree')} title={primary?.name}>
-            <TreeImg tree={primary} on />
-          </button>
-          <div className="rail-col">
-            {[1, 2, 3].map((k) => (
-              <button key={k} className={`rail-rune${picking === `p${k - 1}` ? ' picking' : ''}`} onClick={() => setPicking(`p${k - 1}`)} title={tip(slots[k].rune) || `${page.primary} ${k}`}>
-                <RuneImg rune={slots[k].rune} on size={52} />
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="rail-tree">
-          <button className={`rail-diamond${picking === 'secondaryTree' ? ' picking' : ''}`} onClick={() => setPicking('secondaryTree')} title={secondary?.name}>
-            <TreeImg tree={secondary} on />
-          </button>
-          <div className="rail-col">
-            <button className={`rail-rune${picking === 'secondary' ? ' picking' : ''}`} onClick={() => setPicking('secondary')} title={tip(slots[4].rune) || page.secondary}>
-              <RuneImg rune={slots[4].rune} on size={52} />
-            </button>
-          </div>
-        </div>
+        <div className="page-group-rows">{rows}</div>
       </div>
+    );
+    return (
+      <div className="rune-page">
+        {row(slots[0], t('runes.empty'))}
+        {group(primary, 'primaryTree', [1, 2, 3].map((k) => row(slots[k], t('runes.emptyRow', { n: k }))))}
+        {group(secondary, 'secondaryTree', row(slots[4], t('runes.empty')))}
+      </div>
+    );
+  }
 
+  return (
+    <div className="rune-picker">
       <div className="rune-panel">
-        {!picking && (
-          <ul className="rune-summary">
-            {slots.map((s, i) => (
-              <li key={s.key} className={i === 1 || i === 4 ? 'group-start' : ''}>
-                <button className="rune-row" onClick={() => setPicking(s.key)}>
-                  <RuneImg rune={s.rune} on size={44} />
-                  <span className="rune-row-text">
-                    <span className="rune-name">{s.rune ? s.rune.name : t('runes.empty')}</span>
-                    {s.rune?.tags && <span className="rune-tags">{s.rune.tags}</span>}
-                    {s.rune && <span className="rune-desc clamp">{s.rune.text}</span>}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
         {(picking === 'primaryTree' || picking === 'secondaryTree') && (
           <>
             <h3 className="rune-pick-title">{t('runes.pickTree')} <span className="rune-hl">{t('runes.traits')}</span>:</h3>

@@ -7,12 +7,15 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.concurrent.TimeUnit;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.regex.Pattern;
 
 /** Runes and summoner spells (catalog and icons cropped from the game, bundled in {@code seed/runas}, {@code seed/feiticos}). */
@@ -33,16 +36,16 @@ public class RuneController {
     }
 
     @GetMapping("/api/runes/icons/{file}")
-    public ResponseEntity<Resource> runeIcon(@PathVariable String file) {
-        return icon("seed/runas/", file);
+    public ResponseEntity<Resource> runeIcon(@PathVariable String file, WebRequest request) throws IOException {
+        return icon("seed/runas/", file, request);
     }
 
     @GetMapping("/api/spells/icons/{file}")
-    public ResponseEntity<Resource> spellIcon(@PathVariable String file) {
-        return icon("seed/feiticos/", file);
+    public ResponseEntity<Resource> spellIcon(@PathVariable String file, WebRequest request) throws IOException {
+        return icon("seed/feiticos/", file, request);
     }
 
-    private static ResponseEntity<Resource> icon(String dir, String file) {
+    private static ResponseEntity<Resource> icon(String dir, String file, WebRequest request) throws IOException {
         if (!FILE.matcher(file).matches()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
@@ -50,7 +53,15 @@ public class RuneController {
         if (!img.exists()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG)
-                .cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS)).body(img);
+        // Revalidated every time (cheap 304 through the ETag), so redone icons show up without a hard reload.
+        String etag;
+        try (InputStream in = img.getInputStream()) {
+            etag = "\"" + DigestUtils.md5DigestAsHex(in) + "\"";
+        }
+        CacheControl cache = CacheControl.noCache();
+        if (request.checkNotModified(etag)) {
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED).cacheControl(cache).eTag(etag).build();
+        }
+        return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).cacheControl(cache).eTag(etag).body(img);
     }
 }
