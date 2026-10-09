@@ -182,15 +182,30 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
   em `seed/runas`. As runas com efeito de status entram no cálculo como "itens" presentes desde o início (sem custo nem
   espaço), com opção por build (ex.: Inabalável, 3% + 2% por campeão inimigo próximo da Armadura/RM adicionais) e efeitos
   condicionais ligáveis; no ouro efetivo elas se somam à Forja Viva no bloco do campeão. Feitiços (2 por build) em
-  `seed/feiticos_7_3.yml`, só texto.
+  `seed/feiticos_7_3.yml`, só texto, numa lista com descrição como a de runas.
+  - **Runas que escalam sem limite pela ação do jogador** (Aperto dos Mortos-Vivos: +10 de Vida por ativação;
+    Crescimento Excessivo: +3 de Vida por acúmulo e +3% de Vida máxima ao chegar a 30): informadas como **ativações /
+    acúmulos por minuto, em períodos** ("a partir de 10:00, 1 por minuto"), como ouro/min e XP/min, já que há fases
+    de mais farm e outras de mais lutas. O valor de cada ativação é o do jogo. O editor mostra quanto de Vida isso dá
+    em vários momentos e quando os 30 acúmulos chegam, e converte a partir do relatório de runas do fim da partida
+    ("Aumento de Vida: 410" em 22:00 → taxa média).
+  - **Tempestade Crescente** cresce sozinha com o tempo de jogo (2, 5, 9, 14, 20... de Dano de Ataque a cada 3 min a
+    partir de 6 min, sem limite).
+  - **Runas que rendem ouro** (Demolir, Primeiro Ataque, Especialista em Botânica): a build informa quanto ouro entrou
+    e em que minuto; esse ouro adianta as compras.
+  - Limites que existem no jogo continuam (Coleção de Olhos 8, Sentinela Zumbi 5, Faixa de Fluxo de Mana 300 de Mana,
+    Inabalável até 3 inimigos).
+- **Fim da partida** (m:ss, no cabeçalho da build): a linha do tempo e os gráficos vão até ele (sem ele, até um pouco
+  depois da última compra).
 - **Passivas adquiridas**: no gráfico, o chip "Passivas" troca as linhas por barras empilhadas (um bloco por passiva
   que você tem, uma pilha por build); no painel do momento, a aba "Passivas" lista as passivas por item, desde quando
-  você as tem. Por enquanto cada passiva vale 400 de ouro (estimativa provisória, `PASSIVE_GOLD` em
-  `frontend/src/passives.js`); passivas únicas com o mesmo nome contam uma vez.
+  você as tem. Por enquanto uma passiva vale 300 de ouro em item médio ou bota tier 2 e 900 de ouro em item completo
+  ou bota tier 3 (100 em item básico; estimativa provisória, `PASSIVE_GOLD_BY_TIER` em `frontend/src/passives.js`);
+  passivas únicas com o mesmo nome contam uma vez.
 - **Ouro efetivo**: no gráfico, o chip "Ouro efetivo" mostra barras empilhadas por build, um bloco por item (ouro dos
-  status dele pelo preço por ponto) com um bloco mais claro em cima para as passivas, e a Forja Viva no topo. Passivas
-  já modeladas valem o ouro do que dão; as ainda não catalogadas valem 100 de ouro por enquanto (`UNKNOWN_PASSIVE_GOLD`
-  em `frontend/src/effective.js`). A legenda e a aba "Ouro efetivo" do painel do momento mostram, lado a lado por
+  status dele pelo preço por ponto) com um bloco mais claro em cima para as passivas, e o campeão (Forja Viva + runas) no
+  topo. Passivas já modeladas valem o ouro do que dão; as ainda não catalogadas valem a estimativa por tier acima (300
+  em item médio / bota tier 2, 900 em item completo / bota tier 3). A legenda e a aba "Ouro efetivo" do painel do momento mostram, lado a lado por
   build, o valor de cada status e passiva de cada item, o ouro gasto contra o aproveitado e o lucro (ouro e %) por item
   e da build.
 - No gráfico, a faixa de eventos mostra cada compra (ícone do item) e cada subida de nível. Clicar no gráfico ou num

@@ -1,13 +1,16 @@
+import { PASSIVE_GOLD_BY_TIER, passiveGold as passiveGoldOf } from './passives.js';
+
+export { PASSIVE_GOLD_BY_TIER };
+
 /**
  * Effective gold of the items held at a point of the timeline: what their stats and passives are worth in gold
  * (stat prices of the gold-efficiency methodology), against what they cost.
  * - Stats: the item's flat stats x gold per point.
  * - Passives already modeled by the engine (they give stats): the gold of what they give at that moment.
- * - Passives not catalogued yet (text only): a provisional UNKNOWN_PASSIVE_GOLD each. Passives with the same name are
+ * - Passives not catalogued yet (text only): a provisional value by the item's tier (passiveGoldOf). Passives with the same name are
  *   unique: held twice, they count once.
  * - Ornn's Living Forge is shown apart (it belongs to the champion, amplifying the items).
  */
-export const UNKNOWN_PASSIVE_GOLD = 100;
 
 /** Chart "stat" that shows the effective gold of each item as stacked bars. */
 export const EFFECTIVE_VIEW = 'EFFECTIVE';
@@ -34,7 +37,7 @@ export function effectiveGold(point, itemsById, prices) {
       const k = p.name ? norm(p.name) : `${c.itemId}#${i}`;
       if (known.has(k) || seenUnknown.has(k)) return;
       seenUnknown.add(k);
-      passives.push({ name: p.name || item.name, parts: [], gold: UNKNOWN_PASSIVE_GOLD, known: false });
+      passives.push({ name: p.name || item.name, parts: [], gold: passiveGoldOf(item), known: false });
     });
     const statGold = stats.reduce((a, s) => a + s.gold, 0);
     const passiveGold = passives.reduce((a, p) => a + p.gold, 0);

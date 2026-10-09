@@ -1,6 +1,6 @@
 import { statAbbr, statLabel, t } from '../i18n.js';
 import { n0, n1, pct, statValue } from '../format.js';
-import { ALIGN_SLOT, FORGE_COLOR, UNKNOWN_PASSIVE_GOLD, itemColor, itemPassiveColor } from '../effective.js';
+import { ALIGN_SLOT, FORGE_COLOR, itemColor, itemPassiveColor } from '../effective.js';
 import ItemIcon from './ItemIcon.jsx';
 import { statColor } from './StatIcon.jsx';
 
@@ -82,7 +82,7 @@ export default function EffectiveBreakdown({ columns, compact = false, align }) 
                 ))}
                 {x.passives.map((p) => (
                   <span key={p.name} className={p.known ? 'eff-passive' : 'eff-passive unknown'}
-                    title={p.known ? undefined : t('eff.unknownTitle', { gold: n0(UNKNOWN_PASSIVE_GOLD) })}>
+                    title={p.known ? undefined : t('eff.unknownTitle', { gold: n0(p.gold) })}>
                     ✦ {p.name}
                     {p.known
                       ? `: ${p.parts.map((q) => `${label(q.stat)} +${n1(q.amount)}`).join(', ')} = ${n0(p.gold)}`

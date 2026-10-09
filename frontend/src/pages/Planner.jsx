@@ -8,7 +8,7 @@ import TimelineTable from '../components/TimelineTable.jsx';
 import StatChart from '../components/StatChart.jsx';
 import { PassivesPanel, RelevanceReport, StatSheet, pointAt } from '../components/MomentPanels.jsx';
 import { PASSIVES_VIEW } from '../passives.js';
-import { ALIGN_ITEM, EFFECTIVE_VIEW, UNKNOWN_PASSIVE_GOLD, effectiveGold } from '../effective.js';
+import { ALIGN_ITEM, EFFECTIVE_VIEW, PASSIVE_GOLD_BY_TIER, effectiveGold } from '../effective.js';
 import EffectiveBreakdown, { AlignToggle } from '../components/EffectiveBreakdown.jsx';
 import { StatIcon } from '../components/StatIcon.jsx';
 import { SERIES_COLORS, mmss, n0 } from '../format.js';
@@ -471,7 +471,7 @@ export default function Planner({ meta, items }) {
               {momentTab === 'effective' && (
                 <section className="panel">
                   <h3>{t('eff.title', { time: mmss(point.minute), level: point.level })}</h3>
-                  <p className="muted" style={{ marginTop: 0 }}>{t('eff.help', { gold: n0(UNKNOWN_PASSIVE_GOLD) })}</p>
+                  <p className="muted" style={{ marginTop: 0 }}>{t('eff.help', { mid: n0(PASSIVE_GOLD_BY_TIER.tier_medio), full: n0(PASSIVE_GOLD_BY_TIER.aprimorado) })}</p>
                   {compareIds.length > 0 && <AlignToggle value={effAlign} onChange={setEffAlign} />}
                   <EffectiveBreakdown
                     align={effAlign}

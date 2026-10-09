@@ -5,7 +5,7 @@ import InventorySlots from './InventorySlots.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
 import PassiveCompare from './PassiveCompare.jsx';
 import { findRune, runeIcon } from '../runes.js';
-import { PASSIVE_GOLD, acquiredPassives, passiveColor, passiveSince, pointItemIds } from '../passives.js';
+import { PASSIVE_GOLD_BY_TIER, acquiredPassives, passiveColor, passiveSince, pointItemIds } from '../passives.js';
 
 /** Series point at (or right before) a minute. */
 export function pointAt(series, minute) {
@@ -181,7 +181,7 @@ export function PassivesPanel({ point, series, itemsById, builds = [] }) {
     return (
       <section className="panel">
         <h3>{t('passives.title', { time: mmss(point.minute), level: point.level })}</h3>
-        <p className="muted" style={{ marginTop: 0 }}>{t('passives.help', { gold: n0(PASSIVE_GOLD) })}</p>
+        <p className="muted" style={{ marginTop: 0 }}>{t('passives.help', { mid: n0(PASSIVE_GOLD_BY_TIER.tier_medio), full: n0(PASSIVE_GOLD_BY_TIER.aprimorado) })}</p>
         <PassiveCompare columns={columns} />
       </section>
     );
@@ -198,7 +198,7 @@ export function PassivesPanel({ point, series, itemsById, builds = [] }) {
   return (
     <section className="panel">
       <h3>{t('passives.title', { time: mmss(point.minute), level: point.level })}</h3>
-      <p className="muted" style={{ marginTop: 0 }}>{t('passives.help', { gold: n0(PASSIVE_GOLD) })}</p>
+      <p className="muted" style={{ marginTop: 0 }}>{t('passives.help', { mid: n0(PASSIVE_GOLD_BY_TIER.tier_medio), full: n0(PASSIVE_GOLD_BY_TIER.aprimorado) })}</p>
       <p className="passives-total">{t('passives.total', { n: list.length, gold: n0(gold) })}</p>
       {list.length === 0 && <p className="muted">{t('passives.none')}</p>}
       <ul className="passive-groups">

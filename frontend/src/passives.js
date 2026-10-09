@@ -1,8 +1,11 @@
 /**
- * Passives held at a point of the timeline. Every passive is worth the same gold for now (provisional estimate, to be
+ * Passives held at a point of the timeline, each worth a provisional gold estimate by the tier of its item (to be
  * replaced by a value per passive). Passives with the same name are unique: held twice, they count once.
  */
-export const PASSIVE_GOLD = 400;
+export const PASSIVE_GOLD_BY_TIER = { basico: 100, tier_medio: 300, aprimorado: 900, evolucao: 900 };
+
+/** Provisional gold of a passive: 300 on a mid-tier item (or tier 2 boots), 900 on a completed one (or tier 3 boots). */
+export const passiveGold = (item) => PASSIVE_GOLD_BY_TIER[item?.section] ?? PASSIVE_GOLD_BY_TIER.basico;
 
 /** Chart "stat" that shows passives as stacked bars instead of a stat line. */
 export const PASSIVES_VIEW = 'PASSIVES';
@@ -17,7 +20,7 @@ export function acquiredPassives(itemIds, itemsById) {
       const key = p.name ? p.name.trim().toLowerCase() : `${item.name}#${i}`;
       if (seen.has(key)) return;
       seen.add(key);
-      out.push({ key, name: p.name || item.name, text: p.text, itemId: id, itemName: item.name, gold: PASSIVE_GOLD });
+      out.push({ key, name: p.name || item.name, text: p.text, itemId: id, itemName: item.name, gold: passiveGold(item) });
     });
   }
   return out;
