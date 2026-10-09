@@ -204,6 +204,11 @@ public class RuneCatalog {
      * {@code rate x perStack} per minute, and its bonus from the minute the stacks are reached.
      */
     public Optional<ItemDef> toItem(String name, Integer option, long id, Double rate) {
+        return toItem(name, option, id, rate, null);
+    }
+
+    /** Same, with how much each activation / stack is worth ({@code null} = the game's value). */
+    public Optional<ItemDef> toItem(String name, Integer option, long id, Double rate, Double perStack) {
         Rune r = byName.get(name);
         if (r == null) {
             return Optional.empty();
@@ -261,7 +266,7 @@ public class RuneCatalog {
             l.type = r.rate.stat;
             l.passive = r.name;
             l.value = 0.0;
-            l.perMinute = rate * r.rate.perStack;
+            l.perMinute = rate * (perStack != null && perStack >= 0 ? perStack : r.rate.perStack);
             item.stats.add(l);
             if (r.rate.bonusStacks != null) {
                 StatLine b = StatLine.percent(r.rate.stat, r.name, r.rate.bonusRatio, r.rate.bonusRef, r.rate.bonusScope);

@@ -89,7 +89,8 @@ public class PlannerService {
                         in.extraGold.add(new double[] {g.minute, g.gold});
                     }
                 }
-                runes.toItem(name, opt, id--, rate).ifPresent(item -> {
+                Double each = build.runePage.perStack == null ? null : build.runePage.perStack.get(name);
+                runes.toItem(name, opt, id--, rate, each).ifPresent(item -> {
                     in.runes.add(item);
                     in.runeConditional.add(build.runePage.conditional == null
                             || !Boolean.FALSE.equals(build.runePage.conditional.get(name)));

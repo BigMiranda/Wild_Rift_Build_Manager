@@ -28,6 +28,7 @@ export const emptyRunePage = () => ({
   options: {},
   conditional: {},
   rates: {},
+  perStack: {},
   gold: {},
 });
 

@@ -80,6 +80,8 @@ public class BuildRepository {
         public Map<String, Boolean> conditional = new LinkedHashMap<>();
         /** Rune name -> activations / stacks per minute (runes that scale without limit). */
         public Map<String, Double> rates = new LinkedHashMap<>();
+        /** Rune name -> how much each activation / stack is worth (default: the game's value). */
+        public Map<String, Double> perStack = new LinkedHashMap<>();
         /** Rune name -> gold it earned, at given minutes (runes that earn gold). */
         public Map<String, List<GoldEvent>> gold = new LinkedHashMap<>();
 

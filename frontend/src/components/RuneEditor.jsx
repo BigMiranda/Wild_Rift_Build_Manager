@@ -273,6 +273,7 @@ function RuneOptions({ page, set, matchEnd }) {
         const value = page.options?.[r.name] ?? r.option?.defaultValue;
         const cond = page.conditional?.[r.name] !== false;
         const rate = page.rates?.[r.name];
+        const each = page.perStack?.[r.name];
         const events = page.gold?.[r.name] ?? [];
         const setEvents = (list) => set({ gold: { ...page.gold, [r.name]: list } });
         return (
@@ -294,6 +295,13 @@ function RuneOptions({ page, set, matchEnd }) {
                     onChange={(e) => set({ rates: { ...page.rates, [r.name]: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) } })} />
                 </label>
               )}
+              {r.rate && (
+                <label title={t('runes.perStackTitle', { per: n0(r.rate.perStack) })}>
+                  {t('runes.perStack', { stat: statLabel(r.rate.stat) })}
+                  <input type="number" min={0} step={1} value={each ?? r.rate.perStack}
+                    onChange={(e) => set({ perStack: { ...page.perStack, [r.name]: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) } })} />
+                </label>
+              )}
               {r.hasConditional && (
                 <button className={`opt${cond ? ' on' : ''}`} aria-pressed={cond} title={t('bar.condTitle')}
                   onClick={() => set({ conditional: { ...page.conditional, [r.name]: !cond } })}>
@@ -302,7 +310,7 @@ function RuneOptions({ page, set, matchEnd }) {
               )}
             </div>
             {r.rate && (
-              <RateEstimate rune={r} rate={rate} matchEnd={matchEnd}
+              <RateEstimate rune={r} rate={rate} each={each ?? r.rate.perStack} matchEnd={matchEnd}
                 onUse={(v) => set({ rates: { ...page.rates, [r.name]: v } })} />
             )}
             {r.extraGold && (
@@ -334,9 +342,10 @@ function RuneOptions({ page, set, matchEnd }) {
  * What a rate means over the match (like gold/min): the stat per minute and at a few moments, when the stack bonus
  * kicks in, and a converter from the end-of-match rune report ("Aumento de Vida: 410" in 22:00).
  */
-function RateEstimate({ rune, rate, matchEnd, onUse }) {
+function RateEstimate({ rune, rate, each, matchEnd, onUse }) {
   const [reported, setReported] = useState('');
-  const { stat, perStack, bonusStacks, bonusRatio, report } = rune.rate;
+  const { stat, bonusStacks, bonusRatio, report } = rune.rate;
+  const perStack = each;
   const per = (rate ?? 0) * perStack;
   const until = matchEnd > 0 ? matchEnd : 30;
   const marks = [5, 10, 15, 20, 25, 30].filter((m) => m < until);
