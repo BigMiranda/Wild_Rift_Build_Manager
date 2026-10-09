@@ -200,15 +200,11 @@ public class RuneCatalog {
     }
 
     /**
-     * Same, plus the rate (activations / stacks per minute) of a rune that scales without limit: a line growing by
-     * {@code rate x perStack} per minute, and its bonus from the minute the stacks are reached.
+     * Same, plus the activation / stack rate of a rune that scales without limit, in periods ({start minute,
+     * activations per minute}, each until the next one): a line growing by {@code activations x perStack}, and its bonus
+     * from the minute the stacks are reached.
      */
-    public Optional<ItemDef> toItem(String name, Integer option, long id, Double rate) {
-        return toItem(name, option, id, rate, null);
-    }
-
-    /** Same, with how much each activation / stack is worth ({@code null} = the game's value). */
-    public Optional<ItemDef> toItem(String name, Integer option, long id, Double rate, Double perStack) {
+    public Optional<ItemDef> toItem(String name, Integer option, long id, List<double[]> periods) {
         Rune r = byName.get(name);
         if (r == null) {
             return Optional.empty();
@@ -261,16 +257,29 @@ public class RuneCatalog {
             }
             item.stats.add(l);
         }
-        if (r.rate != null && rate != null && rate > 0) {
+        List<double[]> stacks = new ArrayList<>();
+        if (periods != null) {
+            for (double[] p : periods) {
+                if (p != null && p.length >= 2 && p[0] >= 0 && p[1] >= 0) {
+                    stacks.add(new double[] {p[0], p[1]});
+                }
+            }
+            stacks.sort(java.util.Comparator.comparingDouble(p -> p[0]));
+        }
+        if (r.rate != null && stacks.stream().anyMatch(p -> p[1] > 0)) {
             StatLine l = new StatLine();
             l.type = r.rate.stat;
             l.passive = r.name;
             l.value = 0.0;
-            l.perMinute = rate * (perStack != null && perStack >= 0 ? perStack : r.rate.perStack);
+            l.perMinute = new ArrayList<>();
+            for (double[] p : stacks) {
+                l.perMinute.add(new double[] {p[0], p[1] * r.rate.perStack});
+            }
             item.stats.add(l);
-            if (r.rate.bonusStacks != null) {
+            Double reached = r.rate.bonusStacks == null ? null : StatLine.minuteReaching(stacks, r.rate.bonusStacks);
+            if (reached != null) {
                 StatLine b = StatLine.percent(r.rate.stat, r.name, r.rate.bonusRatio, r.rate.bonusRef, r.rate.bonusScope);
-                b.minMinute = r.rate.bonusStacks / rate;
+                b.minMinute = reached;
                 item.stats.add(b);
             }
         }

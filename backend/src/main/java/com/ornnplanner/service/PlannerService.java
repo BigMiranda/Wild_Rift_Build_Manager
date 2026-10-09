@@ -83,14 +83,18 @@ public class PlannerService {
             long id = -1;
             for (String name : build.runePage.chosen()) {
                 Integer opt = build.runePage.options == null ? null : build.runePage.options.get(name);
-                Double rate = build.runePage.rates == null ? null : build.runePage.rates.get(name);
+                List<double[]> periods = new java.util.ArrayList<>();
+                if (build.runePage.rates != null && build.runePage.rates.get(name) != null) {
+                    for (com.ornnplanner.repo.BuildRepository.RatePeriod p : build.runePage.rates.get(name)) {
+                        periods.add(new double[] {p.start, p.perMinute});
+                    }
+                }
                 if (build.runePage.gold != null && build.runePage.gold.get(name) != null) {
                     for (com.ornnplanner.repo.BuildRepository.GoldEvent g : build.runePage.gold.get(name)) {
                         in.extraGold.add(new double[] {g.minute, g.gold});
                     }
                 }
-                Double each = build.runePage.perStack == null ? null : build.runePage.perStack.get(name);
-                runes.toItem(name, opt, id--, rate, each).ifPresent(item -> {
+                runes.toItem(name, opt, id--, periods).ifPresent(item -> {
                     in.runes.add(item);
                     in.runeConditional.add(build.runePage.conditional == null
                             || !Boolean.FALSE.equals(build.runePage.conditional.get(name)));

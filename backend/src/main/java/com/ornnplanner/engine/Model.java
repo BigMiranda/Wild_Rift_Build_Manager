@@ -44,8 +44,11 @@ public final class Model {
         public RefScope refScope = RefScope.TOTAL;
         /** Flat line that only counts from this level on (e.g. rune Transcendência: +5 AH at level 5). */
         public Integer minLevel;
-        /** Flat line growing with game time: perMinute x minute (e.g. a rune's "Aumento de Vida" over the match). */
-        public Double perMinute;
+        /**
+         * Flat line growing with game time, in periods: {start minute, value per minute}, each until the next one starts
+         * (e.g. a rune's health from activations: more in the farming phase, fewer in the team fights).
+         */
+        public List<double[]> perMinute;
         /** Line that only counts from this game minute on (e.g. +3% health once a rune reaches 30 stacks). */
         public Double minMinute;
         /**
@@ -94,10 +97,36 @@ public final class Model {
             return !marker() && ratio == null && (value != null || perMinute != null || stepValues != null);
         }
 
+        /** Sum of per-minute rates over [0, minute]; periods {start, rate}, sorted, each until the next start. */
+        public static double accumulated(List<double[]> periods, double minute) {
+            double total = 0;
+            for (int i = 0; i < periods.size(); i++) {
+                double from = periods.get(i)[0];
+                double to = i + 1 < periods.size() ? periods.get(i + 1)[0] : Double.MAX_VALUE;
+                total += periods.get(i)[1] * Math.max(0, Math.min(minute, to) - from);
+            }
+            return total;
+        }
+
+        /** First minute the per-minute periods add up to {@code amount} (null if they never do). */
+        public static Double minuteReaching(List<double[]> periods, double amount) {
+            double total = 0;
+            for (int i = 0; i < periods.size(); i++) {
+                double from = periods.get(i)[0];
+                double to = i + 1 < periods.size() ? periods.get(i + 1)[0] : Double.MAX_VALUE;
+                double rate = periods.get(i)[1];
+                if (rate > 0 && total + rate * (to - from) >= amount - 1e-9) {
+                    return from + (amount - total) / rate;
+                }
+                total += rate * (to - from);
+            }
+            return null;
+        }
+
         /** Flat value at a level and game minute. */
         public double valueAt(int level, double minute) {
             if (perMinute != null) {
-                return perMinute * Math.max(0, minute);
+                return accumulated(perMinute, minute);
             }
             if (stepValues != null && !stepValues.isEmpty()) {
                 if (minute < stepStart - 1e-9) {

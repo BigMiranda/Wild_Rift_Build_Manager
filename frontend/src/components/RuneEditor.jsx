@@ -272,8 +272,12 @@ function RuneOptions({ page, set, matchEnd }) {
       {chosen.map((r) => {
         const value = page.options?.[r.name] ?? r.option?.defaultValue;
         const cond = page.conditional?.[r.name] !== false;
-        const rate = page.rates?.[r.name];
-        const each = page.perStack?.[r.name];
+        // Periods of activations / stacks per minute, each from its start until the next one (first one at 0:00).
+        const saved = page.rates?.[r.name];
+        const periods = Array.isArray(saved) && saved.length ? saved
+          : typeof saved === 'number' ? [{ start: 0, perMinute: saved }] // older builds: a single rate
+            : [{ start: 0, perMinute: null }];
+        const setPeriods = (list) => set({ rates: { ...page.rates, [r.name]: list } });
         const events = page.gold?.[r.name] ?? [];
         const setEvents = (list) => set({ gold: { ...page.gold, [r.name]: list } });
         return (
@@ -288,20 +292,7 @@ function RuneOptions({ page, set, matchEnd }) {
                     onChange={(e) => set({ options: { ...page.options, [r.name]: Math.max(r.option.min, Math.min(r.option.max, Number(e.target.value))) } })} />
                 </label>
               )}
-              {r.rate && (
-                <label title={t('runes.rateTitle')}>
-                  {r.rate.name}
-                  <input type="number" min={0} step={0.1} value={rate ?? ''} placeholder="0"
-                    onChange={(e) => set({ rates: { ...page.rates, [r.name]: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) } })} />
-                </label>
-              )}
-              {r.rate && (
-                <label title={t('runes.perStackTitle', { per: n0(r.rate.perStack) })}>
-                  {t('runes.perStack', { stat: statLabel(r.rate.stat) })}
-                  <input type="number" min={0} step={1} value={each ?? r.rate.perStack}
-                    onChange={(e) => set({ perStack: { ...page.perStack, [r.name]: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) } })} />
-                </label>
-              )}
+              {r.rate && <small className="muted">{t('runes.perStackFixed', { per: n0(r.rate.perStack), stat: statLabel(r.rate.stat) })}</small>}
               {r.hasConditional && (
                 <button className={`opt${cond ? ' on' : ''}`} aria-pressed={cond} title={t('bar.condTitle')}
                   onClick={() => set({ conditional: { ...page.conditional, [r.name]: !cond } })}>
@@ -310,8 +301,26 @@ function RuneOptions({ page, set, matchEnd }) {
               )}
             </div>
             {r.rate && (
-              <RateEstimate rune={r} rate={rate} each={each ?? r.rate.perStack} matchEnd={matchEnd}
-                onUse={(v) => set({ rates: { ...page.rates, [r.name]: v } })} />
+              <div className="rune-periods" title={t('runes.rateTitle')}>
+                {periods.map((p, i) => (
+                  <span key={i} className="rune-period">
+                    <small>{t('runes.periodFrom')}</small>
+                    {i === 0
+                      ? <span className="period-start">0:00</span>
+                      : <MinuteInput value={p.start} placeholder="10:00" aria-label={t('runes.periodFrom')}
+                          onChange={(m) => setPeriods(periods.map((x, k) => (k === i ? { ...x, start: m ?? 0 } : x)))} />}
+                    <input type="number" min={0} step={0.1} value={p.perMinute ?? ''} placeholder="0" aria-label={r.rate.name}
+                      onChange={(e) => setPeriods(periods.map((x, k) => (k === i ? { ...x, perMinute: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) } : x)))} />
+                    <small>{r.rate.name.toLowerCase()}</small>
+                    {i > 0 && <button className="icon danger" onClick={() => setPeriods(periods.filter((_, k) => k !== i))} aria-label={t('runes.periodRemove')}>✕</button>}
+                  </span>
+                ))}
+                <button className="link" onClick={() => setPeriods([...periods, { start: (periods[periods.length - 1].start ?? 0) + 10, perMinute: periods[periods.length - 1].perMinute }])}>
+                  {t('runes.periodAdd')}
+                </button>
+                <RateEstimate rune={r} periods={periods} matchEnd={matchEnd}
+                  onUse={(v) => setPeriods([{ start: 0, perMinute: v }])} />
+              </div>
             )}
             {r.extraGold && (
               <div className="rune-gold">
@@ -338,26 +347,50 @@ function RuneOptions({ page, set, matchEnd }) {
   );
 }
 
+/** Sum of per-minute periods ({start, perMinute}, each until the next start) up to a minute. */
+function accumulated(periods, minute) {
+  const list = [...periods].filter((p) => p.perMinute > 0 || p.perMinute === 0).sort((x, y) => x.start - y.start);
+  let total = 0;
+  list.forEach((p, i) => {
+    const to = i + 1 < list.length ? list[i + 1].start : Infinity;
+    total += (p.perMinute ?? 0) * Math.max(0, Math.min(minute, to) - p.start);
+  });
+  return total;
+}
+
+/** First minute the periods add up to `amount` stacks (null if never). */
+function minuteReaching(periods, amount) {
+  const list = [...periods].filter((p) => p.perMinute != null).sort((x, y) => x.start - y.start);
+  let total = 0;
+  for (let i = 0; i < list.length; i++) {
+    const to = i + 1 < list.length ? list[i + 1].start : Infinity;
+    const rate = list[i].perMinute;
+    if (rate > 0 && total + rate * (to - list[i].start) >= amount - 1e-9) return list[i].start + (amount - total) / rate;
+    total += rate * (to - list[i].start);
+  }
+  return null;
+}
+
 /**
- * What a rate means over the match (like gold/min): the stat per minute and at a few moments, when the stack bonus
- * kicks in, and a converter from the end-of-match rune report ("Aumento de Vida: 410" in 22:00).
+ * What the periods mean over the match: the stat at a few moments, when the stack bonus kicks in, and a converter
+ * from the end-of-match rune report ("Aumento de Vida: 410" in 22:00 -> an average rate for the whole match).
  */
-function RateEstimate({ rune, rate, each, matchEnd, onUse }) {
+function RateEstimate({ rune, periods, matchEnd, onUse }) {
   const [reported, setReported] = useState('');
-  const { stat, bonusStacks, bonusRatio, report } = rune.rate;
-  const perStack = each;
-  const per = (rate ?? 0) * perStack;
+  const { stat, perStack, bonusStacks, bonusRatio, report } = rune.rate;
   const until = matchEnd > 0 ? matchEnd : 30;
   const marks = [5, 10, 15, 20, 25, 30].filter((m) => m < until);
+  const any = periods.some((p) => p.perMinute > 0);
+  const reach = bonusStacks ? minuteReaching(periods, bonusStacks) : null;
   const fromReport = Number(reported) > 0 && matchEnd > 0 ? Number(reported) / perStack / matchEnd : null;
   return (
     <div className="rune-estimate">
-      {per > 0 ? (
+      {any ? (
         <small>
-          {t('runes.rateEstimate', { per: n1(per), stat: statLabel(stat) })}
-          {marks.map((m) => ` · ${mmss(m)} → ${n0(per * m)}`).join('')}
-          {matchEnd > 0 && ` · ${mmss(matchEnd)} → ${n0(per * matchEnd)}`}
-          {bonusStacks && ` · ${t('runes.rateBonus', { pct: n0(bonusRatio * 100), stat: statLabel(stat), time: mmss(bonusStacks / rate), n: bonusStacks })}`}
+          {t('runes.rateTotal', { stat: statLabel(stat) })}
+          {marks.map((m) => ` · ${mmss(m)} → ${n0(accumulated(periods, m) * perStack)}`).join('')}
+          {matchEnd > 0 && ` · ${mmss(matchEnd)} → ${n0(accumulated(periods, matchEnd) * perStack)}`}
+          {bonusStacks && reach != null && ` · ${t('runes.rateBonus', { pct: n0(bonusRatio * 100), stat: statLabel(stat), time: mmss(reach), n: bonusStacks })}`}
         </small>
       ) : (
         <small className="muted">{t('runes.rateHint', { per: n0(perStack), stat: statLabel(stat) })}</small>

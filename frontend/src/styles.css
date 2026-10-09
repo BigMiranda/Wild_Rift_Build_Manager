@@ -616,6 +616,11 @@ table.timeline td small.dr { display: block; font-size: 10px; color: var(--muted
 }
 .rune-option-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .rune-estimate { margin-left: 30px; color: var(--text-2); display: flex; flex-direction: column; gap: 3px; }
+.rune-periods { display: flex; flex-direction: column; gap: 4px; margin-left: 30px; }
+.rune-period { display: inline-flex; align-items: center; gap: 6px; }
+.rune-period input { width: 80px; }
+.period-start { display: inline-block; width: 80px; color: var(--text-2); padding-left: 6px; }
+.rune-periods .rune-estimate { margin-left: 0; }
 .rune-convert { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .rune-convert input { width: 80px; }
 .rune-convert .warn { color: var(--gold); }

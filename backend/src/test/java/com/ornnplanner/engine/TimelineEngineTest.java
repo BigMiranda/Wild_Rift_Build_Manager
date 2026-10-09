@@ -551,7 +551,7 @@ class TimelineEngineTest {
         in.itemIds = List.of(cheap.id);
         in.matchEnd = 20.0;
         // 2.05 activations per minute x 10 health -> 20.5 health per minute (410 over a 20:00 match).
-        in.runes.add(runes.toItem("Aperto dos Mortos-Vivos", null, -1, 2.05).orElseThrow());
+        in.runes.add(runes.toItem("Aperto dos Mortos-Vivos", null, -1, List.<double[]>of(new double[] {0, 2.05})).orElseThrow());
         in.runes.add(runes.toItem("Tempestade Crescente", null, -2).orElseThrow());
         TimelineResult r = new TimelineEngine(ref).run(in);
 
@@ -573,12 +573,28 @@ class TimelineEngineTest {
         g.xpPerMin = 0;
         g.itemIds = List.of(cheap.id);
         g.matchEnd = 20.0;
-        g.runes.add(runes.toItem("Crescimento Excessivo", null, -1, 3.0).orElseThrow());
+        g.runes.add(runes.toItem("Crescimento Excessivo", null, -1, List.<double[]>of(new double[] {0, 3})).orElseThrow());
         TimelineResult gr = new TimelineEngine(ref).run(g);
         java.util.function.DoubleFunction<Double> hp = m -> gr.series.stream()
                 .filter(p -> Math.abs(p.minute - m) < 1e-9).findFirst().orElseThrow().total.get(MAX_HEALTH);
         assertEquals(1000 + 81, hp.apply(9), EPS);                                  // 27 stacks, no bonus yet
         assertEquals((1000 + 90) * 1.03, hp.apply(10), 0.5);                        // 30 stacks: +3% of the total
+
+        // Periods: 4 stacks/min until 5:00 (farming), then 1/min (team fights) -> 20 stacks at 5:00, 30 at 15:00.
+        EngineInput p = new EngineInput();
+        p.unit = in.unit;
+        p.goldPerMin = 100;
+        p.xpPerMin = 0;
+        p.itemIds = List.of(cheap.id);
+        p.matchEnd = 20.0;
+        p.runes.add(runes.toItem("Crescimento Excessivo", null, -1,
+                List.<double[]>of(new double[] {5, 1}, new double[] {0, 4})).orElseThrow());   // any order
+        TimelineResult pr = new TimelineEngine(ref).run(p);
+        java.util.function.DoubleFunction<Double> hp2 = m -> pr.series.stream()
+                .filter(x -> Math.abs(x.minute - m) < 1e-9).findFirst().orElseThrow().total.get(MAX_HEALTH);
+        assertEquals(1000 + 60, hp2.apply(5), EPS);                                 // 20 stacks x 3
+        assertEquals(1000 + 3 * 29, hp2.apply(14), EPS);                            // 29 stacks, no bonus yet
+        assertEquals((1000 + 90) * 1.03, hp2.apply(15), 0.5);                       // 30 stacks at 15:00
     }
 
     @Test

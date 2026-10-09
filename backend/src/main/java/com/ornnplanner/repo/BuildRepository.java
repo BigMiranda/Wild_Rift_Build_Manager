@@ -60,6 +60,12 @@ public class BuildRepository {
         }
     }
 
+    /** From a game minute on (until the next period), so many activations / stacks per minute. */
+    public static class RatePeriod {
+        public double start;
+        public double perMinute;
+    }
+
     /** Gold earned at a game minute. */
     public static class GoldEvent {
         public double minute;
@@ -78,10 +84,39 @@ public class BuildRepository {
         public Map<String, Integer> options = new LinkedHashMap<>();
         /** Rune name -> count its conditional effects (default true). */
         public Map<String, Boolean> conditional = new LinkedHashMap<>();
-        /** Rune name -> activations / stacks per minute (runes that scale without limit). */
-        public Map<String, Double> rates = new LinkedHashMap<>();
-        /** Rune name -> how much each activation / stack is worth (default: the game's value). */
-        public Map<String, Double> perStack = new LinkedHashMap<>();
+        /**
+         * Rune name -> activations / stacks per minute, in periods (runes that scale without limit): each period
+         * from its start minute until the next one.
+         */
+        public Map<String, List<RatePeriod>> rates = new LinkedHashMap<>();
+
+        /** Reads the periods; a plain number (builds saved before periods existed) is one period from 0:00. */
+        @com.fasterxml.jackson.annotation.JsonSetter("rates")
+        public void readRates(Map<String, Object> raw) {
+            rates = new LinkedHashMap<>();
+            if (raw == null) {
+                return;
+            }
+            raw.forEach((rune, v) -> {
+                List<RatePeriod> list = new ArrayList<>();
+                if (v instanceof Number) {
+                    RatePeriod p = new RatePeriod();
+                    p.perMinute = ((Number) v).doubleValue();
+                    list.add(p);
+                } else if (v instanceof List) {
+                    for (Object o : (List<?>) v) {
+                        if (o instanceof Map) {
+                            Map<?, ?> m = (Map<?, ?>) o;
+                            RatePeriod p = new RatePeriod();
+                            p.start = m.get("start") instanceof Number ? ((Number) m.get("start")).doubleValue() : 0;
+                            p.perMinute = m.get("perMinute") instanceof Number ? ((Number) m.get("perMinute")).doubleValue() : 0;
+                            list.add(p);
+                        }
+                    }
+                }
+                rates.put(rune, list);
+            });
+        }
         /** Rune name -> gold it earned, at given minutes (runes that earn gold). */
         public Map<String, List<GoldEvent>> gold = new LinkedHashMap<>();
 
