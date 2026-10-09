@@ -20,6 +20,7 @@
 #   {Vamp}   ícone de Vampirismo Físico
 #   {Trein}  ícone de acúmulos de Treinamento Dracônico (Smolder)
 #   {nível}  losango branco: escala com o nível do campeão
+# forma_alternativa: habilidades que a Coleção não mostra (Jayce, Nidalee), complementadas da wiki oficial.
 # Só texto e tabelas por enquanto: nada disso entra no cálculo.
 patch: "7.3"
 campeoes:
@@ -2242,6 +2243,44 @@ campeoes:
         texto: |-
           Transforma o Martelo de Mercúrio no Canhão de Mercúrio, ganhando novas habilidades e ataques à distância.
           O próximo ataque com o Canhão de Mercúrio será fortalecido para causar 13 de Dano Mágico adicional (13 + 10% adicionais{DdA}) e reduzir a Armadura e a Resistência Mágica do alvo em 11% ({nível}) por 5s.
+    # Complemento da wiki oficial (wiki.leagueoflegends.com/en-us/WR:Jayce, dados até V6.3d; nomes em pt-BR podem
+    # diferir do jogo): a Coleção só mostra a forma Martelo.
+    forma_alternativa:
+      nome: Canhão de Mercúrio
+      fonte: wiki V6.3d
+      habilidades:
+        - nome: Explosão de Choque (Shock Blast)
+          tipos: [Físico]
+          recarga: 8
+          texto: |-
+            Dispara um raio elétrico que explode no primeiro inimigo ou no alcance máximo, causando 65 de Dano Físico (65 + 140%{DdA} adicional) e concedendo visão da área por 1,25s. Ao atravessar o Portão de Aceleração, o raio é supercarregado: +45% de dano, velocidade, alcance e raio de explosão (101,5 + 203%{DdA} adicional). Pode ser reconjurada antes ou durante o voo para conjurar o Portão de Aceleração.
+            Causa 80% de dano a tropas.
+          niveis:
+            Custo: [55, 60, 65, 70, 75]
+            Dano base: [65, 130, 195, 260, 325]
+            Dano supercarregado: [101.5, 203, 304.5, 406, 507.5]
+        - nome: Hipercarga (Hyper Charge)
+          tipos: [Físico, Fortalecimento]
+          recarga: 13
+          texto: |-
+            Fortalece os próximos 3 ataques em até 4s com 250% de Velocidade de Ataque adicional; cada um causa 70%{DdA} de Dano Físico. O dano é afetado por Acertos Críticos. Reinicia o ataque básico.
+          niveis:
+            Custo: [40, 40, 40, 40, 40]
+            Tempo de Recarga: [13, 11, 9, 7, 5]
+            DdA: [70%, 80%, 90%, 100%, 110%]
+        - nome: Portão de Aceleração (Acceleration Gate)
+          tipos: [Fortalecimento]
+          recarga: 14
+          texto: |-
+            Posiciona um portão por 4s que concede visão. Jayce e Campeões aliados que o atravessam recebem 35% de Velocidade de Movimento, que decai ao longo de 3s.
+          niveis:
+            Custo: [50, 50, 50, 50, 50]
+            VdM: [35%, 40%, 45%, 50%, 55%]
+        - nome: "Transformar: Martelo de Mercúrio"
+          tipos: [Fortalecimento]
+          recarga: 5
+          texto: |-
+            Volta à forma Martelo (corpo a corpo, 125 de alcance), recebendo 16%–30% de Velocidade de Ataque ({nível}) e 5–33 de Armadura e Resistência Mágica ({nível}) (+ 9%{DdA} adicional). O próximo ataque causa 28–140 de Dano Mágico adicional ({nível}) (+ 25%{DdA} adicional) e afeta estruturas.
   Jhin:
     titulo: O Virtuoso
     passiva:
@@ -3941,6 +3980,38 @@ campeoes:
           – Na Forma de Puma, o dano de habilidade básica de Nidalee escala com o nível desta habilidade, e ela ganha 3 de Armadura e Resistência Mágica (2 + (1 × {nível}) + 2,5%{PdH}) adicionais.
           Forma Humana (Ativo): assume a Forma de Puma, só podendo realizar ataques corpo a corpo e recebendo novas habilidades ativas.
           Forma de Puma (Ativo): assume a Forma Humana, podendo atacar à distância e recebendo novas habilidades ativas.
+    # Complemento da wiki oficial (wiki.leagueoflegends.com/en-us/WR:Nidalee, dados até V7.0a; nomes em pt-BR podem
+    # diferir do jogo): a Coleção só mostra a Forma Humana. Os níveis acompanham o Aspecto do Puma (níveis 1/6/11/16).
+    forma_alternativa:
+      nome: Forma de Puma
+      fonte: wiki V7.0a
+      habilidades:
+        - nome: Abate (Takedown)
+          tipos: [Mágico]
+          recarga: 6
+          texto: |-
+            Fortalece o próximo ataque em até 10s: +75 de alcance e Dano Mágico que cresce com a Vida perdida do alvo, de 5 (5 + 75%{DdA} + 40%{PdH}) a 10 (10 + 150%{DdA} + 80%{PdH}). Contra alvos marcados como Caça, causa 30% a mais. Pode causar Acerto Crítico. Reinicia o ataque básico.
+          niveis:
+            Dano Mín.: [5, 30, 55, 80]
+            Dano Máx.: [10, 67.5, 137.5, 220]
+            Dano Máx. DdA: [150%, 168.75%, 187.5%, 206.25%]
+            Dano Máx. PdH: [80%, 90%, 100%, 110%]
+        - nome: Bote (Pounce)
+          tipos: [Mágico, Mobilidade]
+          recarga: 6
+          texto: |-
+            Salta na direção-alvo e causa 55 de Dano Mágico (55 + 50%{DdA} adicional + 30%{PdH}) aos inimigos próximos ao aterrissar. Pode ser conjurado de mais longe (750) sobre um alvo marcado como Caça, estendendo a marca em 1,5s.
+            Passivo: abater um inimigo na Forma de Puma ou usar o bônus de Caça reduz o Tempo de Recarga ao mínimo.
+          niveis:
+            Dano base: [55, 100, 145, 190]
+            Tempo de Recarga reduzido: [3, 2.5, 2, 1.5]
+        - nome: Golpe (Swipe)
+          tipos: [Mágico]
+          recarga: 6
+          texto: |-
+            Golpeia em um arco de 180° à frente, causando 70 de Dano Mágico (70 + 70%{DdA} adicional + 55%{PdH}).
+          niveis:
+            Dano base: [70, 130, 190, 250]
   Nilah:
     titulo: A Alegria Irrestrita
     passiva:
