@@ -21,11 +21,26 @@
 #   {Trein}  ícone de acúmulos de Treinamento Dracônico (Smolder)
 #   {nível}  losango branco: escala com o nível do campeão
 # forma_alternativa: habilidades que a Coleção não mostra (Jayce, Nidalee), complementadas da wiki oficial.
+#
+# status: lido no modo Treino (placar > 3ª aba) em 10/10/2026, sem itens, com "Atualizar estado" (vida cheia):
+#   nv1 / nv15: valores no nível 1 e no nível 15 (Redefinir nível / Subir de nível). Vida e Mana são os máximos;
+#     VdA em ataques/s; Crit, Tenacidade, Vamp*, Pen*% em %; só aparecem os status extras diferentes de zero
+#     (passivas como a Taxa de Crítico do Tryndamere ou o Vampirismo do Nasus).
+#   VdM: medida fora da base (na fonte o jogo soma um bônus grande); não muda com o nível, salvo passivas (Rammus).
+#   recurso: Mana, Energia, Fúria...; "máx." quando a barra tem um máximo fixo (Mana cresce por nível, fica em nv*).
+#   A página de runas padrão de cada campeão altera o painel; o efeito destas foi descontado (comentário no bloco):
+#     Transcendência (+5 AH no nível 1, +10 no 15), Foco Absoluto (+4/+40 PdH ou +2/+20 DdA com vida alta),
+#     Perseverança (+10% Tenacidade), Lenda: Linhagem (+1% Vampirismo Universal) e Lenda: Espontaneidade (+3% de VdA;
+#     a base é estimada como VdA / 1,03, ±0,01). As demais estavam zeradas (dependem de abates, acúmulos ou tempo).
 # Só texto e tabelas por enquanto: nada disso entra no cálculo.
 patch: "7.3"
 campeoes:
   Aatrox:
     titulo: A Espada Darkin
+    status:
+      VdM: 355
+      nv1: {DdA: 62, PdH: 0, Vida: 630, Armadura: 48, RM: 38, VdA: 0.74, AH: 0, RegVida: 11}
+      nv15: {DdA: 139, PdH: 0, Vida: 2534, Armadura: 120, RM: 66, VdA: 0.93, AH: 0, RegVida: 25}
     passiva:
       nome: Postura do Arauto da Morte
       tipos: [Passivo]
@@ -79,6 +94,12 @@ campeoes:
           VdM: [60%, 75%, 90%]
   Ahri:
     titulo: A Raposa de Nove Caudas
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 52, PdH: 0, Vida: 630, Mana: 435, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 18}
+      nv15: {DdA: 103, PdH: 0, Vida: 2310, Mana: 1121, Armadura: 97, RM: 53, VdA: 0.92, AH: 0, RegVida: 18, RegMana: 34}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Furto de Essência
       tipos: [Passivo, Cura]
@@ -125,6 +146,11 @@ campeoes:
           Dano base: [60, 90, 120]
   Akali:
     titulo: A Assassina Renegada
+    status:
+      recurso: Energia  # máx. 200
+      VdM: 355
+      nv1: {DdA: 64, PdH: 0, Vida: 630, Armadura: 34, RM: 38, VdA: 0.80, AH: 0, RegVida: 10}
+      nv15: {DdA: 128, PdH: 0, Vida: 2730, Armadura: 111, RM: 66, VdA: 0.97, AH: 0, RegVida: 22}
     passiva:
       nome: Marca do Assassino
       tipos: [Passivo, Mágico]
@@ -174,6 +200,12 @@ campeoes:
           Segundo Dano: [70, 140, 210]
   Akshan:
     titulo: O Sentinela Rebelde
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 52, PdH: 0, Vida: 630, Mana: 390, Armadura: 35, RM: 30, VdA: 0.67, AH: 0, RegVida: 9, RegMana: 15}
+      nv15: {DdA: 115, PdH: 0, Vida: 2422, Mana: 1076, Armadura: 105, RM: 50, VdA: 0.89, AH: 0, RegVida: 19, RegMana: 28}
+      # runas da página padrão descontadas: Lenda: Linhagem
     passiva:
       nome: Lutando Sujo
       tipos: [Passivo, Fortalecimento]
@@ -233,6 +265,11 @@ campeoes:
           Dano Máx.: [75, 105, 135]
   Alistar:
     titulo: O Minotauro
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 58, PdH: 0, Vida: 700, Mana: 345, Armadura: 54, RM: 40, VdA: 0.75, AH: 0, RegVida: 14, RegMana: 12}
+      nv15: {DdA: 109, PdH: 0, Vida: 2716, Mana: 919, Armadura: 122, RM: 68, VdA: 0.85, AH: 0, RegVida: 26, RegMana: 22}
     passiva:
       nome: Urro Triunfante
       tipos: [Passivo, Cura]
@@ -281,6 +318,11 @@ campeoes:
           Redução de Dano: [55%, 65%, 75%]
   Ambessa:
     titulo: A Matriarca da Guerra
+    status:
+      recurso: Energia  # máx. 200
+      VdM: 355
+      nv1: {DdA: 58, PdH: 0, Vida: 660, Armadura: 45, RM: 38, VdA: 0.80, AH: 0, RegVida: 8}
+      nv15: {DdA: 121, PdH: 0, Vida: 2340, Armadura: 110, RM: 66, VdA: 0.90, AH: 0, RegVida: 20}
     passiva:
       nome: Passo do Cão-dragão
       tipos: [Passivo, Mobilidade]
@@ -342,6 +384,11 @@ campeoes:
           Vampirismo de Habilidade: [12.5%, 15%, 17.5%]
   Amumu:
     titulo: A Múmia Triste
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 52, PdH: 0, Vida: 690, Mana: 390, Armadura: 42, RM: 40, VdA: 0.80, AH: 0, RegVida: 9, RegMana: 15}
+      nv15: {DdA: 103, PdH: 0, Vida: 2286, Mana: 1300, Armadura: 109, RM: 68, VdA: 1.01, AH: 0, RegVida: 21, RegMana: 25}
     passiva:
       nome: Toque Amaldiçoado
       tipos: [Passivo, Verdadeiro]
@@ -389,6 +436,12 @@ campeoes:
           Dano base: [150, 250, 350]
   Annie:
     titulo: A Criança Sombria
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 52, PdH: 0, Vida: 600, Mana: 435, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 90, PdH: 0, Vida: 2280, Mana: 1233, Armadura: 97, RM: 53, VdA: 0.80, AH: 0, RegVida: 16, RegMana: 28}
+      # runas da página padrão descontadas: Foco Absoluto
     passiva:
       nome: Piromania
       tipos: [Passivo, Controle]
@@ -433,6 +486,12 @@ campeoes:
           Segundo Dano: [110, 150, 190]
   Ashe:
     titulo: A Arqueira do Gelo
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 60, PdH: 0, Vida: 630, Mana: 345, Armadura: 35, RM: 30, VdA: 0.81, AH: 0, RegVida: 6, RegMana: 9}
+      nv15: {DdA: 116, PdH: 0, Vida: 2422, Mana: 807, Armadura: 98, RM: 50, VdA: 1.09, AH: 0, RegVida: 14, RegMana: 19}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Tiro Congelado
       tipos: [Passivo, Lentidão]
@@ -481,6 +540,12 @@ campeoes:
           Dano base: [200, 350, 500]
   Aurelion Sol:
     titulo: O Forjador de Estrelas
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 52, PdH: 0, Vida: 630, Mana: 435, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 9}
+      nv15: {DdA: 90, PdH: 0, Vida: 2422, Mana: 1233, Armadura: 97, RM: 53, VdA: 0.78, AH: 0, RegVida: 18, RegMana: 25}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Criador Cósmico
       tipos: [Passivo, Fortalecimento]
@@ -542,6 +607,11 @@ campeoes:
           Dano base (3): [150, 250, 350]
   Aurora:
     titulo: A Bruxa Entre Mundos
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 54, PdH: 0, Vida: 630, Mana: 420, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 14}
+      nv15: {DdA: 103, PdH: 0, Vida: 2478, Mana: 1120, Armadura: 97, RM: 64, VdA: 0.93, AH: 0, RegVida: 20, RegMana: 26}
     passiva:
       nome: Abjuração Espiritual
       tipos: [Cura]
@@ -594,6 +664,11 @@ campeoes:
           Duração da Lentidão da área de convergência: [1.5, 1.75, 2]
   Bardo:
     titulo: O Protetor Andarilho
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 54, PdH: 0, Vida: 660, Mana: 380, Armadura: 40, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 10}
+      nv15: {DdA: 103, PdH: 0, Vida: 2340, Mana: 1080, Armadura: 117, RM: 57, VdA: 0.89, AH: 0, RegVida: 20, RegMana: 19}
     passiva:
       nome: Chamado do Viajante
       tipos: [Passivo, Fortalecimento]
@@ -649,6 +724,12 @@ campeoes:
           Tempo de Recarga: [75, 65, 55]
   Blitzcrank:
     titulo: O Grande Golem a Vapor
+    status:
+      recurso: Mana
+      VdM: 343
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 300, Armadura: 45, RM: 38, VdA: 0.75, AH: 0, RegVida: 9, RegMana: 12}
+      nv15: {DdA: 86, PdH: 0, Vida: 2520, Mana: 874, Armadura: 117, RM: 66, VdA: 0.80, AH: 0, RegVida: 21, RegMana: 28}
+      # runas da página padrão descontadas: Perseverança
     passiva:
       nome: Barreira de Mana
       tipos: [Passivo, Fortalecimento]
@@ -694,6 +775,12 @@ campeoes:
           Dano da Ativa: [275, 400, 525]
   Brand:
     titulo: A Vingança Flamejante
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 435, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 109, PdH: 0, Vida: 2310, Mana: 1121, Armadura: 97, RM: 53, VdA: 0.91, AH: 0, RegVida: 16, RegMana: 25}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Labareda
       tipos: [Passivo, Mágico]
@@ -744,6 +831,12 @@ campeoes:
           Redução de Velocidade: [30%, 40%, 50%]
   Braum:
     titulo: O Coração de Freljord
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 380, Armadura: 46, RM: 38, VdA: 0.75, AH: 0, RegVida: 14, RegMana: 12}
+      nv15: {DdA: 109, PdH: 0, Vida: 2534, Mana: 1066, Armadura: 118, RM: 66, VdA: 1.02, AH: 0, RegVida: 29, RegMana: 28}
+      # runas da página padrão descontadas: Perseverança
     passiva:
       nome: Golpes Concussivos
       tipos: [Passivo, Controle]
@@ -796,6 +889,12 @@ campeoes:
           Duração do arremesso ao ar: [1, 1.25, 1.5]
   Caitlyn:
     titulo: A Xerife de Piltover
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 60, PdH: 0, Vida: 600, Mana: 345, Armadura: 35, RM: 30, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 12}
+      nv15: {DdA: 119, PdH: 0, Vida: 2392, Mana: 919, Armadura: 98, RM: 50, VdA: 0.97, AH: 0, RegVida: 14, RegMana: 22}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Bem na Mira
       tipos: [Passivo, Físico]
@@ -847,6 +946,12 @@ campeoes:
           Alcance: [1750, 2250, 2750]
   Camille:
     titulo: A Sombra de Aço
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 62, PdH: 0, Vida: 660, Mana: 390, Armadura: 46, RM: 38, VdA: 0.80, AH: 0, RegVida: 11, RegMana: 15}
+      nv15: {DdA: 126, PdH: 0, Vida: 2508, Mana: 852, Armadura: 112, RM: 66, VdA: 0.94, AH: 0, RegVida: 21, RegMana: 28}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Defesa Adaptativa
       tipos: [Passivo, Fortalecimento]
@@ -898,6 +1003,11 @@ campeoes:
           Duração da Zona: [2, 2.5, 3]
   Cho'Gath:
     titulo: O Terror do Vazio
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 62, PdH: 0, Vida: 690, Mana: 380, Armadura: 46, RM: 40, VdA: 0.80, AH: 0, RegVida: 13, RegMana: 12}
+      nv15: {DdA: 118, PdH: 0, Vida: 2482, Mana: 1080, Armadura: 109, RM: 68, VdA: 0.87, AH: 0, RegVida: 25, RegMana: 24}
     passiva:
       nome: Carnívoro
       tipos: [Passivo]
@@ -956,6 +1066,12 @@ campeoes:
           Alcance de Ataque: [4.7, 6.2, 7.7]
   Corki:
     titulo: O Bombardeiro Ousado
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 54, PdH: 0, Vida: 600, Mana: 435, Armadura: 35, RM: 30, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 9}
+      nv15: {DdA: 89, PdH: 0, Vida: 2392, Mana: 1135, Armadura: 105, RM: 50, VdA: 1.04, AH: 0, RegVida: 14, RegMana: 19}
+      # runas da página padrão descontadas: Lenda: Linhagem
     passiva:
       nome: Munição Hextec
       tipos: [Passivo, Verdadeiro]
@@ -1003,6 +1119,12 @@ campeoes:
           Dano Fortalecido: [140, 210, 280]
   Darius:
     titulo: A Mão de Noxus
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 70, PdH: 0, Vida: 660, Mana: 345, Armadura: 47, RM: 40, VdA: 0.73, AH: 0, RegVida: 13, RegMana: 9}
+      nv15: {DdA: 147, PdH: 0, Vida: 2732, Mana: 919, Armadura: 120, RM: 68, VdA: 0.80, AH: 0, RegVida: 24, RegMana: 16}
+      # runas da página padrão descontadas: Perseverança
     passiva:
       nome: Hemorragia
       tipos: [Passivo, Físico]
@@ -1051,6 +1173,11 @@ campeoes:
           Dano base: [125, 250, 375]
   Diana:
     titulo: O Escárnio da Lua
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 52, PdH: 0, Vida: 630, Mana: 435, Armadura: 40, RM: 38, VdA: 0.80, AH: 0, RegVida: 9, RegMana: 12}
+      nv15: {DdA: 103, PdH: 0, Vida: 2590, Mana: 1009, Armadura: 110, RM: 66, VdA: 0.88, AH: 0, RegVida: 21, RegMana: 28}
     passiva:
       nome: Espada de Prata Lunar
       tipos: [Passivo, Mágico]
@@ -1099,6 +1226,10 @@ campeoes:
           Dano base (2): [200, 320, 440]
   Dr. Mundo:
     titulo: O Louco de Zaun
+    status:
+      VdM: 355
+      nv1: {DdA: 58, PdH: 0, Vida: 680, Armadura: 42, RM: 40, VdA: 0.80, AH: 0, RegVida: 21}
+      nv15: {DdA: 122, PdH: 0, Vida: 2360, Armadura: 98, RM: 68, VdA: 1.04, AH: 0, RegVida: 71}
     passiva:
       nome: Vai Para Onde Quer
       tipos: [Passivo, Fortalecimento]
@@ -1154,6 +1285,12 @@ campeoes:
           Vida: [25%, 30%, 35%]
   Draven:
     titulo: O Carrasco de Noxus
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 66, PdH: 0, Vida: 650, Mana: 480, Armadura: 35, RM: 30, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 15}
+      nv15: {DdA: 120, PdH: 0, Vida: 2498, Mana: 1390, Armadura: 105, RM: 50, VdA: 1.04, AH: 0, RegVida: 18, RegMana: 31}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: League of Draven
       tipos: [Passivo, Fortalecimento]
@@ -1205,6 +1342,11 @@ campeoes:
           Dano base: [200, 300, 400]
   Ekko:
     titulo: O Rapaz que Estilhaçou o Tempo
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 58, PdH: 0, Vida: 650, Mana: 390, Armadura: 40, RM: 38, VdA: 0.80, AH: 0, RegVida: 9, RegMana: 12}
+      nv15: {DdA: 109, PdH: 0, Vida: 2414, Mana: 1188, Armadura: 96, RM: 66, VdA: 1.07, AH: 0, RegVida: 21, RegMana: 28}
     passiva:
       nome: Ressonância Revo-Z
       tipos: [Passivo, Fortalecimento]
@@ -1256,6 +1398,11 @@ campeoes:
           Dano base: [200, 350, 500]
   Evelynn:
     titulo: Abraço da Agonia
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 64, PdH: 0, Vida: 630, Mana: 345, Armadura: 45, RM: 38, VdA: 0.80, AH: 0, RegVida: 11, RegMana: 15}
+      nv15: {DdA: 115, PdH: 0, Vida: 2422, Mana: 1031, Armadura: 115, RM: 66, VdA: 0.91, AH: 0, RegVida: 21, RegMana: 25}
     passiva:
       nome: Sombra Demoníaca
       tipos: [Passivo]
@@ -1307,6 +1454,12 @@ campeoes:
           Dano base: [150, 260, 370]
   Ezreal:
     titulo: O Explorador Pródigo
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 60, PdH: 0, Vida: 600, Mana: 390, Armadura: 34, RM: 30, VdA: 0.80, AH: 0, RegVida: 6, RegMana: 9}
+      nv15: {DdA: 123, PdH: 0, Vida: 2280, Mana: 1076, Armadura: 104, RM: 50, VdA: 0.99, AH: 0, RegVida: 16, RegMana: 22}
+      # runas da página padrão descontadas: Lenda: Linhagem
     passiva:
       nome: Feitiço do Poder Crescente
       tipos: [Passivo, Fortalecimento]
@@ -1354,6 +1507,12 @@ campeoes:
           Dano base: [300, 500, 700]
   Fiddlesticks:
     titulo: O Terror Ancestral
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 420, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 14}
+      nv15: {DdA: 93, PdH: 0, Vida: 2310, Mana: 1120, Armadura: 97, RM: 53, VdA: 0.85, AH: 0, RegVida: 17, RegMana: 28}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Um Espantalho Inofensivo
       tipos: [Passivo, Controle]
@@ -1411,6 +1570,11 @@ campeoes:
           Dano base: [30, 50, 70]
   Fiora:
     titulo: A Grande Duelista
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 70, PdH: 0, Vida: 630, Mana: 300, Armadura: 42, RM: 38, VdA: 0.80, AH: 0, RegVida: 14, RegMana: 9}
+      nv15: {DdA: 134, PdH: 0, Vida: 2450, Mana: 986, Armadura: 110, RM: 66, VdA: 1.05, AH: 0, RegVida: 24, RegMana: 22}
     passiva:
       nome: Dança da Duelista
       tipos: [Passivo, Verdadeiro]
@@ -1461,6 +1625,11 @@ campeoes:
           Redução de tempo por revelar Pontos Vitais: [0.25, 0.5, 0.75]
   Fizz:
     titulo: O Trapaceiro das Marés
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 345, Armadura: 30, RM: 38, VdA: 0.80, AH: 0, RegVida: 8, RegMana: 18}
+      nv15: {DdA: 109, PdH: 0, Vida: 2590, Mana: 1031, Armadura: 100, RM: 66, VdA: 1.01, AH: 0, RegVida: 18, RegMana: 31}
     passiva:
       nome: Tridente da Pedra do Mar
       tipos: [Passivo, Mágico]
@@ -1510,6 +1679,11 @@ campeoes:
           Dano Máx.: [300, 400, 500]
   Galio:
     titulo: O Colosso
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 435, Armadura: 40, RM: 44, VdA: 1.05, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 109, PdH: 0, Vida: 2702, Mana: 897, Armadura: 103, RM: 72, VdA: 1.11, AH: 0, RegVida: 19, RegMana: 22}
     passiva:
       nome: Esmagada Colossal
       tipos: [Passivo, Mágico]
@@ -1560,6 +1734,10 @@ campeoes:
           Dano base: [150, 250, 350]
   Garen:
     titulo: O Poder de Demacia
+    status:
+      VdM: 350
+      nv1: {DdA: 64, PdH: 0, Vida: 690, Armadura: 44, RM: 38, VdA: 0.80, AH: 0, RegVida: 8}
+      nv15: {DdA: 141, PdH: 0, Vida: 2482, Armadura: 114, RM: 75, VdA: 1.01, AH: 0, RegVida: 16}
     passiva:
       nome: Perseverança
       tipos: [Passivo]
@@ -1609,6 +1787,12 @@ campeoes:
           Dano base: [150, 250, 350]
   Gnar:
     titulo: O Yordle Pré-Histórico
+    status:
+      recurso: Fúria
+      VdM: 335
+      nv1: {DdA: 70, PdH: 0, Vida: 700, Armadura: 48, RM: 37, VdA: 0.75, AH: 0, RegVida: 6}
+      nv15: {DdA: 161, PdH: 0, Vida: 2732, Armadura: 152, RM: 130, VdA: 0.88, AH: 0, RegVida: 20}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Fúria Genética
       tipos: [Passivo, Fortalecimento]
@@ -1676,6 +1860,12 @@ campeoes:
           Duração de Atordoamento: [1.25, 1.5, 1.75]
   Gragas:
     titulo: O Badernista
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 70, PdH: 0, Vida: 660, Mana: 390, Armadura: 46, RM: 38, VdA: 0.80, AH: 0, RegVida: 6, RegMana: 15}
+      nv15: {DdA: 121, PdH: 0, Vida: 2620, Mana: 1188, Armadura: 107, RM: 66, VdA: 0.91, AH: 0, RegVida: 16, RegMana: 28}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Happy Hour
       tipos: [Passivo, Fortalecimento]
@@ -1725,6 +1915,12 @@ campeoes:
           Dano base: [200, 300, 400]
   Graves:
     titulo: O Foragido
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 66, PdH: 0, Vida: 630, Mana: 390, Armadura: 35, RM: 40, VdA: 0.81, AH: 0, RegVida: 11, RegMana: 12}
+      nv15: {DdA: 117, PdH: 0, Vida: 2534, Mana: 1076, Armadura: 98, RM: 68, VdA: 1.01, AH: 0, RegVida: 24, RegMana: 25}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Novo Destino
       tipos: [Passivo]
@@ -1776,6 +1972,11 @@ campeoes:
           Segundo Dano: [200, 320, 440]
   Gwen:
     titulo: A Costureira Encantada
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 58, PdH: 0, Vida: 640, Mana: 345, Armadura: 50, RM: 40, VdA: 0.80, AH: 0, RegVida: 16, RegMana: 12}
+      nv15: {DdA: 109, PdH: 0, Vida: 2544, Mana: 919, Armadura: 118, RM: 68, VdA: 1.05, AH: 0, RegVida: 26, RegMana: 25}
     passiva:
       nome: Mil Retalhos
       tipos: [Passivo, Mágico]
@@ -1826,6 +2027,12 @@ campeoes:
           Redução de Velocidade: [35%, 40%, 45%]
   Hecarim:
     titulo: A Sombra da Guerra
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 69, PdH: 0, Vida: 630, Mana: 380, Armadura: 44, RM: 38, VdA: 0.80, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 140, PdH: 0, Vida: 2450, Mana: 1178, Armadura: 122, RM: 66, VdA: 0.95, AH: 0, RegVida: 20, RegMana: 28}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Caminho da Guerra
       tipos: [Passivo, Fortalecimento]
@@ -1875,6 +2082,12 @@ campeoes:
           Dano base: [150, 250, 350]
   Heimerdinger:
     titulo: O Inventor Idolatrado
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 54, PdH: 0, Vida: 600, Mana: 420, Armadura: 34, RM: 40, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 103, PdH: 0, Vida: 2280, Mana: 1260, Armadura: 104, RM: 57, VdA: 0.84, AH: 0, RegVida: 17, RegMana: 29}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Afinidade Hextec
       tipos: [Passivo, Fortalecimento]
@@ -1931,6 +2144,12 @@ campeoes:
           Tempo de Recarga: [80, 70, 60]
   Hwei:
     titulo: O Visionário
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 54, PdH: 0, Vida: 630, Mana: 480, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 103, PdH: 0, Vida: 2310, Mana: 1180, Armadura: 97, RM: 53, VdA: 0.98, AH: 0, RegVida: 17, RegMana: 26}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Assinatura do Visionário
       tipos: [Passivo, Mágico]
@@ -1999,6 +2218,12 @@ campeoes:
           Dano base (2): [200, 300, 400]
   Irelia:
     titulo: A Dançarina das Lâminas
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 58, PdH: 0, Vida: 660, Mana: 345, Armadura: 46, RM: 38, VdA: 0.80, AH: 0, RegVida: 9, RegMana: 15}
+      nv15: {DdA: 122, PdH: 0, Vida: 2592, Mana: 807, Armadura: 116, RM: 66, VdA: 0.95, AH: 0, RegVida: 23, RegMana: 25}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Fervor Ioniano
       tipos: [Passivo, Fortalecimento]
@@ -2052,6 +2277,12 @@ campeoes:
           Dano adicional: [100, 225, 350]
   Janna:
     titulo: A Fúria da Tormenta
+    status:
+      recurso: Mana
+      VdM: 357
+      nv1: {DdA: 52, PdH: 0, Vida: 630, Mana: 435, Armadura: 45, RM: 30, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 21}
+      nv15: {DdA: 90, PdH: 0, Vida: 2086, Mana: 1233, Armadura: 106, RM: 47, VdA: 0.94, AH: 0, RegVida: 14, RegMana: 31}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Brisa de Impulso
       tipos: [Passivo, Fortalecimento]
@@ -2097,6 +2328,12 @@ campeoes:
           Cura: [50, 75, 100]
   Jarvan IV:
     titulo: O Exemplo de Demacia
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 58, PdH: 0, Vida: 660, Mana: 390, Armadura: 48, RM: 40, VdA: 0.80, AH: 0, RegVida: 12, RegMana: 12}
+      nv15: {DdA: 128, PdH: 0, Vida: 2480, Mana: 964, Armadura: 110, RM: 68, VdA: 0.95, AH: 0, RegVida: 22, RegMana: 22}
+      # runas da página padrão descontadas: Perseverança
     passiva:
       nome: Cadência Marcial
       tipos: [Passivo, Físico]
@@ -2149,6 +2386,12 @@ campeoes:
           Redução de Dano: [12%, 16%, 20%]
   Jax:
     titulo: O Grão-Mestre das Armas
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 58, PdH: 0, Vida: 660, Mana: 390, Armadura: 44, RM: 38, VdA: 0.73, AH: 0, RegVida: 12, RegMana: 12}
+      nv15: {DdA: 122, PdH: 0, Vida: 2480, Mana: 1188, Armadura: 107, RM: 66, VdA: 1.00, AH: 0, RegVida: 22, RegMana: 25}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Investida Implacável
       tipos: [Passivo, Fortalecimento]
@@ -2200,6 +2443,11 @@ campeoes:
           Resistência Mágica (2): [9, 12, 15]
   Jayce:
     titulo: O Defensor do Amanhã
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 62, PdH: 0, Vida: 650, Mana: 420, Armadura: 53, RM: 37, VdA: 0.91, AH: 0, RegVida: 10, RegMana: 12}
+      nv15: {DdA: 126, PdH: 0, Vida: 2442, Mana: 1218, Armadura: 154, RM: 86, VdA: 1.19, AH: 0, RegVida: 24, RegMana: 22}
     # A Coleção só mostra as habilidades da forma Martelo de Mercúrio (as do canhão não aparecem); 5 níveis.
     passiva:
       nome: Capacitor Hextec
@@ -2283,6 +2531,12 @@ campeoes:
             Volta à forma Martelo (corpo a corpo, 125 de alcance), recebendo 16%–30% de Velocidade de Ataque ({nível}) e 5–33 de Armadura e Resistência Mágica ({nível}) (+ 9%{DdA} adicional). O próximo ataque causa 28–140 de Dano Mágico adicional ({nível}) (+ 25%{DdA} adicional) e afeta estruturas.
   Jhin:
     titulo: O Virtuoso
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 63, PdH: 0, Vida: 630, Mana: 390, Armadura: 35, RM: 30, VdA: 0.64, AH: 0, RegVida: 6, RegMana: 9}
+      nv15: {DdA: 190, PdH: 0, Vida: 2422, Mana: 1188, Armadura: 98, RM: 50, VdA: 0.92, AH: 0, RegVida: 14, RegMana: 25}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Sussurro
       tipos: [Passivo]
@@ -2334,6 +2588,12 @@ campeoes:
           Dano base: [75, 150, 225]
   Jinx:
     titulo: O Gatilho Desenfreado
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 345, Armadura: 35, RM: 30, VdA: 0.81, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 114, PdH: 0, Vida: 2310, Mana: 1031, Armadura: 105, RM: 50, VdA: 0.99, AH: 0, RegVida: 16, RegMana: 31}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Anime-se!
       tipos: [Passivo, Fortalecimento]
@@ -2389,6 +2649,12 @@ campeoes:
           Dano por % de Vida: [25%, 30%, 35%]
   Kai'Sa:
     titulo: A Filha do Vazio
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 59, PdH: 0, Vida: 600, Mana: 435, Armadura: 35, RM: 30, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 15}
+      nv15: {DdA: 108, PdH: 0, Vida: 2392, Mana: 1009, Armadura: 91, RM: 50, VdA: 0.95, AH: 0, RegVida: 14, RegMana: 25}
+      # runas da página padrão descontadas: Lenda: Linhagem
     passiva:
       nome: Segunda Pele
       tipos: [Mágico, Passivo]
@@ -2444,6 +2710,12 @@ campeoes:
           DdA: [80%, 120%, 160%]
   Kalista:
     titulo: A Lança da Vingança
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 57, PdH: 0, Vida: 630, Mana: 340, Armadura: 34, RM: 32, VdA: 0.81, AH: 0, RegVida: 6, RegMana: 10}
+      nv15: {DdA: 130, PdH: 0, Vida: 2422, Mana: 1040, Armadura: 97, RM: 52, VdA: 1.25, AH: 0, RegVida: 15, RegMana: 22}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Aprumo Marcial
       tipos: [Passivo, Mobilidade]
@@ -2501,6 +2773,11 @@ campeoes:
           Duração do arremesso ao ar: [1, 1.5, 2]
   Karma:
     titulo: A Iluminada
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 390, Armadura: 37, RM: 36, VdA: 0.75, AH: 0, RegVida: 9, RegMana: 21}
+      nv15: {DdA: 109, PdH: 0, Vida: 2422, Mana: 1188, Armadura: 107, RM: 53, VdA: 0.87, AH: 0, RegVida: 19, RegMana: 37}
     passiva:
       nome: Mantra
       tipos: [Passivo, Fortalecimento]
@@ -2552,6 +2829,12 @@ campeoes:
           Dano base: [170, 280, 390]
   Kassadin:
     titulo: O Andarilho do Vazio
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 58, PdH: 0, Vida: 650, Mana: 480, Armadura: 30, RM: 38, VdA: 0.80, AH: 0, RegVida: 9, RegMana: 15}
+      nv15: {DdA: 122, PdH: 0, Vida: 2498, Mana: 1390, Armadura: 93, RM: 66, VdA: 1.04, AH: 0, RegVida: 21, RegMana: 34}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Pedra do Vazio
       tipos: [Passivo]
@@ -2596,6 +2879,10 @@ campeoes:
           Dano base: [80, 100, 120]
   Katarina:
     titulo: A Lâmina Sinistra
+    status:
+      VdM: 345
+      nv1: {DdA: 58, PdH: 0, Vida: 660, Armadura: 34, RM: 38, VdA: 0.80, AH: 0, RegVida: 8}
+      nv15: {DdA: 109, PdH: 0, Vida: 2564, Armadura: 104, RM: 66, VdA: 0.97, AH: 0, RegVida: 19}
     passiva:
       nome: Voracidade
       tipos: [Passivo, Mágico]
@@ -2640,6 +2927,11 @@ campeoes:
           Dano base: [400, 600, 800]
   Kayle:
     titulo: A Justa
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 54, PdH: 0, Vida: 630, Mana: 345, Armadura: 39, RM: 38, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 16}
+      nv15: {DdA: 96, PdH: 0, Vida: 2198, Mana: 919, Armadura: 103, RM: 55, VdA: 1.01, AH: 0, RegVida: 16, RegMana: 26}
     passiva:
       nome: Ascensão Divina
       tipos: [Passivo]
@@ -2692,6 +2984,11 @@ campeoes:
           Dano base: [150, 225, 300]
   Kayn:
     titulo: O Ceifador das Sombras
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 70, PdH: 0, Vida: 630, Mana: 420, Armadura: 42, RM: 38, VdA: 0.80, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 126, PdH: 0, Vida: 2422, Mana: 1260, Armadura: 114, RM: 66, VdA: 0.97, AH: 0, RegVida: 20, RegMana: 26}
     passiva:
       nome: A Foice Darkin
       tipos: [Passivo]
@@ -2748,6 +3045,11 @@ campeoes:
           Dano base: [200, 300, 400]
   Kennen:
     titulo: O Coração da Tempestade
+    status:
+      recurso: Energia  # máx. 200
+      VdM: 355
+      nv1: {DdA: 62, PdH: 0, Vida: 600, Armadura: 46, RM: 36, VdA: 0.75, AH: 0, RegVida: 8}
+      nv15: {DdA: 113, PdH: 0, Vida: 2420, Armadura: 116, RM: 53, VdA: 1.02, AH: 0, RegVida: 18}
     passiva:
       nome: Marca da Tormenta
       tipos: [Passivo, Controle]
@@ -2799,6 +3101,11 @@ campeoes:
           Dano base: [20, 55, 90]
   Kha'Zix:
     titulo: O Ceifador do Vazio
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 58, PdH: 0, Vida: 640, Mana: 390, Armadura: 40, RM: 38, VdA: 0.80, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 122, PdH: 0, Vida: 2432, Mana: 1076, Armadura: 103, RM: 66, VdA: 0.97, AH: 0, RegVida: 18, RegMana: 25}
     passiva:
       nome: Ameaça Invisível
       tipos: [Passivo, Mágico]
@@ -2846,6 +3153,12 @@ campeoes:
           Tempo de Recarga: [75, 65, 55]
   Kindred:
     titulo: Os Caçadores Eternos
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 62, PdH: 0, Vida: 630, Mana: 340, Armadura: 37, RM: 32, VdA: 0.80, AH: 0, RegVida: 14, RegMana: 12}
+      nv15: {DdA: 104, PdH: 0, Vida: 2422, Mana: 900, Armadura: 107, RM: 52, VdA: 1.08, AH: 0, RegVida: 23, RegMana: 18}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Marca Familiar
       tipos: [Passivo, Fortalecimento]
@@ -2906,6 +3219,12 @@ campeoes:
           Cura: [150, 200, 250]
   Kog'Maw:
     titulo: A Boca do Abismo
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 380, Armadura: 34, RM: 32, VdA: 0.80, AH: 0, RegVida: 8, RegMana: 14}
+      nv15: {DdA: 107, PdH: 0, Vida: 2310, Mana: 1080, Armadura: 97, RM: 53, VdA: 1.08, AH: 0, RegVida: 16, RegMana: 28}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Surpresa Icathiana
       tipos: [Passivo, Fortalecimento]
@@ -2953,6 +3272,12 @@ campeoes:
           VdA: [10%, 20%, 30%]
   K'Sante:
     titulo: O Orgulho de Nazumah
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 62, PdH: 0, Vida: 660, Mana: 380, Armadura: 48, RM: 42, VdA: 0.80, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 118, PdH: 0, Vida: 2704, Mana: 1080, Armadura: 113, RM: 71, VdA: 0.98, AH: 0, RegVida: 20, RegMana: 24}
+      # runas da página padrão descontadas: Perseverança
     passiva:
       nome: Instinto Valente
       tipos: [Passivo, Fortalecimento]
@@ -3029,6 +3354,12 @@ campeoes:
           VdA: [40%, 60%, 80%]
   Lee Sin:
     titulo: O Monge Cego
+    status:
+      recurso: Energia  # máx. 200
+      VdM: 355
+      nv1: {DdA: 66, PdH: 0, Vida: 660, Armadura: 46, RM: 38, VdA: 0.80, AH: 0, RegVida: 11}
+      nv15: {DdA: 130, PdH: 0, Vida: 2508, Armadura: 112, RM: 66, VdA: 0.98, AH: 0, RegVida: 21}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Agitação
       tipos: [Passivo, Fortalecimento]
@@ -3079,6 +3410,12 @@ campeoes:
           Dano por % de Vida: [12%, 15%, 18%]
   Leona:
     titulo: A Alvorada Radiante
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 62, PdH: 0, Vida: 690, Mana: 390, Armadura: 52, RM: 40, VdA: 0.75, AH: 0, RegVida: 14, RegMana: 12}
+      nv15: {DdA: 104, PdH: 0, Vida: 2482, Mana: 964, Armadura: 120, RM: 68, VdA: 0.93, AH: 0, RegVida: 29, RegMana: 28}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Luz do Sol
       tipos: [Passivo, Mágico]
@@ -3122,6 +3459,12 @@ campeoes:
           Dano base: [150, 225, 300]
   Lillia:
     titulo: O Florir Receoso
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 62, PdH: 0, Vida: 600, Mana: 420, Armadura: 42, RM: 33, VdA: 0.80, AH: 0, RegVida: 8, RegMana: 14}
+      nv15: {DdA: 97, PdH: 0, Vida: 2168, Mana: 1120, Armadura: 99, RM: 54, VdA: 0.94, AH: 0, RegVida: 17, RegMana: 28}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Ramo Onírico
       tipos: [Passivo, Cura]
@@ -3174,6 +3517,11 @@ campeoes:
           Dano base: [100, 150, 200]
   Lissandra:
     titulo: A Bruxa Gélida
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 54, PdH: 0, Vida: 660, Mana: 460, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 10}
+      nv15: {DdA: 96, PdH: 0, Vida: 2480, Mana: 1160, Armadura: 97, RM: 53, VdA: 0.84, AH: 0, RegVida: 20, RegMana: 24}
     passiva:
       nome: Submissão Glacinata
       tipos: [Passivo, Lentidão]
@@ -3223,6 +3571,12 @@ campeoes:
           Redução de Velocidade: [30%, 45%, 60%]
   Lucian:
     titulo: O Purificador
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 60, PdH: 0, Vida: 630, Mana: 390, Armadura: 35, RM: 30, VdA: 0.80, AH: 0, RegVida: 9, RegMana: 15}
+      nv15: {DdA: 109, PdH: 0, Vida: 2422, Mana: 1076, Armadura: 105, RM: 51, VdA: 1.05, AH: 0, RegVida: 21, RegMana: 28}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Disparo Iluminado
       tipos: [Passivo, Físico]
@@ -3274,6 +3628,11 @@ campeoes:
           Dano base: [20, 25, 30]
   Lulu:
     titulo: A Fada Feiticeira
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 46, PdH: 0, Vida: 600, Mana: 480, Armadura: 40, RM: 30, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 21}
+      nv15: {DdA: 84, PdH: 0, Vida: 2056, Mana: 1278, Armadura: 101, RM: 47, VdA: 0.86, AH: 0, RegVida: 18, RegMana: 34}
     passiva:
       nome: Pix, o Silfo Companheiro
       tipos: [Passivo, Mágico]
@@ -3323,6 +3682,12 @@ campeoes:
           Vida: [250, 400, 550]
   Lux:
     titulo: A Dama da Luz
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 52, PdH: 0, Vida: 600, Mana: 480, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 9}
+      nv15: {DdA: 103, PdH: 0, Vida: 2280, Mana: 1166, Armadura: 104, RM: 53, VdA: 1.01, AH: 0, RegVida: 16, RegMana: 25}
+      # runas da página padrão descontadas: Foco Absoluto
     passiva:
       nome: Iluminação
       tipos: [Passivo, Mágico]
@@ -3368,6 +3733,11 @@ campeoes:
           Dano base: [300, 400, 500]
   Malphite:
     titulo: O Fragmento do Monolito
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 58, PdH: 0, Vida: 690, Mana: 345, Armadura: 51, RM: 40, VdA: 0.80, AH: 0, RegVida: 14, RegMana: 15}
+      nv15: {DdA: 109, PdH: 0, Vida: 2510, Mana: 919, Armadura: 123, RM: 68, VdA: 1.15, AH: 0, RegVida: 26, RegMana: 25}
     passiva:
       nome: Escudo de Granito
       tipos: [Passivo, Fortalecimento]
@@ -3413,6 +3783,11 @@ campeoes:
           Dano base: [200, 300, 400]
   Maokai:
     titulo: O Ente Sinistro
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 66, PdH: 0, Vida: 690, Mana: 380, Armadura: 51, RM: 38, VdA: 0.80, AH: 0, RegVida: 15, RegMana: 12}
+      nv15: {DdA: 115, PdH: 0, Vida: 2482, Mana: 1220, Armadura: 109, RM: 66, VdA: 1.08, AH: 0, RegVida: 24, RegMana: 24}
     passiva:
       nome: Seiva Mágica
       tipos: [Passivo, Cura]
@@ -3462,6 +3837,12 @@ campeoes:
           VdM: [40%, 50%, 60%]
   Master Yi:
     titulo: O Espadachim Wuju
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 54, PdH: 0, Vida: 630, Mana: 345, Armadura: 42, RM: 40, VdA: 0.80, AH: 0, RegVida: 9, RegMana: 12}
+      nv15: {DdA: 105, PdH: 0, Vida: 2450, Mana: 1031, Armadura: 107, RM: 68, VdA: 0.97, AH: 0, RegVida: 19, RegMana: 22}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Ataque Duplo
       tipos: [Passivo]
@@ -3511,6 +3892,12 @@ campeoes:
           VdA: [30%, 60%, 90%]
   Mel:
     titulo: O Reflexo da Alma
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 52, PdH: 0, Vida: 600, Mana: 480, Armadura: 30, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 9}
+      nv15: {DdA: 103, PdH: 0, Vida: 2280, Mana: 1166, Armadura: 100, RM: 53, VdA: 0.89, AH: 0, RegVida: 16, RegMana: 25}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Esplendor Calcinante
       tipos: [Passivo, Fortalecimento]
@@ -3584,6 +3971,11 @@ campeoes:
           Dano de acúmulo de Eclipse Dourado: [4, 7, 10]
   Milio:
     titulo: A Chama Gentil
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 50, PdH: 0, Vida: 600, Mana: 420, Armadura: 34, RM: 28, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 20}
+      nv15: {DdA: 85, PdH: 0, Vida: 2070, Mana: 1260, Armadura: 90, RM: 45, VdA: 0.94, AH: 0, RegVida: 15, RegMana: 32}
     passiva:
       nome: A Todo Vapor!
       tipos: [Fortalecimento]
@@ -3635,6 +4027,12 @@ campeoes:
           Cura: [150, 250, 350]
   Miss Fortune:
     titulo: A Caçadora de Recompensas
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 58, PdH: 0, Vida: 600, Mana: 420, Armadura: 34, RM: 30, VdA: 0.80, AH: 0, RegVida: 6, RegMana: 12}
+      nv15: {DdA: 114, PdH: 0, Vida: 2392, Mana: 1120, Armadura: 97, RM: 50, VdA: 1.09, AH: 0, RegVida: 14, RegMana: 25}
+      # runas da página padrão descontadas: Lenda: Linhagem
     passiva:
       nome: Batida do Amor
       tipos: [Passivo, Físico]
@@ -3685,6 +4083,12 @@ campeoes:
           Dano base: [20, 30, 40]
   Mordekaiser:
     titulo: O Revenã de Ferro
+    status:
+      recurso: Quantidade de Escudo
+      VdM: 340
+      nv1: {DdA: 54, PdH: 0, Vida: 660, Armadura: 48, RM: 42, VdA: 0.73, AH: 0, RegVida: 13, PenMag%: 3}
+      nv15: {DdA: 103, PdH: 0, Vida: 2340, Armadura: 106, RM: 71, VdA: 0.80, AH: 0, RegVida: 27, PenMag%: 12}
+      # runas da página padrão descontadas: Perseverança
     passiva:
       nome: Ascensão das Trevas
       tipos: [Passivo, Fortalecimento]
@@ -3736,6 +4140,11 @@ campeoes:
           Tempo de Recarga: [105, 90, 75]
   Morgana:
     titulo: O Anjo Caído
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 435, Armadura: 37, RM: 36, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 15}
+      nv15: {DdA: 96, PdH: 0, Vida: 2310, Mana: 1121, Armadura: 100, RM: 53, VdA: 0.79, AH: 0, RegVida: 16, RegMana: 28}
     passiva:
       nome: Sifão da Alma
       tipos: [Passivo, Fortalecimento]
@@ -3785,6 +4194,12 @@ campeoes:
           VdM: [10%, 25%, 40%]
   Nami:
     titulo: A Conjuradora das Marés
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 52, PdH: 0, Vida: 630, Mana: 390, Armadura: 40, RM: 30, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 18}
+      nv15: {DdA: 103, PdH: 0, Vida: 2086, Mana: 1076, Armadura: 106, RM: 47, VdA: 0.93, AH: 0, RegVida: 16, RegMana: 25}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Maré Oscilante
       tipos: [Passivo, Fortalecimento]
@@ -3831,6 +4246,12 @@ campeoes:
           Dano base: [150, 250, 350]
   Nasus:
     titulo: O Curador das Areias
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 58, PdH: 0, Vida: 650, Mana: 390, Armadura: 42, RM: 33, VdA: 0.80, AH: 0, RegVida: 14, RegMana: 14, VampFisico: 6}
+      nv15: {DdA: 128, PdH: 0, Vida: 2330, Mana: 1076, Armadura: 104, RM: 62, VdA: 1.01, AH: 0, RegVida: 26, RegMana: 24, VampFisico: 24}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Devorador de Almas
       tipos: [Passivo]
@@ -3881,6 +4302,12 @@ campeoes:
           Dano base: [3%, 4%, 5%]
   Nautilus:
     titulo: O Titã das Profundezas
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 62, PdH: 0, Vida: 690, Mana: 390, Armadura: 46, RM: 38, VdA: 0.73, AH: 0, RegVida: 9, RegMana: 12}
+      nv15: {DdA: 126, PdH: 0, Vida: 2482, Mana: 1188, Armadura: 116, RM: 66, VdA: 0.84, AH: 0, RegVida: 19, RegMana: 25}
+      # runas da página padrão descontadas: Perseverança
     passiva:
       nome: Âncora Impactante
       tipos: [Passivo, Controle]
@@ -3932,6 +4359,12 @@ campeoes:
           Duração de Atordoamento: [1, 1.5, 2]
   Nidalee:
     titulo: A Caçadora Bestial
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 54, PdH: 0, Vida: 660, Mana: 420, Armadura: 46, RM: 40, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 14}
+      nv15: {DdA: 96, PdH: 0, Vida: 2452, Mana: 1120, Armadura: 123, RM: 68, VdA: 0.97, AH: 0, RegVida: 17, RegMana: 28}
+      # runas da página padrão descontadas: Transcendência
     # A Coleção só mostra as habilidades da Forma Humana (as do puma não aparecem).
     passiva:
       nome: Espreitar
@@ -4014,6 +4447,12 @@ campeoes:
             Dano base: [70, 130, 190, 250]
   Nilah:
     titulo: A Alegria Irrestrita
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 58, PdH: 0, Vida: 600, Mana: 340, Armadura: 37, RM: 32, VdA: 0.81, AH: 0, RegVida: 10, RegMana: 10}
+      nv15: {DdA: 100, PdH: 0, Vida: 2392, Mana: 1040, Armadura: 107, RM: 60, VdA: 1.00, AH: 0, RegVida: 16, RegMana: 22}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Alegria Eterna
       tipos: [Passivo, Cura]
@@ -4065,6 +4504,12 @@ campeoes:
           Dano base (2): [125, 225, 325]
   Nocturne:
     titulo: O Eterno Pesadelo
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 54, PdH: 0, Vida: 660, Mana: 380, Armadura: 43, RM: 40, VdA: 0.80, AH: 0, RegVida: 10, RegMana: 12}
+      nv15: {DdA: 124, PdH: 0, Vida: 2536, Mana: 1080, Armadura: 106, RM: 68, VdA: 1.04, AH: 0, RegVida: 22, RegMana: 26}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Lâminas Sombrias
       tipos: [Dano em área de ação, Cura]
@@ -4119,6 +4564,12 @@ campeoes:
           Dano base: [150, 275, 400]
   Norra:
     titulo: A Mestra dos Portais
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 54, PdH: 0, Vida: 630, Mana: 460, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 10, RegMana: 14}
+      nv15: {DdA: 103, PdH: 0, Vida: 2310, Mana: 1160, Armadura: 97, RM: 53, VdA: 0.85, AH: 0, RegVida: 19, RegMana: 28}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Amados Amuletos
       tipos: [Efeito negativo]
@@ -4182,6 +4633,12 @@ campeoes:
           Dano base: [100, 140, 180]
   Nunu e Willump:
     titulo: O Garoto e Seu Yeti
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 64, PdH: 0, Vida: 630, Mana: 345, Armadura: 42, RM: 40, VdA: 0.80, AH: 0, RegVida: 13, RegMana: 15}
+      nv15: {DdA: 115, PdH: 0, Vida: 2366, Mana: 919, Armadura: 98, RM: 68, VdA: 0.91, AH: 0, RegVida: 23, RegMana: 28}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Chamado de Freljord
       tipos: [Passivo, Fortalecimento]
@@ -4238,6 +4695,11 @@ campeoes:
           Dano Máx.: [915, 1245, 1575]
   Olaf:
     titulo: O Berserker
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 64, PdH: 0, Vida: 660, Mana: 340, Armadura: 42, RM: 40, VdA: 0.74, AH: 0, RegVida: 12, RegMana: 15}
+      nv15: {DdA: 128, PdH: 0, Vida: 2620, Mana: 802, Armadura: 98, RM: 68, VdA: 1.05, AH: 0, RegVida: 26, RegMana: 25}
     passiva:
       nome: Fúria Berserker
       tipos: [Passivo, Fortalecimento]
@@ -4288,6 +4750,12 @@ campeoes:
           VdM: [20%, 45%, 70%]
   Orianna:
     titulo: A Donzela Mecânica
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 46, PdH: 0, Vida: 630, Mana: 435, Armadura: 28, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 84, PdH: 0, Vida: 2310, Mana: 1233, Armadura: 84, RM: 53, VdA: 1.04, AH: 0, RegVida: 16, RegMana: 28}
+      # runas da página padrão descontadas: Foco Absoluto
     passiva:
       nome: Dando Corda
       tipos: [Passivo, Mágico]
@@ -4336,6 +4804,11 @@ campeoes:
           Dano base: [250, 350, 450]
   Ornn:
     titulo: O Fogo Sob a Montanha
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 62, PdH: 0, Vida: 690, Mana: 380, Armadura: 48, RM: 42, VdA: 0.73, AH: 0, RegVida: 17, RegMana: 12}
+      nv15: {DdA: 118, PdH: 0, Vida: 2538, Mana: 1220, Armadura: 120, RM: 71, VdA: 0.84, AH: 0, RegVida: 34, RegMana: 24}
     passiva:
       nome: Forja Viva
       tipos: [Passivo, Fortalecimento]
@@ -4385,6 +4858,12 @@ campeoes:
           Redução de Velocidade: [40, 50, 60]
   Pantheon:
     titulo: A Lança Indestrutível
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 64, PdH: 0, Vida: 660, Mana: 420, Armadura: 48, RM: 40, VdA: 0.80, AH: 0, RegVida: 9, RegMana: 12}
+      nv15: {DdA: 115, PdH: 0, Vida: 2508, Mana: 882, Armadura: 114, RM: 68, VdA: 0.99, AH: 0, RegVida: 19, RegMana: 22}
+      # runas da página padrão descontadas: Lenda: Linhagem
     passiva:
       nome: Determinação Mortal
       tipos: [Passivo]
@@ -4441,6 +4920,11 @@ campeoes:
           Pen. de Armadura: [10%, 20%, 30%]
   Poppy:
     titulo: A Guardiã do Martelo
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 62, PdH: 0, Vida: 630, Mana: 380, Armadura: 46, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 15}
+      nv15: {DdA: 118, PdH: 0, Vida: 2534, Mana: 940, Armadura: 109, RM: 64, VdA: 0.93, AH: 0, RegVida: 20, RegMana: 27}
     passiva:
       nome: Embaixadora de Ferro
       tipos: [Passivo, Fortalecimento]
@@ -4494,6 +4978,12 @@ campeoes:
           Dano base (2): [100, 150, 200]
   Pyke:
     titulo: O Estripador das Águas Sangrentas
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 64, PdH: 0, Vida: 690, Mana: 435, Armadura: 50, RM: 38, VdA: 0.75, AH: 0, RegVida: 11, RegMana: 12}
+      nv15: {DdA: 113, PdH: 0, Vida: 2594, Mana: 1233, Armadura: 127, RM: 80, VdA: 0.95, AH: 0, RegVida: 19, RegMana: 31}
+      # runas da página padrão descontadas: Perseverança
     passiva:
       nome: Dádiva dos Afogados
       tipos: [Passivo, Fortalecimento]
@@ -4544,6 +5034,11 @@ campeoes:
           Vida: [250, 400, 550]
   Rakan:
     titulo: O Charmoso
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 58, PdH: 0, Vida: 640, Mana: 435, Armadura: 42, RM: 34, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 15}
+      nv15: {DdA: 109, PdH: 0, Vida: 2320, Mana: 1233, Armadura: 103, RM: 57, VdA: 0.94, AH: 0, RegVida: 14, RegMana: 25}
     passiva:
       nome: Plumas Mágicas
       tipos: [Passivo, Fortalecimento]
@@ -4592,6 +5087,11 @@ campeoes:
           Duração do Encanto: [1, 1.25, 1.5]
   Rammus:
     titulo: O Tatu Blindado
+    status:
+      recurso: Mana
+      VdM: 367
+      nv1: {DdA: 54, PdH: 0, Vida: 670, Mana: 345, Armadura: 42, RM: 40, VdA: 0.80, AH: 0, RegVida: 9, RegMana: 12}
+      nv15: {DdA: 105, PdH: 0, Vida: 2406, Mana: 919, Armadura: 109, RM: 57, VdA: 0.96, AH: 0, RegVida: 21, RegMana: 25}
     passiva:
       nome: Tatu Blindado Giratório
       tipos: [Passivo, Fortalecimento]
@@ -4646,6 +5146,11 @@ campeoes:
           Dano: [30, 45, 60]
   Rell:
     titulo: A Dama de Ferro
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 62, PdH: 0, Vida: 660, Mana: 380, Armadura: 46, RM: 36, VdA: 0.75, AH: 0, RegVida: 13, RegMana: 10}
+      nv15: {DdA: 104, PdH: 0, Vida: 2340, Mana: 940, Armadura: 109, RM: 64, VdA: 0.84, AH: 0, RegVida: 25, RegMana: 19}
     passiva:
       nome: A Ferro e Fogo
       tipos: [Fortalecimento]
@@ -4698,6 +5203,12 @@ campeoes:
           Dano base: [120, 200, 280]
   Renekton:
     titulo: O Carniceiro das Areias
+    status:
+      recurso: Fúria  # máx. 100
+      VdM: 355
+      nv1: {DdA: 66, PdH: 0, Vida: 690, Armadura: 46, RM: 38, VdA: 0.80, AH: 0, RegVida: 14}
+      nv15: {DdA: 130, PdH: 0, Vida: 2482, Armadura: 112, RM: 66, VdA: 1.02, AH: 0, RegVida: 26}
+      # runas da página padrão descontadas: Perseverança
     passiva:
       nome: Domínio da Ira
       tipos: [Passivo]
@@ -4765,6 +5276,12 @@ campeoes:
           Dano base: [70, 120, 170]
   Rengar:
     titulo: O Acossador da Alcateia
+    status:
+      recurso: Ferocidade
+      VdM: 355
+      nv1: {DdA: 62, PdH: 0, Vida: 630, Armadura: 40, RM: 38, VdA: 0.80, AH: 0, RegVida: 9}
+      nv15: {DdA: 111, PdH: 0, Vida: 2534, Armadura: 103, RM: 66, VdA: 1.01, AH: 0, RegVida: 19}
+      # runas da página padrão descontadas: Lenda: Linhagem
     passiva:
       nome: Predador Oculto
       tipos: [Passivo, Fortalecimento]
@@ -4819,6 +5336,11 @@ campeoes:
           Redução de Armadura: [16, 24, 32]
   Riven:
     titulo: A Exilada
+    status:
+      VdM: 345
+      nv1: {DdA: 64, PdH: 0, Vida: 660, Armadura: 43, RM: 38, VdA: 0.80, AH: 0, RegVida: 12}
+      nv15: {DdA: 115, PdH: 0, Vida: 2410, Armadura: 106, RM: 66, VdA: 0.99, AH: 0, RegVida: 22}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Lâmina Rúnica
       tipos: [Passivo, Físico]
@@ -4867,6 +5389,11 @@ campeoes:
           Dano base: [100, 150, 200]
   Rumble:
     titulo: A Ameaça Mecânica
+    status:
+      recurso: Aquecimento
+      VdM: 355
+      nv1: {DdA: 62, PdH: 0, Vida: 660, Armadura: 48, RM: 38, VdA: 0.80, AH: 0, RegVida: 13}
+      nv15: {DdA: 111, PdH: 0, Vida: 2452, Armadura: 113, RM: 66, VdA: 0.94, AH: 0, RegVida: 25}
     passiva:
       nome: Titã do Ferro-Velho
       tipos: [Passivo, Fortalecimento]
@@ -4931,6 +5458,11 @@ campeoes:
           Dano base: [700, 1050, 1400]
   Ryze:
     titulo: O Mago Rúnico
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 54, PdH: 0, Vida: 630, Mana: 340, Armadura: 38, RM: 42, VdA: 0.75, AH: 0, RegVida: 17, RegMana: 10}
+      nv15: {DdA: 103, PdH: 0, Vida: 2534, Mana: 1180, Armadura: 110, RM: 71, VdA: 0.91, AH: 0, RegVida: 29, RegMana: 24}
     passiva:
       nome: Maestria Arcana
       tipos: [Passivo, Fortalecimento]
@@ -4982,6 +5514,12 @@ campeoes:
           Dano de Fluxo: [50%, 75%, 100%]
   Samira:
     titulo: A Rosa do Deserto
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 60, PdH: 0, Vida: 630, Mana: 345, Armadura: 35, RM: 30, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 15}
+      nv15: {DdA: 109, PdH: 0, Vida: 2534, Mana: 1031, Armadura: 112, RM: 58, VdA: 1.03, AH: 0, RegVida: 18, RegMana: 22}
+      # runas da página padrão descontadas: Lenda: Linhagem
     passiva:
       nome: Impulso Audacioso
       tipos: [Passivo, Mágico]
@@ -5031,6 +5569,12 @@ campeoes:
           Dano base: [20, 40, 60]
   Senna:
     titulo: A Redentora
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 50, PdH: 0, Vida: 570, Mana: 345, Armadura: 35, RM: 30, VdA: 0.63, AH: 0, RegVida: 6, RegMana: 21}
+      nv15: {DdA: 50, PdH: 0, Vida: 2250, Mana: 1255, Armadura: 98, RM: 50, VdA: 0.73, AH: 0, RegVida: 14, RegMana: 28}
+      # runas da página padrão descontadas: Perseverança
     passiva:
       nome: Absolvição
       tipos: [Passivo]
@@ -5093,6 +5637,12 @@ campeoes:
           Escudo: [120, 160, 200]
   Seraphine:
     titulo: A Cantora Sonhadora
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 52, PdH: 0, Vida: 600, Mana: 435, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 16}
+      nv15: {DdA: 103, PdH: 0, Vida: 2168, Mana: 1121, Armadura: 100, RM: 53, VdA: 0.91, AH: 0, RegVida: 16, RegMana: 32}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Presença de Palco
       tipos: [Passivo, Mágico]
@@ -5143,6 +5693,10 @@ campeoes:
           Duração do Encanto: [1.25, 1.5, 1.75]
   Sett:
     titulo: O Chefe
+    status:
+      VdM: 350
+      nv1: {DdA: 62, PdH: 0, Vida: 690, Armadura: 46, RM: 38, VdA: 0.73, AH: 0, RegVida: 15}
+      nv15: {DdA: 113, PdH: 0, Vida: 2370, Armadura: 112, RM: 66, VdA: 0.82, AH: 0, RegVida: 27}
     passiva:
       nome: Ousadia da Arena
       tipos: [Físico, Cura]
@@ -5190,6 +5744,11 @@ campeoes:
           Dano por % de Vida: [35%, 45%, 55%]
   Shen:
     titulo: O Olho do Crepúsculo
+    status:
+      recurso: Energia  # máx. 200
+      VdM: 350
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Armadura: 48, RM: 40, VdA: 0.80, AH: 0, RegVida: 14}
+      nv15: {DdA: 122, PdH: 0, Vida: 2366, Armadura: 104, RM: 68, VdA: 1.13, AH: 0, RegVida: 26}
     passiva:
       nome: Barreira de Ki
       tipos: [Passivo, Fortalecimento]
@@ -5239,6 +5798,12 @@ campeoes:
           Escudo: [170, 340, 510]
   Shyvana:
     titulo: A Meio-Dragão
+    status:
+      recurso: Fúria  # máx. 100
+      VdM: 350
+      nv1: {DdA: 62, PdH: 0, Vida: 660, Armadura: 48, RM: 40, VdA: 0.80, AH: 0, RegVida: 9}
+      nv15: {DdA: 126, PdH: 0, Vida: 2340, Armadura: 120, RM: 68, VdA: 0.90, AH: 0, RegVida: 21}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Linhagem Dracônica
       tipos: [Passivo, Fortalecimento]
@@ -5292,6 +5857,12 @@ campeoes:
           Vida: [350, 475, 600]
   Singed:
     titulo: O Químico Louco
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 64, PdH: 0, Vida: 690, Mana: 345, Armadura: 48, RM: 33, VdA: 0.80, AH: 0, RegVida: 12, RegMana: 12}
+      nv15: {DdA: 115, PdH: 0, Vida: 2258, Mana: 1031, Armadura: 116, RM: 62, VdA: 0.94, AH: 0, RegVida: 20, RegMana: 22}
+      # runas da página padrão descontadas: Perseverança
     passiva:
       nome: Corrente de Ar Nociva
       tipos: [Passivo, Fortalecimento]
@@ -5345,6 +5916,11 @@ campeoes:
           Reg. de Mana: [15, 20, 25]
   Sion:
     titulo: O Colosso Morto-Vivo
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 64, PdH: 0, Vida: 630, Mana: 345, Armadura: 46, RM: 38, VdA: 0.80, AH: 0, RegVida: 13, RegMana: 9}
+      nv15: {DdA: 128, PdH: 0, Vida: 2086, Mana: 1031, Armadura: 95, RM: 66, VdA: 0.86, AH: 0, RegVida: 26, RegMana: 19}
     passiva:
       nome: In Gloria Mori
       tipos: [Passivo]
@@ -5399,6 +5975,12 @@ campeoes:
           Dano Máx.: [400, 800, 1200]
   Sivir:
     titulo: A Mestra da Batalha
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 60, PdH: 0, Vida: 600, Mana: 340, Armadura: 34, RM: 28, VdA: 0.81, AH: 0, RegVida: 6, RegMana: 10}
+      nv15: {DdA: 116, PdH: 0, Vida: 2392, Mana: 1180, Armadura: 97, RM: 48, VdA: 0.90, AH: 0, RegVida: 18, RegMana: 27}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Pés Ligeiros
       tipos: [Passivo, Fortalecimento]
@@ -5453,6 +6035,12 @@ campeoes:
           VdM: [15%, 20%, 25%]
   Skarner:
     titulo: O Soberano Primordial
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 62, PdH: 0, Vida: 660, Mana: 380, Armadura: 48, RM: 42, VdA: 0.80, AH: 0, RegVida: 9, RegMana: 12}
+      nv15: {DdA: 118, PdH: 0, Vida: 2508, Mana: 1080, Armadura: 113, RM: 71, VdA: 0.84, AH: 0, RegVida: 21, RegMana: 24}
+      # runas da página padrão descontadas: Perseverança
     passiva:
       nome: Linhas de Vibração
       tipos: [Passivo, Mágico]
@@ -5511,6 +6099,12 @@ campeoes:
           Dano base: [150, 250, 350]
   Smolder:
     titulo: O Filhote Flamejante
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 54, PdH: 0, Vida: 600, Mana: 390, Armadura: 34, RM: 30, VdA: 0.80, AH: 0, RegVida: 8, RegMana: 14}
+      nv15: {DdA: 103, PdH: 0, Vida: 2280, Mana: 1090, Armadura: 97, RM: 50, VdA: 1.07, AH: 0, RegVida: 17, RegMana: 27}
+      # runas da página padrão descontadas: Lenda: Linhagem
     passiva:
       nome: Treinamento Dracônico
       tipos: [Passivo, Fortalecimento]
@@ -5581,6 +6175,11 @@ campeoes:
           Cura: [100, 135, 170]
   Sona:
     titulo: A Mestra das Cordas
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 46, PdH: 0, Vida: 600, Mana: 345, Armadura: 40, RM: 30, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 15}
+      nv15: {DdA: 84, PdH: 0, Vida: 2056, Mana: 1031, Armadura: 95, RM: 47, VdA: 0.90, AH: 0, RegVida: 14, RegMana: 28}
     passiva:
       nome: Power Chord
       tipos: [Passivo, Mágico]
@@ -5634,6 +6233,11 @@ campeoes:
           Redução de Velocidade: [25%, 30%, 35%]
   Soraka:
     titulo: A Filha das Estrelas
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 52, PdH: 0, Vida: 630, Mana: 345, Armadura: 37, RM: 30, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 18}
+      nv15: {DdA: 76, PdH: 0, Vida: 2198, Mana: 1255, Armadura: 93, RM: 47, VdA: 0.85, AH: 0, RegVida: 14, RegMana: 25}
     passiva:
       nome: Salvação
       tipos: [Passivo, Fortalecimento]
@@ -5682,6 +6286,12 @@ campeoes:
           Cura: [150, 225, 300]
   Swain:
     titulo: O Grande General Noxiano
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 58, PdH: 0, Vida: 660, Mana: 460, Armadura: 40, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 100, PdH: 0, Vida: 2340, Mana: 1020, Armadura: 110, RM: 64, VdA: 0.85, AH: 0, RegVida: 20, RegMana: 24}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Bando Voraz
       tipos: [Fortalecimento, Cura]
@@ -5733,6 +6343,12 @@ campeoes:
           Cura: [15, 30, 45]
   Syndra:
     titulo: A Soberana Sombria
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 54, PdH: 0, Vida: 630, Mana: 380, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 10}
+      nv15: {DdA: 96, PdH: 0, Vida: 2310, Mana: 1080, Armadura: 97, RM: 53, VdA: 0.88, AH: 0, RegVida: 15, RegMana: 24}
+      # runas da página padrão descontadas: Foco Absoluto
     passiva:
       nome: Transcender
       tipos: [Passivo, Fortalecimento]
@@ -5786,6 +6402,12 @@ campeoes:
           Dano base: [60, 110, 160]
   Taliyah:
     titulo: A Tecelã de Pedras
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 54, PdH: 0, Vida: 630, Mana: 460, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 103, PdH: 0, Vida: 2310, Mana: 1160, Armadura: 97, RM: 53, VdA: 0.84, AH: 0, RegVida: 16, RegMana: 26}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Deslizar em Pedras
       tipos: [Passivo, Fortalecimento]
@@ -5848,6 +6470,12 @@ campeoes:
           Tempo de Recarga: [100, 90, 80]
   Talon:
     titulo: A Sombra da Lâmina
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 66, PdH: 0, Vida: 660, Mana: 460, Armadura: 40, RM: 38, VdA: 0.80, AH: 0, RegVida: 9, RegMana: 12}
+      nv15: {DdA: 130, PdH: 0, Vida: 2452, Mana: 1034, Armadura: 103, RM: 66, VdA: 1.02, AH: 0, RegVida: 19, RegMana: 22}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Limiar da Lâmina
       tipos: [Passivo, Físico]
@@ -5903,6 +6531,11 @@ campeoes:
           VdM: [40%, 55%, 70%]
   Teemo:
     titulo: O Explorador Veloz
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 52, PdH: 0, Vida: 630, Mana: 345, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 18}
+      nv15: {DdA: 103, PdH: 0, Vida: 2310, Mana: 919, Armadura: 97, RM: 53, VdA: 1.04, AH: 0, RegVida: 16, RegMana: 28}
     passiva:
       nome: Tiro Tóxico
       tipos: [Passivo, Mágico]
@@ -5953,6 +6586,12 @@ campeoes:
           Tempo de Recarga: [30, 25, 20]
   Thresh:
     titulo: O Guardião das Correntes
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 58, PdH: 0, Vida: 660, Mana: 435, Armadura: 36, RM: 31, VdA: 0.75, AH: 0, RegVida: 11, RegMana: 12}
+      nv15: {DdA: 96, PdH: 0, Vida: 2620, Mana: 1009, Armadura: 36, RM: 49, VdA: 0.99, AH: 0, RegVida: 22, RegMana: 31}
+      # runas da página padrão descontadas: Perseverança
     passiva:
       nome: Condenação
       tipos: [Passivo, Fortalecimento]
@@ -6001,6 +6640,12 @@ campeoes:
           Dano base: [250, 400, 550]
   Tristana:
     titulo: A Artilheira Yordle
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 60, PdH: 0, Vida: 630, Mana: 300, Armadura: 35, RM: 30, VdA: 0.81, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 130, PdH: 0, Vida: 2422, Mana: 874, Armadura: 91, RM: 50, VdA: 1.01, AH: 0, RegVida: 18, RegMana: 22}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Tiro Certeiro
       tipos: [Passivo, Fortalecimento]
@@ -6048,6 +6693,12 @@ campeoes:
           Dano base: [300, 350, 400]
   Tryndamere:
     titulo: O Rei Bárbaro
+    status:
+      recurso: Fúria
+      VdM: 355
+      nv1: {DdA: 64, PdH: 0, Vida: 690, Armadura: 46, RM: 38, VdA: 0.80, AH: 0, RegVida: 8, Crit: 26}
+      nv15: {DdA: 134, PdH: 0, Vida: 2482, Armadura: 109, RM: 66, VdA: 1.05, AH: 0, RegVida: 19, Crit: 38}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Fúria da Batalha
       tipos: [Passivo, Fortalecimento]
@@ -6097,6 +6748,12 @@ campeoes:
           Reg. de Fúria: [50, 75, 100]
   Twisted Fate:
     titulo: O Mestre das Cartas
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 52, PdH: 0, Vida: 630, Mana: 345, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 9}
+      nv15: {DdA: 90, PdH: 0, Vida: 2422, Mana: 919, Armadura: 90, RM: 53, VdA: 0.89, AH: 0, RegVida: 16, RegMana: 25}
+      # runas da página padrão descontadas: Foco Absoluto
     passiva:
       nome: Dados Viciados
       tipos: [Passivo]
@@ -6151,6 +6808,12 @@ campeoes:
           Duração: [6, 7, 8]
   Twitch:
     titulo: O Semeador da Peste
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 340, Armadura: 40, RM: 32, VdA: 0.80, AH: 0, RegVida: 8, RegMana: 14}
+      nv15: {DdA: 114, PdH: 0, Vida: 2422, Mana: 1040, Armadura: 96, RM: 46, VdA: 1.09, AH: 0, RegVida: 17, RegMana: 28}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Veneno Mortal
       tipos: [Verdadeiro, Passivo]
@@ -6205,6 +6868,11 @@ campeoes:
           DdA adicional: [30, 45, 60]
   Urgot:
     titulo: O Encouraçado
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 62, PdH: 0, Vida: 660, Mana: 380, Armadura: 48, RM: 42, VdA: 0.75, AH: 0, RegVida: 15, RegMana: 12}
+      nv15: {DdA: 111, PdH: 0, Vida: 2564, Mana: 1080, Armadura: 120, RM: 71, VdA: 1.02, AH: 0, RegVida: 27, RegMana: 24}
     passiva:
       nome: Chamas Ecoantes
       tipos: []
@@ -6255,6 +6923,12 @@ campeoes:
           Dano base: [100, 225, 350]
   Varus:
     titulo: A Flecha da Vingança
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 58, PdH: 0, Vida: 600, Mana: 390, Armadura: 35, RM: 30, VdA: 0.80, AH: 0, RegVida: 6, RegMana: 12}
+      nv15: {DdA: 114, PdH: 0, Vida: 2392, Mana: 852, Armadura: 98, RM: 50, VdA: 1.08, AH: 0, RegVida: 14, RegMana: 19}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Vingança Viva
       tipos: [Passivo, Fortalecimento]
@@ -6312,6 +6986,12 @@ campeoes:
           Dano base: [150, 250, 350]
   Vayne:
     titulo: A Caçadora Noturna
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 60, PdH: 0, Vida: 570, Mana: 300, Armadura: 31, RM: 30, VdA: 0.81, AH: 0, RegVida: 8, RegMana: 9}
+      nv15: {DdA: 102, PdH: 0, Vida: 2250, Mana: 874, Armadura: 94, RM: 50, VdA: 1.09, AH: 0, RegVida: 16, RegMana: 16}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Caçadora Noturna
       tipos: [Passivo, Fortalecimento]
@@ -6362,6 +7042,12 @@ campeoes:
           Duração: [8, 10, 12]
   Veigar:
     titulo: O Pequeno Mestre do Mal
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 480, Armadura: 37, RM: 36, VdA: 0.75, AH: 0, RegVida: 9, RegMana: 16}
+      nv15: {DdA: 109, PdH: 0, Vida: 2310, Mana: 1166, Armadura: 93, RM: 53, VdA: 0.87, AH: 0, RegVida: 17, RegMana: 32}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Poder Maligno Fenomenal
       tipos: [Passivo]
@@ -6411,6 +7097,12 @@ campeoes:
           Dano base: [185, 250, 315]
   Vel'Koz:
     titulo: O Olho do Vazio
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 54, PdH: 0, Vida: 630, Mana: 480, Armadura: 37, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 10}
+      nv15: {DdA: 103, PdH: 0, Vida: 2310, Mana: 1040, Armadura: 100, RM: 53, VdA: 0.84, AH: 0, RegVida: 17, RegMana: 24}
+      # runas da página padrão descontadas: Foco Absoluto
     passiva:
       nome: Desconstrução Orgânica
       tipos: [Passivo, Verdadeiro]
@@ -6463,6 +7155,12 @@ campeoes:
           Dano base: [450, 625, 800]
   Vex:
     titulo: A Melancolista
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 58, PdH: 0, Vida: 660, Mana: 480, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 109, PdH: 0, Vida: 2340, Mana: 1166, Armadura: 97, RM: 53, VdA: 0.84, AH: 0, RegVida: 19, RegMana: 25}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Destruição e Escuridão
       tipos: [Passivo, Controle]
@@ -6518,6 +7216,12 @@ campeoes:
           Alcance de Ataque: [20, 25, 30]
   Vi:
     titulo: A Defensora de Piltover
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 64, PdH: 0, Vida: 660, Mana: 390, Armadura: 42, RM: 38, VdA: 0.80, AH: 0, RegVida: 11, RegMana: 15}
+      nv15: {DdA: 115, PdH: 0, Vida: 2480, Mana: 1076, Armadura: 114, RM: 66, VdA: 0.91, AH: 0, RegVida: 24, RegMana: 28}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Pancada Certeira
       tipos: [Passivo, Fortalecimento]
@@ -6571,6 +7275,11 @@ campeoes:
           Dano base: [150, 300, 450]
   Viego:
     titulo: O Rei Destruído
+    status:
+      VdM: 345
+      nv1: {DdA: 60, PdH: 0, Vida: 630, Armadura: 46, RM: 36, VdA: 0.80, AH: 0, RegVida: 8}
+      nv15: {DdA: 119, PdH: 0, Vida: 2562, Armadura: 116, RM: 64, VdA: 1.03, AH: 0, RegVida: 20}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Dominação Monárquica
       tipos: [Passivo, Fortalecimento]
@@ -6627,6 +7336,12 @@ campeoes:
           Vida perdida do alvo: [14%, 17%, 20%]
   Viktor:
     titulo: O Arauto do Arcano
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 54, PdH: 0, Vida: 630, Mana: 460, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 10}
+      nv15: {DdA: 103, PdH: 0, Vida: 2310, Mana: 1160, Armadura: 97, RM: 53, VdA: 0.93, AH: 0, RegVida: 20, RegMana: 24}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Gloriosa Evolução
       tipos: [Passivo, Fortalecimento]
@@ -6691,6 +7406,11 @@ campeoes:
           Dano: [50, 90, 130]
   Vladimir:
     titulo: O Sanguinário Escarlate
+    status:
+      VdM: 355
+      nv1: {DdA: 52, PdH: 0, Vida: 630, Armadura: 37, RM: 36, VdA: 0.75, AH: 0, RegVida: 8}
+      nv15: {DdA: 103, PdH: 0, Vida: 2422, Armadura: 107, RM: 53, VdA: 0.90, AH: 0, RegVida: 18}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Pacto Vermelho
       tipos: [Passivo, Fortalecimento]
@@ -6735,6 +7455,12 @@ campeoes:
           Cura: [150, 250, 350]
   Volibear:
     titulo: A Tempestade Implacável
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 62, PdH: 0, Vida: 690, Mana: 390, Armadura: 46, RM: 38, VdA: 0.74, AH: 0, RegVida: 9, RegMana: 12}
+      nv15: {DdA: 118, PdH: 0, Vida: 2482, Mana: 1300, Armadura: 112, RM: 66, VdA: 0.87, AH: 0, RegVida: 21, RegMana: 22}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: A Tempestade Implacável
       tipos: [Passivo, Mágico]
@@ -6788,6 +7514,12 @@ campeoes:
           Dano base: [300, 500, 700]
   Warwick:
     titulo: A Ira Desimpedida de Zaun
+    status:
+      recurso: Mana
+      VdM: 345
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 340, Armadura: 46, RM: 38, VdA: 0.80, AH: 0, RegVida: 6, RegMana: 16}
+      nv15: {DdA: 121, PdH: 0, Vida: 2198, Mana: 1026, Armadura: 107, RM: 66, VdA: 0.90, AH: 0, RegVida: 16, RegMana: 26}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Fome Eterna
       tipos: [Passivo, Cura]
@@ -6839,6 +7571,12 @@ campeoes:
           Dano base: [100, 275, 450]
   Wukong:
     titulo: O Macaco Rei
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 64, PdH: 0, Vida: 690, Mana: 345, Armadura: 40, RM: 38, VdA: 0.80, AH: 0, RegVida: 12, RegMana: 15}
+      nv15: {DdA: 128, PdH: 0, Vida: 2370, Mana: 919, Armadura: 101, RM: 66, VdA: 1.04, AH: 0, RegVida: 22, RegMana: 28}
+      # runas da página padrão descontadas: Lenda: Linhagem
     passiva:
       nome: Pele de Pedra
       tipos: [Passivo, Fortalecimento]
@@ -6890,6 +7628,12 @@ campeoes:
           Vida Máxima: [10%, 14%, 18%]
   Xayah:
     titulo: A Rebelde
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 60, PdH: 0, Vida: 630, Mana: 435, Armadura: 40, RM: 30, VdA: 0.80, AH: 0, RegVida: 8, RegMana: 15}
+      nv15: {DdA: 119, PdH: 0, Vida: 2310, Mana: 1009, Armadura: 96, RM: 50, VdA: 1.12, AH: 0, RegVida: 19, RegMana: 28}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Cortes Certeiros
       tipos: [Passivo, Fortalecimento]
@@ -6935,6 +7679,11 @@ campeoes:
           Dano base: [150, 250, 350]
   Xin Zhao:
     titulo: O Senescal de Demacia
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 62, PdH: 0, Vida: 650, Mana: 345, Armadura: 48, RM: 40, VdA: 0.80, AH: 0, RegVida: 9, RegMana: 12}
+      nv15: {DdA: 125, PdH: 0, Vida: 2470, Mana: 919, Armadura: 116, RM: 68, VdA: 1.03, AH: 0, RegVida: 21, RegMana: 22}
     passiva:
       nome: Determinação
       tipos: [Passivo, Físico]
@@ -6983,6 +7732,12 @@ campeoes:
           Dano base: [75, 150, 225]
   Yasuo:
     titulo: O Imperdoável
+    status:
+      recurso: Fluxo  # máx. 100
+      VdM: 355
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Armadura: 40, RM: 38, VdA: 0.80, AH: 0, RegVida: 17}
+      nv15: {DdA: 121, PdH: 0, Vida: 2310, Armadura: 101, RM: 66, VdA: 1.18, AH: 0, RegVida: 31}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Estilo do Errante
       tipos: [Passivo, Fortalecimento]
@@ -7031,6 +7786,12 @@ campeoes:
           Dano base: [200, 350, 500]
   Yone:
     titulo: O Inesquecido
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 54, PdH: 0, Vida: 630, Mana: 100, Armadura: 39, RM: 40, VdA: 0.80, AH: 0, RegVida: 14, RegMana: 0}
+      nv15: {DdA: 110, PdH: 0, Vida: 2450, Mana: 100, Armadura: 101, RM: 68, VdA: 1.08, AH: 0, RegVida: 28, RegMana: 0}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Estilo do Caçador
       tipos: [Passivo]
@@ -7084,6 +7845,12 @@ campeoes:
           Dano base: [200, 375, 550]
   Yunara:
     titulo: A Fé Inabalável
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 345, Armadura: 35, RM: 30, VdA: 0.80, AH: 0, RegVida: 6, RegMana: 9}
+      nv15: {DdA: 100, PdH: 0, Vida: 2422, Mana: 807, Armadura: 98, RM: 50, VdA: 1.09, AH: 0, RegVida: 14, RegMana: 19}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Voto às Primeiras Terras
       tipos: [Passivo, Mágico]
@@ -7143,6 +7910,11 @@ campeoes:
           Tempo de Recarga: [70, 60, 50]
   Yuumi:
     titulo: A Gata Mágica
+    status:
+      recurso: Mana
+      VdM: 340
+      nv1: {DdA: 50, PdH: 0, Vida: 570, Mana: 435, Armadura: 40, RM: 30, VdA: 0.75, AH: 0, RegVida: 11, RegMana: 15}
+      nv15: {DdA: 101, PdH: 0, Vida: 2026, Mana: 1121, Armadura: 95, RM: 47, VdA: 0.80, AH: 0, RegVida: 21, RegMana: 34}
     passiva:
       nome: Amizade Felina
       tipos: [Passivo, Cura]
@@ -7203,6 +7975,12 @@ campeoes:
           Dano base das ondas subsequentes: [20, 30, 40]
   Zed:
     titulo: O Mestre das Sombras
+    status:
+      recurso: Energia  # máx. 200
+      VdM: 355
+      nv1: {DdA: 64, PdH: 0, Vida: 690, Armadura: 40, RM: 40, VdA: 0.80, AH: 0, RegVida: 9}
+      nv15: {DdA: 128, PdH: 0, Vida: 2370, Armadura: 110, RM: 68, VdA: 1.02, AH: 0, RegVida: 19}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Desprezo pelos Fracos
       tipos: [Passivo, Mágico]
@@ -7250,6 +8028,12 @@ campeoes:
           Dano base: [30%, 42.5%, 55%]
   Zeri:
     titulo: A Faísca de Zaun
+    status:
+      recurso: Mana
+      VdM: 335
+      nv1: {DdA: 58, PdH: 0, Vida: 600, Mana: 380, Armadura: 31, RM: 32, VdA: 0.80, AH: 0, RegVida: 8, RegMana: 10}
+      nv15: {DdA: 114, PdH: 0, Vida: 2504, Mana: 1080, Armadura: 101, RM: 60, VdA: 1.01, AH: 0, RegVida: 17, RegMana: 22}
+      # runas da página padrão descontadas: Lenda: Espontaneidade
     passiva:
       nome: Bateria Viva
       tipos: [Passivo]
@@ -7302,6 +8086,12 @@ campeoes:
           Dano base: [150, 225, 300]
   Ziggs:
     titulo: O Especialista em Hexplosivos
+    status:
+      recurso: Mana
+      VdM: 355
+      nv1: {DdA: 52, PdH: 0, Vida: 630, Mana: 460, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 16}
+      nv15: {DdA: 103, PdH: 0, Vida: 2310, Mana: 1034, Armadura: 90, RM: 53, VdA: 0.88, AH: 0, RegVida: 18, RegMana: 29}
+      # runas da página padrão descontadas: Foco Absoluto
     passiva:
       nome: Pavio Curto
       tipos: [Passivo, Mágico]
@@ -7351,6 +8141,12 @@ campeoes:
           Dano base: [270, 375, 480]
   Zilean:
     titulo: O Guardião do Tempo
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 54, PdH: 0, Vida: 630, Mana: 460, Armadura: 45, RM: 28, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 12}
+      nv15: {DdA: 96, PdH: 0, Vida: 2310, Mana: 1160, Armadura: 106, RM: 45, VdA: 0.90, AH: 0, RegVida: 15, RegMana: 24}
+      # runas da página padrão descontadas: Transcendência
     passiva:
       nome: Tempo Engarrafado
       tipos: [Passivo, Fortalecimento]
@@ -7404,6 +8200,11 @@ campeoes:
           Cura: [600, 850, 1100]
   Zoe:
     titulo: O Aspecto do Crepúsculo
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 54, PdH: 0, Vida: 630, Mana: 420, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 12}
+      nv15: {DdA: 103, PdH: 0, Vida: 2422, Mana: 1120, Armadura: 97, RM: 53, VdA: 0.93, AH: 0, RegVida: 17, RegMana: 24}
     passiva:
       nome: Brililim!
       tipos: [Passivo]
@@ -7454,6 +8255,11 @@ campeoes:
           Tempo de Recarga: [11, 8, 5]
   Zyra:
     titulo: A Ascensão dos Espinhos
+    status:
+      recurso: Mana
+      VdM: 360
+      nv1: {DdA: 54, PdH: 0, Vida: 600, Mana: 420, Armadura: 37, RM: 36, VdA: 0.75, AH: 0, RegVida: 6, RegMana: 14}
+      nv15: {DdA: 103, PdH: 0, Vida: 2280, Mana: 1120, Armadura: 100, RM: 57, VdA: 0.92, AH: 0, RegVida: 15, RegMana: 26}
     passiva:
       nome: Jardim de Espinhos
       tipos: [Passivo, Mágico]
