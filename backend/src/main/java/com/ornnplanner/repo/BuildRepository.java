@@ -142,6 +142,11 @@ public class BuildRepository {
     public static class ChampionSetup {
         /** Priority of the basic abilities (e.g. [1, 3, 2]): the one maxed first comes first. */
         public List<Integer> skillOrder = new ArrayList<>(List.of(1, 2, 3));
+        /**
+         * Ability upgraded at each level 1..15 ("1", "2", "3" or "R"), chosen point by point; null = generated from
+         * skillOrder.
+         */
+        public List<String> skillLevels;
         public Map<String, Integer> options = new LinkedHashMap<>();
         /** Effect name -> count its conditional lines (missing = the effect's default). */
         public Map<String, Boolean> conditional = new LinkedHashMap<>();

@@ -17,6 +17,7 @@ import { emptyRunePage, setRuneCatalog } from '../runes.js';
 import PrepPanel from '../components/PrepPanel.jsx';
 import MinuteInput from '../components/MinuteInput.jsx';
 import ChampionPanel, { emptyChampionSetup } from '../components/ChampionPanel.jsx';
+import ChampionPicker from '../components/ChampionPicker.jsx';
 import RuneEditor from '../components/RuneEditor.jsx';
 import SpellEditor from '../components/SpellEditor.jsx';
 
@@ -330,11 +331,9 @@ export default function Planner({ meta, items }) {
                 {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
               </select>
             </label>
-            <label className="field">{t('build.unit')}
-              <select value={draft.unitCode} onChange={(e) => update({ unitCode: e.target.value })}>
-                {meta.units.map((u) => <option key={u.code} value={u.code}>{u.name}</option>)}
-              </select>
-            </label>
+            <div className="field champ-field">{t('build.unit')}
+              <ChampionPicker units={meta.units} value={draft.unitCode} onChange={(unitCode) => update({ unitCode })} />
+            </div>
             <label className="field narrow">{t('build.startGold')}
               <input type="number" value={meta.startingGold} disabled title={t('build.startGoldTitle')} />
             </label>
@@ -374,7 +373,7 @@ export default function Planner({ meta, items }) {
         </section>
 
         {!isRagdoll && (
-          <ChampionPanel code={draft.unitCode} setup={draft.championSetup} matchEnd={draft.matchEnd}
+          <ChampionPanel code={draft.unitCode} setup={draft.championSetup} matchEnd={draft.matchEnd} point={point}
             onChange={(championSetup) => update({ championSetup })} />
         )}
 

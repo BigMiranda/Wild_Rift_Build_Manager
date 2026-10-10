@@ -136,7 +136,7 @@ public class PlannerService {
         }
         long firstId = -1 - in.runes.size();
         for (com.ornnplanner.seed.ChampionCatalog.EffectItem e : champions.toItems(in.unit.code, setup.skillOrder,
-                setup.options, setup.conditional, rates, firstId)) {
+                setup.skillLevels, setup.options, setup.conditional, rates, firstId)) {
             in.runes.add(e.item);
             in.runeConditional.add(e.conditional);
         }

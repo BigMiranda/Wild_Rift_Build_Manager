@@ -59,7 +59,7 @@ class ChampionEffectsTest {
         in.goldPerMin = 1e6;
         in.xpPerMin = level >= 15 ? 1e7 : 0;
         in.itemIds = List.of(items);
-        for (ChampionCatalog.EffectItem e : champions.toItems(code, order, Map.of(), cond, rates, -1)) {
+        for (ChampionCatalog.EffectItem e : champions.toItems(code, order, null, Map.of(), cond, rates, -1)) {
             in.runes.add(e.item);
             in.runeConditional.add(e.conditional);
         }
@@ -80,6 +80,19 @@ class ChampionEffectsTest {
         assertArrayEquals(new int[] {1, 4, 1, 1}, ChampionCatalog.ranks(List.of(2, 1, 3), 7));
         assertArrayEquals(new int[] {4, 4, 4, 3}, ChampionCatalog.ranks(List.of(3, 2, 1), 15));
         assertArrayEquals(new int[] {1, 0, 0, 0}, ChampionCatalog.ranks(List.of(9, 9, 9), 1)); // invalid -> 1 > 2 > 3
+    }
+
+    @Test
+    void skillPlanChosenPointByPoint() {
+        List<String> plan = List.of("2", "1", "3", "2", "R", "2", "2", "1", "R", "1", "1", "3", "R", "3", "3");
+        assertTrue(ChampionCatalog.validLevels(plan));
+        assertArrayEquals(new int[] {1, 2, 1, 1}, ChampionCatalog.ranks(List.of(1, 2, 3), plan, 5));
+        assertArrayEquals(new int[] {4, 4, 4, 3}, ChampionCatalog.ranks(List.of(1, 2, 3), plan, 15));
+        // A basic ability's rank k needs level 2k - 1, the ultimate levels 5/9/13: invalid plans fall back to the order.
+        assertTrue(!ChampionCatalog.validLevels(List.of("2", "2", "3", "1", "R", "2", "2", "1", "R", "1", "1", "3", "R", "3", "3")));
+        assertTrue(!ChampionCatalog.validLevels(List.of("R", "1", "3", "2", "2", "2", "2", "1", "R", "1", "1", "3", "R", "3", "3")));
+        assertArrayEquals(new int[] {1, 0, 0, 0}, ChampionCatalog.ranks(List.of(1, 2, 3), List.of("R"), 1));
+        assertEquals(ChampionCatalog.planFromOrder(List.of(2, 1, 3)).subList(0, 5), List.of("2", "1", "3", "2", "R"));
     }
 
     @Test

@@ -180,6 +180,32 @@ public class ChampionCatalog {
         return Optional.ofNullable(byCode.get(code));
     }
 
+    /** Every champion, for the picker: code, name, title, resource and the names of the passive and abilities. */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> summaries() {
+        List<Map<String, Object>> out = new ArrayList<>();
+        byCode.forEach((code, c) -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("code", code);
+            m.put("nome", c.get("nome"));
+            m.put("titulo", c.get("titulo"));
+            Map<String, Object> status = (Map<String, Object>) c.get("status");
+            m.put("recurso", status == null ? null : status.get("recurso"));
+            List<String> abilities = new ArrayList<>();
+            Map<String, Object> p = (Map<String, Object>) c.get("passiva");
+            if (p != null) {
+                abilities.add(String.valueOf(p.get("nome")));
+            }
+            for (Map<String, Object> a : (List<Map<String, Object>>) c.getOrDefault("habilidades", List.of())) {
+                abilities.add(String.valueOf(a.get("nome")));
+            }
+            m.put("habilidades", abilities);
+            m.put("efeitos", effects(code).size());
+            out.add(m);
+        });
+        return out;
+    }
+
     public List<Effect> effects(String code) {
         return effects.getOrDefault(code, List.of());
     }
@@ -220,25 +246,63 @@ public class ChampionCatalog {
      * that is not maxed yet.
      */
     public static int[] ranks(List<Integer> order, int level) {
-        List<Integer> prio = validOrder(order);
+        return ranks(order, null, level);
+    }
+
+    /**
+     * Same, from the ability chosen at each level when {@code levels} is a valid plan (see {@link #validLevels}); else
+     * from the priority order.
+     */
+    public static int[] ranks(List<Integer> order, List<String> levels, int level) {
+        List<String> plan = validLevels(levels) ? levels : planFromOrder(order);
         int[] r = new int[4];
-        int learned = 0;
-        for (int l = 1; l <= Math.min(level, TimelineEngine.MAX_LEVEL); l++) {
-            final int lv = l;
-            if (java.util.Arrays.stream(ULT_LEVELS).anyMatch(u -> u == lv)) {
-                r[3]++;
-            } else if (learned < 3) {
-                r[prio.get(learned++) - 1]++;
-            } else {
-                for (int a : prio) {
-                    if (r[a - 1] < MAX_BASIC_RANK) {
-                        r[a - 1]++;
-                        break;
-                    }
-                }
-            }
+        for (int l = 0; l < Math.min(level, plan.size()); l++) {
+            String a = plan.get(l);
+            r["R".equals(a) ? 3 : Integer.parseInt(a) - 1]++;
         }
         return r;
+    }
+
+    /** Ability upgraded at each level 1..15 by the priority rule. */
+    public static List<String> planFromOrder(List<Integer> order) {
+        List<Integer> prio = validOrder(order);
+        int[] r = new int[3];
+        List<String> plan = new ArrayList<>();
+        int learned = 0;
+        for (int l = 1; l <= TimelineEngine.MAX_LEVEL; l++) {
+            final int lv = l;
+            if (java.util.Arrays.stream(ULT_LEVELS).anyMatch(u -> u == lv)) {
+                plan.add("R");
+                continue;
+            }
+            int a = learned < 3 ? prio.get(learned++) : prio.stream().filter(x -> r[x - 1] < MAX_BASIC_RANK).findFirst().orElse(prio.get(0));
+            r[a - 1]++;
+            plan.add(String.valueOf(a));
+        }
+        return plan;
+    }
+
+    /**
+     * A plan of 15 points the game allows: a basic ability reaches rank k from level 2k - 1 (max 4), the ultimate rank
+     * k from level 5, 9, 13 (max 3).
+     */
+    public static boolean validLevels(List<String> levels) {
+        if (levels == null || levels.size() != TimelineEngine.MAX_LEVEL) {
+            return false;
+        }
+        int[] r = new int[4];
+        for (int l = 1; l <= levels.size(); l++) {
+            String a = levels.get(l - 1);
+            int i = "R".equals(a) ? 3 : "1".equals(a) ? 0 : "2".equals(a) ? 1 : "3".equals(a) ? 2 : -1;
+            if (i < 0) {
+                return false;
+            }
+            int rank = ++r[i];
+            if (i == 3 ? rank > ULT_LEVELS.length || l < ULT_LEVELS[rank - 1] : rank > MAX_BASIC_RANK || l < 2 * rank - 1) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** The given priority if it is a permutation of 1, 2, 3; else 1 > 2 > 3. */
@@ -253,7 +317,7 @@ public class ChampionCatalog {
      * The champion's effects as engine items for a build: values by level from the skill order, the option applied,
      * stack rates in periods ({start minute, stacks per minute}) and the conditional choice (default per effect).
      */
-    public List<EffectItem> toItems(String code, List<Integer> order, Map<String, Integer> options,
+    public List<EffectItem> toItems(String code, List<Integer> order, List<String> levels, Map<String, Integer> options,
                                     Map<String, Boolean> conditional, Map<String, List<double[]>> rates, long firstId) {
         List<EffectItem> out = new ArrayList<>();
         long id = firstId;
@@ -284,7 +348,7 @@ public class ChampionCatalog {
             item.category = "Campeão";
             item.passives.add(new PassiveText(f.name, String.join("; ", f.summary)));
             for (Map<String, Object> l : f.lines) {
-                item.stats.add(line(f, l, order, opt, periods));
+                item.stats.add(line(f, l, order, levels, opt, periods));
             }
             boolean on = conditional != null && conditional.get(f.name) != null ? conditional.get(f.name) : f.defaultOn;
             out.add(new EffectItem(item, on));
@@ -292,7 +356,8 @@ public class ChampionCatalog {
         return out;
     }
 
-    private StatLine line(Effect f, Map<String, Object> l, List<Integer> order, int opt, List<double[]> periods) {
+    private StatLine line(Effect f, Map<String, Object> l, List<Integer> order, List<String> levels, int opt,
+                          List<double[]> periods) {
         StatLine s = new StatLine();
         s.type = stat(l.get("tipo"));
         s.passive = f.name;
@@ -301,7 +366,7 @@ public class ChampionCatalog {
         boolean ratio = l.get("ratio") != null;
         List<Double> values = new ArrayList<>();
         for (int level = 1; level <= TimelineEngine.MAX_LEVEL; level++) {
-            int rank = rank(f.ability, order, level);
+            int rank = rank(f.ability, order, levels, level);
             double v = 0;
             if (rank > 0) {
                 if (ratio) {
@@ -330,14 +395,14 @@ public class ChampionCatalog {
     }
 
     /** Rank of the effect's ability at a level (a passive counts as rank 1 from level 1). */
-    private static int rank(String ability, List<Integer> order, int level) {
+    private static int rank(String ability, List<Integer> order, List<String> levels, int level) {
         switch (ability) {
             case "P":
                 return 1;
             case "R":
-                return ranks(order, level)[3];
+                return ranks(order, levels, level)[3];
             default:
-                return ranks(order, level)[Integer.parseInt(ability) - 1];
+                return ranks(order, levels, level)[Integer.parseInt(ability) - 1];
         }
     }
 

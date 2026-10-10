@@ -679,3 +679,52 @@ input[aria-invalid="true"] { border-color: var(--error); }
   border: 1px solid var(--border); border-radius: 3px; padding: 0 2px; }
 .champ-point small { font-size: 9px; font-weight: 400; color: var(--muted); }
 .champ-point.ult { border-color: var(--accent, currentColor); }
+
+/* champion picker */
+.champ-field { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .05em; flex: 1 1 150px; }
+.champ-pick-btn { display: flex; align-items: center; gap: 8px; padding: 3px 10px 3px 4px; text-transform: none; letter-spacing: 0;
+  font-size: 14px; color: var(--text); text-align: left; }
+.champ-pick-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.champ-avatar { display: inline-grid; place-items: center; flex: none; border-radius: 50%; border: 2px solid var(--border-strong);
+  color: #fff; font-weight: 700; letter-spacing: .02em; object-fit: cover; text-transform: none; }
+.champ-panel > summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.champ-picker .prep-overlay-head { gap: 12px; flex-wrap: wrap; }
+.champ-search { flex: 1 1 260px; max-width: 520px; font-size: 15px; padding: 7px 12px; }
+.champ-grid { list-style: none; margin: 0 auto; padding: 0; max-width: 1200px; display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+.champ-tile { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 6px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.champ-tile:hover { border-color: var(--gold); background: var(--surface-2); }
+.champ-tile.selected { border-color: var(--gold-bright); box-shadow: 0 0 0 1px var(--gold-bright) inset; }
+.champ-tile-name { font-weight: 600; font-size: 13px; text-align: center; }
+.champ-tile-title { font-size: 10.5px; color: var(--muted); text-align: center; line-height: 1.25; min-height: 2.5em; }
+.champ-tile-badge { position: absolute; top: 6px; right: 6px; min-width: 18px; height: 18px; border-radius: 9px; padding: 0 4px;
+  background: var(--gold); color: var(--accent-ink); font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+
+/* ability points by level */
+.champ-plan { margin: 8px 0; }
+.champ-plan-scroll { overflow-x: auto; }
+.champ-plan-grid { border-collapse: separate; border-spacing: 2px; font-size: 12px; }
+.champ-plan-grid th { font-weight: 400; color: var(--muted); padding: 0 2px; text-align: center; }
+.champ-plan-grid th.l { text-align: left; white-space: nowrap; padding-right: 8px; }
+.champ-plan-name { display: inline-block; max-width: 160px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; color: var(--text-2); }
+.champ-plan-cell { width: 26px; height: 24px; padding: 0; border-radius: 4px; background: var(--surface); border: 1px solid var(--border);
+  font-weight: 700; font-size: 12px; }
+.champ-plan-cell.on { background: #2a6db3; border-color: #4f8fd6; color: #fff; }
+.champ-plan-cell.ult.on { background: var(--gold); border-color: var(--gold-bright); color: var(--accent-ink); }
+.champ-plan-cell:disabled { opacity: .25; cursor: not-allowed; }
+
+/* ability viewer */
+.champ-ab-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
+.champ-ab-toolbar .view-toggle button { font-size: 12px; padding: 4px 10px; }
+.champ-ab-toolbar .view-toggle button:disabled { opacity: .45; }
+.champ-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.champ-tabs button { padding: 3px 10px; font-size: 12px; }
+.champ-tabs button.active { border-color: var(--gold); color: var(--gold-bright); }
+.champ-val { color: var(--gold-bright); font-weight: 700; border-bottom: 1px dotted var(--gold); cursor: help; }
+.champ-rank-pick { display: inline-flex; gap: 2px; margin-left: 4px; }
+.champ-rank-pick button { padding: 0 6px; font-size: 11px; line-height: 18px; }
+.champ-rank-pick button.active { background: var(--surface-3); border-color: var(--gold); color: var(--gold-bright); }
+.champ-ranks td.on { color: var(--gold-bright); font-weight: 700; }
+.champ-ability small.warn { color: var(--gold); }

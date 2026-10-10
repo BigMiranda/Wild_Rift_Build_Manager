@@ -19,6 +19,11 @@ public class ChampionController {
         this.champions = champions;
     }
 
+    @GetMapping("/api/champions")
+    public java.util.List<Map<String, Object>> list() {
+        return champions.summaries();
+    }
+
     @GetMapping("/api/champions/{code}")
     public Map<String, Object> champion(@PathVariable String code) {
         return champions.find(code).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));

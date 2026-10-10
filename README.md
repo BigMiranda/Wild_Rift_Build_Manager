@@ -126,14 +126,23 @@ e ajuste `planner.seed.catalog` em `application.properties`.
 habilidades transcritas da Coleção do jogo, e os status dos níveis 1 e 15 medidos no modo Treino (sem itens, sem
 habilidades aprendidas, com o efeito da página de runas padrão descontado). Cada campeão vira uma **unidade** do
 planejador, com status base que crescem em linha reta entre os dois níveis; o Ornn mantém o perfil calibrado dele.
-O painel do campeão no Planejador mostra os status, a passiva e as habilidades.
+O campeão da build é escolhido numa grade com pesquisa (nome, título ou nome de uma passiva/habilidade; Enter escolhe
+o primeiro); por enquanto cada um aparece com as iniciais, sem retrato. O painel do campeão mostra os status, a passiva
+e as habilidades, uma aba por habilidade, com os valores em três modos: **texto do jogo** (rank 1, nível 1, status
+crus), **momento selecionado** no gráfico (status totais daquele minuto, com itens, runas e passivas, e o rank do plano
+de habilidades) ou **nível sem itens**. As fórmulas do texto ("57 de Dano Físico (10 + 75%{DdA})") são recalculadas
+quando todos os termos são entendidos (número, que segue a tabela por rank, ou % de um status total / adicional);
+passe o mouse no valor para ver a conta e o valor do jogo. Cada habilidade pode mostrar outro rank (R1–R4).
 
 **Passivas e habilidades que mudam status** (bloco `efeitos`, 94 efeitos em 76 campeões) entram no cálculo como as
 runas: presentes desde o início, sem custo nem espaço, no bloco do campeão do ouro efetivo.
 
-- **Ordem das habilidades** (por build): os níveis 1–3 aprendem as três básicas nessa ordem, a ultimate sobe nos níveis
-  5, 9 e 13 e os demais pontos vão para a primeira que ainda não está no máximo. Um efeito de habilidade só conta depois
-  de aprendida, com o valor do rank naquele nível (ex.: Trovoada do Malphite, +25/30/35/40% da Armadura total).
+- **Pontos de habilidade** (por build): uma ordem de prioridade preenche o plano (os níveis 1–3 aprendem as três
+  básicas nessa ordem, a ultimate sobe nos níveis 5, 9 e 13 e os demais pontos vão para a primeira que ainda não está
+  no máximo), e a grade nível × habilidade permite escolher ponto a ponto: clicar numa célula dá o ponto daquele nível
+  à habilidade, trocando com outro nível dela, dentro das regras do jogo (rank k de uma básica a partir do nível
+  2k − 1, ultimate a partir dos níveis 5/9/13). Um efeito de habilidade só conta depois de aprendida, com o valor do
+  rank naquele nível (ex.: Trovoada do Malphite, +25/30/35/40% da Armadura total).
 - **Condicionais** (formas, ativos, acúmulos, Vida baixa) são ligados por build no painel do campeão, desligados por
   padrão (a forma Martelo do Jayce, a Esfera na Orianna, o Mover Depressa do Teemo e a Conexão da Yuumi começam
   ligados). Ex.: Forma Irrestrita do K'Sante (perde 30% da Vida e 75% da Armadura/RM adicionais), Mega-Gnar,
