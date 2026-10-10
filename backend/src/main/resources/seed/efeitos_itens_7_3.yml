@@ -1,0 +1,582 @@
+# Passivas e ativos dos itens que entram no cálculo como "status efetivos" (patch 7.3), além das linhas de `efeitos`
+# de loja_7_3.yml (estas ficam no banco, editáveis no Admin, e seguem a escolha "condicional" de cada compra).
+#
+# Aqui cada efeito tem o próprio liga / desliga na build (vale para todas as compras do item), uma opção e uma taxa por
+# minuto, como os efeitos dos campeões:
+#   passiva      nome da passiva da loja que o efeito modela (no relatório de ouro efetivo ela deixa de ser estimada
+#                pelo tier do item e passa a valer o que dá)
+#   condicional  só vale em certas situações (luta, vida baixa, ativo usado): ligado por padrão (padrao: false
+#                desliga); linhas sem condicional contam sempre que o item está no inventário
+#   opcao        valor escolhido na build (ativações por luta, acúmulos...); valor_por_opcao / ratio_por_opcao x opção
+#                (valor_por_opcao_nv15: o valor por ponto no nível 15)
+#   por_minuto   cresce sem limite (acúmulos permanentes): a build informa a taxa por minuto, em períodos; cada
+#                acúmulo vale as linhas (ratio também: x acúmulos)
+#   linhas       tipo (nome do status), valor (+ valor_nv15: faixa pelo nível) ou ratio + ref + escopo (total / bonus
+#                / base)
+#   nota         premissa da estimativa
+#
+# Status efetivos (precos_status.yml): não mudam a Vida máxima nem a Aceleração mostradas, têm preço próprio:
+#   Escudo / Cura                vida extra temporária numa luta (um acionamento): preço da Vida
+#   Escudo / Cura em Aliados     o mesmo dado a aliados (opção "aliados"): preço da Vida
+#   Aceleração da Ultimate       soma-se à Aceleração de Habilidade só na ultimate (medido: Ornn nível 15, ult 70s;
+#                                10 AH + 10 da ult = 20 AH = 58,3s): 1/4 do preço da AH (1 de 4 habilidades)
+#   Aceleração de Hab. Básica    3/4 do preço da AH
+#   Estase                       segundos invulnerável em que as recargas correm sem risco: numa luta de ~20s,
+#                                1s ≈ 5 de AH
+# Valores de Campeões corpo a corpo quando o texto diferencia (os de ataque à distância ficam na nota).
+# Efeitos que dependem do inimigo (dano, redução de resistência, Feridas Dolorosas, corte de escudo, redução de dano
+# sofrido) ficam para o simulador de confronto.
+patch: "7.3"
+itens:
+  # ------------------------------------------------------------------ Aceleração da ultimate / básica
+  Convergência de Zeke:
+    Convergir:
+      passiva: Convergir
+      linhas:
+      - {tipo: Aceleração da Ultimate, valor: 10}
+  Hexoplaca Experimental:
+    Hexcarregado:
+      passiva: Hexcarregado
+      linhas:
+      - {tipo: Aceleração da Ultimate, valor: 20}
+    Turbo:
+      passiva: Turbo
+      condicional: true
+      nota: "8s depois de usar a ultimate"
+      linhas:
+      - {tipo: "% Velocidade de Ataque", valor: 40}
+      - {tipo: "% Velocidade de Movimento", valor: 20}
+  Dardos de Caça-Demônios:
+    Vigília Noturna:
+      passiva: Vigília Noturna
+      linhas:
+      - {tipo: Aceleração da Ultimate, valor: 20}
+  Malevolência:
+    Desprezo:
+      passiva: Desprezo
+      linhas:
+      - {tipo: Aceleração da Ultimate, valor: 20}
+  Lança de Shojin:
+    Força Dracônica:
+      passiva: Força Dracônica
+      linhas:
+      - {tipo: Aceleração de Habilidade Básica, valor: 20}
+  Mandato Imperial:
+    Controle:
+      passiva: Controle
+      opcao: {nome: Habilidades básicas com controle, min: 0, max: 3, padrao: 1}
+      nota: "20 de AH em cada habilidade de controle; a ultimate com controle é um efeito à parte"
+      linhas:
+      - {tipo: Aceleração de Habilidade Básica, valor: 0, valor_por_opcao: 6.67}
+    Controle (ultimate):
+      passiva: Controle
+      condicional: true
+      padrao: false
+      nota: "ligue se a ultimate do campeão aplica controle de grupo"
+      linhas:
+      - {tipo: Aceleração da Ultimate, valor: 20}
+  Adagas Rápidas Navori:
+    Golpes Hábeis:
+      passiva: Golpes Hábeis
+      condicional: true
+      opcao: {nome: Ataques por recarga, min: 0, max: 5, padrao: 2}
+      nota: "cada ataque corta 15% da recarga restante: 2 ataques ≈ 38 de AH básica (aprox. 19 por ataque)"
+      linhas:
+      - {tipo: Aceleração de Habilidade Básica, valor: 0, valor_por_opcao: 19}
+
+  # ------------------------------------------------------------------ Acúmulos permanentes
+  Coração de Aço:
+    Consumo Colossal:
+      passiva: Consumo Colossal
+      por_minuto: "Golpes carregados por minuto"
+      nota: "cada golpe dá 15% do dano (140 + 3,5% da Vida máxima) em Vida máxima: 21 + 0,525% da Vida atual por golpe"
+      linhas:
+      - {tipo: Vida Máxima, valor: 21}
+      - {tipo: Vida Máxima, ratio: 0.00525, ref: Vida Máxima, escopo: total}
+
+  # ------------------------------------------------------------------ Escudos
+  Medalhão dos Solari de Ferro:
+    Medalhão:
+      passiva: Medalhão (Ativo)
+      condicional: true
+      opcao: {nome: Aliados protegidos, min: 0, max: 4, padrao: 0}
+      linhas:
+      - {tipo: Escudo, valor: 250, valor_nv15: 370}
+      - {tipo: Escudo em Aliados, valor: 0, valor_por_opcao: 250, valor_por_opcao_nv15: 370}
+  Placa Gargolítica:
+    Placa:
+      passiva: Placa (Ativo)
+      condicional: true
+      nota: "decai ao longo de 2,5s"
+      linhas:
+      - {tipo: Escudo, valor: 100}
+      - {tipo: Escudo, ratio: 0.9, ref: Vida Máxima, escopo: bonus}
+  Sinal de Sterak:
+    Salva-Vidas:
+      passiva: Salva-Vidas
+      condicional: true
+      nota: "abaixo de 35% de Vida; decai ao longo de 5s"
+      linhas:
+      - {tipo: Escudo, ratio: 0.75, ref: Vida Máxima, escopo: bonus}
+  Eclipse:
+    Lua Sempre Crescente:
+      passiva: Lua Sempre Crescente
+      condicional: true
+      opcao: {nome: Acionamentos por luta, min: 0, max: 5, padrao: 1}
+      nota: "corpo a corpo (a distância: 70 + 18% do DdA adicional); 6s de recarga"
+      linhas:
+      - {tipo: Escudo, valor: 0, valor_por_opcao: 150}
+      - {tipo: Escudo, ratio: 0, ratio_por_opcao: 0.4, ref: Dano de Ataque, escopo: bonus}
+  Fimbulwinter:
+    Colosso Congelado:
+      passiva: Colosso Congelado
+      condicional: true
+      opcao: {nome: Mais de 1 inimigo por perto (0 / 1), min: 0, max: 1, padrao: 0}
+      nota: "8s de recarga; +80% com mais de 1 Campeão inimigo; 50% para ataque a distância"
+      linhas:
+      - {tipo: Escudo, valor: 120, valor_por_opcao: 96}
+      - {tipo: Escudo, ratio: 0.045, ratio_por_opcao: 0.036, ref: Mana Máximo, escopo: total}
+  Rookern Lamúrico:
+    Perdição dos Magos:
+      passiva: Perdição dos Magos
+      condicional: true
+      nota: "escudo só contra Dano Mágico"
+      linhas:
+      - {tipo: Escudo, valor: 50, valor_nv15: 150}
+      - {tipo: Escudo, ratio: 0.14, ref: Vida Máxima, escopo: total}
+  Mandíbula de Malmortius:
+    Salva-Vidas:
+      passiva: Salva-Vidas
+      condicional: true
+      nota: "escudo só contra Dano Mágico, abaixo de 35% de Vida"
+      linhas:
+      - {tipo: Escudo, valor: 220, valor_nv15: 530}
+      - {tipo: "% Vampirismo Universal", valor: 10}
+  Sedenta por Sangue:
+    Ícor-escudo:
+      passiva: Ícor-escudo
+      condicional: true
+      nota: "escudo máximo, feito com a cura excedente do Roubo de Vida"
+      linhas:
+      - {tipo: Escudo, valor: 165, valor_nv15: 345}
+  Arco-escudo Imortal:
+    Salva-Vidas:
+      passiva: Salva-Vidas
+      condicional: true
+      nota: "corpo a corpo (a distância: 300–550)"
+      linhas:
+      - {tipo: Escudo, valor: 350, valor_nv15: 650}
+  Abraço de Seraph:
+    Salva-Vidas:
+      passiva: Salva-Vidas
+      condicional: true
+      linhas:
+      - {tipo: Escudo, ratio: 0.16, ref: Mana Máximo, escopo: total}
+  Esmagadores Acorrentados:
+    Persistência Noxiana:
+      passiva: Persistência Noxiana
+      condicional: true
+      opcao: {nome: Acionamentos por luta, min: 0, max: 5, padrao: 1}
+      nota: "escudo mágico; 12s de recarga"
+      linhas:
+      - {tipo: Escudo, valor: 0, valor_por_opcao: 20, valor_por_opcao_nv15: 140}
+      - {tipo: Escudo, ratio: 0, ratio_por_opcao: 0.05, ref: Vida Máxima, escopo: total}
+  Mobilização Blindada:
+    Tolerância Noxiana:
+      passiva: Tolerância Noxiana
+      condicional: true
+      opcao: {nome: Acionamentos por luta, min: 0, max: 5, padrao: 1}
+      nota: "escudo físico; 12s de recarga"
+      linhas:
+      - {tipo: Escudo, valor: 0, valor_por_opcao: 20, valor_por_opcao_nv15: 140}
+      - {tipo: Escudo, ratio: 0, ratio_por_opcao: 0.05, ref: Vida Máxima, escopo: total}
+
+  # ------------------------------------------------------------------ Curas
+  Manto da Meia-noite:
+    Salva-Vidas (mobilidade):
+      passiva: Salva-Vidas
+      condicional: true
+      nota: "5s abaixo de 30% de Vida (a Vida adicional do Salva-Vidas segue o condicional da compra)"
+      linhas:
+      - {tipo: "% Velocidade de Movimento", valor: 10}
+      - {tipo: "% Tenacidade", valor: 20}
+    Salva-Vidas (restauração):
+      passiva: Salva-Vidas
+      condicional: true
+      nota: "restaurada ao longo de 5s: desligue para um dano explosivo que não dá tempo à cura"
+      linhas:
+      - {tipo: Cura, valor: 200, valor_nv15: 400}
+      - {tipo: Cura, ratio: 1.2, ref: Armadura, escopo: bonus}
+      - {tipo: Cura, ratio: 1.2, ref: Resistência Mágica, escopo: bonus}
+      - {tipo: Cura, ratio: 0.15, ref: Vida Máxima, escopo: total}
+  Virtude Radiante:
+    Luz-guia:
+      passiva: Luz-guia
+      condicional: true
+      opcao: {nome: Aliados curados, min: 0, max: 4, padrao: 0}
+      nota: "6s depois da ultimate: +10% de Vida máxima e 2,5% da Vida máxima por segundo (15% no total)"
+      linhas:
+      - {tipo: Vida Máxima, ratio: 0.1, ref: Vida Máxima, escopo: total}
+      - {tipo: Cura, ratio: 0.15, ref: Vida Máxima, escopo: total}
+      - {tipo: Cura em Aliados, ratio: 0, ratio_por_opcao: 0.15, ref: Vida Máxima, escopo: total}
+  Desespero Eterno:
+    Angústia:
+      passiva: Angústia
+      condicional: true
+      opcao: {nome: Pulsos por luta (a cada 4s), min: 0, max: 8, padrao: 3}
+      nota: "cura 250% do dano (3% da Vida máxima), antes das resistências do alvo"
+      linhas:
+      - {tipo: Cura, ratio: 0, ratio_por_opcao: 0.075, ref: Vida Máxima, escopo: total}
+  Armadura de Warmog:
+    Abençoado:
+      passiva: Abençoado
+      linhas:
+      - {tipo: Escudo, ratio: 0.3, ref: Escudo, escopo: total}
+      - {tipo: Cura, ratio: 0.3, ref: Cura, escopo: total}
+  Anjo Guardião:
+    Ressurreição:
+      passiva: Ressurreição
+      condicional: true
+      nota: "volta com 50% da Vida base depois de 4s de Estase (180s de recarga)"
+      linhas:
+      - {tipo: Cura, ratio: 0.5, ref: Vida Máxima, escopo: base}
+      - {tipo: Estase, valor: 4}
+  Dança da Morte:
+    Desafiar:
+      passiva: Desafiar
+      condicional: true
+      nota: "ao participar de um abate"
+      linhas:
+      - {tipo: Cura, ratio: 0.9, ref: Dano de Ataque, escopo: bonus}
+  Céu Dividido:
+    Golpe de Lumescudo:
+      passiva: Golpe de Lumescudo
+      condicional: true
+      opcao: {nome: Acionamentos por luta, min: 0, max: 5, padrao: 1}
+      nota: "125% do DdA base (os 6% da Vida perdida dependem da luta)"
+      linhas:
+      - {tipo: Cura, ratio: 0, ratio_por_opcao: 1.25, ref: Dano de Ataque, escopo: base}
+  Hemodrenário:
+    Hemodrenagem:
+      passiva: Hemodrenagem (Passivo)
+      linhas:
+      - {tipo: "% Vampirismo Universal", valor: 8}
+    Corte Sedento:
+      passiva: Corte Sedento (Ativo)
+      condicional: true
+      opcao: {nome: Campeões atingidos, min: 0, max: 5, padrao: 1}
+      nota: "20% do DdA por Campeão (os 10% da Vida perdida dependem da luta)"
+      linhas:
+      - {tipo: Cura, ratio: 0, ratio_por_opcao: 0.2, ref: Dano de Ataque, escopo: total}
+  Catalisador das Eras:
+    Eternidade:
+      passiva: Eternidade
+      condicional: true
+      opcao: {nome: Conjurações por luta, min: 0, max: 10, padrao: 4}
+      nota: "limite de 15 de Vida por conjuração"
+      linhas:
+      - {tipo: Cura, valor: 0, valor_por_opcao: 15}
+  Bastão das Eras:
+    Eternidade:
+      passiva: Eternidade
+      condicional: true
+      opcao: {nome: Conjurações por luta, min: 0, max: 10, padrao: 4}
+      nota: "limite de 25 de Vida por conjuração"
+      linhas:
+      - {tipo: Cura, valor: 0, valor_por_opcao: 25}
+  Capuz do Espectro:
+    Visitação Espectral:
+      passiva: Visitação Espectral
+      condicional: true
+      nota: "10s depois de sofrer dano de um Campeão"
+      linhas:
+      - {tipo: "% Regeneração de Vida", valor: 150}
+  Aurora e Crepúsculo:
+    Lâmina Arcana:
+      passiva: Lâmina Arcana
+      condicional: true
+      opcao: {nome: Acionamentos por luta, min: 0, max: 8, padrao: 3}
+      linhas:
+      - {tipo: Cura, ratio: 0, ratio_por_opcao: 0.03, ref: Vida Máxima, escopo: bonus}
+      - {tipo: Cura, ratio: 0, ratio_por_opcao: 0.1, ref: Poder de Habilidade, escopo: total}
+  Criptoflora:
+    Vida na Morte:
+      passiva: Vida na Morte
+      condicional: true
+      opcao: {nome: Aliados curados, min: 0, max: 4, padrao: 0}
+      nota: "ao participar de um abate (60s de recarga)"
+      linhas:
+      - {tipo: Cura, valor: 100}
+      - {tipo: Cura, ratio: 0.2, ref: Poder de Habilidade, escopo: total}
+      - {tipo: Cura em Aliados, valor: 0, valor_por_opcao: 100}
+      - {tipo: Cura em Aliados, ratio: 0, ratio_por_opcao: 0.2, ref: Poder de Habilidade, escopo: total}
+  Redenção:
+    Intervenção:
+      passiva: Intervenção (Ativo)
+      condicional: true
+      opcao: {nome: Aliados curados, min: 0, max: 4, padrao: 2}
+      linhas:
+      - {tipo: Cura, valor: 150, valor_nv15: 350}
+      - {tipo: Cura em Aliados, valor: 0, valor_por_opcao: 150, valor_por_opcao_nv15: 350}
+  Bênção de Mikael:
+    Purificar:
+      passiva: Purificar (Ativo)
+      condicional: true
+      linhas:
+      - {tipo: Cura em Aliados, valor: 150, valor_nv15: 250}
+  Diadema de Canções:
+    Diadema:
+      passiva: Diadema
+      condicional: true
+      opcao: {nome: Segundos em combate por luta, min: 0, max: 20, padrao: 5}
+      nota: "cura o aliado com a Vida mais baixa (você incluído)"
+      linhas:
+      - {tipo: Cura em Aliados, ratio: 0, ratio_por_opcao: 0.008, ref: Mana Máximo, escopo: total}
+  Ecos de Helia:
+    Sifão da Alma:
+      passiva: Sifão da Alma
+      condicional: true
+      nota: "Fragmentos de Espírito no máximo"
+      linhas:
+      - {tipo: Cura em Aliados, valor: 80, valor_nv15: 250}
+  Grevas do Berserker:
+    Lâmina Abençoada:
+      passiva: Lâmina Abençoada
+      condicional: true
+      opcao: {nome: Ataques por luta, min: 0, max: 30, padrao: 8}
+      linhas:
+      - {tipo: Cura, valor: 0, valor_por_opcao: 10}
+  Grevas Bélicas:
+    Lâmina Abençoada:
+      passiva: Lâmina Abençoada
+      condicional: true
+      opcao: {nome: Ataques por luta, min: 0, max: 30, padrao: 8}
+      linhas:
+      - {tipo: Cura, valor: 0, valor_por_opcao: 12}
+    Marcha Noxiana:
+      passiva: Marcha Noxiana
+      condicional: true
+      nota: "corpo a corpo (a distância: 7%); decai em 2s"
+      linhas:
+      - {tipo: "% Velocidade de Movimento", valor: 10}
+
+  # ------------------------------------------------------------------ Vampirismo
+  Grevas Vorazes:
+    Conversão:
+      passiva: Conversão
+      opcao: {nome: Abates de Campeões (até 10), min: 0, max: 10, padrao: 0}
+      linhas:
+      - {tipo: "% Vampirismo Universal", valor: 5, valor_por_opcao: 0.5}
+  Passos Imortais:
+    Conversão:
+      passiva: Conversão
+      opcao: {nome: Abates de Campeões (até 10), min: 0, max: 10, padrao: 0}
+      linhas:
+      - {tipo: "% Vampirismo Universal", valor: 5, valor_por_opcao: 0.5}
+    Agora e Sempre:
+      passiva: Agora e Sempre
+      condicional: true
+      padrao: false
+      nota: "abaixo de 50% de Vida: +12% de cura e escudo recebidos (o dano a mais fica para o simulador)"
+      linhas:
+      - {tipo: Escudo, ratio: 0.12, ref: Escudo, escopo: total}
+      - {tipo: Cura, ratio: 0.12, ref: Cura, escopo: total}
+  Criafendas:
+    Corrupção do Vazio:
+      passiva: Corrupção do Vazio
+      condicional: true
+      nota: "força máxima (4s em combate); corpo a corpo (a distância: 6%)"
+      linhas:
+      - {tipo: "% Vampirismo Universal", valor: 10}
+
+  # ------------------------------------------------------------------ Estase
+  Ampulheta de Zhonya:
+    Estase:
+      passiva: Estase (Ativo)
+      condicional: true
+      linhas:
+      - {tipo: Estase, valor: 2.5}
+  Armaguarda da Caçadora:
+    Estase:
+      passiva: Estase (Ativo)
+      condicional: true
+      linhas:
+      - {tipo: Estase, valor: 2.5}
+
+  # ------------------------------------------------------------------ Tenacidade, mobilidade e outros status em luta
+  Duplaguarda de Amaranto:
+    Tolerância (tenacidade):
+      passiva: Tolerância
+      condicional: true
+      nota: "com o máximo de acúmulos (a Armadura e a RM seguem o condicional da compra)"
+      linhas:
+      - {tipo: "% Tenacidade", valor: 20}
+  Cimitarra Mercurial:
+    Perseverança:
+      passiva: Perseverança (Passivo)
+      condicional: true
+      padrao: false
+      nota: "1,5s depois do ativo"
+      linhas:
+      - {tipo: "% Tenacidade", valor: 30}
+  Bandana de Mercúrio:
+    Perseverança:
+      passiva: Perseverança (Passivo)
+      condicional: true
+      padrao: false
+      nota: "1,5s depois do ativo"
+      linhas:
+      - {tipo: "% Tenacidade", valor: 30}
+  Armadilha de Yordle:
+    Apanhador:
+      passiva: Apanhador
+      condicional: true
+      nota: "8s depois de aplicar Lentidão ou Imobilização; corpo a corpo (a distância: 20% de VdA). Os aliados também recebem a VdA"
+      linhas:
+      - {tipo: Velocidade de Movimento, valor: 20}
+      - {tipo: "% Velocidade de Ataque", valor: 30}
+  Presságio de Randuin:
+    Contracorrente:
+      passiva: Contracorrente
+      condicional: true
+      padrao: false
+      opcao: {nome: Acúmulos, min: 0, max: 4, padrao: 4}
+      nota: "ao sofrer Acertos Críticos (a redução de dano crítico fica para o simulador)"
+      linhas:
+      - {tipo: "% Velocidade de Movimento", valor: 0, valor_por_opcao: 5}
+  Couraça do Defunto:
+    Embalo:
+      passiva: Embalo
+      condicional: true
+      nota: "100 acúmulos de Embalo (andando sem atacar)"
+      linhas:
+      - {tipo: Velocidade de Movimento, valor: 40}
+  Armadura Sangrenta do Suserano:
+    Retaliação:
+      passiva: Retaliação
+      condicional: true
+      padrao: false
+      nota: "abaixo de 30% de Vida"
+      linhas:
+      - {tipo: Dano de Ataque, ratio: 0.09, ref: Dano de Ataque, escopo: total}
+  Cutelo Negro:
+    Perseguir:
+      passiva: Perseguir
+      condicional: true
+      nota: "ao causar Dano Físico; corpo a corpo (a distância: metade)"
+      linhas:
+      - {tipo: Velocidade de Movimento, valor: 20}
+  Quebrapassos:
+    Marcha:
+      passiva: Marcha (Passivo)
+      condicional: true
+      linhas:
+      - {tipo: Velocidade de Movimento, valor: 20}
+  Força da Trindade:
+    Valentia:
+      passiva: Valentia
+      condicional: true
+      nota: "corpo a corpo (a distância: metade)"
+      linhas:
+      - {tipo: Velocidade de Movimento, valor: 20}
+  Fago:
+    Fúria:
+      passiva: Fúria
+      condicional: true
+      nota: "corpo a corpo (a distância: metade)"
+      linhas:
+      - {tipo: Velocidade de Movimento, valor: 20}
+  Lâmina Fantasma de Youmuu:
+    Embalo:
+      passiva: Embalo
+      condicional: true
+      nota: "fora de combate; corpo a corpo (a distância: 20)"
+      linhas:
+      - {tipo: Velocidade de Movimento, valor: 30}
+  Botas Esmaga-armaduras:
+    Andarilho das Nuvens:
+      passiva: Andarilho das Nuvens
+      condicional: true
+      nota: "fora de combate"
+      linhas:
+      - {tipo: Velocidade de Movimento, valor: 20}
+  Ímpeto Cósmico:
+    Dança Enfeitiçada:
+      passiva: Dança Enfeitiçada
+      condicional: true
+      linhas:
+      - {tipo: Velocidade de Movimento, valor: 30}
+  Dançarina Fantasma:
+    Valsa Espectral:
+      passiva: Valsa Espectral
+      condicional: true
+      opcao: {nome: Acúmulos, min: 0, max: 5, padrao: 5}
+      linhas:
+      - {tipo: "% Velocidade de Ataque", valor: 0, valor_por_opcao: 6}
+      - {tipo: "% Velocidade de Movimento", valor: 0, valor_por_opcao: 1}
+  Lâmina da Fúria de Guinsoo:
+    Golpe Fervente:
+      passiva: Golpe Fervente
+      condicional: true
+      linhas:
+      - {tipo: "% Velocidade de Ataque", valor: 32}
+  Flechatroz de Yun Tal:
+    Praticar e Matar:
+      passiva: Praticar e Matar
+      opcao: {nome: "% de Crítico acumulado (até 25)", min: 0, max: 25, padrao: 25}
+      nota: "0,4% por ataque (corpo a corpo) ou 0,2% (a distância), permanente"
+      linhas:
+      - {tipo: "% Taxa de Crítico", valor: 0, valor_por_opcao: 1}
+    Agitação:
+      passiva: Agitação
+      condicional: true
+      linhas:
+      - {tipo: "% Velocidade de Ataque", valor: 35}
+  Terminus:
+    Justaposição:
+      passiva: Justaposição
+      condicional: true
+      nota: "3 acúmulos de Luz e 3 de Escuridão"
+      linhas:
+      - {tipo: Armadura, valor: 15, valor_nv15: 24}
+      - {tipo: Resistência Mágica, valor: 15, valor_nv15: 24}
+      - {tipo: "% Penetração de Armadura", valor: 30}
+      - {tipo: "% Penetração Mágica", valor: 30}
+  Tocha de Chamas Negras:
+    Chamas Negras:
+      passiva: Chamas Negras
+      condicional: true
+      opcao: {nome: Inimigos queimando, min: 0, max: 5, padrao: 1}
+      linhas:
+      - {tipo: Poder de Habilidade, ratio: 0, ratio_por_opcao: 0.04, ref: Poder de Habilidade, escopo: total}
+  Turíbulo Ardente:
+    Turíbulo:
+      passiva: Turíbulo
+      condicional: true
+      nota: "6s depois de curar ou proteger um aliado (ele também recebe)"
+      linhas:
+      - {tipo: "% Velocidade de Ataque", valor: 30}
+  Cajado Aquafluxo:
+    Corredeira:
+      passiva: Corredeira
+      condicional: true
+      nota: "6s depois de curar ou proteger um aliado (ele também recebe)"
+      linhas:
+      - {tipo: Aceleração de Habilidade, valor: 15}
+      - {tipo: Poder de Habilidade, valor: 40}
+  Botas de Mana:
+    Equilíbrio:
+      passiva: Equilíbrio
+      condicional: true
+      padrao: false
+      nota: "só para Campeões sem Mana"
+      linhas:
+      - {tipo: "% Regeneração de Vida", valor: 50}
+  Sapatos Enfeitiçados:
+    Equilíbrio:
+      passiva: Equilíbrio
+      condicional: true
+      padrao: false
+      nota: "só para Campeões sem Mana"
+      linhas:
+      - {tipo: "% Regeneração de Vida", valor: 50}

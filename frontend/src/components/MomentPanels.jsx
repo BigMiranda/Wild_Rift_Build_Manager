@@ -1,5 +1,5 @@
 import { statLabel, t } from '../i18n.js';
-import { DERIVED_STATS, PERCENT_STATS, SHEET_STATS, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
+import { DERIVED_STATS, EFFECTIVE_STATS, PERCENT_STATS, SHEET_STATS, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
 import ItemIcon from './ItemIcon.jsx';
 import InventorySlots from './InventorySlots.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
@@ -52,7 +52,34 @@ export function StatSheet({ point, itemsById }) {
           );
         })}
       </div>
+      <EffectiveSheet total={point.total} />
     </section>
+  );
+}
+
+/** Effective stats of a moment (shields, heals, stasis, haste of one ability), with what they add up to in a fight. */
+function EffectiveSheet({ total }) {
+  const held = EFFECTIVE_STATS.filter((s) => (total[s] ?? 0) > 0.05);
+  if (!held.length) return null;
+  const v = (s) => total[s] ?? 0;
+  const rows = held.map((s) => ({ key: s, stat: s, label: statLabel(s), value: statValue(s, v(s)) }));
+  if (v('Shield') + v('Heal') > 0) {
+    rows.unshift({ key: 'eff', stat: 'Max Health', label: t('sheet.effHealth'), value: n0(v('Max Health') + v('Shield') + v('Heal')), strong: true });
+  }
+  if (v('Ultimate Haste') > 0) rows.push({ key: 'ult', stat: 'Ability Haste', label: t('sheet.ultHaste'), value: n0(v('Ability Haste') + v('Ultimate Haste')) });
+  if (v('Basic Ability Haste') > 0) rows.push({ key: 'basic', stat: 'Ability Haste', label: t('sheet.basicHaste'), value: n0(v('Ability Haste') + v('Basic Ability Haste')) });
+  return (
+    <>
+      <h4 className="sheet-sub" title={t('sheet.effectiveHelp')}>{t('sheet.effective')}</h4>
+      <div className="stat-sheet">
+        {rows.map((r) => (
+          <div key={r.key} className="sheet-row" title={r.key === 'eff' ? t('sheet.effectiveHelp') : undefined}>
+            <span className="sheet-label" style={{ color: statColor(r.stat) }}><StatIcon stat={r.stat} />{r.label}</span>
+            <span className="sheet-value">{r.strong ? <strong>{r.value}</strong> : r.value}</span>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 

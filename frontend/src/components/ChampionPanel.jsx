@@ -125,9 +125,12 @@ function SkillPlan({ abilities, setup, set }) {
       <div className="champ-order">
         <label title={t('champ.skillOrderHint')}>
           {t('champ.skillOrder')}{' '}
-          <select value={custom ? '' : order.join()} onChange={(ev) => set({ skillOrder: ev.target.value.split(',').map(Number), skillLevels: null })}>
+          <select value={custom ? '' : order.join()} title={custom ? undefined : order.map((x) => `${x} ${name(String(x))}`).join(' › ')}
+            onChange={(ev) => set({ skillOrder: ev.target.value.split(',').map(Number), skillLevels: null })}>
             {custom && <option value="">{t('champ.customPlan')}</option>}
-            {ORDERS.map((o) => <option key={o.join()} value={o.join()}>{o.map((x) => name(String(x))).join(' › ')}</option>)}
+            {ORDERS.map((o) => (
+              <option key={o.join()} value={o.join()} title={o.map((x) => name(String(x))).join(' › ')}>{o.join(' › ')}</option>
+            ))}
           </select>
         </label>
         {custom && <button className="link" onClick={() => set({ skillLevels: null })}>{t('champ.resetPlan')}</button>}

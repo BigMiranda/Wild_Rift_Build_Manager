@@ -154,6 +154,18 @@ public class BuildRepository {
         public Map<String, List<RatePeriod>> rates = new LinkedHashMap<>();
     }
 
+    /**
+     * Choices for the modeled item effects of a build (efeitos_itens), by "item|effect": on / off, option and stack rate.
+     * They apply to every purchase of the item.
+     */
+    public static class ItemSetup {
+        public Map<String, Integer> options = new LinkedHashMap<>();
+        /** "item|effect" -> count its conditional lines (missing = the effect's default). */
+        public Map<String, Boolean> conditional = new LinkedHashMap<>();
+        /** "item|effect" -> stacks / activations per minute, in periods. */
+        public Map<String, List<RatePeriod>> rates = new LinkedHashMap<>();
+    }
+
     public static class Build {
         public Long id;
         public long folderId;
@@ -169,6 +181,7 @@ public class BuildRepository {
         public List<Step> steps = new ArrayList<>();
         public RunePage runePage;
         public ChampionSetup championSetup;
+        public ItemSetup itemSetup;
         /** Game minute the match ended (optional): the timeline goes up to it. */
         public Double matchEnd;
         /** Two summoner spells (names). */
@@ -266,7 +279,8 @@ public class BuildRepository {
         jdbc.update(con -> {
             PreparedStatement ps = con.prepareStatement(
                     "INSERT INTO build (folder_id, name, note, unit_code, gold_per_min, xp_per_min, created_at, updated_at, "
-                            + "assume_half_items, assume_small_items, rune_page, spells, match_end, champion_setup) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                            + "assume_half_items, assume_small_items, rune_page, spells, match_end, champion_setup, item_setup) "
+                            + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setLong(1, b.folderId);
             ps.setString(2, b.name);
@@ -286,6 +300,7 @@ public class BuildRepository {
                 ps.setDouble(13, b.matchEnd);
             }
             ps.setString(14, json(b.championSetup));
+            ps.setString(15, json(b.itemSetup));
             return ps;
         }, kh);
         long id = kh.getKey().longValue();
@@ -296,9 +311,9 @@ public class BuildRepository {
     public boolean updateBuild(long id, Build b) {
         int n = jdbc.update("UPDATE build SET folder_id = ?, name = ?, note = ?, unit_code = ?, gold_per_min = ?, "
                         + "xp_per_min = ?, assume_half_items = ?, assume_small_items = ?, rune_page = ?, spells = ?, "
-                        + "match_end = ?, champion_setup = ?, updated_at = ? WHERE id = ?",
+                        + "match_end = ?, champion_setup = ?, item_setup = ?, updated_at = ? WHERE id = ?",
                 b.folderId, b.name, b.note, b.unitCode, b.goldPerMin, b.xpPerMin, b.assumeHalfItems ? 1 : 0,
-                b.assumeSmallItems ? 1 : 0, json(b.runePage), json(b.spells), b.matchEnd, json(b.championSetup),
+                b.assumeSmallItems ? 1 : 0, json(b.runePage), json(b.spells), b.matchEnd, json(b.championSetup), json(b.itemSetup),
                 Instant.now().toString(), id);
         if (n == 0) {
             return false;
@@ -364,6 +379,8 @@ public class BuildRepository {
             b.runePage = page == null ? null : JSON.readValue(page, RunePage.class);
             String setup = rs.getString("champion_setup");
             b.championSetup = setup == null ? null : JSON.readValue(setup, ChampionSetup.class);
+            String items = rs.getString("item_setup");
+            b.itemSetup = items == null ? null : JSON.readValue(items, ItemSetup.class);
             String spells = rs.getString("spells");
             b.spells = spells == null ? new ArrayList<>()
                     : JSON.readValue(spells, JSON.getTypeFactory().constructCollectionType(List.class, String.class));

@@ -164,7 +164,7 @@ function ItemDetail({ tile, variant, items, itemsById, buildPayload, purchase, o
         ))}
       </div>
 
-      {modeled.length > 0 && (
+      {(modeled.length > 0 || variant.effects?.length > 0) && (
         <div className="detail-block modeled">
           <h4>{t('shop.modeled')}</h4>
           <ul>
@@ -173,6 +173,14 @@ function ItemDetail({ tile, variant, items, itemsById, buildPayload, purchase, o
                 <StatIcon stat={m.stat} /><span className="passive-name">{m.name}:</span>{' '}
                 <span style={{ color: statColor(m.stat) }}>{m.text}</span>
                 {m.conditional && <small className="cond"> · {t('shop.conditional')}</small>}
+              </li>
+            ))}
+            {(variant.effects ?? []).map((e) => (
+              <li key={e.name} title={e.note ?? undefined}>
+                <span className="passive-name">{e.name}:</span> {e.summary.join(' · ')}
+                {e.option && <small className="muted"> · {t('shop.effectOption', { name: e.option.name })}</small>}
+                {e.rate && <small className="muted"> · {e.rate.name}</small>}
+                {e.note && <small className="muted"> — {e.note}</small>}
               </li>
             ))}
           </ul>

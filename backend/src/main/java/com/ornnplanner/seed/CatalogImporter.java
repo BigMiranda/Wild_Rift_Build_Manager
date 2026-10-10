@@ -154,6 +154,7 @@ public class CatalogImporter {
             d.baseItem = str(v.get("base_item"));
             d.fixedPrice = num(v.get("price"));
             d.alias = str(v.get("alias"));
+            d.factor = num(v.get("factor"));
             d.relevant = RELEVANT_STATS.contains(d.name);
             catalog.upsertStatDef(d);
             if (v.get("loja") != null) {

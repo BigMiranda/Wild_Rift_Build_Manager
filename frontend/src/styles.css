@@ -31,6 +31,7 @@
   --stat-ms: #cfd8e3;
   --stat-crit: #f06a5f;
   --stat-ten: #9b86e8;
+  --stat-shield: #c9d4e0;
   --bonus: #6fd486;
   /* categorical series colors (validated dark-surface steps), fixed order, one per build */
   --series-1: #3987e5;
@@ -728,3 +729,13 @@ input[aria-invalid="true"] { border-color: var(--error); }
 .champ-rank-pick button.active { background: var(--surface-3); border-color: var(--gold); color: var(--gold-bright); }
 .champ-ranks td.on { color: var(--gold-bright); font-weight: 700; }
 .champ-ability small.warn { color: var(--gold); }
+
+/* Modeled item effects (below the purchase sequence) and the effective stats of the sheet */
+.item-effects { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+.item-effects > summary { cursor: pointer; font-weight: 600; }
+.item-effects > p { margin: 6px 0; font-size: 12px; }
+.item-effects-fixed { list-style: none; margin: 6px 0 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.item-effects-fixed li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.item-effects-fixed img, .rune-option img.item { border-radius: 3px; }
+.effect-details { margin-left: 30px; }
+.sheet-sub { margin: 14px 0 6px; font-size: 13px; color: var(--text-2); }

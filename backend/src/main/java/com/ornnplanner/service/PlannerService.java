@@ -30,19 +30,24 @@ public class PlannerService {
     public static class ItemView extends ItemDef {
         public double staticPct;
         public String staticFormula;
+        /** Passives / actives modeled as stats (efeitos_itens), switched on or off per build. */
+        public List<com.ornnplanner.seed.EffectSpec.Effect> effects = new ArrayList<>();
     }
 
     private final CatalogRepository catalog;
     private final ReferenceRepository reference;
     private final com.ornnplanner.seed.RuneCatalog runes;
     private final com.ornnplanner.seed.ChampionCatalog champions;
+    private final com.ornnplanner.seed.ItemEffectCatalog itemEffects;
 
     public PlannerService(CatalogRepository catalog, ReferenceRepository reference,
-                          com.ornnplanner.seed.RuneCatalog runes, com.ornnplanner.seed.ChampionCatalog champions) {
+                          com.ornnplanner.seed.RuneCatalog runes, com.ornnplanner.seed.ChampionCatalog champions,
+                          com.ornnplanner.seed.ItemEffectCatalog itemEffects) {
         this.catalog = catalog;
         this.reference = reference;
         this.runes = runes;
         this.champions = champions;
+        this.itemEffects = itemEffects;
     }
 
     public ReferenceData referenceData() {
@@ -62,6 +67,7 @@ public class PlannerService {
 
     public TimelineResult calculate(Build build) {
         ReferenceData ref = referenceData();
+        applyItemEffects(build, ref);
         EngineInput in = new EngineInput();
         in.unit = resolveUnit(build);
         in.goldPerMin = build.goldPerMin;
@@ -115,16 +121,18 @@ public class PlannerService {
         return result;
     }
 
-    /**
-     * The champion's modeled passive / abilities, held from the start like the runes (ids after the runes'), with the
-     * build's skill order, options, conditional choices and stack rates.
-     */
-    private void addChampionEffects(Build build, EngineInput in) {
-        com.ornnplanner.repo.BuildRepository.ChampionSetup setup = build.championSetup != null ? build.championSetup
-                : new com.ornnplanner.repo.BuildRepository.ChampionSetup();
+    /** Items with modeled effects get the lines the build switched on (with its options and stack rates). */
+    private void applyItemEffects(Build build, ReferenceData ref) {
+        com.ornnplanner.repo.BuildRepository.ItemSetup setup = build.itemSetup != null ? build.itemSetup
+                : new com.ornnplanner.repo.BuildRepository.ItemSetup();
+        Map<String, List<double[]>> rates = periods(setup.rates);
+        ref.items.replaceAll((id, item) -> itemEffects.apply(item, setup.options, setup.conditional, rates));
+    }
+
+    private static Map<String, List<double[]>> periods(Map<String, List<com.ornnplanner.repo.BuildRepository.RatePeriod>> raw) {
         Map<String, List<double[]>> rates = new java.util.LinkedHashMap<>();
-        if (setup.rates != null) {
-            setup.rates.forEach((name, list) -> {
+        if (raw != null) {
+            raw.forEach((name, list) -> {
                 List<double[]> periods = new ArrayList<>();
                 if (list != null) {
                     for (com.ornnplanner.repo.BuildRepository.RatePeriod p : list) {
@@ -134,6 +142,17 @@ public class PlannerService {
                 rates.put(name, periods);
             });
         }
+        return rates;
+    }
+
+    /**
+     * The champion's modeled passive / abilities, held from the start like the runes (ids after the runes'), with the
+     * build's skill order, options, conditional choices and stack rates.
+     */
+    private void addChampionEffects(Build build, EngineInput in) {
+        com.ornnplanner.repo.BuildRepository.ChampionSetup setup = build.championSetup != null ? build.championSetup
+                : new com.ornnplanner.repo.BuildRepository.ChampionSetup();
+        Map<String, List<double[]>> rates = periods(setup.rates);
         long firstId = -1 - in.runes.size();
         for (com.ornnplanner.seed.ChampionCatalog.EffectItem e : champions.toItems(in.unit.code, setup.skillOrder,
                 setup.skillLevels, setup.options, setup.conditional, rates, firstId)) {
@@ -185,6 +204,7 @@ public class PlannerService {
             GoldPricing.StaticResult st = GoldPricing.staticEfficiency(i, ref.statPrices, ref.baseItemNames);
             v.staticPct = st.pct;
             v.staticFormula = st.formula;
+            v.effects = itemEffects.effects(i.name);
             views.add(v);
         }
         return views;

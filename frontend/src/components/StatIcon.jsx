@@ -47,6 +47,14 @@ export const STAT_META = {
   '% Heal and shield strength': { icon: 'heal', color: 'var(--stat-hp)' },
   'Physical Reduction': { icon: 'shield', color: 'var(--stat-armor)' },
   'Magic Reduction': { icon: 'ring', color: 'var(--stat-mr)' },
+  '% Omnivamp': { icon: 'drop', color: 'var(--stat-crit)' },
+  'Ultimate Haste': { icon: 'hourglass', color: 'var(--stat-ah)' },
+  'Basic Ability Haste': { icon: 'hourglass', color: 'var(--stat-ah)' },
+  Shield: { icon: 'shield', color: 'var(--stat-shield)' },
+  Heal: { icon: 'heal', color: 'var(--stat-hp)' },
+  'Ally Shield': { icon: 'shield', color: 'var(--stat-shield)' },
+  'Ally Heal': { icon: 'heal', color: 'var(--stat-hp)' },
+  Stasis: { icon: 'hourglass', color: 'var(--stat-shield)' },
 };
 
 export const statColor = (code) => STAT_META[code]?.color ?? 'var(--text-2)';

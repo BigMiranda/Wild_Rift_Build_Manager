@@ -67,6 +67,10 @@ fundamentais:
       adicional: 20% por 1s. Ao atacar um Campeão, restaura 8% do Mana perdido ou 8% da Energia perdida. Ao atacar
       tropas ou monstros, cura-se em 35% (Campeões corpo a corpo) ou 15% (Campeões de ataque a distância) do valor
       original da cura.
+    efeitos:  # uma cura por luta (Escudo / Cura: vida extra temporária, ver efeitos_itens_7_3.yml)
+    - {passiva: Agilidade nos Pés, tipo: Cura, valor: 15, valor_nv15: 110, condicional: true}
+    - {passiva: Agilidade nos Pés, tipo: Cura, ratio: 0.15, ref: Dano de Ataque, escopo: bonus, condicional: true}
+    - {passiva: Agilidade nos Pés, tipo: Cura, ratio: 0.1, ref: Poder de Habilidade, escopo: total, condicional: true}
   Conquistador:
     tags: Dano Acumulado, Vampirismo
     texto: >-
@@ -76,6 +80,7 @@ fundamentais:
       5% de Vampirismo Universal adicional.
     efeitos:
     - {passiva: Conquistador, tipo: Dano de Ataque, valor: 18, valor_nv15: 30, condicional: true}  # 6 acúmulos
+    - {passiva: Conquistador, tipo: "% Vampirismo Universal", valor: 9, condicional: true}  # corpo a corpo (distância: 5)
   Aperto dos Mortos-Vivos:
     tags: Tanque, Cura
     texto: >-
@@ -83,6 +88,9 @@ fundamentais:
       máxima. Cura: 1,3% da Vida máxima. Aumento de Vida permanente: 10. Para Campeões de ataque a distância, os
       efeitos são 60% menores.
     por_minuto: {nome: Ativações por minuto, tipo: Vida Máxima, valor: 10, relatorio: Aumento de Vida}
+    opcao: {nome: Ativações por luta, min: 0, max: 10, padrao: 3}
+    efeitos:  # cura de 1,3% da Vida máxima por ativação numa luta
+    - {passiva: Aperto dos Mortos-Vivos, tipo: Cura, ratio: 0, ratio_por_opcao: 0.013, ref: Vida Máxima, escopo: total, condicional: true}
   Guardião:
     tags: Proteção, Escudo
     texto: >-
@@ -90,6 +98,13 @@ fundamentais:
       por 2,5s. Durante a proteção, se você ou o aliado sofrerem mais do que uma determinada quantidade de dano, ambos
       ganharão um Escudo por 1,5s. Tempo de Recarga: 55–25s (nível). Escudo: 40–165 (nível) + 6% da Vida adicional +
       15% do Poder de Habilidade. Limite de dano: 70–240 de dano sofrido (nível).
+    efeitos:  # você e um aliado protegido
+    - {passiva: Guardião, tipo: Escudo, valor: 40, valor_nv15: 165, condicional: true}
+    - {passiva: Guardião, tipo: Escudo, ratio: 0.06, ref: Vida Máxima, escopo: bonus, condicional: true}
+    - {passiva: Guardião, tipo: Escudo, ratio: 0.15, ref: Poder de Habilidade, escopo: total, condicional: true}
+    - {passiva: Guardião, tipo: Escudo em Aliados, valor: 40, valor_nv15: 165, condicional: true}
+    - {passiva: Guardião, tipo: Escudo em Aliados, ratio: 0.06, ref: Vida Máxima, escopo: bonus, condicional: true}
+    - {passiva: Guardião, tipo: Escudo em Aliados, ratio: 0.15, ref: Poder de Habilidade, escopo: total, condicional: true}
   Aery:
     tags: Cutucar, Proteger
     texto: >-
@@ -97,6 +112,10 @@ fundamentais:
       escudo. Dano: 15–70 (nível) + 10% do Dano de Ataque adicional + 5% do Poder de Habilidade. Escudo: 25–120
       (nível) + 10% do Dano de Ataque adicional + 5% do Poder de Habilidade. Aery não pode ser enviada novamente antes
       de retornar para você.
+    efeitos:  # um escudo em aliado por luta
+    - {passiva: Aery, tipo: Escudo em Aliados, valor: 25, valor_nv15: 120, condicional: true}
+    - {passiva: Aery, tipo: Escudo em Aliados, ratio: 0.1, ref: Dano de Ataque, escopo: bonus, condicional: true}
+    - {passiva: Aery, tipo: Escudo em Aliados, ratio: 0.05, ref: Poder de Habilidade, escopo: total, condicional: true}
   Cometa Arcano:
     tags: Poke, aumento de acúmulos
     texto: >-
@@ -110,6 +129,8 @@ fundamentais:
       Habilidade Básica, além de reduzir os Tempos de Recarga restantes das habilidades básicas em 20%. Duração: 3s.
       Velocidade de Movimento: 40%–60% (nível) para Campeões de ataque corpo a corpo; 20%–35% (nível) para Campeões
       de ataque à distância. Aceleração de Habilidade Básica: 10. Tempo de Recarga: 21s - 7s (nível).
+    efeitos:
+    - {passiva: Ímpeto Gradual, tipo: Aceleração de Habilidade Básica, valor: 10, condicional: true}
   Primeiro Ataque:
     tags: Iniciação, Amplificação de Dano, ouro adicional
     ouro_extra: true
@@ -223,6 +244,8 @@ runas:
     texto: >-
       Eliminar Campeões restaura 10% da Vida perdida e 10% da Energia e do Mana máximos, além de conceder 35 de
       Velocidade de Movimento por 2s.
+    efeitos:  # 10% da Vida perdida, contando metade da Vida perdida
+    - {passiva: Triunfo, tipo: Cura, ratio: 0.05, ref: Vida Máxima, escopo: total, condicional: true}
   Zelo de Combate:
     arvore: Precisão
     linha: 1
@@ -275,6 +298,10 @@ runas:
     texto: >-
       Recebe 1% de Vampirismo Universal. Elimine monstros, Campeões inimigos ou tropas para receber até 7% de
       Vampirismo Universal adicional.
+    status:
+    - {tipo: "% Vampirismo Universal", valor: 1}
+    efeitos:
+    - {passiva: "Lenda: Linhagem", tipo: "% Vampirismo Universal", valor: 7, condicional: true}
 
   # ---------------------------------------------------------------- Determinação
   Demolir:
@@ -296,6 +323,11 @@ runas:
       máxima + 5% do seu Poder de Habilidade. Tempo de Recarga: 20s. A cura terá 130% de eficácia se você for um
       Campeão de ataque corpo a corpo (não acionará se você ou os aliados próximos estiverem com a Vida cheia, ou se
       não houver aliados por perto).
+    efeitos:  # uma cura por luta, corpo a corpo (130%)
+    - {passiva: Fonte da Vida, tipo: Cura, ratio: 0.013, ref: Vida Máxima, escopo: total, condicional: true}
+    - {passiva: Fonte da Vida, tipo: Cura, ratio: 0.065, ref: Poder de Habilidade, escopo: total, condicional: true}
+    - {passiva: Fonte da Vida, tipo: Cura em Aliados, ratio: 0.0195, ref: Vida Máxima, escopo: total, condicional: true}
+    - {passiva: Fonte da Vida, tipo: Cura em Aliados, ratio: 0.065, ref: Poder de Habilidade, escopo: total, condicional: true}
   Coragem do Colosso:
     arvore: Determinação
     linha: 1
@@ -303,6 +335,9 @@ runas:
     texto: >-
       Recebe um Escudo que absorve dano equivalente a 25–45 (nível) + 1% da Vida máxima por 3s ao imobilizar um
       Campeão inimigo (18s de Tempo de Recarga).
+    efeitos:
+    - {passiva: Coragem do Colosso, tipo: Escudo, valor: 25, valor_nv15: 45, condicional: true}
+    - {passiva: Coragem do Colosso, tipo: Escudo, ratio: 0.01, ref: Vida Máxima, escopo: total, condicional: true}
   Inabalável:
     arvore: Determinação
     linha: 1
@@ -324,6 +359,9 @@ runas:
     texto: >-
       Ganha 5 de Vida a cada 5s. Depois de sofrer dano de um Campeão inimigo, regenera 3 + 1,5% da sua Vida perdida
       ao longo dos próximos 5s. O efeito é dobrado para Campeões corpo a corpo.
+    efeitos:  # corpo a corpo: 6 + 3% da Vida perdida, contando metade da Vida perdida
+    - {passiva: Ventos Revigorantes, tipo: Cura, valor: 6, condicional: true}
+    - {passiva: Ventos Revigorantes, tipo: Cura, ratio: 0.015, ref: Vida Máxima, escopo: total, condicional: true}
   Orbe Anulador:
     arvore: Determinação
     linha: 2
@@ -331,6 +369,8 @@ runas:
     texto: >-
       Caso você sofra dano de um Campeão e fique com menos de 35% da sua Vida máxima, recebe um Escudo que absorve
       60–180 (nível) de dano por 4s (60s de Tempo de Recarga).
+    efeitos:
+    - {passiva: Orbe Anulador, tipo: Escudo, valor: 60, valor_nv15: 180, condicional: true}
   Osso Revestido:
     arvore: Determinação
     linha: 2
@@ -338,6 +378,8 @@ runas:
     texto: >-
       Ao sofrer dano de um Campeão, a fonte de dano atual e os próximos 3 ataques ou habilidades de Campeão contra
       você dentro de 1,5s causarão 30–60 (nível) a menos de dano (40s de Tempo de Recarga).
+    efeitos:  # 4 golpes com 30–60 a menos: como um escudo de 120–240
+    - {passiva: Osso Revestido, tipo: Escudo, valor: 120, valor_nv15: 240, condicional: true}
   Crescimento Excessivo:
     arvore: Determinação
     linha: 3

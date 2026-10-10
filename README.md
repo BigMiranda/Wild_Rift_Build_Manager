@@ -109,6 +109,32 @@ Escopos: `total` (base + bônus), `bonus` (o que a loja chama de “adicional”
 sequência de compras), e itens que evoluem podem ser contados já evoluídos (botão “evoluído”). Status adaptativos
 (Grevas Vorazes, Passos Imortais, Foice Espectral) foram modelados como Dano de Ataque, que é o que o Ornn recebe.
 
+### Status efetivos (escudos, curas, aceleração da ultimate, estase)
+
+Passivas e ativos que não mudam status da ficha, mas valem numa luta, entram como **status efetivos** de
+[`seed/efeitos_itens_7_3.yml`](backend/src/main/resources/seed/efeitos_itens_7_3.yml) (74 efeitos em 67 itens), de
+efeitos novos das runas e das passivas de campeões. Eles nunca mudam a Vida máxima nem a Aceleração mostradas e têm
+preço próprio em `precos_status.yml` (`alias` × `factor`, editável no Admin):
+
+| Status | O que conta | Preço por ponto |
+|---|---|---|
+| Escudo / Cura | vida extra temporária numa luta (um acionamento, ou "acionamentos por luta" na opção) | o da Vida |
+| Escudo / Cura em Aliados | o mesmo dado a aliados (opção "aliados") | o da Vida |
+| Aceleração da Ultimate | soma-se à AH só na ultimate (medido: Ornn nível 15, ult de 70s; 10 AH + 10 da Zeke = 58,3s, igual a 20 AH) | 1/4 da AH (1 de 4 habilidades) |
+| Aceleração de Habilidade Básica | Lança de Shojin, Navori, Mandato Imperial, Ímpeto Gradual | 3/4 da AH |
+| Estase | segundos invulnerável em que as recargas correm (Zhonya, Armaguarda, Anjo Guardião) | 5× a AH (1s numa luta de ~20s) |
+| Vampirismo Universal | Hemodrenário, Grevas Vorazes, Conquistador, Lenda: Linhagem... | o do Roubo de Vida |
+
+Exemplos: Placa Gargolítica = Escudo de 100 + 90% da Vida adicional; Manto da Meia-noite ganha, além da Vida do
+Salva-Vidas, 10% de VdM e 20% de Tenacidade e uma restauração de 200–400 + 120% da Armadura e da RM adicionais + 15%
+da Vida (efeito à parte, para simular um dano explosivo que não dá tempo à cura); Armadura de Warmog amplifica escudos
+e curas em 30%; Coração de Aço cresce com "golpes carregados por minuto" (21 + 0,525% da Vida por golpe), como o
+Aperto dos Mortos-Vivos. Cada efeito é ligado ou desligado **na build**, para todas as compras do item (painel
+"Efeitos modelados dos itens", abaixo da sequência de compras), com sua opção e taxa. A ficha do momento mostra a
+**Vida efetiva numa luta** (Vida + escudos + curas) e a aceleração total da ultimate e das básicas. Dano, redução de
+resistências, Feridas Dolorosas, corte de escudo e redução de dano sofrido dependem do inimigo e ficam para o
+simulador de confronto.
+
 ### Importação
 
 `CatalogImporter` lê o catálogo e [`seed/precos_status.yml`](backend/src/main/resources/seed/precos_status.yml)

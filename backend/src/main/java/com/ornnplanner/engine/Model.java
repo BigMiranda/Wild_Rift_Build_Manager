@@ -67,6 +67,11 @@ public final class Model {
         public List<Double> levelRatios;
         /** Conversion that reads only the flat bonus of its source stat (items, runes), before any multiplier. */
         public boolean refPre;
+        /**
+         * Conditional line with its own switch (a modeled item effect the build turns on or off by itself): it counts
+         * whenever present, whatever the purchase's conditional choice (lines of an effect turned off are not added).
+         */
+        public boolean switched;
 
         public StatLine() {
         }
@@ -77,6 +82,11 @@ public final class Model {
                 return levelRatios.get(Math.max(1, Math.min(levelRatios.size(), level)) - 1);
             }
             return ratio == null ? 0 : ratio;
+        }
+
+        /** Ratio at a level and game minute: a ratio per stack grows with the stacks gathered (per-minute periods). */
+        public double ratioAt(int level, double minute) {
+            return perMinute == null ? ratioAt(level) : ratioAt(level) * accumulated(perMinute, minute);
         }
 
         private double perLevel(int level) {

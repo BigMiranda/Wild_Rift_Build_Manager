@@ -29,7 +29,13 @@ export function effectiveGold(point, itemsById, prices) {
       const k = norm(p.passive);
       if (!known.has(k)) known.set(k, { name: p.passive, parts: [], gold: 0, known: true });
       const e = known.get(k);
-      e.parts.push({ stat: p.stat, amount: p.amount, gold: p.gold });
+      const same = e.parts.find((x) => x.stat === p.stat);   // e.g. a shield of 100 + 90% of bonus health: one line
+      if (same) {
+        same.amount += p.amount;
+        same.gold += p.gold;
+      } else {
+        e.parts.push({ stat: p.stat, amount: p.amount, gold: p.gold });
+      }
       e.gold += p.gold;
     }
     const passives = [...known.values()];

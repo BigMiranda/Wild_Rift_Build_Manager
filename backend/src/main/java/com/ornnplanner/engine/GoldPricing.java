@@ -20,7 +20,8 @@ import java.util.Set;
  *   <li>"exclude": price fixed manually in the stats file.</li>
  *   <li>"first": item that grants only that stat, price = cost / stat amount.</li>
  *   <li>"second": item with two stats, subtract the already known price of the others first.</li>
- *   <li>alias: same price as another stat.</li>
+ *   <li>alias: same price as another stat, times {@code factor} when given (e.g. Ultimate Haste = 25% of Ability
+ *       Haste: it speeds up one ability out of four).</li>
  * </ul>
  * Prices are rounded to 2 decimals exactly like the reference implementation.
  */
@@ -37,6 +38,8 @@ public final class GoldPricing {
         public String baseItem;
         public Double fixedPrice;
         public String alias;
+        /** Share of the alias' price (null = 1). */
+        public Double factor;
         public boolean relevant;
     }
 
@@ -113,7 +116,9 @@ public final class GoldPricing {
                 if (target == null) {
                     table.problems.add("'" + d.name + "' aliases '" + d.alias + "' which has no price");
                 } else {
-                    put(table, d.name, target.price, "alias of " + d.alias, target.formula);
+                    double factor = d.factor == null ? 1 : d.factor;
+                    put(table, d.name, round2(target.price * factor), "alias of " + d.alias
+                            + (factor != 1 ? " × " + fmt(factor) : ""), target.formula + (factor != 1 ? " × " + fmt(factor) : ""));
                 }
             }
         }

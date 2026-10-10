@@ -180,17 +180,18 @@ public class CatalogRepository {
             d.baseItem = rs.getString("base_item");
             d.fixedPrice = nullableDouble(rs, "fixed_price");
             d.alias = rs.getString("alias");
+            d.factor = nullableDouble(rs, "factor");
             d.relevant = rs.getInt("relevant") == 1;
             return d;
         });
     }
 
     public void upsertStatDef(StatDef d) {
-        jdbc.update("INSERT INTO stat_def (name, seq, category, base_type, base_item, fixed_price, alias, relevant) "
-                        + "VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(name) DO UPDATE SET seq = excluded.seq, "
+        jdbc.update("INSERT INTO stat_def (name, seq, category, base_type, base_item, fixed_price, alias, factor, relevant) "
+                        + "VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(name) DO UPDATE SET seq = excluded.seq, "
                         + "category = excluded.category, base_type = excluded.base_type, base_item = excluded.base_item, "
-                        + "fixed_price = excluded.fixed_price, alias = excluded.alias, relevant = excluded.relevant",
-                d.name, d.seq, d.category, d.baseType, d.baseItem, d.fixedPrice, d.alias, d.relevant ? 1 : 0);
+                        + "fixed_price = excluded.fixed_price, alias = excluded.alias, factor = excluded.factor, relevant = excluded.relevant",
+                d.name, d.seq, d.category, d.baseType, d.baseItem, d.fixedPrice, d.alias, d.factor, d.relevant ? 1 : 0);
     }
 
     public int countStatDefs() {

@@ -18,6 +18,7 @@ import PrepPanel from '../components/PrepPanel.jsx';
 import MinuteInput from '../components/MinuteInput.jsx';
 import ChampionPanel, { emptyChampionSetup } from '../components/ChampionPanel.jsx';
 import ChampionPicker from '../components/ChampionPicker.jsx';
+import ItemEffectsPanel, { emptyItemSetup } from '../components/ItemEffectsPanel.jsx';
 import RuneEditor from '../components/RuneEditor.jsx';
 import SpellEditor from '../components/SpellEditor.jsx';
 
@@ -34,6 +35,7 @@ const emptyBuild = (folderId) => ({
   assumeSmallItems: false,
   runePage: emptyRunePage(),
   championSetup: emptyChampionSetup(),
+  itemSetup: emptyItemSetup(),
   spells: [],
   ragdollStats: {},
 });
@@ -64,7 +66,7 @@ function fromApi(b) {
     ragdollStats[k] = { base: v.base ?? '', growth: v.growth ?? '' };
   }
   return { ...b, note: b.note ?? '', steps: b.steps ?? [], ragdollStats, runePage: b.runePage ?? emptyRunePage(),
-    championSetup: b.championSetup ?? emptyChampionSetup(), spells: b.spells ?? [] };
+    championSetup: b.championSetup ?? emptyChampionSetup(), itemSetup: b.itemSetup ?? emptyItemSetup(), spells: b.spells ?? [] };
 }
 
 export default function Planner({ meta, items }) {
@@ -423,6 +425,8 @@ export default function Planner({ meta, items }) {
             onToggleCond={(idx) => updateStep(idx, (s) => ({ ...s, includeConditional: !s.includeConditional }))}
             onToggleEvolved={(idx) => updateStep(idx, (s) => ({ ...s, itemId: evoPairs.get(s.itemId)?.id ?? s.itemId }))}
           />
+          <ItemEffectsPanel steps={draft.steps} itemsById={itemsById} setup={draft.itemSetup} matchEnd={draft.matchEnd}
+            onChange={(itemSetup) => update({ itemSetup })} />
         </section>
 
         <section className="panel">

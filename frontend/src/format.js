@@ -21,7 +21,8 @@ export const DERIVED_STATS = {
 export const statOf = (totals, stat) => (DERIVED_STATS[stat] ? DERIVED_STATS[stat](totals) : totals[stat]);
 
 /** Stats selectable in the chart. */
-export const CHART_STATS = [...TABLE_STATS.slice(0, 3), 'Physical Reduction', 'Magic Reduction', ...TABLE_STATS.slice(3)];
+export const CHART_STATS = [...TABLE_STATS.slice(0, 3), 'Physical Reduction', 'Magic Reduction', ...TABLE_STATS.slice(3),
+  'Shield', 'Heal', 'Ultimate Haste'];
 
 /** Stats of the champion sheet (in-game stats tab order). */
 export const SHEET_STATS = [
@@ -30,12 +31,18 @@ export const SHEET_STATS = [
   '% Attack Speed', 'Ability Haste',
   '% Critical Rate', 'Health Regen', 'Mana Regen', 'Move Speed',
   'Armor Penetration', '% Armor Penetration', 'Magic Penetration', '% Magic Penetration',
-  '% Lifesteal', '% Tenacity', '% Heal and shield strength', '% Move Speed',
+  '% Lifesteal', '% Omnivamp', '% Tenacity', '% Heal and shield strength', '% Move Speed',
 ];
+
+/**
+ * Effective stats of modeled effects (items, runes, champion): what shields, heals, stasis and ability haste of one
+ * ability are worth in a fight. They never change the max health or the ability haste shown.
+ */
+export const EFFECTIVE_STATS = ['Shield', 'Heal', 'Ally Shield', 'Ally Heal', 'Ultimate Haste', 'Basic Ability Haste', 'Stasis'];
 
 /** Stats whose value is a percentage. */
 export const PERCENT_STATS = new Set(['Physical Reduction', 'Magic Reduction', '% Attack Speed', '% Critical Rate', '% Armor Penetration', '% Magic Penetration',
-  '% Lifesteal', '% Tenacity', '% Heal and shield strength', '% Move Speed', '% Health Regen', '% Mana Regeneration']);
+  '% Lifesteal', '% Omnivamp', '% Tenacity', '% Heal and shield strength', '% Move Speed', '% Health Regen', '% Mana Regeneration']);
 
 const fmt = (digits) => (v) => {
   if (v == null || Number.isNaN(v)) return '—';
@@ -48,7 +55,8 @@ export const n2 = fmt(2);
 export const pct = (v) => (v == null || Number.isNaN(v) ? '—' : `${n1(v)}%`);
 
 /** A stat value with its unit (percent stats get a % sign). */
-export const statValue = (stat, v) => (PERCENT_STATS.has(stat) ? `${n1(v)}%` : stat.includes('Regen') ? n1(v) : n0(v));
+export const statValue = (stat, v) => (PERCENT_STATS.has(stat) ? `${n1(v)}%` : stat === 'Stasis' ? `${n1(v)}s`
+  : stat.includes('Regen') ? n1(v) : n0(v));
 
 /** 12.57 -> "12:34" */
 export function mmss(minutes) {

@@ -30,8 +30,8 @@ const L = {
     xpNote: 'Estimativa. Não há tabela pública confiável de XP do Wild Rift. Os valores iniciais são os 15 primeiros níveis da curva do LoL de PC (280 XP para o nível 2, +100 a cada nível). Corrija com base na sua experiência de jogo.',
     level: 'Nível', cumXp: 'XP acumulado para alcançar', levelXp: 'XP deste nível', loading: 'Carregando…',
     pricesTitle: 'Preço em ouro por ponto de status',
-    pricesHelp: 'Metodologia de changchiyou/wildrift-gold-efficiency: first = item-base com um só status (custo ÷ quantidade); second = item com dois status, subtraindo o valor já conhecido dos outros; exclude = preço fixo manual; alias = mesmo preço de outro status. Os itens-base usam os nomes da loja.',
-    relevant: 'Relevante', baseType: 'Base', baseItem: 'Item-base', fixed: 'Preço fixo', alias: 'Alias', perPoint: 'Ouro/ponto', formula: 'Fórmula',
+    pricesHelp: 'Metodologia de changchiyou/wildrift-gold-efficiency: first = item-base com um só status (custo ÷ quantidade); second = item com dois status, subtraindo o valor já conhecido dos outros; exclude = preço fixo manual; alias = mesmo preço de outro status, vezes o fator (Aceleração da Ultimate = 0,25 × AH; Escudo e Cura = Vida). Os itens-base usam os nomes da loja.',
+    relevant: 'Relevante', baseType: 'Base', baseItem: 'Item-base', fixed: 'Preço fixo', alias: 'Alias', factor: 'Fator', perPoint: 'Ouro/ponto', formula: 'Fórmula',
     sample: 'Eficiência estática da Duplaguarda de Amaranto com estes preços: {pct}',
     catTitle: 'Reimportar o catálogo da loja',
     catHelp: 'Relê backend/src/main/resources/seed/loja_7_3.yml e precos_status.yml. Itens são atualizados pelo nome (os ids usados pelas builds salvas não mudam); itens fora do arquivo não são tocados.',
@@ -62,8 +62,8 @@ const L = {
     xpNote: 'Estimate. There is no reliable public Wild Rift XP table. Initial values are the first 15 levels of the LoL PC curve (280 XP for level 2, +100 per level). Adjust them from your own games.',
     level: 'Level', cumXp: 'Cumulative XP to reach', levelXp: 'XP of this level', loading: 'Loading…',
     pricesTitle: 'Gold price per stat point',
-    pricesHelp: 'Methodology of changchiyou/wildrift-gold-efficiency: first = base item with a single stat (cost ÷ amount); second = item with two stats, minus the known value of the others; exclude = fixed price; alias = same price as another stat. Base items use the shop (pt-BR) names.',
-    relevant: 'Relevant', baseType: 'Base', baseItem: 'Base item', fixed: 'Fixed price', alias: 'Alias', perPoint: 'Gold/point', formula: 'Formula',
+    pricesHelp: 'Methodology of changchiyou/wildrift-gold-efficiency: first = base item with a single stat (cost ÷ amount); second = item with two stats, minus the known value of the others; exclude = fixed price; alias = same price as another stat, times the factor (Ultimate Haste = 0.25 × AH; Shield and Heal = Health). Base items use the shop (pt-BR) names.',
+    relevant: 'Relevant', baseType: 'Base', baseItem: 'Base item', fixed: 'Fixed price', alias: 'Alias', factor: 'Factor', perPoint: 'Gold/point', formula: 'Formula',
     sample: 'Static efficiency of Duplaguarda de Amaranto with these prices: {pct}',
     catTitle: 'Re-import the shop catalog',
     catHelp: 'Reads backend/src/main/resources/seed/loja_7_3.yml and precos_status.yml again. Items are updated by name (ids used by saved builds do not change); items missing from the file are left alone.',
@@ -371,7 +371,7 @@ function PricesAdmin({ run, items }) {
   if (!defs || !prices) return <p className="muted">{a('loading')}</p>;
   const set = (idx, patch) => setDefs(defs.map((d, k) => (k === idx ? { ...d, ...patch } : d)));
   const save = async () => {
-    await run(() => api.put('/api/admin/stat-defs', defs.map((d) => ({ ...d, fixedPrice: d.fixedPrice === '' || d.fixedPrice == null ? null : Number(d.fixedPrice), baseType: d.baseType || null, baseItem: d.baseItem || null, alias: d.alias || null }))));
+    await run(() => api.put('/api/admin/stat-defs', defs.map((d) => ({ ...d, fixedPrice: d.fixedPrice === '' || d.fixedPrice == null ? null : Number(d.fixedPrice), baseType: d.baseType || null, baseItem: d.baseItem || null, alias: d.alias || null, factor: d.factor === '' || d.factor == null ? null : Number(d.factor) }))));
     await load();
   };
 
@@ -385,7 +385,7 @@ function PricesAdmin({ run, items }) {
           <thead>
             <tr>
               <th className="l">{a('stat')}</th><th>{a('relevant')}</th><th>{a('baseType')}</th><th className="l">{a('baseItem')}</th>
-              <th>{a('fixed')}</th><th className="l">{a('alias')}</th><th>{a('perPoint')}</th><th className="l">{a('formula')}</th>
+              <th>{a('fixed')}</th><th className="l">{a('alias')}</th><th>{a('factor')}</th><th>{a('perPoint')}</th><th className="l">{a('formula')}</th>
             </tr>
           </thead>
           <tbody>
@@ -403,6 +403,7 @@ function PricesAdmin({ run, items }) {
                   <td className="l" style={{ minWidth: 200 }}><input value={d.baseItem ?? ''} onChange={(e) => set(idx, { baseItem: e.target.value })} /></td>
                   <td style={{ minWidth: 80 }}><input type="number" value={d.fixedPrice ?? ''} onChange={(e) => set(idx, { fixedPrice: e.target.value })} /></td>
                   <td className="l" style={{ minWidth: 120 }}><input value={d.alias ?? ''} onChange={(e) => set(idx, { alias: e.target.value })} /></td>
+                  <td style={{ minWidth: 70 }}><input type="number" step="0.05" value={d.factor ?? ''} placeholder="1" disabled={!d.alias} onChange={(e) => set(idx, { factor: e.target.value })} /></td>
                   <td><strong>{p ? n2(p.price) : '—'}</strong></td>
                   <td className="l formula">{p ? `${p.formula} (${p.method})` : ''}</td>
                 </tr>

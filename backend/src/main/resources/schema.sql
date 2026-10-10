@@ -6,6 +6,7 @@
 -- Version 6: rune page and summoner spells of a build (build.rune_page, build.spells).
 -- Version 7: end of the match (build.match_end).
 -- Version 8: champion setup of a build: skill order and effect choices (build.champion_setup).
+-- Version 9: stats priced as a share of another (stat_def.factor); item effect choices of a build (build.item_setup).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS stat_def (
     base_item   TEXT,
     fixed_price REAL,
     alias       TEXT,
+    factor      REAL,          -- with alias: share of the alias' price (NULL = 1)
     relevant    INTEGER NOT NULL DEFAULT 0
 );
 
@@ -111,6 +113,7 @@ CREATE TABLE IF NOT EXISTS build (
     spells       TEXT,      -- JSON: two summoner spell names (v6)
     match_end    REAL,      -- game minute the match ended (v7)
     champion_setup TEXT,    -- JSON: skill order, champion effect options / conditional / stack rates (v8)
+    item_setup   TEXT,      -- JSON: modeled item effects on / off, options and stack rates, by "item|effect" (v9)
     created_at   TEXT    NOT NULL,
     updated_at   TEXT    NOT NULL
 );

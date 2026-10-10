@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 8;
+    static final int VERSION = 9;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -79,6 +79,15 @@ public class SchemaManager {
         if (version < 8 && tableExists("build") && !columnExists("build", "champion_setup")) {
             // v8: skill order and champion effect choices (options, conditional, stack rates), as JSON.
             jdbc.execute("ALTER TABLE build ADD COLUMN champion_setup TEXT");
+        }
+        if (version < 9 && tableExists("stat_def") && !columnExists("stat_def", "factor")) {
+            // v9: stats priced as a share of another one (Ultimate Haste, shields and heals as temporary health...),
+            // and the item effect choices of a build (on / off, options, stack rates), as JSON.
+            jdbc.execute("ALTER TABLE stat_def ADD COLUMN factor REAL");
+            catalogReimportNeeded = true;
+        }
+        if (version < 9 && tableExists("build") && !columnExists("build", "item_setup")) {
+            jdbc.execute("ALTER TABLE build ADD COLUMN item_setup TEXT");
         }
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {

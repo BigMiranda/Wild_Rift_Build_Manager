@@ -273,7 +273,7 @@ function RuneOptions({ page, set, matchEnd }) {
  * effects (on unless `defaultOn` is false), stacks / activations per minute in periods and gold earned. `state` holds
  * options, conditional, rates and gold by effect name.
  */
-export function EffectOptions({ entries, state, set, matchEnd, icon, title }) {
+export function EffectOptions({ entries, state, set, matchEnd, icon, title, details = false }) {
   if (!entries.length) return null;
   const page = state;
   return (
@@ -293,8 +293,8 @@ export function EffectOptions({ entries, state, set, matchEnd, icon, title }) {
         return (
           <div key={r.name} className="rune-option">
             <div className="rune-option-head">
-              {icon && <img src={icon(r)} alt="" width={22} height={22} />}
-              <strong>{r.name}</strong>
+              {icon && <img src={icon(r)} alt="" width={22} height={22} className={r.iconClass} />}
+              <strong>{r.label ?? r.name}</strong>
               {r.option && (
                 <label>
                   {r.option.name}
@@ -310,6 +310,11 @@ export function EffectOptions({ entries, state, set, matchEnd, icon, title }) {
                 </button>
               )}
             </div>
+            {details && (r.summary?.length > 0 || r.note) && (
+              <small className="muted effect-details">
+                {r.summary?.join(' · ')}{r.note ? ` — ${r.note}` : ''}
+              </small>
+            )}
             {r.rate && (
               <div className="rune-periods" title={t('runes.rateTitle')}>
                 {periods.map((p, i) => (
