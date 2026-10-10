@@ -778,3 +778,28 @@ input[aria-invalid="true"] { border-color: var(--error); }
 .collapse-head { display: inline-flex; align-items: center; gap: 8px; background: none; border: none; padding: 0; color: inherit; }
 .collapse-head h3 { margin: 0; }
 .timeline-panel > .spread { margin-bottom: 8px; }
+
+/* Matchup simulator */
+.combat-setup { align-items: flex-end; gap: 10px 16px; flex-wrap: wrap; }
+.combat-teams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 12px; }
+@media (max-width: 1000px) { .combat-teams { grid-template-columns: 1fr; } }
+.combat-team h4 { margin: 0 0 8px; }
+.combat-team.team-0 h4 { color: #6fc3ff; }
+.combat-team.team-1 h4 { color: #ff9a7a; }
+.combat-slot { border: 1px solid var(--border); border-left: 4px solid; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
+.combat-slot .row { flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.combat-slot select { max-width: 260px; }
+.combat-slot label.inline { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); }
+.combat-slot label.inline input { width: 70px; }
+.combat-order { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.order-chip { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--border-strong); border-radius: 4px; padding: 0 2px; }
+.order-chip strong { min-width: 18px; text-align: center; }
+.order-chip button.icon { padding: 0 4px; font-size: 11px; }
+.combat-details { margin-top: 10px; }
+.combat-details > summary { cursor: pointer; color: var(--text-2); }
+.combat-fighter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 8px; }
+.combat-fighter { border: 1px solid var(--border); border-top: 3px solid; border-radius: 6px; padding: 8px; font-size: 12px; }
+.combat-fighter ul { margin: 6px 0; padding-left: 16px; }
+.combat-sources { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--text-2); margin: 4px 0; }
+.combat-events { font-size: 12px; columns: 2 320px; }
+td.warn, .combat-items td.warn { color: var(--warn, #f0c75e); }

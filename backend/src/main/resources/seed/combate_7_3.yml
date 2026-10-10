@@ -1,0 +1,137 @@
+# Efeitos de combate dos itens para o simulador de confronto (patch 7.3): o que depende do inimigo e não cabe nos
+# status (dano dos itens, redução de resistência, Feridas Dolorosas, corte de escudo, amplificação e redução de dano).
+# Status planos (penetração, crítico, roubo de vida...) e status efetivos (escudos, curas, estase) vêm do cálculo da
+# build; aqui ficam só os efeitos que acontecem na luta. Valores de Campeões corpo a corpo quando o texto diferencia.
+#
+# Tipos (campo `tipo`):
+#   ao_contato     ataques causam `dano` (+ `pdh` x PdH, + `vida_atual_alvo` x Vida atual do alvo) de `dano_tipo`
+#   a_cada_ataque  todo `n`º ataque causa `dano` (+ `dda_base`, `vida`, `dano_nv15`) de `dano_tipo`
+#   lamina         Lâmina Arcana: o ataque depois de uma habilidade causa dano extra (recarga 1,5s): `dda_base`, `dda`,
+#                  `pdh`, `armadura_bonus`, `vida_max_alvo`; `cura_vida_max_alvo` / `cura_vida_bonus` / `cura_pdh`
+#   queimadura     habilidades queimam por `duracao` s: `por_s` + `pdh_por_s` x PdH + `vida_max_alvo_por_s`
+#   aura           a cada `a_cada` s em combate, a todos os inimigos: `dano` + `vida_bonus` x Vida adicional +
+#                  `vida_max` x Vida máxima; `cura_do_dano`: cura uma fração do dano causado
+#   golpe          dano periódico no alvo (recarga `recarga`): `dano` (+ `dano_nv15`), `vida_max` (sua), `vida_max_alvo`,
+#                  `pdh`, `dda_bonus`; `gatilho`: ataque | habilidade | qualquer
+#   espinhos       ao ser atingido por um ataque devolve `dano` + `armadura_bonus` x Armadura adicional + `vida_bonus` x
+#                  Vida adicional de `dano_tipo`
+#   feridas        Feridas Dolorosas de `pct` por 3s ao causar dano (`gatilho`: fisico | magico | qualquer) ou ao ser
+#                  atingido por ataques (`ao_ser_atingido: true`)
+#   corta_escudo   ao causar dano, reduz os escudos do alvo em `base` + `dda_bonus` x DdA adicional (+ `pdh` x PdH),
+#                  até `max` (por 3s; os escudos que ele já tem e os que receber)
+#   reduz_resistencia  cada acerto (`gatilho`) reduz a `resistencia` (armadura | rm) do alvo em `por_acerto`, até `max`
+#                  por `duracao` s
+#   amplifica      dano causado a mais: `pct` (+ `pct_por_s` em combate até `max`); `dano_tipo` restringe; `alvo_vida_bonus`
+#                  (Lembranças: até `max` com 1.200 de Vida adicional do alvo); `vida_alta`: só acima de 50% de Vida
+#   amplifica_alvo inimigos sofrem `pct` a mais (`aura`: todos os inimigos, com `dano_tipo`; `marca`: o alvo de uma
+#                  habilidade por `duracao` s)
+#   reduz_dano     dano sofrido a menos: `pct` contra `contra` (ataque | critico)
+#   critico        Acertos Críticos causam `mult` (200% sem o item)
+#   reduz_vel_ataque  inimigos na luta atacam `pct` mais devagar (Coração Congelado; Carapaça do Vigia: ao ser atingido,
+#                  contado como sempre ativo)
+#   ativo          ativo de dano usado na ordem da build ("Ativo"): `dano` (+ `dano_nv15`), `dda`, `dda_base`, `dda_bonus`,
+#                  `pdh`, `vida_max_alvo`; `cura_dda`; `recarga`
+patch: "7.3"
+itens:
+  # ------------------------------------------------------------- Feridas Dolorosas
+  Chamado do Carrasco: [{tipo: feridas, pct: 0.4, gatilho: fisico}]
+  Serrespada Quimiopunk: [{tipo: feridas, pct: 0.5, gatilho: fisico}]
+  Lembrete Mortal: [{tipo: feridas, pct: 0.5, gatilho: fisico}]
+  Orbe do Oblívio: [{tipo: feridas, pct: 0.4, gatilho: magico}]
+  Morellonomicon: [{tipo: feridas, pct: 0.5, gatilho: magico}]
+  Colete Espinhoso:
+  - {tipo: feridas, pct: 0.4, gatilho: qualquer}
+  - {tipo: feridas, pct: 0.4, ao_ser_atingido: true}
+  - {tipo: espinhos, dano: 4, armadura_bonus: 0.06, dano_tipo: magico}
+  Armadura de Espinhos:
+  - {tipo: feridas, pct: 0.5, gatilho: qualquer}
+  - {tipo: feridas, pct: 0.5, ao_ser_atingido: true}
+  - {tipo: espinhos, dano: 20, armadura_bonus: 0.06, vida_bonus: 0.01, dano_tipo: magico}
+
+  # ------------------------------------------------------------- Corte de escudo
+  Presa da Serpente: [{tipo: corta_escudo, base: 0.40, dda_bonus: 0.001, max: 0.60}]
+  Tridente da Oceânide: [{tipo: corta_escudo, base: 0.40, pdh: 0.0005, max: 0.60}]
+
+  # ------------------------------------------------------------- Redução de resistência
+  Cutelo Negro: [{tipo: reduz_resistencia, resistencia: armadura, por_acerto: 0.06, max: 0.30, gatilho: fisico, duracao: 6}]
+  Maldição Sanguinária: [{tipo: reduz_resistencia, resistencia: rm, por_acerto: 0.075, max: 0.30, gatilho: magico, duracao: 6}]
+
+  # ------------------------------------------------------------- Amplificação de dano
+  Máscara Abissal: [{tipo: amplifica_alvo, aura: true, pct: 0.12, dano_tipo: magico}]
+  Mandato Imperial: [{tipo: amplifica_alvo, marca: true, pct: 0.07, duracao: 4}]
+  Lembranças do Lorde Dominik: [{tipo: amplifica, alvo_vida_bonus: 1200, max: 0.12}]
+  Tormento de Liandry:
+  - {tipo: amplifica, pct_por_s: 0.02, max: 0.06}
+  - {tipo: queimadura, vida_max_alvo_por_s: 0.02, duracao: 3, dano_tipo: magico}
+  Máscara Assustadora: [{tipo: amplifica, pct_por_s: 0.02, max: 0.06}]
+  Criafendas: [{tipo: amplifica, pct_por_s: 0.02, max: 0.08}]
+  Passos Imortais: [{tipo: amplifica, pct: 0.05, vida_alta: true}]
+  Lança de Shojin: [{tipo: amplifica, pct_por_s: 0.03, max: 0.12, so_habilidade: true}]
+
+  # ------------------------------------------------------------- Redução de dano sofrido
+  Botas Galvanizadas de Aço: [{tipo: reduz_dano, pct: 0.10, contra: ataque}]
+  Mobilização Blindada: [{tipo: reduz_dano, pct: 0.10, contra: ataque}]
+  Presságio de Randuin: [{tipo: reduz_dano, pct: 0.30, contra: critico}]
+
+  Coração Congelado: [{tipo: reduz_vel_ataque, pct: 0.25}]
+  Carapaça do Vigia: [{tipo: reduz_vel_ataque, pct: 0.15}]
+
+  # ------------------------------------------------------------- Dano ao contato e a cada N ataques
+  Limite da Razão: [{tipo: ao_contato, dano: 40, dano_tipo: magico}]
+  Lâmina da Fúria de Guinsoo: [{tipo: ao_contato, dano: 30, dano_tipo: magico}]
+  Terminus: [{tipo: ao_contato, dano: 30, dano_tipo: magico}]
+  Arco Recurvo: [{tipo: ao_contato, dano: 15, dano_tipo: fisico}]
+  Dente de Na'Shor: [{tipo: ao_contato, dano: 15, pdh: 0.2, dano_tipo: magico}]
+  Espada do Rei Destruído: [{tipo: ao_contato, vida_atual_alvo: 0.08, dano_tipo: fisico}]
+  Hidra Titânica: [{tipo: a_cada_ataque, n: 2, dano: 25, vida_bonus: 0.03, dano_tipo: fisico}]
+  Mata-Cráquens: [{tipo: a_cada_ataque, n: 3, dano: 150, dano_nv15: 210, dano_tipo: fisico}]
+  Quebracascos: [{tipo: a_cada_ataque, n: 4, dda_base: 1.6, vida: 0.05, dano_tipo: fisico}]
+  Chuva de Canivete: [{tipo: a_cada_ataque, n: 4, dano: 120, dano_tipo: magico}]
+  Canhão Fumegante: [{tipo: a_cada_ataque, n: 4, dano: 80, dano_tipo: magico}]
+  Faca de Statikk: [{tipo: a_cada_ataque, n: 3, dano: 60, dano_tipo: magico}]
+  Muramana:
+  - {tipo: ao_contato, mana: 0.015, dano_tipo: fisico}
+  - {tipo: golpe, mana: 0.035, gatilho: habilidade, recarga: 0, dano_tipo: fisico}
+  Gume do Infinito: [{tipo: critico, mult: 2.3}]
+
+  # ------------------------------------------------------------- Lâmina Arcana
+  Fulgor: [{tipo: lamina, dda_base: 1.0, dano_tipo: fisico}]
+  Força da Trindade: [{tipo: lamina, dda_base: 2.0, dano_tipo: fisico}]
+  Ruptor Divino: [{tipo: lamina, vida_max_alvo: 0.10, cura_vida_max_alvo: 0.06, dano_tipo: fisico}]
+  Manopla dos Glacinatas: [{tipo: lamina, dda_base: 1.0, armadura_bonus: 0.25, dano_tipo: fisico}]
+  Perdição de Lich: [{tipo: lamina, dda_base: 0.75, pdh: 0.45, dano_tipo: magico}]
+  Aurora e Crepúsculo: [{tipo: lamina, dda_base: 0.75, pdh: 0.10, cura_vida_bonus: 0.03, cura_pdh: 0.10, dano_tipo: magico}]
+  Colhedor de Essência: [{tipo: lamina, dda_base: 1.35, critico_dano: 80, dano_tipo: fisico}]
+
+  # ------------------------------------------------------------- Queimaduras e auras
+  Tocha de Chamas Negras: [{tipo: queimadura, por_s: 20, pdh_por_s: 0.02, duracao: 3, dano_tipo: magico}]
+  Cinzas do Destino: [{tipo: queimadura, por_s: 1.67, duracao: 3, dano_tipo: magico}]
+  Égide de Fogo Solar: [{tipo: aura, a_cada: 1, dano: 20, vida_bonus: 0.015, dano_tipo: magico}]
+  Resplendor Vazio: [{tipo: aura, a_cada: 1, dano: 20, dano_nv15: 30, vida_bonus: 0.01, dano_tipo: magico}]
+  Brasa de Bami: [{tipo: aura, a_cada: 1, dano: 10, dano_nv15: 20, dano_tipo: magico}]
+  Desespero Eterno: [{tipo: aura, a_cada: 4, vida_max: 0.03, cura_do_dano: 2.5, dano_tipo: magico}]
+
+  # ------------------------------------------------------------- Golpes periódicos
+  Coração de Aço: [{tipo: golpe, gatilho: ataque, recarga: 20, dano: 140, vida_max: 0.035, dano_tipo: fisico}]
+  Eclipse: [{tipo: golpe, gatilho: qualquer, recarga: 6, vida_max_alvo: 0.07, dano_tipo: fisico}]
+  Crepúsculo de Draktharr: [{tipo: golpe, gatilho: ataque, recarga: 10, dano: 60, dano_nv15: 160, dano_tipo: fisico}]
+  Eco de Luden: [{tipo: golpe, gatilho: habilidade, recarga: 9, dano: 155, pdh: 0.128, dano_tipo: magico}]
+  Alternador Hextec: [{tipo: golpe, gatilho: qualquer, recarga: 20, dano: 25, dano_nv15: 60, dano_tipo: magico}]
+  Estilhaço de Kircheis: [{tipo: golpe, gatilho: ataque, recarga: 10, dano: 40, dano_tipo: magico}]
+  Ápice da Tempestade: [{tipo: golpe, gatilho: habilidade, recarga: 25, dano: 125, pdh: 0.10, dano_tipo: magico}]
+  Manto da Aurora: [{tipo: golpe, gatilho: habilidade, recarga: 3, dano: 40, vida_bonus: 0.025, dano_tipo: magico}]
+
+  # ------------------------------------------------------------- Ativos de dano (ação "Ativo" na ordem)
+  Hemodrenário: [{tipo: ativo, recarga: 12, dda_base: 1.75, cura_dda: 0.20, dano_tipo: fisico}]
+  Quebrapassos: [{tipo: ativo, recarga: 25, dda: 1.0, dano_tipo: fisico}]
+  Força do Vendaval: [{tipo: ativo, recarga: 60, dano: 120, dano_nv15: 375, dda_bonus: 1.05, dano_tipo: fisico}]
+  Explocinturão Hextec: [{tipo: ativo, recarga: 30, dano: 100, pdh: 0.10, dano_tipo: magico}]
+  Redenção: [{tipo: ativo, recarga: 60, vida_max_alvo: 0.10, dano_tipo: verdadeiro}]
+
+# Feitiços da build usados na luta (automaticamente): Incendiar e Exaustão no começo, no alvo; Barreira e Curar
+# abaixo de 35% de Vida.
+feiticos:
+  Incendiar: {dano: 72, dano_nv15: 380, duracao: 5, feridas: 0.4}
+  Exaustão: {reduz_dano_causado: 0.40, duracao: 2.5}
+  Barreira: {escudo: 120, escudo_nv15: 560}
+  Curar: {cura: 110, cura_nv15: 400}

@@ -68,6 +68,60 @@ public class PlannerService {
     public TimelineResult calculate(Build build) {
         ReferenceData ref = referenceData();
         applyItemEffects(build, ref);
+        EngineInput in = input(build);
+        TimelineResult result = new TimelineEngine(ref).run(in);
+        if (ReferenceSeeder.RAGDOLL.equals(in.unit.code)) {
+            boolean anyFilled = build.ragdollStats != null && build.ragdollStats.values().stream()
+                    .anyMatch(s -> s != null && (s.base != null || s.growth != null));
+            if (!anyFilled) {
+                result.warnings.add(0, "Boneco de pano sem status definidos: todos os campos em branco contam como 0.");
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Stats of the build's champion holding {@code items} at a level and game minute, whatever the purchases and the
+     * gold (same runes, champion effects and choices): every item is bought at once and the XP gives the level.
+     */
+    public com.ornnplanner.engine.Model.MinutePoint snapshot(Build build, List<Long> items, int level, double minute) {
+        ReferenceData ref = referenceData();
+        applyItemEffects(build, ref);
+        EngineInput in = input(build);
+        double t = Math.max(minute, 0.01);
+        in.itemIds = new ArrayList<>(items);
+        in.conditional = new ArrayList<>();
+        for (Long id : items) {
+            Boolean cond = null;
+            for (com.ornnplanner.repo.BuildRepository.Step s : build.steps == null ? List.<com.ornnplanner.repo.BuildRepository.Step>of() : build.steps) {
+                if (!s.moment() && id.equals(s.itemId)) {
+                    cond = s.includeConditional;
+                }
+            }
+            in.conditional.add(cond == null || cond);
+        }
+        in.positions = new ArrayList<>();
+        in.moments = new ArrayList<>();
+        in.extraGold = new ArrayList<>();
+        in.assumeHalfItems = false;
+        in.assumeSmallItems = false;
+        in.goldPerMin = 1e9;
+        double from = ref.xpTable.getOrDefault(level, 0.0);
+        Double to = ref.xpTable.get(level + 1);
+        in.xpPerMin = (to == null ? from + 1 : (from + to) / 2) / t;
+        in.matchEnd = t;
+        TimelineResult r = new TimelineEngine(ref).run(in);
+        com.ornnplanner.engine.Model.MinutePoint best = r.series.get(0);
+        for (com.ornnplanner.engine.Model.MinutePoint p : r.series) {
+            if (p.minute <= t + 1e-9) {
+                best = p;
+            }
+        }
+        return best;
+    }
+
+    /** Engine input of a build: unit, gold / XP, purchases and moments, runes and champion effects. */
+    private EngineInput input(Build build) {
         EngineInput in = new EngineInput();
         in.unit = resolveUnit(build);
         in.goldPerMin = build.goldPerMin;
@@ -110,15 +164,7 @@ public class PlannerService {
             }
         }
         addChampionEffects(build, in);
-        TimelineResult result = new TimelineEngine(ref).run(in);
-        if (ReferenceSeeder.RAGDOLL.equals(in.unit.code)) {
-            boolean anyFilled = build.ragdollStats != null && build.ragdollStats.values().stream()
-                    .anyMatch(s -> s != null && (s.base != null || s.growth != null));
-            if (!anyFilled) {
-                result.warnings.add(0, "Boneco de pano sem status definidos: todos os campos em branco contam como 0.");
-            }
-        }
-        return result;
+        return in;
     }
 
     /** Items with modeled effects get the lines the build switched on (with its options and stack rates). */

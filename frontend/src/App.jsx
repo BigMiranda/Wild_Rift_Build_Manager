@@ -4,8 +4,9 @@ import { loadSettings, saveSettings, setLanguage, t } from './i18n.js';
 import Planner from './pages/Planner.jsx';
 import Admin from './pages/Admin.jsx';
 import About from './pages/About.jsx';
+import Combat from './pages/Combat.jsx';
 
-const TABS = ['planner', 'admin', 'about'];
+const TABS = ['planner', 'combat', 'admin', 'about'];
 
 export default function App() {
   const [tab, setTab] = useState('planner');
@@ -77,6 +78,7 @@ export default function App() {
         </div>
       )}
       {meta && tab === 'planner' && <Planner meta={meta} items={items} settings={settings} />}
+      {meta && tab === 'combat' && <Combat />}
       {meta && tab === 'admin' && <Admin meta={meta} items={items} onChanged={reload} />}
       {tab === 'about' && <About />}
     </>

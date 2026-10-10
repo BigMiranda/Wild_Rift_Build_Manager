@@ -283,12 +283,46 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
 - Interface em português ou inglês, com siglas de status em qualquer dos dois (DdA/AD, PdH/AP, RM/MR…), escolhidas
   no cabeçalho. Nomes e textos dos itens continuam em português, como na loja.
 
+## Simulador de confronto
+
+Aba **Confronto**: 1 x 1, luta 5 x 5 ou lados personalizados (até 5 por lado; 6 só com clones, como o do Wukong).
+Cada campeão é uma **build salva num minuto de jogo** — itens, nível e status daquele momento, com runas, efeitos do
+campeão e status efetivos —, com sua **ordem de ações** (habilidades 1, 2, 3, R e "Ativo", o ativo de dano de um
+item) e seu **alvo** (primeiro vivo, menor % de Vida ou um inimigo).
+
+- **Luta** em passos de 0,05s até um lado cair ou o tempo limite: cada campeão usa a primeira ação pronta da ordem
+  (no máximo uma a cada 0,25s) e ataca no ritmo da velocidade de ataque (base do nível medida no Treino × (1 +
+  bônus)). O dano de cada habilidade é o primeiro "N de Dano Físico/Mágico/Verdadeiro (fórmula)" do texto do jogo,
+  com a tabela por rank e o plano de pontos da build (427 de 463 habilidades com dano no texto são lidas); a recarga
+  segue o rank e a aceleração (AH + Aceleração da Ultimate / Básica). Habilidades acertam só o alvo.
+- **Dano**: bruto × (1 + amplificações) × 100 / (100 + resistência), com resistência = resist × (1 − redução %) ×
+  (1 − penetração %) − penetração fixa; depois a redução de dano do alvo, seus escudos e a Vida. Crítico pelo valor
+  esperado. Roubo de vida nos ataques e vampirismo universal em todo dano.
+- **Escudos** da build estão de pé no começo e as **curas** voltam ao longo de 5s enquanto o campeão está ferido;
+  escudos e curas em aliados vão para os aliados. **Estase** aciona uma vez abaixo de 30% de Vida (ou num golpe
+  letal). Incendiar e Exaustão no começo, Barreira e Curar abaixo de 35% de Vida.
+- **Efeitos de combate** dos itens em [`seed/combate_7_3.yml`](backend/src/main/resources/seed/combate_7_3.yml):
+  Feridas Dolorosas (cortam curas e roubo de vida), corte de escudo (Presa da Serpente, Tridente da Oceânide: cortam
+  os escudos que o alvo tem e os que receber), redução de resistência em % (Cutelo Negro, Maldição Sanguinária),
+  amplificação (Máscara Abissal, Mandato Imperial, Lembranças do Lorde Dominik, Liandry, Criafendas...), redução de
+  dano (Botas Galvanizadas, Mobilização Blindada, Presságio de Randuin), redução de velocidade de ataque (Coração
+  Congelado), dano ao contato, Lâmina Arcana, queimaduras, auras, golpes periódicos e ativos de dano.
+- **Relatório por item**: o dano dos efeitos do item; o dano extra que ele deu ao time (redução de resistência e
+  amplificação); o dano que evitou; os escudos e curas do inimigo que **anulou**; o escudo e a cura que ele deu e o
+  quanto deles o inimigo **anulou**; e, com "lutar de novo sem cada item", a mesma luta sem ele (resultado, Δ dano
+  causado, Δ tempo vivo, Δ Vida + escudos do time) — o que o item valeu naquela luta. Penetração fixa contra
+  resistência fixa aparece nessa comparação.
+
+Limites desta versão: sem posições, alcance, controle de grupo ou custo de mana; habilidades em área acertam só o
+alvo; dano baseado na Vida do alvo dentro das habilidades (execuções, % da Vida perdida) não é lido.
+
 ## Aproximações assumidas
 
 - **Tabela de XP por nível é uma estimativa**: não há fonte pública confiável para o Wild Rift. Os valores iniciais
   são os 15 primeiros níveis da curva do LoL de PC (280 XP para o nível 2, +100 por nível). Editável no Admin.
 - O minuto de compra considera só ouro acumulado (não modela a volta à base nem ouro gasto em outras coisas).
-- Passivas de dano, cura, escudo e efeitos em aliados ficam só como texto; não entram no valor em ouro.
+- Escudos e curas entram no valor em ouro como vida extra temporária de uma luta (status efetivos); dano e efeitos
+  que dependem do inimigo entram no simulador de confronto, não no valor em ouro.
 - O preço do Mana mantém a razão da metodologia original (Lágrima carregada: 400 de ouro por 900 de Mana), porque a
   Lágrima da loja mostra só os 200 de Mana iniciais.
 
