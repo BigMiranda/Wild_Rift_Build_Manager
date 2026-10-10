@@ -35,12 +35,14 @@ public class PlannerService {
     private final CatalogRepository catalog;
     private final ReferenceRepository reference;
     private final com.ornnplanner.seed.RuneCatalog runes;
+    private final com.ornnplanner.seed.ChampionCatalog champions;
 
     public PlannerService(CatalogRepository catalog, ReferenceRepository reference,
-                          com.ornnplanner.seed.RuneCatalog runes) {
+                          com.ornnplanner.seed.RuneCatalog runes, com.ornnplanner.seed.ChampionCatalog champions) {
         this.catalog = catalog;
         this.reference = reference;
         this.runes = runes;
+        this.champions = champions;
     }
 
     public ReferenceData referenceData() {
@@ -101,6 +103,7 @@ public class PlannerService {
                 });
             }
         }
+        addChampionEffects(build, in);
         TimelineResult result = new TimelineEngine(ref).run(in);
         if (ReferenceSeeder.RAGDOLL.equals(in.unit.code)) {
             boolean anyFilled = build.ragdollStats != null && build.ragdollStats.values().stream()
@@ -110,6 +113,33 @@ public class PlannerService {
             }
         }
         return result;
+    }
+
+    /**
+     * The champion's modeled passive / abilities, held from the start like the runes (ids after the runes'), with the
+     * build's skill order, options, conditional choices and stack rates.
+     */
+    private void addChampionEffects(Build build, EngineInput in) {
+        com.ornnplanner.repo.BuildRepository.ChampionSetup setup = build.championSetup != null ? build.championSetup
+                : new com.ornnplanner.repo.BuildRepository.ChampionSetup();
+        Map<String, List<double[]>> rates = new java.util.LinkedHashMap<>();
+        if (setup.rates != null) {
+            setup.rates.forEach((name, list) -> {
+                List<double[]> periods = new ArrayList<>();
+                if (list != null) {
+                    for (com.ornnplanner.repo.BuildRepository.RatePeriod p : list) {
+                        periods.add(new double[] {p.start, p.perMinute});
+                    }
+                }
+                rates.put(name, periods);
+            });
+        }
+        long firstId = -1 - in.runes.size();
+        for (com.ornnplanner.seed.ChampionCatalog.EffectItem e : champions.toItems(in.unit.code, setup.skillOrder,
+                setup.options, setup.conditional, rates, firstId)) {
+            in.runes.add(e.item);
+            in.runeConditional.add(e.conditional);
+        }
     }
 
     private UnitProfile resolveUnit(Build build) {

@@ -67,11 +67,10 @@ public class ReferenceSeeder implements ApplicationRunner {
             r.livingForge = false;
             reference.upsertUnit(r); // no stats: always defined by the user, per build
         }
-        // Champions measured in the training mode; Ornn keeps his own calibrated profile (ornn()).
-        java.util.Set<String> known = new java.util.HashSet<>();
-        reference.findUnits().forEach(u -> known.add(u.code));
+        // Champions measured in the training mode, refreshed from the seed file on every start (only Ornn's base stats
+        // are editable in the Admin); Ornn keeps his own calibrated profile (ornn()).
         champions.units().forEach((code, u) -> {
-            if (!known.contains(code)) {
+            if (!ORNN.equals(code)) {
                 reference.upsertUnit(u);
             }
         });

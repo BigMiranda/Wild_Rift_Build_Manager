@@ -74,6 +74,8 @@ public class TimelineEngine {
     public static final int INVENTORY_SLOTS = 6;
     /** Item slots besides the single boots slot. */
     public static final int ITEM_SLOTS = 5;
+    /** Section of the engine items made from the champion's passive / abilities (passed with the runes). */
+    public static final String CHAMPION_SECTION = "campeao";
 
     private final ReferenceData ref;
 
@@ -557,7 +559,7 @@ public class TimelineEngine {
                 if (!r.line.dynamicPercent()) {
                     PassiveDetail d = detail(r);
                     d.staticFallback = true;
-                    d.value = r.line.value != null ? r.line.value : (r.line.ref != null ? r.line.ratio * r.line.ref : 0);
+                    d.value = r.line.value != null ? r.line.value : (r.line.ref != null ? r.line.ratioAt(level) * r.line.ref : 0);
                     d.formula = "valor estático da referência = " + fmt(d.value) + " " + r.line.type;
                     s.itemPassives.merge(r.line.type, d.value, Double::sum);
                 }
@@ -588,7 +590,7 @@ public class TimelineEngine {
                         parts.add(part(r.detail.passive, r.detail.stat, r.detail.value, r.line.conditional));
                     }
                 }
-                s.contributions.add(contribution(o, level, parts));
+                s.contributions.add(contribution(o, level, minute, parts));
             }
         }
 
@@ -606,16 +608,19 @@ public class TimelineEngine {
             double pre = s.itemFlat.getOrDefault(stat, 0.0);
             for (RatioLine r : lines) {
                 if (r.line.dynamicPercent() && r.conversion() && r.line.type.equals(stat)) {
-                    double source = resolve(r.line.refType);
+                    // refPre (e.g. Vladimir, Pyke): only the flat bonus of the source, so two conversions between the
+                    // same stats do not feed each other and a multiplier removing the source does not cancel it.
                     double sourceBase = s.base.getOrDefault(r.line.refType, 0.0);
-                    double ref = r.line.refScope == RefScope.BONUS ? source - sourceBase
+                    double source = r.line.refPre ? sourceBase + s.itemFlat.getOrDefault(r.line.refType, 0.0)
+                            : resolve(r.line.refType);
+                    double ref = r.line.refPre || r.line.refScope == RefScope.BONUS ? source - sourceBase
                             : r.line.refScope == RefScope.BASE ? sourceBase : source;
                     PassiveDetail d = detail(r);
                     d.refBase = r.line.refScope == RefScope.BONUS ? 0 : sourceBase;
                     d.refItems = r.line.refScope == RefScope.BASE ? 0 : source - sourceBase;
                     d.refTotal = ref;
-                    d.value = r.line.ratio * ref;
-                    d.formula = fmt(r.line.ratio) + " × " + fmt(ref) + " " + r.line.refType + " ("
+                    d.value = r.line.ratioAt(level) * ref;
+                    d.formula = fmt(r.line.ratioAt(level)) + " × " + fmt(ref) + " " + r.line.refType + " ("
                             + scopeLabel(r.line.refScope) + ", valor final) = " + fmt(d.value) + " " + stat
                             + (r.line.conditional ? " (condicional)" : "");
                     pre += d.value;
@@ -635,7 +640,7 @@ public class TimelineEngine {
             double forged = pre * (1 + f);
             double bonusFirst = 0;
             for (RatioLine r : multiplierLines(stat, RefScope.BONUS)) {
-                bonusFirst += r.line.ratio * forged;
+                bonusFirst += r.line.ratioAt(level) * forged;
             }
             double totalBeforeBuffs = base + forged + bonusFirst * (1 + f);
             double totalGains = 0;
@@ -644,8 +649,8 @@ public class TimelineEngine {
                 d.refBase = base;
                 d.refItems = totalBeforeBuffs - base;
                 d.refTotal = totalBeforeBuffs;
-                d.value = r.line.ratio * totalBeforeBuffs;
-                d.formula = fmt(r.line.ratio) + " × " + fmt(totalBeforeBuffs) + " " + stat
+                d.value = r.line.ratioAt(level) * totalBeforeBuffs;
+                d.formula = fmt(r.line.ratioAt(level)) + " × " + fmt(totalBeforeBuffs) + " " + stat
                         + " (total" + (f > 0 ? ", com Forja; não é amplificado por ela" : "") + ") = "
                         + fmt(d.value) + (r.line.conditional ? " (condicional)" : "");
                 totalGains += d.value;
@@ -658,8 +663,8 @@ public class TimelineEngine {
                 d.refBase = 0;
                 d.refItems = ref;
                 d.refTotal = ref;
-                d.value = r.line.ratio * ref;
-                d.formula = fmt(r.line.ratio) + " × (" + fmt(forged) + " adicional" + (f > 0 ? " com Forja" : "")
+                d.value = r.line.ratioAt(level) * ref;
+                d.formula = fmt(r.line.ratioAt(level)) + " × (" + fmt(forged) + " adicional" + (f > 0 ? " com Forja" : "")
                         + (totalGains > 0 ? " + " + fmt(totalGains) + " de bônus de % do total" : "") + ") = "
                         + fmt(d.value) + " " + stat + (f > 0 ? " (+" + fmt(d.value * f) + " da Forja Viva)" : "")
                         + (r.line.conditional ? " (condicional)" : "");
@@ -671,8 +676,8 @@ public class TimelineEngine {
                 PassiveDetail d = detail(r);
                 d.refBase = base;
                 d.refTotal = base;
-                d.value = r.line.ratio * base;
-                d.formula = fmt(r.line.ratio) + " × " + fmt(base) + " base = " + fmt(d.value) + " " + stat
+                d.value = r.line.ratioAt(level) * base;
+                d.formula = fmt(r.line.ratioAt(level)) + " × " + fmt(base) + " base = " + fmt(d.value) + " " + stat
                         + (r.line.conditional ? " (condicional)" : "");
                 baseGains += d.value;
                 s.itemPassives.merge(stat, d.value, Double::sum);
@@ -712,11 +717,12 @@ public class TimelineEngine {
             d.buildIndex = r.owner.buildIndex;
             d.number = r.owner.number;
             d.rune = r.owner.purchaseIndex < 0;
+            d.champion = CHAMPION_SECTION.equals(r.owner.item.section);
             d.implied = r.owner.implied;
             d.itemName = r.owner.item.name;
             d.passive = r.line.passive;
             d.stat = r.line.type;
-            d.ratio = r.line.ratio;
+            d.ratio = r.line.ratioAt(level);
             d.refType = r.line.refType;
             d.refScope = r.line.refScope;
             d.conditional = r.line.conditional;
@@ -743,12 +749,13 @@ public class TimelineEngine {
      * Gold value an owned item adds: plain stats, and its passives one by one (percentage passives as evaluated in
      * step 3, plus fixed bonuses that belong to a named passive, e.g. "Salva-Vidas: +200–300 Vida").
      */
-    private Model.ItemContribution contribution(Owned o, int level, List<Model.PassivePart> ratioParts) {
+    private Model.ItemContribution contribution(Owned o, int level, double minute, List<Model.PassivePart> ratioParts) {
         Model.ItemContribution c = new Model.ItemContribution();
         c.purchaseIndex = o.purchaseIndex;
         c.buildIndex = o.buildIndex;
         c.number = o.number;
         c.rune = o.purchaseIndex < 0;
+        c.champion = CHAMPION_SECTION.equals(o.item.section);
         c.implied = o.implied;
         c.itemId = o.item.id;
         c.itemName = o.item.name;
@@ -758,9 +765,9 @@ public class TimelineEngine {
                 continue;
             }
             if (l.passive != null) {
-                c.passiveParts.add(part(l.passive, l.type, l.valueAt(level), l.conditional));
+                c.passiveParts.add(part(l.passive, l.type, l.valueAt(level, minute), l.conditional));
             } else {
-                c.flat.merge(l.type, l.valueAt(level), Double::sum);
+                c.flat.merge(l.type, l.valueAt(level, minute), Double::sum);
             }
         }
         c.passiveParts.addAll(ratioParts);

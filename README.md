@@ -120,6 +120,34 @@ e ajuste `planner.seed.catalog` em `application.properties`.
 > A migração para este catálogo (schema v2) substituiu os itens da base antiga; sequências de compra de builds salvas
 > antes dela são esvaziadas (pastas e builds continuam).
 
+## Campeões
+
+[`seed/campeoes_7_3.yml`](backend/src/main/resources/seed/campeoes_7_3.yml) traz os 142 campeões do 7.3: passiva e
+habilidades transcritas da Coleção do jogo, e os status dos níveis 1 e 15 medidos no modo Treino (sem itens, sem
+habilidades aprendidas, com o efeito da página de runas padrão descontado). Cada campeão vira uma **unidade** do
+planejador, com status base que crescem em linha reta entre os dois níveis; o Ornn mantém o perfil calibrado dele.
+O painel do campeão no Planejador mostra os status, a passiva e as habilidades.
+
+**Passivas e habilidades que mudam status** (bloco `efeitos`, 94 efeitos em 76 campeões) entram no cálculo como as
+runas: presentes desde o início, sem custo nem espaço, no bloco do campeão do ouro efetivo.
+
+- **Ordem das habilidades** (por build): os níveis 1–3 aprendem as três básicas nessa ordem, a ultimate sobe nos níveis
+  5, 9 e 13 e os demais pontos vão para a primeira que ainda não está no máximo. Um efeito de habilidade só conta depois
+  de aprendida, com o valor do rank naquele nível (ex.: Trovoada do Malphite, +25/30/35/40% da Armadura total).
+- **Condicionais** (formas, ativos, acúmulos, Vida baixa) são ligados por build no painel do campeão, desligados por
+  padrão (a forma Martelo do Jayce, a Esfera na Orianna, o Mover Depressa do Teemo e a Conexão da Yuumi começam
+  ligados). Ex.: Forma Irrestrita do K'Sante (perde 30% da Vida e 75% da Armadura/RM adicionais), Mega-Gnar,
+  Bola Curva Defensiva do Rammus, Poppy com menos de 40% de Vida.
+- **Opções** (Vida perdida, acúmulos) e **acúmulos por minuto em períodos** (almas do Thresh, Poder Maligno do Veigar,
+  Banquete do Cho'Gath, Névoa da Senna, abates do Sion...), como nas runas.
+- Conversões especiais: Vladimir (PdH ↔ Vida adicional, sem acumularem entre si) e Pyke (Vida adicional vira DdA e
+  ele não ganha Vida) leem só o adicional de itens e runas (`ref_pre`).
+- Conferido no modo Treino em 10/10/2026: Malphite (51 → 64 de Armadura com a Trovoada), Poppy (+12% da Armadura e
+  RM totais), Rammus ((Armadura + 30) × 1,3 com a Bola Curva Defensiva). Gnar e Jayce tinham sido medidos na forma
+  Mega / Martelo: a base agora é a da forma padrão, e a outra forma é um efeito.
+- Fica só no texto: dano, cura, escudos, vampirismo, alcance, penetração sobre a armadura adicional e acelerações de
+  poucos segundos. Valores “({nível})” cujo máximo a Coleção não mostra usam o valor do nível 1 (anotado no efeito).
+
 ## Regras de cálculo
 
 Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/ornnplanner/engine/TimelineEngine.java).

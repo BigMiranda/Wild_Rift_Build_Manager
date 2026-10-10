@@ -16,7 +16,7 @@ import { evolutionPairs } from '../shopModel.js';
 import { emptyRunePage, setRuneCatalog } from '../runes.js';
 import PrepPanel from '../components/PrepPanel.jsx';
 import MinuteInput from '../components/MinuteInput.jsx';
-import ChampionPanel from '../components/ChampionPanel.jsx';
+import ChampionPanel, { emptyChampionSetup } from '../components/ChampionPanel.jsx';
 import RuneEditor from '../components/RuneEditor.jsx';
 import SpellEditor from '../components/SpellEditor.jsx';
 
@@ -32,6 +32,7 @@ const emptyBuild = (folderId) => ({
   assumeHalfItems: false,
   assumeSmallItems: false,
   runePage: emptyRunePage(),
+  championSetup: emptyChampionSetup(),
   spells: [],
   ragdollStats: {},
 });
@@ -61,7 +62,8 @@ function fromApi(b) {
   for (const [k, v] of Object.entries(b.ragdollStats ?? {})) {
     ragdollStats[k] = { base: v.base ?? '', growth: v.growth ?? '' };
   }
-  return { ...b, note: b.note ?? '', steps: b.steps ?? [], ragdollStats, runePage: b.runePage ?? emptyRunePage(), spells: b.spells ?? [] };
+  return { ...b, note: b.note ?? '', steps: b.steps ?? [], ragdollStats, runePage: b.runePage ?? emptyRunePage(),
+    championSetup: b.championSetup ?? emptyChampionSetup(), spells: b.spells ?? [] };
 }
 
 export default function Planner({ meta, items }) {
@@ -371,7 +373,10 @@ export default function Planner({ meta, items }) {
           </details>
         </section>
 
-        {!isRagdoll && <ChampionPanel code={draft.unitCode} />}
+        {!isRagdoll && (
+          <ChampionPanel code={draft.unitCode} setup={draft.championSetup} matchEnd={draft.matchEnd}
+            onChange={(championSetup) => update({ championSetup })} />
+        )}
 
         {runesReady && (
           <PrepPanel

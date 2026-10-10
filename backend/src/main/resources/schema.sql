@@ -5,6 +5,7 @@
 -- Version 5: build options assume_half_items / assume_small_items; purchase moments (build_moment).
 -- Version 6: rune page and summoner spells of a build (build.rune_page, build.spells).
 -- Version 7: end of the match (build.match_end).
+-- Version 8: champion setup of a build: skill order and effect choices (build.champion_setup).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -109,6 +110,7 @@ CREATE TABLE IF NOT EXISTS build (
     rune_page    TEXT,      -- JSON: primary/secondary tree, keystone, runes, options (v6)
     spells       TEXT,      -- JSON: two summoner spell names (v6)
     match_end    REAL,      -- game minute the match ended (v7)
+    champion_setup TEXT,    -- JSON: skill order, champion effect options / conditional / stack rates (v8)
     created_at   TEXT    NOT NULL,
     updated_at   TEXT    NOT NULL
 );

@@ -94,7 +94,9 @@ export function RelevanceReport({ point, prices, itemsById }) {
                   <tr key={`i${r.purchaseIndex}`} className="report-item">
                     <td className="l">
                       <span className="with-icon">
-                        {r.rune
+                        {r.champion
+                          ? <><span className="champ-tag">◆</span>{t('champ.effect')} {r.itemName}</>
+                          : r.rune
                           ? <><img src={runeIcon(findRune(r.itemName))} alt="" width={24} height={24} className="rune-img on" />{t('runes.rune')} {r.itemName}</>
                           : <><ItemIcon id={r.itemId} size={24} />#{r.number}{r.implied ? '↳' : ''} {r.itemName}</>}
                         {!r.conditionalIncluded && r.passiveParts.length === 0 && itemsById.get(r.itemId)?.stats.some((s) => s.conditional)

@@ -265,13 +265,23 @@ function GridView({ page, set, setPrimaryRune, setPrimaryTree, setSecondaryTree 
 function RuneOptions({ page, set, matchEnd }) {
   const chosen = [page.keystone, ...page.primaryRunes, page.secondaryRune].map(findRune)
     .filter((r) => r && (r.option || r.hasConditional || r.rate || r.extraGold));
-  if (!chosen.length) return null;
+  return <EffectOptions entries={chosen} state={page} set={set} matchEnd={matchEnd} icon={runeIcon} title={t('runes.options')} />;
+}
+
+/**
+ * Build choices of effects that enter the calculation (runes, champion passives / abilities): option, conditional
+ * effects (on unless `defaultOn` is false), stacks / activations per minute in periods and gold earned. `state` holds
+ * options, conditional, rates and gold by effect name.
+ */
+export function EffectOptions({ entries, state, set, matchEnd, icon, title }) {
+  if (!entries.length) return null;
+  const page = state;
   return (
     <div className="rune-options">
-      <span className="rune-options-title">{t('runes.options')}</span>
-      {chosen.map((r) => {
+      {title && <span className="rune-options-title">{title}</span>}
+      {entries.map((r) => {
         const value = page.options?.[r.name] ?? r.option?.defaultValue;
-        const cond = page.conditional?.[r.name] !== false;
+        const cond = page.conditional?.[r.name] ?? (r.defaultOn ?? true);
         // Periods of activations / stacks per minute, each from its start until the next one (first one at 0:00).
         const saved = page.rates?.[r.name];
         const periods = Array.isArray(saved) && saved.length ? saved
@@ -283,7 +293,7 @@ function RuneOptions({ page, set, matchEnd }) {
         return (
           <div key={r.name} className="rune-option">
             <div className="rune-option-head">
-              <img src={runeIcon(r)} alt="" width={22} height={22} />
+              {icon && <img src={icon(r)} alt="" width={22} height={22} />}
               <strong>{r.name}</strong>
               {r.option && (
                 <label>

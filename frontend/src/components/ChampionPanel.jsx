@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { currentLang, statLabel, t } from '../i18n.js';
 import { StatIcon } from './StatIcon.jsx';
+import { EffectOptions } from './RuneEditor.jsx';
 
 /**
  * Champion reference for the build's unit: stats measured in the training mode (levels 1 and 15), passive and
@@ -70,7 +71,67 @@ function Ability({ a, tag }) {
   );
 }
 
-export default function ChampionPanel({ code }) {
+export const emptyChampionSetup = () => ({ skillOrder: [1, 2, 3], options: {}, conditional: {}, rates: {} });
+
+const ORDERS = [[1, 2, 3], [1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]];
+const ULT_LEVELS = [5, 9, 13];
+
+/** Ability that gets the point at each level 1..15 (same rule as the backend's ChampionCatalog.ranks). */
+function pointsByLevel(order) {
+  const ranks = [0, 0, 0];
+  const out = [];
+  let learned = 0;
+  for (let l = 1; l <= 15; l++) {
+    if (ULT_LEVELS.includes(l)) { out.push('R'); continue; }
+    const a = learned < 3 ? order[learned++] : order.find((x) => ranks[x - 1] < 4);
+    ranks[a - 1]++;
+    out.push(String(a));
+  }
+  return out;
+}
+
+/** Modeled effects of the champion and the build's choices for them (skill order, conditional, options, rates). */
+function CalcEffects({ effects, abilities, setup, onChange, matchEnd }) {
+  const order = ORDERS.some((o) => o.join() === setup.skillOrder?.join()) ? setup.skillOrder : [1, 2, 3];
+  const set = (patch) => onChange({ ...setup, ...patch });
+  const name = (a) => abilities?.[a - 1]?.nome ?? a;
+  const controls = effects.filter((e) => e.option || e.hasConditional || e.rate);
+  return (
+    <div className="champ-calc">
+      <h4>{t('champ.calc')}</h4>
+      {!effects.length ? <p className="muted">{t('champ.none')}</p> : (
+        <ul className="champ-effects">
+          {effects.map((e) => (
+            <li key={e.name}>
+              <span className="champ-tag">{e.ability}</span> <strong>{e.name}</strong>
+              {!e.hasConditional && !e.rate && <small className="muted"> · {t('champ.always')}</small>}
+              <span className="champ-effect-lines">{e.summary.join(' · ')}</span>
+              {e.note && <small className="muted"> ({e.note})</small>}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="champ-order">
+        <label title={t('champ.skillOrderHint')}>
+          {t('champ.skillOrder')}{' '}
+          <select value={order.join()} onChange={(ev) => set({ skillOrder: ev.target.value.split(',').map(Number) })}>
+            {ORDERS.map((o) => <option key={o.join()} value={o.join()}>{o.map(name).join(' › ')}</option>)}
+          </select>
+        </label>
+        <span className="champ-points" title={t('champ.byLevel')}>
+          {pointsByLevel(order).map((a, i) => (
+            <span key={i} className={`champ-point${a === 'R' ? ' ult' : ''}`}><small>{i + 1}</small>{a}</span>
+          ))}
+        </span>
+      </div>
+      {setup && (
+        <EffectOptions entries={controls} state={setup} set={set} matchEnd={matchEnd} title={t('champ.choices')} />
+      )}
+    </div>
+  );
+}
+
+export default function ChampionPanel({ code, setup, onChange, matchEnd }) {
   const [champ, setChamp] = useState(null);
 
   useEffect(() => {
@@ -89,7 +150,12 @@ export default function ChampionPanel({ code }) {
     <details className="panel champ-panel">
       <summary>
         <strong>{champ.nome}</strong> <span className="muted">{champ.titulo}</span>
+        {champ.modelados?.length > 0 && <small className="champ-count">{t('champ.effectsCount', { n: champ.modelados.length })}</small>}
       </summary>
+      {onChange && (
+        <CalcEffects effects={champ.modelados ?? []} abilities={champ.habilidades} setup={setup ?? emptyChampionSetup()}
+          onChange={onChange} matchEnd={matchEnd} />
+      )}
       <div className="champ-body">
         <div className="champ-stats">
           <table>

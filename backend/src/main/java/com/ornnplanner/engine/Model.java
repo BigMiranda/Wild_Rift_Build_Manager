@@ -58,8 +58,29 @@ public final class Model {
         public Double stepStart;
         public Double stepEvery;
         public List<Double> stepValues;
+        /**
+         * Value at each champion level 1..15 (champion abilities: the rank follows the build's skill order). For a
+         * per-minute line, the value of one stack at each level (the periods then count stacks).
+         */
+        public List<Double> levelValues;
+        /** Ratio at each champion level 1..15 (champion abilities whose percentage grows with the rank). */
+        public List<Double> levelRatios;
+        /** Conversion that reads only the flat bonus of its source stat (items, runes), before any multiplier. */
+        public boolean refPre;
 
         public StatLine() {
+        }
+
+        /** Ratio at a level: per-level ratios when given, else the fixed ratio. */
+        public double ratioAt(int level) {
+            if (levelRatios != null && !levelRatios.isEmpty()) {
+                return levelRatios.get(Math.max(1, Math.min(levelRatios.size(), level)) - 1);
+            }
+            return ratio == null ? 0 : ratio;
+        }
+
+        private double perLevel(int level) {
+            return levelValues.get(Math.max(1, Math.min(levelValues.size(), level)) - 1);
         }
 
         public static StatLine flat(String type, double value) {
@@ -84,17 +105,18 @@ public final class Model {
         }
 
         public boolean hasRatio() {
-            return ratio != null;
+            return ratio != null || levelRatios != null;
         }
 
         /** Ratio line that can be evaluated against the build's real stats. */
         public boolean dynamicPercent() {
-            return ratio != null && refType != null;
+            return hasRatio() && refType != null;
         }
 
         /** Line that contributes a fixed amount (flat stat, or a ratio line we must fall back to its static value). */
         public boolean countsAsFlat() {
-            return !marker() && ratio == null && (value != null || perMinute != null || stepValues != null);
+            return !marker() && !hasRatio()
+                    && (value != null || perMinute != null || stepValues != null || levelValues != null);
         }
 
         /** Sum of per-minute rates over [0, minute]; periods {start, rate}, sorted, each until the next start. */
@@ -126,7 +148,7 @@ public final class Model {
         /** Flat value at a level and game minute. */
         public double valueAt(int level, double minute) {
             if (perMinute != null) {
-                return accumulated(perMinute, minute);
+                return accumulated(perMinute, minute) * (levelValues != null ? perLevel(level) : 1);
             }
             if (stepValues != null && !stepValues.isEmpty()) {
                 if (minute < stepStart - 1e-9) {
@@ -151,6 +173,9 @@ public final class Model {
 
         /** Flat value at a level: `value` at level 1, `valueMax` at level 15, linear in between. */
         public double valueAt(int level) {
+            if (levelValues != null && perMinute == null) {
+                return perLevel(level);
+            }
             if (value == null) {
                 return 0;
             }
@@ -345,6 +370,8 @@ public final class Model {
         public boolean implied;
         /** From a rune of the build (not an item). */
         public boolean rune;
+        /** From the champion's own passive or abilities (also flagged as rune: held from the start, no cost). */
+        public boolean champion;
         public String itemName;
         public String passive;
         public String stat;
@@ -402,6 +429,8 @@ public final class Model {
         public boolean implied;
         /** From a rune of the build (not an item). */
         public boolean rune;
+        /** From the champion's own passive or abilities (also flagged as rune: held from the start, no cost). */
+        public boolean champion;
         public long itemId;
         public String itemName;
         public boolean conditionalIncluded;
