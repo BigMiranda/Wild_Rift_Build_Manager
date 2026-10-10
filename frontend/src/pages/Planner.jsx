@@ -16,6 +16,7 @@ import { evolutionPairs } from '../shopModel.js';
 import { emptyRunePage, setRuneCatalog } from '../runes.js';
 import PrepPanel from '../components/PrepPanel.jsx';
 import MinuteInput from '../components/MinuteInput.jsx';
+import ChampionPanel from '../components/ChampionPanel.jsx';
 import RuneEditor from '../components/RuneEditor.jsx';
 import SpellEditor from '../components/SpellEditor.jsx';
 
@@ -369,6 +370,8 @@ export default function Planner({ meta, items }) {
             )}
           </details>
         </section>
+
+        {!isRagdoll && <ChampionPanel code={draft.unitCode} />}
 
         {runesReady && (
           <PrepPanel

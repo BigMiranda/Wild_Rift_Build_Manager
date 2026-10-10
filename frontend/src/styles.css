@@ -647,3 +647,24 @@ input[aria-invalid="true"] { border-color: var(--error); }
   .grid-trees { grid-template-columns: 1fr; }
   .prep-row { grid-template-columns: 80px 1fr 20px; }
 }
+
+/* ---------------------------------------------------------------- champion reference */
+.champ-panel > summary { cursor: pointer; }
+.champ-panel > summary .muted { margin-left: 6px; }
+.champ-body { display: grid; grid-template-columns: minmax(240px, 300px) 1fr; gap: 16px; margin-top: 10px; }
+.champ-stats table { width: 100%; }
+.champ-stats td, .champ-stats th { padding: 2px 6px; text-align: right; }
+.champ-stats .l { text-align: left; }
+.champ-stats .small { font-size: 11px; }
+.champ-ability { padding: 8px 0; border-top: 1px solid var(--border); }
+.champ-ability:first-child { border-top: none; padding-top: 0; }
+.champ-ability-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.champ-tag { display: inline-grid; place-items: center; min-width: 20px; height: 20px; border-radius: 4px; background: var(--panel-2, rgba(255,255,255,.08)); font-size: 11px; font-weight: 700; }
+.champ-type { font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; }
+.champ-text { white-space: pre-line; margin: 4px 0; font-size: 13px; line-height: 1.45; }
+.champ-text svg { vertical-align: -2px; margin: 0 1px; }
+.champ-marker { font-size: 11px; color: var(--muted); }
+.champ-ranks { font-size: 12px; border-collapse: collapse; }
+.champ-ranks td { padding: 1px 8px 1px 0; text-align: right; }
+.champ-ranks td.l { text-align: left; color: var(--muted); }
+@media (max-width: 760px) { .champ-body { grid-template-columns: 1fr; } }

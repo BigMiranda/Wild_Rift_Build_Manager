@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "backend",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd backend && .\\mvnw.cmd spring-boot:run"],
+      "port": 8080
+    },
+    {
       "name": "frontend",
       "runtimeExecutable": "C:/Users/Matheus/AppData/Local/nvm/v24.15.0/node.exe",
       "runtimeArgs": ["frontend/node_modules/vite/bin/vite.js", "frontend"],

@@ -38,14 +38,17 @@ public class ReferenceSeeder implements ApplicationRunner {
     private final BuildRepository builds;
     private final CatalogImporter importer;
     private final SchemaManager schema;
+    private final ChampionCatalog champions;
 
     public ReferenceSeeder(CatalogRepository catalog, ReferenceRepository reference, BuildRepository builds,
-                           CatalogImporter importer, SchemaManager schema) {
+                           CatalogImporter importer, SchemaManager schema,
+                           ChampionCatalog champions) {
         this.catalog = catalog;
         this.reference = reference;
         this.builds = builds;
         this.importer = importer;
         this.schema = schema;
+        this.champions = champions;
     }
 
     @Override
@@ -64,6 +67,14 @@ public class ReferenceSeeder implements ApplicationRunner {
             r.livingForge = false;
             reference.upsertUnit(r); // no stats: always defined by the user, per build
         }
+        // Champions measured in the training mode; Ornn keeps his own calibrated profile (ornn()).
+        java.util.Set<String> known = new java.util.HashSet<>();
+        reference.findUnits().forEach(u -> known.add(u.code));
+        champions.units().forEach((code, u) -> {
+            if (!known.contains(code)) {
+                reference.upsertUnit(u);
+            }
+        });
         if (reference.findForgeTiers().isEmpty()) {
             reference.replaceForgeTiers(List.of(
                     new ForgeTier(1, 0.07), new ForgeTier(7, 0.12), new ForgeTier(10, 0.17), new ForgeTier(13, 0.22)));

@@ -11,7 +11,7 @@ import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.TreeMap;
 
-/** Units (Ornn / ragdoll), Living Forge tiers and the XP-per-level table. */
+/** Units (champions / ragdoll, last), Living Forge tiers and the XP-per-level table. */
 @Repository
 public class ReferenceRepository {
 
@@ -22,7 +22,7 @@ public class ReferenceRepository {
     }
 
     public List<UnitProfile> findUnits() {
-        List<UnitProfile> units = jdbc.query("SELECT * FROM unit ORDER BY code", (rs, n) -> {
+        List<UnitProfile> units = jdbc.query("SELECT * FROM unit ORDER BY code = 'RAGDOLL', name", (rs, n) -> {
             UnitProfile u = new UnitProfile();
             u.code = rs.getString("code");
             u.name = rs.getString("name");
