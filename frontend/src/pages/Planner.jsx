@@ -19,6 +19,7 @@ import MinuteInput from '../components/MinuteInput.jsx';
 import ChampionPanel, { emptyChampionSetup } from '../components/ChampionPanel.jsx';
 import ChampionPicker from '../components/ChampionPicker.jsx';
 import ItemEffectsPanel, { emptyItemSetup } from '../components/ItemEffectsPanel.jsx';
+import BuildDock, { ItemReaderContext } from '../components/BuildDock.jsx';
 import RuneEditor from '../components/RuneEditor.jsx';
 import SpellEditor from '../components/SpellEditor.jsx';
 
@@ -41,6 +42,22 @@ const emptyBuild = (folderId) => ({
 });
 
 const SIDEBAR_KEY = 'ornn-planner-sidebar';
+const TIMELINE_KEY = 'ornn-planner-timeline';
+const loadFlag = (key, fallback) => {
+  try {
+    const v = localStorage.getItem(key);
+    return v == null ? fallback : v === 'open';
+  } catch {
+    return fallback;
+  }
+};
+const saveFlag = (key, open) => {
+  try {
+    localStorage.setItem(key, open ? 'open' : 'closed');
+  } catch {
+    /* storage unavailable: keep it for this session only */
+  }
+};
 const loadSidebar = () => {
   try {
     return localStorage.getItem(SIDEBAR_KEY) !== 'collapsed';
@@ -95,6 +112,11 @@ export default function Planner({ meta, items }) {
   const [selectedIdx, setSelectedIdx] = useState(null);
   const [message, setMessage] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(loadSidebar);
+  /** Item open in the dock's reader (from the dock's slots or any item name of the reports). */
+  const [readerId, setReaderId] = useState(null);
+  /** The purchase timeline table can be collapsed (it gets long). */
+  const [timelineOpen, setTimelineOpen] = useState(() => loadFlag(TIMELINE_KEY, false));
+  const toggleTimeline = () => setTimelineOpen((o) => { saveFlag(TIMELINE_KEY, !o); return !o; });
   const toggleSidebar = () => {
     setSidebarOpen((open) => {
       try {
@@ -316,6 +338,9 @@ export default function Planner({ meta, items }) {
       </aside>
 
       <main className="main">
+        <ItemReaderContext.Provider value={setReaderId}>
+        <BuildDock point={point} itemsById={itemsById} selected={selectedMinute != null} readerId={readerId}
+          onRead={setReaderId} onShop={() => shopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
         {message && (
           <div className="notice spread">
             <span>{message}</span>
@@ -381,11 +406,8 @@ export default function Planner({ meta, items }) {
 
         {runesReady && (
           <PrepPanel
-            inventoryIds={result?.steps?.[result.steps.length - 1]?.inventoryIds ?? []}
-            itemsById={itemsById}
             runePage={draft.runePage}
             spells={draft.spells}
-            onItems={() => shopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
             onRunes={() => setPrepEditor('runes')}
             onSpells={() => setPrepEditor('spells')}
           />
@@ -429,16 +451,25 @@ export default function Planner({ meta, items }) {
             onChange={(itemSetup) => update({ itemSetup })} />
         </section>
 
-        <section className="panel">
-          <h3>{t('timeline.title')}</h3>
-          <p className="muted" style={{ marginTop: 0 }} dangerouslySetInnerHTML={{ __html: t('timeline.xpNote', { gold: meta.startingGold }) }} />
+        <section className="panel timeline-panel">
+          <div className="spread">
+            <button className="collapse-head" onClick={toggleTimeline} aria-expanded={timelineOpen}>
+              <span aria-hidden="true">{timelineOpen ? '▾' : '▸'}</span> <h3>{t('timeline.title')}</h3>
+            </button>
+            {lastStep && (
+              <small className="muted">
+                {t('timeline.summary', { n: result.steps.filter((x) => !x.implied).length, gold: n0(lastStep.cumulativeGold), time: mmss(lastStep.minute) })}
+              </small>
+            )}
+          </div>
           {!result && !calcError && <p className="muted">{t('timeline.needInputs')}</p>}
           {calcError && <p className="error">{calcError}</p>}
           {warnings.length > 0 && (
             <div className="notice"><ul>{warnings.map((w) => <li key={w}>{w}</li>)}</ul></div>
           )}
-          {result && compareIds.length === 0 && <TimelineTable result={result} itemsById={itemsById} />}
-          {result && compareIds.length > 0 && (
+          {timelineOpen && <p className="muted" style={{ marginTop: 0 }} dangerouslySetInnerHTML={{ __html: t('timeline.xpNote', { gold: meta.startingGold }) }} />}
+          {timelineOpen && result && compareIds.length === 0 && <TimelineTable result={result} itemsById={itemsById} />}
+          {timelineOpen && result && compareIds.length > 0 && (
             <div className="compare-grid">
               {chartSeries.map((s) => (
                 <div key={s.key}>
@@ -504,6 +535,7 @@ export default function Planner({ meta, items }) {
             </div>
           </div>
         )}
+        </ItemReaderContext.Provider>
       </main>
       {prepEditor === 'runes' && (
         <RuneEditor page={draft.runePage} matchEnd={draft.matchEnd} onChange={(runePage) => update({ runePage })} onClose={() => setPrepEditor(null)} />

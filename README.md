@@ -239,7 +239,13 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
   mostra o que aquela compra traz à build (minuto, ouro pago, valor em ouro somado e eficiências).
 - Clique numa linha da linha do tempo para ver o **detalhamento**: base/itens/passivas/forja por status, fórmula de
   cada passiva e de cada eficiência.
-- **Preparações (itens, runas e feitiços)**: no topo da build, como a tela de Preparações do jogo. Runas: página com
+- **Barra da build** (fixa no topo da página): os 6 espaços do inventário no momento inspecionado (o minuto clicado no
+  gráfico, ou a última compra) e, recolhível, os status desse momento (com os status efetivos e a Vida efetiva). Clicar
+  num item abre a leitura completa dele ali mesmo — status, passivas com os status coloridos e com ícone como no jogo,
+  efeitos modelados e quanto ele vale naquele momento —, sem voltar à loja; os nomes de itens do relatório de
+  relevância, das passivas e do ouro efetivo abrem a mesma leitura. A linha do tempo fica recolhida (com um resumo) e
+  abre num clique; a escolha fica salva no navegador.
+- **Preparações (runas e feitiços)**: logo após o campeão, como a tela de Preparações do jogo. Runas: página com
   1 fundamental + 1 runa por linha da árvore principal + 1 runa de outra árvore, editável em lista (com descrição) ou
   em grade, como no jogo. Catálogo transcrito do jogo (patch 7.3) em `seed/runas_7_3.yml`, ícones coloridos e apagados
   em `seed/runas`. As runas com efeito de status entram no cálculo como "itens" presentes desde o início (sem custo nem

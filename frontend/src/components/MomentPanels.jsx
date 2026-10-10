@@ -1,7 +1,8 @@
 import { statLabel, t } from '../i18n.js';
 import { DERIVED_STATS, EFFECTIVE_STATS, PERCENT_STATS, SHEET_STATS, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
 import ItemIcon from './ItemIcon.jsx';
-import InventorySlots from './InventorySlots.jsx';
+import { useItemReader } from './BuildDock.jsx';
+import RichText from './RichText.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
 import PassiveCompare from './PassiveCompare.jsx';
 import { findRune, runeIcon } from '../runes.js';
@@ -26,10 +27,6 @@ export function StatSheet({ point, itemsById }) {
       <p className="muted" style={{ marginTop: 0 }}>
         {t('sheet.help')} {point.forgePct > 0 && t('sheet.forge', { pct: pct(point.forgePct * 100) })}
       </p>
-      <div className="sheet-inventory">
-        <span className="muted">{t('sheet.inventory')}</span>
-        <InventorySlots ids={(point.contributions ?? []).filter((c) => !c.rune).map((c) => c.itemId)} itemsById={itemsById} size={30} />
-      </div>
       <div className="stat-sheet">
         {SHEET_STATS.map((s) => {
           const total = statOf(point.total, s) ?? 0;
@@ -88,6 +85,7 @@ function EffectiveSheet({ total }) {
  * Forge on top. Share = part of the build's whole bonus value.
  */
 export function RelevanceReport({ point, prices, itemsById }) {
+  const read = useItemReader();
   if (!point) return null;
   const forgeGold = Object.entries(point.forge ?? {}).reduce((sum, [k, v]) => sum + v * (prices[k] ?? 0), 0);
   const rows = (point.contributions ?? []).map((c) => ({ ...c, gold: c.flatGold + c.passiveGold }));
@@ -125,7 +123,11 @@ export function RelevanceReport({ point, prices, itemsById }) {
                           ? <><span className="champ-tag">◆</span>{t('champ.effect')} {r.itemName}</>
                           : r.rune
                           ? <><img src={runeIcon(findRune(r.itemName))} alt="" width={24} height={24} className="rune-img on" />{t('runes.rune')} {r.itemName}</>
-                          : <><ItemIcon id={r.itemId} size={24} />#{r.number}{r.implied ? '↳' : ''} {r.itemName}</>}
+                          : (
+                            <button className="link item-link" onClick={() => read(r.itemId)} title={t('dock.read', { name: r.itemName })}>
+                              <ItemIcon id={r.itemId} size={24} />#{r.number}{r.implied ? '↳' : ''} {r.itemName}
+                            </button>
+                          )}
                         {!r.conditionalIncluded && r.passiveParts.length === 0 && itemsById.get(r.itemId)?.stats.some((s) => s.conditional)
                           && <small className="cond">{t('report.condOff')}</small>}
                       </span>
@@ -200,6 +202,7 @@ function ShareBar({ value, thin = false }) {
  * builds (`builds`: [{ key, name, color, series }], the active one first) they are shown side by side instead.
  */
 export function PassivesPanel({ point, series, itemsById, builds = [] }) {
+  const read = useItemReader();
   if (!point) return null;
   if (builds.length > 1) {
     const columns = builds.map((b) => ({
@@ -233,7 +236,9 @@ export function PassivesPanel({ point, series, itemsById, builds = [] }) {
       <ul className="passive-groups">
         {byItem.map((g) => (
           <li key={g.itemId}>
-            <div className="with-icon passive-item"><ItemIcon id={g.itemId} size={24} />{g.itemName}</div>
+            <button className="link with-icon passive-item item-link" onClick={() => read(g.itemId)} title={t('dock.read', { name: g.itemName })}>
+              <ItemIcon id={g.itemId} size={24} />{g.itemName}
+            </button>
             <ul>
               {g.passives.map((x) => (
                 <li key={x.key} className="passive-entry">
@@ -241,7 +246,7 @@ export function PassivesPanel({ point, series, itemsById, builds = [] }) {
                   <div>
                     <span className="passive-name">{x.name}</span>
                     <small className="muted"> · {n0(x.gold)} · {t('passives.since', { time: mmss(since.get(x.key) ?? point.minute) })}</small>
-                    {x.text && <p className="passive-text">{x.text}</p>}
+                    {x.text && <p className="passive-text"><RichText text={x.text} /></p>}
                   </div>
                 </li>
               ))}

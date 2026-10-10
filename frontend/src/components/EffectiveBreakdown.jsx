@@ -2,6 +2,7 @@ import { statAbbr, statLabel, t } from '../i18n.js';
 import { n0, n1, pct, statValue } from '../format.js';
 import { ALIGN_SLOT, FORGE_COLOR, itemColor, itemPassiveColor } from '../effective.js';
 import ItemIcon from './ItemIcon.jsx';
+import { useItemReader } from './BuildDock.jsx';
 import { statColor } from './StatIcon.jsx';
 
 const signed = (v) => (v > 0 ? `+${n0(v)}` : n0(v));
@@ -25,6 +26,7 @@ function Profit({ value, pctValue }) {
  */
 export default function EffectiveBreakdown({ columns, compact = false, align }) {
   const label = compact ? statAbbr : statLabel;
+  const read = useItemReader();
   const rows = new Map();
   const put = (key, ci, x) => {
     if (!rows.has(key)) rows.set(key, columns.map(() => null));
@@ -69,7 +71,9 @@ export default function EffectiveBreakdown({ columns, compact = false, align }) 
                   <span style={{ background: itemColor(x.itemName) }} />
                 </span>
                 {!compact && <ItemIcon id={x.itemId} size={20} />}
-                <span className="eff-item-name">#{x.number}{x.implied ? '↳' : ''} {x.itemName}</span>
+                <button className="link eff-item-name item-link" onClick={() => read(x.itemId)} title={t('dock.read', { name: x.itemName })}>
+                  #{x.number}{x.implied ? '↳' : ''} {x.itemName}
+                </button>
               </div>
               <div className="eff-line">
                 {t('eff.worthOfCost', { worth: n0(x.effective), cost: n0(x.cost) })} · <Profit value={x.profit} pctValue={x.profitPct} />

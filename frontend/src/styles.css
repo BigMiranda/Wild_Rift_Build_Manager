@@ -739,3 +739,42 @@ input[aria-invalid="true"] { border-color: var(--error); }
 .item-effects-fixed img, .rune-option img.item { border-radius: 3px; }
 .effect-details { margin-left: 30px; }
 .sheet-sub { margin: 14px 0 6px; font-size: 13px; color: var(--text-2); }
+
+/* Build dock: the 6 slots and the stats fixed under the header, with the item reader */
+.build-dock {
+  position: sticky; top: 50px; z-index: 4; margin: -14px -18px 14px; padding: 8px 18px;
+  background: rgba(8, 17, 28, .95); border-bottom: 1px solid var(--border); backdrop-filter: blur(6px);
+}
+.dock-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
+.dock-when { display: flex; flex-direction: column; line-height: 1.2; min-width: 120px; }
+.dock-when strong { color: var(--gold-bright); text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
+.dock-when small { color: var(--text-2); }
+.dock-toggle { margin-left: auto; }
+.dock-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 12px; }
+.dock-stat { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.dock-stat strong { color: var(--text); }
+.dock-stat.effective { border-left: 1px solid var(--border); padding-left: 10px; }
+.inv-slot.pickable { padding: 0; cursor: pointer; background: none; }
+.inv-slot.pickable:hover { border-color: var(--gold-bright); }
+.inv-slot.picked { outline: 2px solid var(--gold-bright); outline-offset: 1px; }
+.item-reader {
+  margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 6px;
+  background: var(--surface); max-height: min(60vh, 520px); overflow-y: auto;
+}
+.item-reader .detail-head { display: flex; gap: 10px; align-items: center; }
+.item-reader .detail-head h3 { margin: 0; }
+.reader-close { margin-left: auto; align-self: flex-start; }
+.reader-body { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; margin-top: 8px; }
+.reader-body ul { list-style: none; padding: 0; margin: 4px 0; }
+.reader-body li { margin: 2px 0; }
+.reader-body h4 { margin: 4px 0; font-size: 12px; color: var(--text-2); text-transform: uppercase; letter-spacing: .05em; }
+.reader-value p { margin: 4px 0; }
+@media (max-width: 760px) { .reader-body { grid-template-columns: 1fr; } }
+.item-link { display: inline-flex; align-items: center; gap: 6px; color: inherit; text-align: left; }
+.item-link:hover { color: var(--gold-bright); text-decoration: underline; }
+.rich-stat { white-space: nowrap; }
+.rich-stat .stat-icon { margin-right: 2px; vertical-align: -1px; }
+.rich-stat.true-dmg { color: #fff; font-weight: 600; }
+.collapse-head { display: inline-flex; align-items: center; gap: 8px; background: none; border: none; padding: 0; color: inherit; }
+.collapse-head h3 { margin: 0; }
+.timeline-panel > .spread { margin-bottom: 8px; }

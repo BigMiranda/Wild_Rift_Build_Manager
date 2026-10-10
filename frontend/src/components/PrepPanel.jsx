@@ -1,19 +1,13 @@
 import { t } from '../i18n.js';
 import { findSpell, pageSlots, runeIcon, spellIcon } from '../runes.js';
-import InventorySlots from './InventorySlots.jsx';
 
 /**
- * The build at a glance, like the game's "Preparações" screen: final items, rune page and summoner spells, each row
- * opening its editor.
+ * Rune page and summoner spells, like the game's "Preparações" screen, each row opening its editor (the items are in
+ * the build dock fixed at the top of the page).
  */
-export default function PrepPanel({ inventoryIds, itemsById, runePage, spells, onItems, onRunes, onSpells }) {
+export default function PrepPanel({ runePage, spells, onRunes, onSpells }) {
   return (
     <section className="panel prep-panel" aria-label={t('prep.title')}>
-      <button className="prep-row" onClick={onItems}>
-        <span className="prep-label">{t('prep.items')}</span>
-        <span className="prep-icons"><InventorySlots ids={inventoryIds} itemsById={itemsById} size={40} /></span>
-        <span className="prep-go" aria-hidden="true">›</span>
-      </button>
       <button className="prep-row" onClick={onRunes}>
         <span className="prep-label">{t('prep.runes')}</span>
         <span className="prep-icons">

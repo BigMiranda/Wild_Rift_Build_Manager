@@ -4,6 +4,7 @@ import { statLabel, t, violationText } from '../i18n.js';
 import { mmss, n0, pct, statValue } from '../format.js';
 import { DEFAULT_TAB, MARKERS, TABS, buildTiles, describeStats, markerLabel, sectionsFor, variantLabel } from '../shopModel.js';
 import ItemIcon from './ItemIcon.jsx';
+import RichText from './RichText.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
 
 /**
@@ -159,7 +160,7 @@ function ItemDetail({ tile, variant, items, itemsById, buildPayload, purchase, o
         </ul>
         {variant.passives.map((p, i) => (
           <p className="passive" key={i}>
-            {p.name && <span className="passive-name">{p.name}: </span>}{p.text}
+            {p.name && <span className="passive-name">{p.name}: </span>}<RichText text={p.text} />
           </p>
         ))}
       </div>
