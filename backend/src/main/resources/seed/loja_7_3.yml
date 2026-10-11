@@ -3154,6 +3154,8 @@ itens:
     receita:
     - Códex Demoníaco
     - Máscara Assustadora
+    exclusivo:
+    - Penetração Mágica %
   Criptoflora:
     custo: 3000
     secao: aprimorado

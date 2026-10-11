@@ -8,6 +8,7 @@
 -- Version 8: champion setup of a build: skill order and effect choices (build.champion_setup).
 -- Version 9: stats priced as a share of another (stat_def.factor); item effect choices of a build (build.item_setup).
 -- Version 10: no table change; re-imports the stat prices (magic / physical shields).
+-- Version 11: no table change; re-imports the catalog (Maldição Sanguinária in the % magic penetration group).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,

@@ -229,7 +229,7 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
     ÷ ouro efetivamente pago.
 - **Componentes**: componentes já possuídos são consumidos (recursivamente) e descontados do preço, como na loja.
 - **Regras da loja** (checadas pelo motor sobre o inventário logo após cada compra, já com os componentes consumidos):
-  nenhum item finalizado repetido; só um item por grupo exclusivo (penetração de armadura %, penetração mágica %,
+  nenhum item finalizado repetido; só um item por grupo exclusivo (penetração de armadura %, penetração mágica % — com a Maldição Sanguinária —,
   Lâmina Arcana, Lágrima da Deusa, Salva-Vidas, item de suporte — campo `exclusivo` do catálogo; botas ficam fora dos
   grupos de penetração); só um item ativável; 5 itens + 1 bota. A interface não deixa adicionar uma compra que quebre
   uma regra, exceto o limite de itens: uma compra sem espaço no inventário naquele ponto da ordem é mantida na

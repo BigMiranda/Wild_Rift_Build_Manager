@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 10;
+    static final int VERSION = 11;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -88,6 +88,9 @@ public class SchemaManager {
         }
         if (version < 9 && tableExists("build") && !columnExists("build", "item_setup")) {
             jdbc.execute("ALTER TABLE build ADD COLUMN item_setup TEXT");
+        }
+        if (version < 11 && tableExists("item")) {
+            catalogReimportNeeded = true;   // v11: Maldição Sanguinária joins the % magic penetration group
         }
         if (version < 10 && tableExists("stat_def")) {
             catalogReimportNeeded = true;   // v10: shields only against magic / physical damage (new stat prices)
