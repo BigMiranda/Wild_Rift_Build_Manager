@@ -9,6 +9,7 @@
 -- Version 9: stats priced as a share of another (stat_def.factor); item effect choices of a build (build.item_setup).
 -- Version 10: no table change; re-imports the stat prices (magic / physical shields).
 -- Version 11: no table change; re-imports the catalog (Maldição Sanguinária in the % magic penetration group).
+-- Version 12: a purchase step can be a sale of a held item (build_step.sell).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -125,6 +126,7 @@ CREATE TABLE IF NOT EXISTS build_step (
     seq      INTEGER NOT NULL,
     item_id  INTEGER NOT NULL REFERENCES item (id),
     include_conditional INTEGER NOT NULL DEFAULT 1, -- count this purchase's conditional effects
+    sell     INTEGER NOT NULL DEFAULT 0,            -- 1 = sells one held copy of the item instead of buying it (v12)
     PRIMARY KEY (build_id, seq)
 );
 

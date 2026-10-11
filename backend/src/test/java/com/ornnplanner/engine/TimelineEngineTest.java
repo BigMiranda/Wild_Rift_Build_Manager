@@ -399,9 +399,10 @@ class TimelineEngineTest {
         boots1.tabs = new java.util.ArrayList<>(List.of("Botas"));
         boots2.tabs = new java.util.ArrayList<>(List.of("Botas"));
         TimelineResult twoBoots = run(ornn(), 1000, 0, boots1.id, boots2.id);
-        assertEquals(1, twoBoots.steps.size());                   // the second boots is left out...
-        assertEquals("boots", twoBoots.ignored.get(0).violations.get(0).code);
-        assertEquals(1, twoBoots.ignored.get(0).index);
+        assertEquals(2, twoBoots.steps.size());                   // other boots: a swap, never two pairs
+        assertEquals("Botas Galvanizadas", twoBoots.steps.get(1).swappedOut);
+        assertEquals(List.of(boots2.id), twoBoots.steps.get(1).inventoryIds);
+        assertTrue(twoBoots.ignored.isEmpty());
 
         Long[] six = new Long[7];
         six[0] = boots1.id;
@@ -682,5 +683,56 @@ class TimelineEngineTest {
             assertEquals(want[0], s.stats.total.get(ARMOR), 2, "armor boots, case " + c);
             assertEquals(want[1], s.stats.total.get(MAGIC_RESIST), 2, "armor boots MR, case " + c);
         }
+    }
+
+    private ItemDef boots(long id, String name, int cost, ItemDef component, StatLine... stats) {
+        ItemDef b = item(id, name, cost, stats);
+        b.tabs = List.of("Botas");
+        b.section = cost >= 2000 ? "aprimorado" : cost >= 1000 ? "tier_medio" : "basico";
+        if (component != null) {
+            b.components.add(new ComponentRef(component.id, 1));
+        }
+        return b;
+    }
+
+    private EngineInput input(List<Long> items, List<Boolean> sells) {
+        EngineInput in = new EngineInput();
+        in.unit = ragdoll(0);
+        in.goldPerMin = 100;
+        in.xpPerMin = 0;
+        in.itemIds = items;
+        in.sells = sells;
+        return in;
+    }
+
+    @Test
+    void bootsOfTheSameTierAreSwappedForTheDifference() {
+        ItemDef speed = boots(20, "Botas da Velocidade", 400, null, StatLine.flat("Move Speed", 25));
+        boots(21, "Botas Ionianas da Lucidez", 1000, speed, StatLine.flat(Stats.ABILITY_HASTE, 15));
+        boots(22, "Botas Galvanizadas de Aço", 1200, speed, StatLine.flat(ARMOR, 25));
+        TimelineResult r = new TimelineEngine(ref).run(input(List.of(21L, 22L), List.of(false, false)));
+        TimelineStep swap = r.steps.get(1);
+        assertEquals("Botas Ionianas da Lucidez", swap.swappedOut);
+        assertEquals(700, swap.tradeIn);                        // the old boots are sold (70%)...
+        assertEquals(500, swap.paidCost);                       // ...and the new ones bought: 1200 - 700
+        assertEquals(List.of("Botas Galvanizadas de Aço"), swap.inventory);
+        assertTrue(r.ignored.isEmpty());
+        assertTrue(swap.warnings.stream().anyMatch(w -> w.startsWith("Troca de bota")));
+        // As in the game's shop with Passos de Mercúrio (1200): the 1000 boots cost 160, the 1200 ones 360.
+        TimelineResult back = new TimelineEngine(ref).run(input(List.of(22L, 21L), List.of(false, false)));
+        assertEquals(160, back.steps.get(1).paidCost);
+    }
+
+    @Test
+    void sellingAnItemGivesGoldBackAndFreesTheSlot() {
+        TimelineResult r = new TimelineEngine(ref).run(input(List.of(2L, 2L, 3L), List.of(false, true, false)));
+        TimelineStep sale = r.steps.get(1);
+        assertTrue(sale.sold);
+        assertEquals(-350, sale.paidCost);                      // 70% of 500
+        assertTrue(sale.inventory.isEmpty());
+        assertEquals(500 - 350 + 900, r.steps.get(2).cumulativeGold);
+        // Selling what is not held: left out.
+        TimelineResult none = new TimelineEngine(ref).run(input(List.of(2L), List.of(true)));
+        assertEquals("notOwned", none.ignored.get(0).violations.get(0).code);
     }
 }

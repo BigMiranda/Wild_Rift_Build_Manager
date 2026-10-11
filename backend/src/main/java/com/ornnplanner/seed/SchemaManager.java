@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 11;
+    static final int VERSION = 12;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -94,6 +94,9 @@ public class SchemaManager {
         }
         if (version < 10 && tableExists("stat_def")) {
             catalogReimportNeeded = true;   // v10: shields only against magic / physical damage (new stat prices)
+        }
+        if (version < 12 && tableExists("build_step") && !columnExists("build_step", "sell")) {
+            jdbc.execute("ALTER TABLE build_step ADD COLUMN sell INTEGER NOT NULL DEFAULT 0");   // v12: sales
         }
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {

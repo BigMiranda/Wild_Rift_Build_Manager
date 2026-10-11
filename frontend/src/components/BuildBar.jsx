@@ -22,7 +22,7 @@ export function parseMinutes(text) {
  */
 export default function BuildBar({
   steps, itemsById, evoPairs, timeline, ignored, moments, selectedIdx, onSelect, onMove, onMoveTo, onRemove, onClear,
-  onToggleCond, onToggleEvolved, onAddMoment, onUpdateMoment,
+  onToggleCond, onToggleEvolved, onAddMoment, onUpdateMoment, onSell,
 }) {
   const [dragFrom, setDragFrom] = useState(null);
   const [dropAt, setDropAt] = useState(null);
@@ -86,6 +86,33 @@ export default function BuildBar({
             );
           }
           number += 1;
+          if (s.kind === 'sell') {
+            const sale = timeline?.find((x) => x.buildIndex === idx && x.sold);
+            const notHeld = ignored?.find((x) => x.buildIndex === idx);
+            const it = itemsById.get(s.itemId);
+            const name = it?.name ?? `item ${s.itemId}`;
+            const title = notHeld ? t('sell.notHeld', { name }) : t('sell.title', { name, gold: n0(-(sale?.paidCost ?? 0)) });
+            return (
+              <li key={idx} className={['buildbar-item', 'sale', ...dragClasses(idx), notHeld ? 'ignored' : '', idx === selectedIdx ? 'selected' : ''].join(' ')}
+                title={title} {...dragProps(idx)}>
+                <button className="tile-icon tile-select" onClick={() => onSelect(idx === selectedIdx ? null : idx)}
+                  aria-pressed={idx === selectedIdx} aria-label={title}>
+                  <ItemIcon id={it ? s.itemId : null} size={56} />
+                  <span className="tile-sale">{t('sell.tag')}</span>
+                  <span className="tile-cost">{sale ? `+${n0(-sale.paidCost)}` : '—'}</span>
+                  {notHeld && <span className="tile-ignored" aria-hidden="true">⊘</span>}
+                </button>
+                <span className="buildbar-when">
+                  {sale ? <>{mmss(sale.minute)} <small>{t('bar.lv', { n: sale.level })}</small></> : <small>{t('bar.ignoredShort')}</small>}
+                </span>
+                <span className="buildbar-actions">
+                  <button className="icon" onClick={() => onMove(idx, -1)} disabled={idx === 0} aria-label={t('bar.before', { name })}>‹</button>
+                  <button className="icon danger" onClick={() => onRemove(idx)} aria-label={t('bar.remove', { name })}>✕</button>
+                  <button className="icon" onClick={() => onMove(idx, 1)} disabled={idx === steps.length - 1} aria-label={t('bar.after', { name })}>›</button>
+                </span>
+              </li>
+            );
+          }
           const item = itemsById.get(s.itemId);
           const step = timeline?.find((x) => x.buildIndex === idx && !x.implied);
           const skipped = ignored?.find((x) => x.buildIndex === idx);
@@ -96,7 +123,8 @@ export default function BuildBar({
           const title = skipped
             ? `${name}\n${t('bar.ignored', { reason: skipped.violations.map(violationText).join(' · ') })}`
             : step?.violations?.length ? `${name}\n⛔ ${step.violations.map(violationText).join('\n⛔ ')}` : name;
-          const bag = step ? `\n${t('bar.bagTitle', { gold: n0(step.goldLeft) })}` : '';
+          const bag = (step ? `\n${t('bar.bagTitle', { gold: n0(step.goldLeft) })}` : '')
+            + (step?.swappedOut ? `\n⇄ ${t('swap.title', { old: step.swappedOut, credit: n0(step.tradeIn), paid: n0(step.paidCost) })}` : '');
           const fullTitle = (implied.length
             ? `${title}\n${t('bar.impliedTitle')}\n${implied.map((x) => `↳ ${mmss(x.minute)} ${x.itemName}`).join('\n')}`
             : title) + bag;
@@ -115,6 +143,7 @@ export default function BuildBar({
                 <span className="tile-cost">{n0(step ? step.paidCost : item?.cost)}</span>
                 {skipped && <span className="tile-ignored" aria-hidden="true">⊘</span>}
                 {implied.length > 0 && <span className="tile-implied">↳{implied.length}</span>}
+                {step?.swappedOut && <span className="tile-swap" title={t('swap.title', { old: step.swappedOut, credit: n0(step.tradeIn), paid: n0(step.paidCost) })}>⇄</span>}
               </button>
               <span className="buildbar-when">
                 {step ? <>{mmss(step.minute)} <small>{t('bar.lv', { n: step.level })}</small></>
@@ -130,6 +159,11 @@ export default function BuildBar({
                     ⟳ {t('bar.evolved')}
                   </button>
                 )}
+                {step?.swappedOut && (
+                  <span className="opt swap-note" title={t('swap.title', { old: step.swappedOut, credit: n0(step.tradeIn), paid: n0(step.paidCost) })}>
+                    ⇄ {t('swap.tag')}
+                  </span>
+                )}
                 {hasConditional(item) && (
                   <button
                     className={`opt${s.includeConditional ? ' on' : ''}`} aria-pressed={s.includeConditional}
@@ -143,6 +177,7 @@ export default function BuildBar({
                 <button className="icon" onClick={() => onMove(idx, -1)} disabled={idx === 0} aria-label={t('bar.before', { name })}>‹</button>
                 <button className="icon danger" onClick={() => onRemove(idx)} aria-label={t('bar.remove', { name })}>✕</button>
                 <button className="icon" onClick={() => onMove(idx, 1)} disabled={idx === steps.length - 1} aria-label={t('bar.after', { name })}>›</button>
+                {onSell && item && <button className="icon sell" onClick={() => onSell(idx)} title={t('sell.addTitle', { name })} aria-label={t('sell.addTitle', { name })}>$</button>}
               </span>
             </li>
           );

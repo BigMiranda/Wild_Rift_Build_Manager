@@ -812,3 +812,16 @@ td.warn, .combat-items td.warn { color: var(--warn, #f0c75e); }
 .folder.drop { outline: 2px dashed var(--gold); outline-offset: 2px; border-radius: 4px; }
 
 .combat-slot label.delay input { width: 90px; }
+
+/* Sales and boot swaps in the purchase sequence */
+.buildbar-item.sale .item-icon { filter: grayscale(.7) brightness(.8); }
+.tile-sale { position: absolute; top: 2px; left: 2px; font-size: 9px; font-weight: 700; padding: 0 3px; border-radius: 3px;
+  background: var(--error); color: #fff; letter-spacing: .04em; }
+.buildbar-item.sale .tile-cost { color: var(--stat-hp); }
+.tile-swap { position: absolute; top: 2px; right: 2px; font-size: 11px; padding: 0 3px; border-radius: 3px;
+  background: var(--gold); color: var(--accent-ink); }
+.swap-note { cursor: help; color: var(--gold-bright); border-color: var(--gold); }
+.buildbar-actions .sell { color: var(--gold-bright); }
+.sale-tag, .swap-tag { font-size: 10px; padding: 0 4px; border-radius: 3px; border: 1px solid currentColor; }
+.sale-tag { color: var(--error); }
+.swap-tag { color: var(--gold-bright); cursor: help; }

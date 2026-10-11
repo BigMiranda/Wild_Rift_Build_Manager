@@ -235,6 +235,18 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
   uma regra, exceto o limite de itens: uma compra sem espaço no inventário naquele ponto da ordem é mantida na
   sequência, mas **desconsiderada** (sem ouro, tempo nem status) e aparece esmaecida com ⊘. A linha do tempo mostra os
   6 espaços do inventário a cada compra, com os itens finalizados em destaque.
+- **Troca de bota**: comprar botas com outras botas no inventário (que não são componente das novas) troca as botas —
+  nunca há dois pares. Como no jogo, as antigas são vendidas (70% do custo) e as novas compradas pelo preço cheio:
+  Grevas Vorazes e Botas Ionianas da Lucidez custam 1.000 (tier médio) e 2.000 (aprimoradas); as demais, 1.200 e 2.200.
+  Com Passos de Mercúrio (vende por 840), a loja mostra 160 para as botas de 1.000 e 360 para as de 1.200 (conferido
+  no jogo). A compra aparece com o aviso "⇄ troca de bota" na sequência e na linha do tempo; uma troca não supõe
+  componentes comprados antes.
+- **Vender um item** (botão $ no item da sequência): adiciona uma venda no fim da sequência, que se arrasta para o
+  momento dela (Chamado do Carrasco, Mejai, item de suporte, Anjo Guardião, itens de Salva-Vidas, ativos...). A venda
+  acontece logo depois da compra anterior (ou do último momento de compra), tira o item do inventário e devolve 70%
+  do custo; vender um item que não está no inventário naquele ponto fica de fora (⊘).
+  Venda conferida no jogo: Passos de Mercúrio 1.200 → 840, Anjo Guardião 3.200 → 2.240. As taxas ficam em
+  [`seed/regras_loja.yml`](backend/src/main/resources/seed/regras_loja.yml).
 - **Sequência de compras**: arraste os itens para reordenar; clique num item para selecioná-lo, e o painel da loja
   mostra o que aquela compra traz à build (minuto, ouro pago, valor em ouro somado e eficiências).
 - Clique numa linha da linha do tempo para ver o **detalhamento**: base/itens/passivas/forja por status, fórmula de

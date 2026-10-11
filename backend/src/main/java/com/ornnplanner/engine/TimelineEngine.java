@@ -170,10 +170,66 @@ public class TimelineEngine {
                 inventoryAfterStep.add(new ArrayList<>(inventory));
                 continue;
             }
+            if (i < in.sells.size() && Boolean.TRUE.equals(in.sells.get(i))) {
+                // Sale: right after the previous purchase (or the last purchase moment), the gold comes back.
+                int pos = inventoryAfterStep.size();
+                TimelineStep step = new TimelineStep();
+                step.index = pos;
+                step.buildIndex = position;
+                step.number = i + 1;
+                step.itemId = item.id;
+                step.itemName = item.name;
+                step.category = item.category;
+                step.itemCost = item.cost;
+                step.sold = true;
+                step.minute = Math.max(lastMinute, gate);
+                step.xp = in.xpPerMin * step.minute;
+                step.level = levelForXp(step.xp);
+                Owned held = null;
+                for (Owned o : inventory) {
+                    if (o.item.id == item.id) {
+                        held = o;   // the last copy bought
+                    }
+                }
+                if (held == null) {
+                    step.ignored = true;
+                    step.violations.add(new Model.Violation("notOwned", null, List.of(item.name)));
+                    step.cumulativeGold = cumulative;
+                    inventoryAfterStep.add(new ArrayList<>(inventory));
+                    for (Owned o : inventory) {
+                        step.inventory.add(o.item.name);
+                        step.inventoryIds.add(o.item.id);
+                    }
+                    result.ignored.add(step);
+                    continue;
+                }
+                inventory.remove(held);
+                int refund = (int) Math.round(item.cost * in.sellRate);
+                step.paidCost = -refund;
+                cumulative -= refund;
+                step.cumulativeGold = cumulative;
+                step.goldLeft = goldAt(step.minute, in.goldPerMin) - cumulative;
+                inventoryAfterStep.add(new ArrayList<>(inventory));
+                for (Owned o : inventory) {
+                    step.inventory.add(o.item.name);
+                    step.inventoryIds.add(o.item.id);
+                }
+                step.stats = snapshot(in.unit, inventory, step.level, step.minute);
+                step.efficiency = new Efficiency();   // nothing bought: no efficiency
+                step.warnings.add("Venda: " + item.name + " devolve " + refund + " de ouro ("
+                        + Math.round(in.sellRate * 100) + "% de " + item.cost + ").");
+                result.steps.add(step);
+                lastMinute = step.minute;
+                lastBuildMinute = step.minute;
+                continue;
+            }
             boolean cond = i < in.conditional.size() && in.conditional.get(i) != null
                     ? in.conditional.get(i) : in.includeConditional;
             // Build options: the missing components are bought first, one by one as gold allows, towards this item.
-            List<ItemDef> queue = impliedComponents(item, inventory, in.assumeHalfItems, in.assumeSmallItems);
+            // A boot swap (other boots held that are not in the recipe) assumes no components: the old boots pay for it.
+            boolean swap = item.boots() && inventory.stream().anyMatch(o -> o.item.boots() && !inRecipe(item, o.item.id));
+            List<ItemDef> queue = swap ? new ArrayList<>()
+                    : impliedComponents(item, inventory, in.assumeHalfItems, in.assumeSmallItems);
             queue.add(item);
             for (int q = 0; q < queue.size(); q++) {
                 ItemDef buy = queue.get(q);
@@ -201,6 +257,26 @@ public class TimelineEngine {
                     step.consumedComponents.add(o.item.name);
                 }
                 step.paidCost = Math.max(0, buy.cost - discount);
+                // Boot swap: other boots still held (not a component of these) leave and count towards the new ones.
+                if (!implied && buy.boots()) {
+                    Owned old = null;
+                    for (Owned o : inventory) {
+                        if (o.item.boots()) {
+                            old = o;
+                        }
+                    }
+                    if (old != null) {
+                        inventory.remove(old);
+                        int credit = (int) Math.round(old.item.cost * in.bootSwapCredit);
+                        int paid = buy.cost - discount - credit;
+                        step.paidCost = in.bootSwapGivesBack ? paid : Math.max(0, paid);
+                        step.swappedOut = old.item.name;
+                        step.tradeIn = credit;
+                        step.warnings.add("Troca de bota: " + old.item.name + " (" + old.item.cost + ") é vendida por "
+                                + credit + " e " + buy.name + " (" + buy.cost + ") comprada: "
+                                + (step.paidCost >= 0 ? "paga " + step.paidCost : "devolve " + -step.paidCost) + " de ouro.");
+                    }
+                }
                 cumulative += step.paidCost;
                 step.cumulativeGold = cumulative;
                 // As soon as the gold covers it, never before the previous purchase; the build's own items also wait
@@ -327,6 +403,17 @@ public class TimelineEngine {
                 }
             }
         }
+    }
+
+    /** Whether {@code id} is somewhere in the recipe tree of {@code item}. */
+    private boolean inRecipe(ItemDef item, long id) {
+        for (ComponentRef c : item.components) {
+            ItemDef comp = ref.items.get(c.itemId);
+            if (c.itemId == id || comp != null && inRecipe(comp, id)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Gold earned by a minute: starting gold + gold/min, plus the extra gold events up to it. */

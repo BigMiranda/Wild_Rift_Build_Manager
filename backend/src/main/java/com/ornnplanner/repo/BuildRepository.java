@@ -37,8 +37,9 @@ public class BuildRepository {
     /** One entry of a build's purchase sequence: an item purchase, or a purchase moment (kind "moment"). */
     public static class Step {
         public static final String MOMENT = "moment";
+        public static final String SELL = "sell";
 
-        /** "item" (default) or "moment". */
+        /** "item" (default), "moment" or "sell" (sells one held copy of the item). */
         public String kind;
         public Long itemId;
         /** Count this item's conditional effects (stacks, in combat, low health...). */
@@ -57,6 +58,10 @@ public class BuildRepository {
 
         public boolean moment() {
             return MOMENT.equals(kind);
+        }
+
+        public boolean sell() {
+            return SELL.equals(kind);
         }
     }
 
@@ -253,8 +258,12 @@ public class BuildRepository {
         }
         Build b = list.get(0);
         java.util.TreeMap<Integer, Step> bySeq = new java.util.TreeMap<>();
-        jdbc.query("SELECT seq, item_id, include_conditional FROM build_step WHERE build_id = ?", rs -> {
-            bySeq.put(rs.getInt("seq"), new Step(rs.getLong("item_id"), rs.getInt("include_conditional") == 1));
+        jdbc.query("SELECT seq, item_id, include_conditional, sell FROM build_step WHERE build_id = ?", rs -> {
+            Step s = new Step(rs.getLong("item_id"), rs.getInt("include_conditional") == 1);
+            if (rs.getInt("sell") == 1) {
+                s.kind = Step.SELL;
+            }
+            bySeq.put(rs.getInt("seq"), s);
         }, id);
         jdbc.query("SELECT seq, at_minute, after_minutes FROM build_moment WHERE build_id = ?", rs -> {
             Step m = new Step();
@@ -340,8 +349,8 @@ public class BuildRepository {
                 jdbc.update("INSERT INTO build_moment (build_id, seq, at_minute, after_minutes) VALUES (?,?,?,?)",
                         id, i, s.atMinute, s.afterMinutes);
             } else {
-                jdbc.update("INSERT INTO build_step (build_id, seq, item_id, include_conditional) VALUES (?,?,?,?)",
-                        id, i, s.itemId, s.includeConditional ? 1 : 0);
+                jdbc.update("INSERT INTO build_step (build_id, seq, item_id, include_conditional, sell) VALUES (?,?,?,?,?)",
+                        id, i, s.itemId, s.includeConditional ? 1 : 0, s.sell() ? 1 : 0);
             }
         }
         jdbc.update("DELETE FROM build_ragdoll_stat WHERE build_id = ?", id);

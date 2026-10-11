@@ -124,6 +124,12 @@ export default function TimelineTable({ result, itemsById, compact = false }) {
                       <ItemIcon id={s.itemId} size={22} />
                       {s.itemName}
                       {s.implied && <small className="implied-tag">{t('timeline.implied')}</small>}
+                      {s.sold && <small className="sale-tag">{t('sell.tag')}</small>}
+                      {s.swappedOut && (
+                        <small className="swap-tag" title={t('swap.title', { old: s.swappedOut, credit: n0(s.tradeIn), paid: n0(s.paidCost) })}>
+                          ⇄ {t('swap.tag')}
+                        </small>
+                      )}
                       {s.warnings.length > 0 && <span title={s.warnings.join('\n')}>⚠</span>}
                       {s.violations?.length > 0 && (
                         <span className="violation" title={`${t('rule.title')}: ${s.violations.map(violationText).join(' · ')}`}>⛔</span>

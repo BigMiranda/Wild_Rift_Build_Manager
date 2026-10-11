@@ -418,8 +418,8 @@ export default function Planner({ meta, items }) {
           <Shop
             items={items}
             buildPayload={canCalculate ? payload : null}
-            ownedIds={draft.steps.filter((s) => s.kind !== 'moment').map((s) => s.itemId)}
-            purchase={selectedIdx != null && draft.steps[selectedIdx] && draft.steps[selectedIdx].kind !== 'moment' ? {
+            ownedIds={draft.steps.filter((s) => !s.kind).map((s) => s.itemId)}
+            purchase={selectedIdx != null && draft.steps[selectedIdx] && !draft.steps[selectedIdx].kind ? {
               index: selectedIdx,
               number: draft.steps.slice(0, selectedIdx + 1).filter((s) => s.kind !== 'moment').length,
               itemId: draft.steps[selectedIdx].itemId,
@@ -446,6 +446,11 @@ export default function Planner({ meta, items }) {
             onRemove={removeStep}
             onClear={() => { update({ steps: [] }); setSelectedIdx(null); }}
             onToggleCond={(idx) => updateStep(idx, (s) => ({ ...s, includeConditional: !s.includeConditional }))}
+            onSell={(idx) => {
+              const at = draft.steps.length;
+              update((d) => ({ steps: [...d.steps, { kind: 'sell', itemId: d.steps[idx].itemId, includeConditional: true }] }));
+              setSelectedIdx(at);
+            }}
             onToggleEvolved={(idx) => updateStep(idx, (s) => ({ ...s, itemId: evoPairs.get(s.itemId)?.id ?? s.itemId }))}
           />
           <ItemEffectsPanel steps={draft.steps} itemsById={itemsById} setup={draft.itemSetup} matchEnd={draft.matchEnd}

@@ -15,7 +15,7 @@ export default function ItemEffectsPanel({ steps, itemsById, setup, matchEnd, on
   const seen = new Set();
   const items = [];
   for (const s of steps) {
-    const item = s.kind === 'moment' ? null : itemsById.get(s.itemId);
+    const item = s.kind === 'moment' || s.kind === 'sell' ? null : itemsById.get(s.itemId);
     if (item?.effects?.length && !seen.has(item.name)) {
       seen.add(item.name);
       items.push(item);

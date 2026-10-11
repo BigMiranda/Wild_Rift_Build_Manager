@@ -39,10 +39,12 @@ public class PlannerService {
     private final com.ornnplanner.seed.RuneCatalog runes;
     private final com.ornnplanner.seed.ChampionCatalog champions;
     private final com.ornnplanner.seed.ItemEffectCatalog itemEffects;
+    private final com.ornnplanner.seed.ShopRules shopRules;
 
     public PlannerService(CatalogRepository catalog, ReferenceRepository reference,
                           com.ornnplanner.seed.RuneCatalog runes, com.ornnplanner.seed.ChampionCatalog champions,
-                          com.ornnplanner.seed.ItemEffectCatalog itemEffects) {
+                          com.ornnplanner.seed.ItemEffectCatalog itemEffects, com.ornnplanner.seed.ShopRules shopRules) {
+        this.shopRules = shopRules;
         this.catalog = catalog;
         this.reference = reference;
         this.runes = runes;
@@ -101,6 +103,7 @@ public class PlannerService {
             in.conditional.add(cond == null || cond);
         }
         in.positions = new ArrayList<>();
+        in.sells = new ArrayList<>();
         in.moments = new ArrayList<>();
         in.extraGold = new ArrayList<>();
         in.assumeHalfItems = false;
@@ -123,6 +126,9 @@ public class PlannerService {
     /** Engine input of a build: unit, gold / XP, purchases and moments, runes and champion effects. */
     private EngineInput input(Build build) {
         EngineInput in = new EngineInput();
+        in.sellRate = shopRules.sellRate;
+        in.bootSwapCredit = shopRules.bootSwapCredit;
+        in.bootSwapGivesBack = shopRules.bootSwapGivesBack;
         in.unit = resolveUnit(build);
         in.goldPerMin = build.goldPerMin;
         in.xpPerMin = build.xpPerMin;
@@ -138,6 +144,7 @@ public class PlannerService {
                     in.itemIds.add(s.itemId);
                     in.conditional.add(s.includeConditional);
                     in.positions.add(p);
+                    in.sells.add(s.sell());
                 }
             }
         }

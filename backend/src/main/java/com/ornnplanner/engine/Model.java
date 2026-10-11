@@ -340,6 +340,13 @@ public final class Model {
         public List<ItemDef> runes = new ArrayList<>();
         /** Per rune (same order): count its conditional effects. */
         public List<Boolean> runeConditional = new ArrayList<>();
+        /** Per entry of itemIds (same order): true = the build sells one held copy of that item there. */
+        public List<Boolean> sells = new ArrayList<>();
+        /** Shop rules (regras_loja.yml): share of the cost given back when selling an item. */
+        public double sellRate = 0.7;
+        /** Boot swap: share of the old boots' cost taken off the new ones, and whether a cheaper swap gives gold back. */
+        public double bootSwapCredit = 0.7;
+        public boolean bootSwapGivesBack = true;
     }
 
     /**
@@ -510,6 +517,11 @@ public final class Model {
         public List<Violation> violations = new ArrayList<>();
         /** Purchase left out because the inventory had no free slot for it (it is listed in TimelineResult.ignored). */
         public boolean ignored;
+        /** A sale: the item leaves the inventory and paidCost is minus the gold given back. */
+        public boolean sold;
+        /** Boot swap: the boots that left the inventory and what they were worth towards the new ones. */
+        public String swappedOut;
+        public Integer tradeIn;
         public StatSnapshot stats;
         public Efficiency efficiency;
         public List<String> warnings = new ArrayList<>();
