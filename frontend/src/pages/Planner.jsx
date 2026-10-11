@@ -334,6 +334,7 @@ export default function Planner({ meta, items }) {
           onToggleCompare={toggleCompare}
           onChanged={loadTree}
           onError={setMessage}
+          onMoved={(id, folderId) => setDraft((d) => (d && d.id === id ? { ...d, folderId } : d))}
         />}
       </aside>
 

@@ -127,6 +127,8 @@ const EN = {
   'folders.rename': 'Rename folder',
   'folders.delete': 'Delete folder',
   'folders.compare': 'compare',
+  'folders.move': 'Send to another folder (or drag the build onto the folder)',
+  'folders.moveTo': 'Send "{name}" to…',
   'folders.compareTitle': 'Compare with the active build',
   // build header
   'build.new': 'New build',
@@ -599,6 +601,8 @@ const PT = {
   'folders.rename': 'Renomear pasta',
   'folders.delete': 'Apagar pasta',
   'folders.compare': 'comparar',
+  'folders.move': 'Enviar para outra pasta (ou arraste a build até a pasta)',
+  'folders.moveTo': 'Enviar "{name}" para…',
   'folders.compareTitle': 'Comparar com a build ativa',
   'build.new': 'Nova build',
   'build.name': 'Nome',
