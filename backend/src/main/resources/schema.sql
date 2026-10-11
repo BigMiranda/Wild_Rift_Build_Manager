@@ -10,6 +10,7 @@
 -- Version 10: no table change; re-imports the stat prices (magic / physical shields).
 -- Version 11: no table change; re-imports the catalog (Maldição Sanguinária in the % magic penetration group).
 -- Version 12: a purchase step can be a sale of a held item (build_step.sell).
+-- Version 13: orchestrated matchup scenarios (arena_scenario).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -148,4 +149,13 @@ CREATE TABLE IF NOT EXISTS build_ragdoll_stat (
     base     REAL,
     growth   REAL,
     PRIMARY KEY (build_id, stat)
+);
+
+-- Orchestrated matchups (arena): the whole scenario (champions, positions, timeline of orders) as JSON (v13).
+CREATE TABLE IF NOT EXISTS arena_scenario (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT NOT NULL,
+    data       TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
 );

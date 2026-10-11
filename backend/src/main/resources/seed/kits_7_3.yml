@@ -1,0 +1,387 @@
+# Fichas de habilidades para o confronto orquestrado (arena): geometria, tempos e efeitos de cada habilidade.
+#
+# Fontes (anotadas em `fontes` de cada habilidade):
+#   WR  wiki de League of Legends, páginas do Wild Rift (https://wiki.leagueoflegends.com/en-us/WR:<Campeão>):
+#       recargas, conjuração, durações, dano e efeitos. Consultada em 11/10/2026.
+#   PC  mesma wiki, páginas do LoL de PC (https://wiki.leagueoflegends.com/en-us/<Campeão>): alcance, largura, raio,
+#       velocidade quando a página do Wild Rift não tem (o Wild Rift pode ter valores diferentes: conferir no Treino).
+#   EST estimativa, sem fonte (anotada também em `nota`).
+# Unidades: distância em unidades do jogo, tempo em segundos, velocidade em unidades/s.
+#
+# Por campeão: raio (corpo), alcance (ataque básico), espera_ataque (fração do intervalo de ataque antes do golpe sair),
+# velocidade_projetil (ataques à distância), efeitos_de_forma (efeitos de campeão de campeoes_7_3.yml que a arena liga e
+# desliga sozinha no momento certo, em vez da escolha da build) e habilidades "1", "2", "3", "R".
+#
+# Por habilidade:
+#   forma         linha (projétil reto) | area (círculo no lançador ou num ponto) | cone | avanco (o lançador avança) |
+#                 alvo (precisa de um alvo no alcance) | ataque (fortalece o próximo ataque) | proprio (efeito em si) |
+#                 canal (efeito repetido por um tempo, que acompanha o lançador) | campo (área que fica no chão) |
+#                 elemental (ultimate do Ornn) | empurrao (Condenar da Vayne) | tudo_ou_nada (ultimate do K'Sante)
+#   recarga       por rank; conjuracao: tempo parado antes do efeito; atraso: tempo até o efeito depois da conjuração
+#   alcance, largura, raio, raio_interno, angulo (graus), velocidade, duracao, intervalo (canal / campo)
+#   dano          {tipo: fisico | magico | verdadeiro, base, dda, dda_base, dda_bonus, pdh, vida_max_alvo, vida_bonus,
+#                 arm_bonus, rm_bonus, vida_max}; listas são por rank; chave_nv15 = valor no nível 15 (pelo nível)
+#   efeitos       aplicados em quem é atingido: lentidao + duracao, atordoa, arremessa (no ar), puxa, fragil, marca,
+#                 acumulos (sangramento), reduz_rm / reduz_arm {pct, duracao}, cura_propria, escudo_proprio
+#   recursos      furia: ganho / limiar; calor: ganho / zona de perigo / superaquecimento (Renekton, Rumble)
+mapa:
+  # Howling Abyss simplificado: uma rota reta entre os dois Nexus, com paredes dos dois lados. EST: a wiki não traz as
+  # medidas do mapa do Wild Rift; ajuste aqui quando medir.
+  comprimento: 10000
+  largura: 1100
+  nexus_azul: [500, 0]
+  nexus_vermelho: [9500, 0]
+
+campeoes:
+  Ornn:
+    raio: 80                 # PC
+    alcance: 175             # WR
+    espera_ataque: 0.219     # PC (21,875%)
+    fragil:                  # passiva da W e da R: imobilizar um alvo Frágil
+      dano: {tipo: magico, vida_max_alvo: 0.07, vida_max_alvo_nv15: 0.22}   # WR (pelo nível do Ornn)
+      aumento_controle: 0.30                                                 # WR: +30% de duração
+    habilidades:
+      "1":
+        nome: Ruptura Vulcânica
+        forma: linha
+        recarga: [9, 8.5, 8, 7.5]
+        conjuracao: 0.25
+        alcance: 750
+        largura: 130
+        velocidade: 1800
+        atravessa: true
+        para_apos_campeao: 200
+        dano: {tipo: fisico, base: [25, 60, 95, 130], dda: 1.1}
+        efeitos: {lentidao: 0.55, duracao: 2}
+        pilar: {atraso: 1.125, duracao: 4, raio: 100}
+        fontes: "recarga, conjuração, dano, lentidão, pilar: WR; alcance, largura, velocidade: PC; raio do pilar: EST"
+      "2":
+        nome: Fôlego do Fole
+        forma: canal
+        recarga: [11.5, 11, 10.5, 10]
+        duracao: 1.0
+        intervalo: 0.2
+        alcance: 500
+        largura: 350
+        avanca: 0.35         # anda 35% da velocidade de movimento durante o canal
+        imparavel: true
+        dano: {tipo: magico, vida_max_alvo: [0.10, 0.11, 0.12, 0.13]}   # total do canal
+        ultimo_golpe: {fragil: 3}
+        fontes: "recarga, duração, dano, Frágil: WR; alcance: PC; largura: PC (raio 175); avanço: PC"
+      "3":
+        nome: Investida Calcinante
+        forma: avanco
+        recarga: [13, 12, 11, 10]
+        conjuracao: 0.25
+        alcance: 650
+        velocidade: 1600
+        raio: 150
+        dano: {tipo: fisico, base: [80, 140, 200, 260], arm_bonus: 0.4, rm_bonus: 0.4}
+        terreno: {raio: 360, arremessa: 1.25}     # ao bater em parede ou pilar: onda de choque
+        destroi_pilar: true
+        fontes: "recarga, conjuração, dano, arremesso: WR; alcance, velocidade, raios: PC"
+      "R":
+        nome: Chamado do Deus da Forja
+        forma: elemental
+        recarga: [90, 80, 70]
+        conjuracao: 0.5
+        distancia: 2550          # o elemental surge a esta distância, na direção mirada, e corre até o Ornn
+        largura: 340
+        velocidade: 450
+        velocidade_final: 1250   # acelera até esta velocidade
+        aceleracao: 400          # EST
+        dano: {tipo: magico, base: [125, 175, 225], pdh: 0.2}
+        efeitos: {lentidao: [0.4, 0.5, 0.6], duracao: 2, fragil: 3}
+        reconjurar:
+          apos: 1.25             # WR: a reconjuração fica disponível 1,25s depois
+          cabecada: 200          # EST: avanço curto do Ornn
+          velocidade: 1250       # PC
+          distancia: 1500        # EST: até onde o elemental devolvido corre
+          dano: {tipo: magico, base: [125, 175, 225], pdh: 0.2}
+          efeitos: {arremessa: 1.0, arremessa_demais: 0.5, fragil: 3}
+        fontes: "recarga, conjuração, dano, lentidão, Frágil, janela da reconjuração, arremesso: WR; distância, largura, velocidades: PC; aceleração, cabeçada, distância da volta: EST"
+
+  Darius:
+    raio: 80                 # PC
+    alcance: 175             # WR
+    espera_ataque: 0.25      # EST
+    efeitos_de_forma: {Hemorragia: {duracao: 5}}   # Poder de Noxus: +DdA por 5s
+    acumulos:                # Hemorragia: sangramento no alvo
+      nome: Hemorragia
+      max: 5
+      duracao: 5
+      por_s: {tipo: fisico, base: 3.6, base_nv15: 9.2, dda_bonus: 0.08}   # WR, por acúmulo
+      cheio_ativa: Hemorragia   # 5 acúmulos num Campeão: Poder de Noxus (e os ataques aplicam 5 de uma vez)
+    habilidades:
+      "1":
+        nome: Dizimar
+        forma: area
+        recarga: [9.5, 8, 6.5, 5]
+        conjuracao: 0.75         # WR: giro depois de 0,75s, sem atacar
+        raio: 460
+        raio_interno: 240
+        dano: {tipo: fisico, base: [50, 90, 130, 170], dda: [1.0, 1.15, 1.3, 1.45]}
+        interno: 0.35            # o cabo causa 35% e não aplica Hemorragia
+        efeitos: {acumulos: 1, cura_vida_perdida: 0.15, cura_max: 0.45}
+        fontes: "WR"
+      "2":
+        nome: Ataque Mutilador
+        forma: ataque
+        recarga: [5.5]
+        janela: 4
+        alcance_extra: 25
+        reinicia_ataque: true
+        dano: {tipo: fisico, dda: [0.3, 0.4, 0.5, 0.6]}
+        efeitos: {lentidao: 0.9, duracao: 1}
+        fontes: "WR"
+      "3":
+        nome: Apreender
+        forma: cone
+        recarga: [18, 16, 14, 12]
+        conjuracao: 0.25
+        alcance: 450
+        angulo: 50
+        trava: 0.4
+        efeitos: {puxa: 150, lentidao: 0.4, duracao: 1.5}
+        fontes: "WR (o tempo da puxada não aparece: puxa até 150 à frente do Darius)"
+      "R":
+        nome: Guilhotina de Noxus
+        forma: alvo
+        recarga: [70, 65, 60]
+        conjuracao: 0.3667
+        alcance: 475
+        salta: true
+        dano: {tipo: verdadeiro, base: [125, 250, 375], dda_bonus: 0.75}
+        por_acumulo: 0.20        # +20% por acúmulo de Hemorragia no alvo
+        efeitos: {acumulos: 1}
+        fontes: "WR"
+
+  Renekton:
+    raio: 80                 # PC
+    alcance: 175             # WR
+    espera_ataque: 0.25      # EST
+    recurso:
+      tipo: furia
+      max: 100
+      por_ataque: 5
+      por_campeao: 10        # habilidade que acerta Campeão (até 30 por conjuração)
+      limiar: 50             # a próxima habilidade básica gasta 50 e fica fortalecida
+    habilidades:
+      "1":
+        nome: Abater os Indefesos
+        forma: area
+        recarga: [7]
+        raio: 400
+        raio_fortalecido: 480
+        dano: {tipo: fisico, base: [80, 130, 180, 230], dda_bonus: 0.9}
+        fortalecido: {tipo: fisico, base: [120, 195, 270, 345], dda_bonus: 1.35}
+        efeitos: {cura_por_campeao: {base: [16, 24, 32, 40], dda_bonus: 0.2}}
+        efeitos_fortalecido: {cura_por_campeao: {base: [48, 72, 96, 120], dda_bonus: 0.6}}
+        fontes: "WR; raio: PC (480 com Dominus)"
+      "2":
+        nome: Predador Desumano
+        forma: ataque
+        recarga: [14, 12, 10, 8]
+        janela: 7
+        alcance_extra: 50
+        trava: 0.528
+        dano: {tipo: fisico, base: [24, 48, 72, 96], dda: 1.5}
+        efeitos: {atordoa: 0.75}
+        fortalecido: {tipo: fisico, base: [36, 72, 108, 144], dda: 2.25}
+        efeitos_fortalecido: {atordoa: 1.5, remove_escudos: true}
+        fontes: "WR; trava: PC"
+      "3":
+        nome: Fatiar e Picar
+        forma: avanco
+        recarga: [14.5, 13.5, 12.5, 11.5]
+        alcance: 450
+        velocidade: 760
+        velocidade_mais_vdm: true
+        raio: 100
+        dano: {tipo: fisico, base: [40, 80, 120, 160], dda_bonus: 0.9}
+        reconjurar: {janela: 4, se_acertou: true}
+        fortalecido: {tipo: fisico, base: [70, 130, 190, 250], dda_bonus: 1.35}
+        efeitos_fortalecido: {reduz_arm: {pct: [0.25, 0.3, 0.35, 0.4], duracao: 4}}
+        fontes: "WR; alcance, velocidade: PC; raio: EST"
+      "R":
+        nome: Dominus
+        forma: proprio
+        recarga: [75, 70, 65]
+        conjuracao: 0.25
+        duracao: 12
+        vida_extra: [300, 575, 850]
+        alcance_extra: 50
+        furia_ao_usar: 20
+        furia_por_s: 5
+        aura: {raio: 375, intervalo: 0.5, dano: {tipo: magico, base: [35, 60, 85], pdh: 0.1}}
+        fontes: "WR"
+
+  Rumble:
+    raio: 80                 # PC
+    alcance: 175             # WR
+    espera_ataque: 0.25      # EST
+    efeitos_de_forma: {"Titã do Ferro-Velho": {}}   # Superaquecido: +VdA
+    recurso:
+      tipo: calor
+      max: 150
+      por_habilidade: 20
+      zona_de_perigo: 50     # habilidades +50%
+      superaquece: 150       # WR: habilidades bloqueadas, o calor some em 4s
+      superaquecido_por: 4
+      ao_contato_superaquecido: {tipo: magico, base: 5, base_nv15: 40, pdh: 0.2, vida_max_alvo: 0.05}
+    habilidades:
+      "1":
+        nome: Cospe-Fogo
+        forma: canal
+        recarga: [8, 7, 6, 5]
+        duracao: 3
+        intervalo: 0.25
+        alcance: 600
+        angulo: 64
+        dano: {tipo: magico, base: [120, 160, 200, 240], pdh: 1.1, vida_max_alvo: [0.06, 0.08, 0.10, 0.12]}   # total
+        fontes: "WR; alcance, ângulo: PC"
+      "2":
+        nome: Escudo de Sucata
+        forma: proprio
+        recarga: [5]
+        escudo: {base: [40, 70, 100, 130], pdh: 0.35, vida_max: 0.06}
+        duracao: 1.5
+        velocidade_movimento: [0.20, 0.25, 0.30, 0.35]
+        duracao_velocidade: 1
+        fontes: "WR"
+      "3":
+        nome: Arpão Elétrico
+        forma: linha
+        recarga: [0.5]
+        cargas: 2
+        recarga_carga: 6
+        conjuracao: 0.25
+        alcance: 950
+        largura: 120
+        velocidade: 2000
+        dano: {tipo: magico, base: [60, 90, 120, 150], pdh: 0.4}
+        efeitos: {lentidao: [0.30, 0.35, 0.40, 0.45], duracao: 1.5, reduz_rm: {pct: [0.08, 0.12, 0.16, 0.20], duracao: 4, acumula: 2}}
+        fontes: "WR; alcance, largura, velocidade: PC"
+      "R":
+        nome: O Equalizador
+        forma: campo
+        recarga: [80, 70, 60]
+        conjuracao: 0.25
+        alcance: 1700
+        comprimento: 1000
+        largura: 390
+        atraso: 0.75
+        duracao: 4.5
+        intervalo: 0.5
+        dano: {tipo: magico, base: [70, 105, 140], pdh: 0.2}    # por pulso
+        efeitos: {lentidao: 0.45, duracao: 0.5}
+        fontes: "recarga, conjuração, dano, duração: WR; alcance, comprimento, largura: PC"
+
+  Vayne:
+    raio: 65                 # PC
+    alcance: 575             # WR
+    espera_ataque: 0.175     # PC (17,544%)
+    velocidade_projetil: 2000   # PC
+    marcas:                  # Dardos de Prata: 3º acerto seguido no mesmo alvo
+      max: 3
+      duracao: 3.5
+      dano: {tipo: verdadeiro, vida_max_alvo: [0.02, 0.05, 0.08, 0.11], minimo: [50, 65, 80, 95]}
+      habilidade: "2"
+    habilidades:
+      "1":
+        nome: Rolamento
+        forma: avanco
+        recarga: [5, 4, 3, 2]
+        alcance: 300
+        velocidade: 500
+        velocidade_mais_vdm: true
+        sem_dano: true
+        proximo_ataque: {janela: 4, dano: {tipo: fisico, dda: [0.35, 0.45, 0.55, 0.65]}}
+        reinicia_ataque: true
+        invisivel_com_R: 1
+        fontes: "WR; alcance, velocidade: PC"
+      "2":
+        nome: Dardos de Prata
+        forma: proprio
+        recarga: [18, 17, 16, 15]
+        duracao: 5
+        velocidade_ataque: [0.10, 0.15, 0.20, 0.25]
+        vampirismo: 0.10
+        fontes: "WR"
+      "3":
+        nome: Condenar
+        forma: empurrao
+        recarga: [21, 18, 15, 12]
+        conjuracao: 0.25
+        alcance: 575
+        velocidade_projetil: 2200
+        distancia: 475
+        velocidade: 1000          # EST: velocidade do empurrão
+        dano: {tipo: fisico, base: [50, 80, 110, 140], dda_bonus: 0.55}
+        terreno: {dano: {tipo: fisico, base: [105, 145, 185, 225], dda_bonus: 0.75}, atordoa: 1.5}
+        marca: true
+        fontes: "WR; distância, velocidade do projétil: PC; velocidade do empurrão: EST"
+      "R":
+        nome: Hora Final
+        forma: proprio
+        recarga: [70, 65, 60]
+        duracao: [8, 10, 12]
+        dda: [15, 25, 35]
+        fontes: "WR"
+
+  K'Sante:
+    raio: 80                 # EST
+    alcance: 150             # WR
+    espera_ataque: 0.25      # EST
+    efeitos_de_forma: {Forma Irrestrita: {duracao: 15}}
+    marcas_ksante:           # passiva: habilidades marcam; o próximo ataque consome
+      duracao: 4
+      dano: {tipo: fisico, base: 12, vida_max_alvo: 0.01, vida_max_alvo_nv15: 0.0212}
+    habilidades:
+      "1":
+        nome: Golpes de Ntofo
+        forma: linha
+        recarga: [3.5]
+        conjuracao: 0.4
+        alcance: 465
+        largura: 100
+        velocidade: 4000          # EST: quase instantâneo
+        atravessa: true
+        dano: {tipo: fisico, base: [70, 100, 130, 160], arm_bonus: 0.4, rm_bonus: 0.4}
+        efeitos: {lentidao: 0.8, duracao: 0.5, marca: true}
+        segunda_carga: {alcance: 930, puxa: 150, atordoa: 0.8}   # com 2 acúmulos
+        fontes: "WR; velocidade: EST"
+      "2":
+        nome: Criador de Caminhos
+        forma: avanco
+        recarga: [14, 13, 12, 11]
+        carregar: {min: 0.4, max: 1.0, reducao_dano: 0.3}
+        alcance: 450
+        velocidade: 1300
+        raio: 120
+        dano: {tipo: fisico, base: [45, 75, 105, 135], vida_max_alvo: 0.08}
+        efeitos: {atordoa: 0.5, atordoa_max: 1.75, empurra: 200, marca: true}
+        fontes: "WR; raio, distância do empurrão: EST"
+      "3":
+        nome: Passo Forte
+        forma: avanco
+        recarga: [10, 9.5, 9, 8.5]
+        alcance: 250
+        velocidade: 900
+        sem_dano: true
+        escudo: {base: [80, 120, 160, 200], vida_bonus: 0.15}
+        duracao_escudo: 2
+        fontes: "WR"
+      "R":
+        nome: Forma Irrestrita
+        forma: tudo_ou_nada
+        recarga: [120, 110, 100]
+        conjuracao: 0.4
+        alcance: 300
+        empurra: 300
+        terreno_ate: 350
+        dano: {tipo: fisico, base: [80, 97.5, 115]}
+        terreno: {dano: {tipo: fisico, base: [160, 195, 230], vida_bonus: 0.05}, atordoa: 0.5}
+        efeitos: {atordoa: 0.3}
+        duracao: 15
+        fontes: "WR (alguns valores do Wild Rift têm 5 ranks na wiki: usados os 3 primeiros)"

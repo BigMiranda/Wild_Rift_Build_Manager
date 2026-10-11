@@ -219,6 +219,39 @@ public class CombatService {
         return sum;
     }
 
+    /** A fighter for the arena: the build at the minute, with the champion's form effects off (the arena turns them on). */
+    public Fighter arenaFighter(Combatant c, java.util.Set<String> formsOff) {
+        Resolved r = resolve(c);
+        return fighter(r, r.items, formsOff);
+    }
+
+    /**
+     * What each form effect (Noxian Might, Overheat, All Out...) changes in the fighter's stats at the minute: stats
+     * with it on minus with it off.
+     */
+    public Map<String, Map<String, Double>> formDeltas(Combatant c, java.util.Set<String> forms) {
+        Resolved r = resolve(c);
+        Map<String, Map<String, Double>> out = new LinkedHashMap<>();
+        Map<String, Boolean> allOff = new LinkedHashMap<>();
+        forms.forEach(f -> allOff.put(f, false));
+        Map<String, Double> off = planner.snapshot(withDelayedOn(r.build, forms, allOff), r.items, r.level, r.minute).total;
+        for (String form : forms) {
+            Map<String, Boolean> one = new LinkedHashMap<>(allOff);
+            one.put(form, true);
+            Map<String, Double> on = planner.snapshot(withDelayedOn(r.build, java.util.Set.of(), one), r.items, r.level,
+                    r.minute).total;
+            Map<String, Double> delta = new LinkedHashMap<>();
+            on.forEach((k, v) -> {
+                double d = v - off.getOrDefault(k, 0.0);
+                if (Math.abs(d) > 1e-9) {
+                    delta.put(k, d);
+                }
+            });
+            out.put(form, delta);
+        }
+        return out;
+    }
+
     private Resolved resolve(Combatant c) {
         if (c == null || c.buildId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha uma build para cada campeão.");
@@ -257,6 +290,14 @@ public class CombatService {
      * count.
      */
     private Build withDelayedOn(Build original) {
+        return withDelayedOn(original, java.util.Set.of(), java.util.Map.of());
+    }
+
+    /**
+     * Same, with some champion effects forced off (the arena switches them itself: Noxian Might, Overheat, All Out) or
+     * forced to a value.
+     */
+    private Build withDelayedOn(Build original, java.util.Set<String> off, Map<String, Boolean> forced) {
         Build b = JSON.convertValue(original, Build.class);
         java.util.Set<String> names = catalog.activations().keySet();
         if (b.steps != null) {
@@ -283,6 +324,10 @@ public class CombatService {
                 b.championSetup.conditional.put(n, true);
             }
         }
+        for (String n : off) {
+            b.championSetup.conditional.put(n, false);
+        }
+        b.championSetup.conditional.putAll(forced);
         return b;
     }
 
@@ -297,9 +342,13 @@ public class CombatService {
     private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper()
             .configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    @SuppressWarnings("unchecked")
     private Fighter fighter(Resolved r, List<Long> items) {
-        Build b = withDelayedOn(r.build);
+        return fighter(r, items, java.util.Set.of());
+    }
+
+    @SuppressWarnings("unchecked")
+    private Fighter fighter(Resolved r, List<Long> items, java.util.Set<String> formsOff) {
+        Build b = withDelayedOn(r.build, formsOff, Map.of());
         MinutePoint p = planner.snapshot(b, items, r.level, r.minute);
         Fighter f = new Fighter();
         Map<String, Object> champ = champions.find(b.unitCode).orElse(null);
@@ -323,7 +372,7 @@ public class CombatService {
             for (PassivePart part : c.passiveParts) {
                 source(f, c.itemName, part.stat, part.amount, healInFight);
             }
-            Map<String, Object> act = catalog.activation(c.itemName);
+            Map<String, Object> act = formsOff.contains(c.itemName) ? null : catalog.activation(c.itemName);
             if (act != null) {
                 CombatSimulator.Delay d = new CombatSimulator.Delay();
                 d.source = c.itemName;
@@ -360,6 +409,7 @@ public class CombatService {
                     double a15 = ((Number) l15.get("VdA")).doubleValue();
                     double baseAs = a1 + (a15 - a1) * (r.level - 1) / 14.0;
                     f.attackSpeed = Math.min(3.0, baseAs * (1 + f.total.getOrDefault("% Attack Speed", 0.0) / 100));
+                    f.baseAttackSpeed = baseAs;
                 }
             }
         }

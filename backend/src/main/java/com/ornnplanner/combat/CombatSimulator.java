@@ -67,7 +67,7 @@ public class CombatSimulator {
             this.p = p;
         }
 
-        String kind() {
+        public String kind() {
             return String.valueOf(p.get("tipo"));
         }
     }
@@ -89,6 +89,8 @@ public class CombatSimulator {
         /** Ranks of 1, 2, 3, R at the fighter's level. */
         public int[] ranks = new int[4];
         public double attackSpeed;
+        /** Base attack speed at the level (attacks / s), before the bonus %. */
+        public double baseAttackSpeed;
         public List<String> order = new ArrayList<>(List.of("R", "1", "2", "3", "ATIVO"));
         /** first | lowest | index of an enemy (0-based, as a string). */
         public String target = "first";
@@ -107,11 +109,11 @@ public class CombatSimulator {
         public Map<String, Double> allyHealSources = new LinkedHashMap<>();
         public Map<String, Double> vampSources = new LinkedHashMap<>();
 
-        double stat(String s) {
+        public double stat(String s) {
             return total.getOrDefault(s, 0.0);
         }
 
-        double bonus(String s) {
+        public double bonus(String s) {
             return stat(s) - base.getOrDefault(s, 0.0);
         }
     }
@@ -253,7 +255,7 @@ public class CombatSimulator {
         }
 
         /** A stat now: the build's total minus what is not active yet. */
-        double stat(String s) {
+        public double stat(String s) {
             double v = f.stat(s);
             for (int i = 0; i < delayOn.length; i++) {
                 if (!delayOn[i]) {
@@ -267,7 +269,7 @@ public class CombatSimulator {
             return f.base.getOrDefault(s, 0.0);
         }
 
-        double bonus(String s) {
+        public double bonus(String s) {
             return stat(s) - base(s);
         }
 

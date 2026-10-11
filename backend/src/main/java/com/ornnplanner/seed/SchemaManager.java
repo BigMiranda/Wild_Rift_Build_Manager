@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 12;
+    static final int VERSION = 13;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;

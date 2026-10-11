@@ -1230,9 +1230,9 @@ campeoes:
       Hemorragia:
         habilidade: P
         condicional: true
-        nota: "Poder de Noxus; valor do nível 1 (a Coleção não mostra o máximo)"
+        nota: "Poder de Noxus; 32–236 pelo nível (wiki do Wild Rift)"
         linhas:
-        - {tipo: Dano de Ataque, valor: 32}
+        - {tipo: Dano de Ataque, valor: 32, valor_nv15: 236}
       Apreender:
         habilidade: 3
         linhas:
@@ -5945,9 +5945,9 @@ campeoes:
       Titã do Ferro-Velho:
         habilidade: P
         condicional: true
-        nota: "Superaquecido, valor do nível 1"
+        nota: "Superaquecido; 55–125% pelo nível (wiki do Wild Rift)"
         linhas:
-        - {tipo: "% Velocidade de Ataque", valor: 55}
+        - {tipo: "% Velocidade de Ataque", valor: 55, valor_nv15: 125}
     passiva:
       nome: Titã do Ferro-Velho
       tipos: [Passivo, Fortalecimento]
