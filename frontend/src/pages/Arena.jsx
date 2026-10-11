@@ -234,8 +234,78 @@ export default function Arena() {
         )}
       </section>
 
+      {ready && (
+        <SearchPanel sc={sc} names={names}
+          onApply={(fighter, actions) => set({ actions: [...sc.actions.filter((a) => a.fighter !== fighter), ...actions] })} />
+      )}
       {result && <ArenaReport result={result} names={names} />}
     </div>
+  );
+}
+
+/**
+ * Trial and error on one champion's timeline (backend): each try adds, removes, moves or swaps an order and keeps it
+ * when the objective improves. The best timeline can replace that champion's orders.
+ */
+function SearchPanel({ sc, names, onApply }) {
+  const [fighter, setFighter] = useState(0);
+  const [objective, setObjective] = useState('win_fast');
+  const [iterations, setIterations] = useState(300);
+  const [seed, setSeed] = useState(1);
+  const [out, setOut] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const run = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      setOut(await api.post('/api/arena/search', { scenario: sc, fighter, objective, iterations, seed }));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="panel arena-search">
+      <h3>{t('arena.search.title')}</h3>
+      <p className="muted" style={{ marginTop: 0 }}>{t('arena.search.help')}</p>
+      <div className="row">
+        <label className="inline">{t('arena.search.fighter')}
+          <select value={fighter} onChange={(e) => { setFighter(Number(e.target.value)); setOut(null); }}>
+            {sc.fighters.map((f, i) => <option key={i} value={i}>{i + 1} · {names[i]}</option>)}
+          </select>
+        </label>
+        <label className="inline">{t('arena.search.objective')}
+          <select value={objective} onChange={(e) => setObjective(e.target.value)}>
+            {['win_fast', 'damage', 'survive', 'team'].map((o) => <option key={o} value={o}>{t(`arena.search.obj.${o}`)}</option>)}
+          </select>
+        </label>
+        <label className="inline">{t('arena.search.tries')}
+          <input type="number" min={10} max={3000} step={50} value={iterations} onChange={(e) => setIterations(Number(e.target.value) || 300)} />
+        </label>
+        <label className="inline" title={t('arena.search.seedTitle')}>{t('arena.search.seed')}
+          <input type="number" value={seed} onChange={(e) => setSeed(Number(e.target.value) || 1)} />
+        </label>
+        <button className="primary" onClick={run} disabled={busy}>{busy ? t('arena.search.running') : t('arena.search.run')}</button>
+      </div>
+      {error && <p className="error">{error}</p>}
+      {out && (
+        <div className="arena-search-out">
+          <p>
+            {t('arena.search.before')}: <strong>{out.baselineSummary}</strong><br />
+            {t('arena.search.after')}: <strong>{out.summary}</strong>
+            <small className="muted"> · {t('arena.search.stats', { tried: out.tried, improved: out.improved })}</small>
+          </p>
+          <ol className="arena-search-list">
+            {out.actions.map((a, k) => <li key={k}>{orderText(a, names)}</li>)}
+          </ol>
+          <button onClick={() => onApply(fighter, out.actions)} disabled={!out.actions.length && out.score === out.baseline}>
+            {t('arena.search.apply', { n: fighter + 1 })}
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 

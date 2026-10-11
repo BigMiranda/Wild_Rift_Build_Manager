@@ -380,9 +380,17 @@ public class Arena {
     private double halfWidth;
     private double length;
 
+    /** Records the frames for the screen (a search turns it off: only the totals matter). */
+    private boolean recordFrames = true;
+
     public Arena(CombatCatalog catalog, Map<String, Object> map) {
         this.catalog = catalog;
         this.map = map;
+    }
+
+    public Arena withoutFrames() {
+        recordFrames = false;
+        return this;
     }
 
     // ------------------------------------------------------------------ run
@@ -2543,6 +2551,10 @@ public class Arena {
     // ------------------------------------------------------------------ frames and helpers
 
     private void frame() {
+        if (!recordFrames) {
+            flashes.clear();
+            return;
+        }
         Frame f = new Frame();
         f.t = Math.round(now * 1000) / 1000.0;
         for (U u : units) {

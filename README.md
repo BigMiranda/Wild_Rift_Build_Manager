@@ -377,6 +377,13 @@ Nexus (ou onde você os colocar).
   (o mesmo cenário dá sempre o mesmo resultado), o que permite comparar linhas do tempo automaticamente. Uma luta de
   40s roda em menos de um segundo.
 
+- **Busca automática** (tentativa e erro): escolha um campeão e um objetivo (vencer o quanto antes, mais dano, ficar
+  vivo mais tempo, vida do lado menos a do inimigo). Cada tentativa muda a linha do tempo dele — põe uma ordem num
+  segundo ao acaso, tira, move ou troca uma de lugar, ou muda a habilidade — e a luta roda sem quadros; a mudança fica
+  se o objetivo melhorar. ~6ms por luta: 300 tentativas em ~2s. A melhor linha do tempo pode substituir as ordens do
+  campeão no cenário. Mesma semente, mesmo resultado (`POST /api/arena/search`, pronto para ser chamado por um
+  assistente).
+
 Limites: o mapa é uma rota reta (medidas estimadas em `kits_7_3.yml`, `mapa`); custo de mana não é cobrado; campeões
 não colidem entre si; parte da geometria vem do LoL de PC (conferir no Treino).
 
