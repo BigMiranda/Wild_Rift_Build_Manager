@@ -139,7 +139,24 @@ class ArenaTest {
         Result r = run(List.of(ornn, b), new ArrayList<>(List.of(q1, q2)), 9);
         ArenaModel.Frame at2 = r.frames.stream().filter(f -> Math.abs(f.t - 2.0) < 0.06).findFirst().orElseThrow();
         assertEquals(7.5 - 2 + 0.25 - 0.25, at2.units.get(0).cooldowns.get("1"), 0.06);
-        assertTrue(r.events.stream().anyMatch(ev -> ev.text.contains("esperou")), r.events.toString());
+        assertTrue(r.events.stream().anyMatch(ev -> ev.text.contains("depois de esperar")), r.events.toString());
+    }
+
+    @Test
+    void ornnUltimateFirstPassThenHeadbuttBreaksBrittle() {
+        Arena.Input ornn = champion("Ornn", 0, 1000, 0, 5000, 100, 0);
+        Arena.Input b = champion("Darius", 1, 1500, 0, 20000, 0, 0);
+        b.f.total.put(Stats.MOVE_SPEED, 0.0);
+        Action r1 = order(0, 0, "ability", "R");
+        r1.target = 1;
+        Action r2 = order(0, 1.5, "recast", "R");   // waits for the elemental to come within reach
+        Result r = run(List.of(ornn, b), new ArrayList<>(List.of(r1, r2)), 8);
+        assertTrue(r.events.stream().anyMatch(ev -> ev.text.contains("devolveu o elemental")), r.events.toString());
+        assertTrue(r.events.stream().anyMatch(ev -> ev.text.contains("quebrou o Frágil")), r.events.toString());
+        assertEquals(0.22 * 20000, r.fighters.get(0).damageBySource.get("Frágil"), 1e-6);
+        // first pass + the elemental sent back: two hits of 225 (rank 3, no AP)
+        assertEquals(2 * 225, r.fighters.get(0).damageBySource.get("R · Chamado do Deus da Forja"), 1e-6);
+        assertTrue(r.frames.stream().anyMatch(f -> "air".equals(f.units.get(1).state)));
     }
 
     @Test

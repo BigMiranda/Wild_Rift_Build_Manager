@@ -142,6 +142,8 @@ public final class ArenaModel {
         public double healLost;
         public Double deathTime;
         public Map<String, Double> damageBySource = new LinkedHashMap<>();
+        /** Item actives and summoner spells it can use (name -> cooldown, s). */
+        public Map<String, Double> actives = new LinkedHashMap<>();
         /** What the arena knows of the champion's abilities (kit sheet, or read from the game's text). */
         public List<Map<String, Object>> abilities = new ArrayList<>();
         public List<String> notes = new ArrayList<>();

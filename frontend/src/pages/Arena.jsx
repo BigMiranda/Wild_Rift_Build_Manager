@@ -1,0 +1,645 @@
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { api } from '../api.js';
+import { t } from '../i18n.js';
+import { n0, n1 } from '../format.js';
+import MinuteInput from '../components/MinuteInput.jsx';
+
+/**
+ * Orchestrated matchup: a scenario (champions from saved builds at a minute, where they start, and a timeline of
+ * orders) run by the backend's arena. The timeline shows every cooldown at every instant; the map plays the fight with
+ * circles for champions and simple shapes for the rest (hover them while paused to see what they are).
+ */
+const TEAM = ['#4fa8ff', '#f06a5f'];
+const TEAM_SOFT = ['rgba(79,168,255,.22)', 'rgba(240,106,95,.22)'];
+const SLOTS = ['1', '2', '3', 'R'];
+const ORDER_TYPES = ['ability', 'recast', 'item', 'spell', 'move', 'attack', 'stop'];
+const SPELLS = ['Flash', 'Incendiar', 'Exaustão', 'Barreira', 'Curar', 'Fantasma', 'Purificar', 'Golpear', 'Teleporte'];
+const STORE = 'ornn-planner-arena';
+const PX_PER_S = 36;
+
+const emptyScenario = () => ({ id: null, name: t('arena.newName'), note: '', duration: 40, fighters: [newSlot(0), newSlot(1)], actions: [] });
+const newSlot = (team) => ({ team, buildId: null, minute: null, x: null, y: null, target: null, autoAbilities: true, priority: ['R', '3', '1', '2'], activations: {} });
+
+function loadDraft() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE));
+    if (s && Array.isArray(s.fighters)) return s;
+  } catch {
+    /* none */
+  }
+  return null;
+}
+
+/** Frame at (or right before) a time. */
+function frameAt(result, time) {
+  if (!result?.frames?.length) return null;
+  const i = Math.max(0, Math.min(result.frames.length - 1, Math.round(time / result.frameEvery)));
+  return result.frames[i];
+}
+
+export default function Arena() {
+  const [builds, setBuilds] = useState([]);
+  const [saved, setSaved] = useState([]);
+  const [sc, setSc] = useState(() => loadDraft() ?? emptyScenario());
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [time, setTime] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const [editing, setEditing] = useState(null);   // index of the action being edited
+  const [pickPoint, setPickPoint] = useState(null); // action index waiting for a click on the map
+  const [message, setMessage] = useState(null);
+
+  useEffect(() => {
+    api.get('/api/builds').then(setBuilds).catch((e) => setError(e.message));
+    api.get('/api/arena/scenarios').then(setSaved).catch(() => {});
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORE, JSON.stringify(sc));
+    } catch {
+      /* session only */
+    }
+  }, [sc]);
+
+  // Runs the scenario on every change (the engine is fast): debounced.
+  const ready = sc.fighters.length > 1 && sc.fighters.every((f) => f.buildId != null)
+    && sc.fighters.some((f) => f.team === 0) && sc.fighters.some((f) => f.team === 1);
+  const seq = useRef(0);
+  useEffect(() => {
+    if (!ready) {
+      setResult(null);
+      return undefined;
+    }
+    const n = ++seq.current;
+    const timer = setTimeout(async () => {
+      setBusy(true);
+      try {
+        const r = await api.post('/api/arena/run', sc);
+        if (n === seq.current) {
+          setResult(r);
+          setError(null);
+        }
+      } catch (e) {
+        if (n === seq.current) setError(e.message);
+      } finally {
+        if (n === seq.current) setBusy(false);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [sc, ready]);
+
+  // Playback.
+  useEffect(() => {
+    if (!playing || !result) return undefined;
+    let last = performance.now();
+    let raf;
+    const tick = (now) => {
+      const dt = (now - last) / 1000;
+      last = now;
+      setTime((tm) => {
+        const next = tm + dt * speed;
+        if (next >= result.duration) {
+          setPlaying(false);
+          return result.duration;
+        }
+        return next;
+      });
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [playing, speed, result]);
+
+  const set = (patch) => setSc((s) => ({ ...s, ...patch }));
+  const setFighter = (i, patch) => set({ fighters: sc.fighters.map((f, k) => (k === i ? { ...f, ...patch } : f)) });
+  const addFighter = (team) => {
+    if (sc.fighters.filter((f) => f.team === team).length >= 6) return;
+    set({ fighters: [...sc.fighters, newSlot(team)] });
+  };
+  const removeFighter = (i) => set({
+    fighters: sc.fighters.filter((_, k) => k !== i),
+    actions: sc.actions.filter((a) => a.fighter !== i).map((a) => ({
+      ...a, fighter: a.fighter > i ? a.fighter - 1 : a.fighter, target: a.target == null ? null : a.target > i ? a.target - 1 : a.target === i ? null : a.target,
+    })),
+  });
+  const addAction = (fighter, at) => {
+    const enemy = sc.fighters.findIndex((f) => f.team !== sc.fighters[fighter].team);
+    const action = { fighter, time: Math.round(at * 10) / 10, type: 'ability', slot: '1', target: enemy >= 0 ? enemy : null, x: null, y: null };
+    set({ actions: [...sc.actions, action] });
+    setEditing(sc.actions.length);
+  };
+  const setAction = (i, patch) => set({ actions: sc.actions.map((a, k) => (k === i ? { ...a, ...patch } : a)) });
+  const removeAction = (i) => {
+    set({ actions: sc.actions.filter((_, k) => k !== i) });
+    setEditing(null);
+  };
+
+  const save = async (asNew = false) => {
+    try {
+      const body = { ...sc, id: asNew ? null : sc.id };
+      const out = body.id ? await api.put(`/api/arena/scenarios/${body.id}`, body) : await api.post('/api/arena/scenarios', body);
+      set({ id: out.id, name: out.name });
+      setSaved(await api.get('/api/arena/scenarios'));
+      setMessage(t('arena.saved'));
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const open = async (id) => {
+    if (!id) return;
+    try {
+      const s = await api.get(`/api/arena/scenarios/${id}`);
+      setSc({ ...emptyScenario(), ...s });
+      setTime(0);
+      setEditing(null);
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const remove = async () => {
+    if (!sc.id || !window.confirm(t('arena.deleteConfirm', { name: sc.name }))) return;
+    await api.del(`/api/arena/scenarios/${sc.id}`);
+    setSaved(await api.get('/api/arena/scenarios'));
+    setSc(emptyScenario());
+  };
+
+  const frame = frameAt(result, time);
+  const names = sc.fighters.map((f, i) => result?.fighters?.[i]?.champion ?? builds.find((b) => b.id === f.buildId)?.unitCode ?? `#${i + 1}`);
+
+  return (
+    <div className="main arena-page">
+      <section className="panel">
+        <div className="spread">
+          <h3>{t('arena.title')}</h3>
+          <div className="row arena-files">
+            <select value={sc.id ?? ''} onChange={(e) => open(Number(e.target.value))} aria-label={t('arena.saved')}>
+              <option value="">{t('arena.open')}</option>
+              {saved.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <button onClick={() => { setSc(emptyScenario()); setTime(0); }}>{t('arena.new')}</button>
+            <button className="primary" onClick={() => save(false)}>{t('arena.save')}</button>
+            {sc.id && <button onClick={() => save(true)}>{t('arena.saveCopy')}</button>}
+            {sc.id && <button className="danger" onClick={remove}>{t('arena.delete')}</button>}
+          </div>
+        </div>
+        <p className="muted" style={{ marginTop: 0 }}>{t('arena.help')}</p>
+        {message && <p className="muted">{message}</p>}
+        <div className="row arena-head">
+          <label className="field grow">{t('arena.name')}<input value={sc.name} onChange={(e) => set({ name: e.target.value })} /></label>
+          <label className="field narrow">{t('arena.duration')}
+            <input type="number" min={5} max={180} value={sc.duration} onChange={(e) => set({ duration: Number(e.target.value) || 40 })} />
+          </label>
+        </div>
+        <div className="arena-sides">
+          {[0, 1].map((team) => (
+            <div key={team} className={`arena-side team-${team}`}>
+              <h4 style={{ color: TEAM[team] }}>{t(`combat.team${team}`)}</h4>
+              {sc.fighters.map((f, i) => (f.team !== team ? null : (
+                <FighterSlot key={i} index={i} slot={f} builds={builds} names={names} fighters={sc.fighters}
+                  stats={result?.fighters?.[i]} onChange={(p) => setFighter(i, p)} onRemove={() => removeFighter(i)} />
+              )))}
+              <button className="link" onClick={() => addFighter(team)}>{t('arena.addFighter')}</button>
+            </div>
+          ))}
+        </div>
+        {error && <p className="error">{error}</p>}
+      </section>
+
+      <section className="panel arena-stage">
+        <div className="spread">
+          <div className="row">
+            <button className="primary" onClick={() => setPlaying((p) => !p)} disabled={!result}>
+              {playing ? t('arena.pause') : t('arena.play')}
+            </button>
+            <button onClick={() => { setPlaying(false); setTime(0); }} disabled={!result}>⏮</button>
+            <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} aria-label={t('arena.speed')}>
+              {[0.25, 0.5, 1, 2, 4].map((s) => <option key={s} value={s}>{s}×</option>)}
+            </select>
+            <strong className="arena-clock">{n1(time)}s</strong>
+            {busy && <small className="muted">{t('arena.running')}</small>}
+          </div>
+          {result && <Outcome result={result} />}
+        </div>
+        <ArenaMap result={result} frame={frame} paused={!playing} names={names} pickPoint={pickPoint}
+          onPick={(x, y) => { if (pickPoint != null) { setAction(pickPoint, { x: Math.round(x), y: Math.round(y), target: null }); setPickPoint(null); } }} />
+        <Timeline sc={sc} result={result} time={time} names={names} editing={editing}
+          onTime={(tm) => { setPlaying(false); setTime(tm); }} onAdd={addAction} onEdit={setEditing}
+          onMove={(i, tm) => setAction(i, { time: Math.max(0, Math.round(tm * 10) / 10) })} />
+        {editing != null && sc.actions[editing] && (
+          <ActionEditor action={sc.actions[editing]} fighters={sc.fighters} names={names} stats={result?.fighters}
+            onChange={(p) => setAction(editing, p)} onRemove={() => removeAction(editing)} onClose={() => setEditing(null)}
+            onPickPoint={() => setPickPoint(editing)} picking={pickPoint === editing} />
+        )}
+      </section>
+
+      {result && <ArenaReport result={result} names={names} />}
+    </div>
+  );
+}
+
+function Outcome({ result }) {
+  const text = result.winner < 0 ? t('combat.draw', { s: n1(result.duration) })
+    : t('combat.win', { team: t(`combat.team${result.winner}`), s: n1(result.duration) });
+  return <strong>{text}</strong>;
+}
+
+function FighterSlot({ index, slot, builds, names, fighters, stats, onChange, onRemove }) {
+  const enemies = fighters.map((f, i) => ({ f, i })).filter(({ f }) => f.team !== slot.team);
+  return (
+    <div className="arena-slot" style={{ borderLeftColor: TEAM[slot.team] }}>
+      <div className="row">
+        <strong className="arena-idx">{index + 1}</strong>
+        <select value={slot.buildId ?? ''} onChange={(e) => onChange({ buildId: e.target.value ? Number(e.target.value) : null })} aria-label={t('combat.build')}>
+          <option value="">{t('combat.pickBuild')}</option>
+          {builds.map((b) => <option key={b.id} value={b.id}>{b.name} · {b.unitCode}</option>)}
+        </select>
+        <label className="inline">{t('combat.minute')}
+          <MinuteInput value={slot.minute} placeholder={t('combat.minuteAuto')} onChange={(minute) => onChange({ minute })} />
+        </label>
+        <button className="icon danger" onClick={onRemove} aria-label={t('arena.removeFighter')}>✕</button>
+      </div>
+      <div className="row">
+        <label className="inline" title={t('arena.positionTitle')}>{t('arena.position')}
+          <input type="number" value={slot.x ?? ''} placeholder="Nexus" onChange={(e) => onChange({ x: e.target.value === '' ? null : Number(e.target.value) })} aria-label="x" />
+          <input type="number" value={slot.y ?? ''} placeholder="y" onChange={(e) => onChange({ y: e.target.value === '' ? null : Number(e.target.value) })} aria-label="y" />
+        </label>
+        <label className="inline">{t('combat.target')}
+          <select value={slot.target ?? ''} onChange={(e) => onChange({ target: e.target.value === '' ? null : Number(e.target.value) })}>
+            <option value="">{t('arena.nearest')}</option>
+            {enemies.map(({ i }) => <option key={i} value={i}>{i + 1} · {names[i]}</option>)}
+          </select>
+        </label>
+        <label className="check" title={t('arena.autoTitle')}>
+          <input type="checkbox" checked={slot.autoAbilities} onChange={(e) => onChange({ autoAbilities: e.target.checked })} />
+          {t('arena.auto')}
+        </label>
+      </div>
+      {stats && (
+        <small className="muted">
+          {stats.champion} · {t('bar.lv', { n: stats.level })} · {stats.abilities.filter((a) => a.rank > 0).map((a) => `${a.slot} ${n1(a.cooldown ?? 0)}s`).join(' · ')}
+          {stats.notes.length > 0 && ` — ${stats.notes.join(' · ')}`}
+        </small>
+      )}
+    </div>
+  );
+}
+
+/** The map: the lane, champions as circles, everything else as simple shapes; hover while paused to identify. */
+function ArenaMap({ result, frame, paused, names, pickPoint, onPick }) {
+  const svgRef = useRef(null);
+  const [hover, setHover] = useState(null);
+  const [follow, setFollow] = useState(true);
+  if (!result || !frame) {
+    return <div className="arena-map empty muted">{t('arena.noRun')}</div>;
+  }
+  const H = 360;
+  const W = 1000;
+  const alive = frame.units.filter((u) => u.state !== 'dead');
+  const xs = (alive.length ? alive : frame.units).map((u) => u.x);
+  const span = follow ? Math.max(2200, Math.max(...xs) - Math.min(...xs) + 1200) : result.mapLength;
+  const cx = follow ? (Math.max(...xs) + Math.min(...xs)) / 2 : result.mapLength / 2;
+  const vw = span;
+  const vh = Math.max(result.mapWidth + 300, (span * H) / W);
+  const view = `${cx - vw / 2} ${-vh / 2} ${vw} ${vh}`;
+  const toWorld = (ev) => {
+    const pt = svgRef.current.createSVGPoint();
+    pt.x = ev.clientX;
+    pt.y = ev.clientY;
+    const p = pt.matrixTransform(svgRef.current.getScreenCTM().inverse());
+    return { x: p.x, y: -p.y };
+  };
+  const onMove = (ev) => {
+    if (!paused) return;
+    const p = toWorld(ev);
+    const found = [];
+    frame.units.forEach((u, i) => {
+      if (Math.hypot(u.x - p.x, u.y - p.y) <= 90 + span / 120) found.push({ unit: u, i });
+    });
+    frame.shapes.forEach((s) => {
+      if (hitShape(s, p.x, p.y, span / 150)) found.push({ shape: s });
+    });
+    setHover(found.length ? { x: ev.clientX, y: ev.clientY, found } : null);
+  };
+  return (
+    <div className="arena-map">
+      <div className="row arena-map-tools">
+        <label className="check"><input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} />{t('arena.follow')}</label>
+        {pickPoint != null && <small className="warn">{t('arena.pickHint')}</small>}
+        {paused && <small className="muted">{t('arena.hoverHint')}</small>}
+      </div>
+      <svg ref={svgRef} viewBox={view} preserveAspectRatio="xMidYMid meet" width="100%" height={H}
+        onMouseMove={onMove} onMouseLeave={() => setHover(null)} onClick={(ev) => { if (pickPoint != null) { const p = toWorld(ev); onPick(p.x, p.y); } }}
+        style={{ cursor: pickPoint != null ? 'crosshair' : 'default' }}>
+        <g transform="scale(1,-1)">
+          <rect x={0} y={-result.mapWidth / 2} width={result.mapLength} height={result.mapWidth} className="arena-lane" />
+          {[0, 1].map((team) => (
+            <circle key={team} cx={team === 0 ? 500 : result.mapLength - 500} cy={0} r={180} fill={TEAM_SOFT[team]} stroke={TEAM[team]} strokeWidth={8} />
+          ))}
+          {frame.shapes.map((s) => <ShapeView key={s.id} s={s} />)}
+          {frame.units.map((u, i) => <UnitView key={i} u={u} i={i} name={names[i]} team={result.fighters[i]?.team ?? 0} span={span} />)}
+        </g>
+      </svg>
+      {hover && (
+        <div className="arena-tip" style={{ left: hover.x + 14, top: hover.y + 14 }}>
+          {hover.found.map((h, k) => (h.unit ? (
+            <div key={k}>
+              <strong>{h.i + 1} · {names[h.i]}</strong> — {n0(h.unit.hp)}/{n0(h.unit.maxHp)}{h.unit.shield > 0 ? ` +${n0(h.unit.shield)} ${t('arena.shield')}` : ''}
+              <div><small>{t(`arena.state.${h.unit.state.split(':')[0]}`)}{h.unit.state.includes(':') ? ` ${h.unit.state.split(':')[1]}` : ''}{h.unit.resource != null ? ` · ${t('arena.resource')} ${n0(h.unit.resource)}` : ''}</small></div>
+              {h.unit.marks.length > 0 && <div><small>{h.unit.marks.join(' · ')}</small></div>}
+              <div><small>{Object.entries(h.unit.cooldowns).map(([k2, v]) => `${k2}: ${v > 0 ? `${n1(v)}s` : t('arena.ready')}`).join(' · ')}</small></div>
+            </div>
+          ) : (
+            <div key={k}><small>{h.shape.label}</small></div>
+          )))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function hitShape(s, x, y, pad) {
+  if (s.kind === 'circle') return Math.hypot(s.x - x, s.y - y) <= (s.radius ?? 20) + pad;
+  if (s.kind === 'rect' || s.kind === 'line') {
+    const len = s.kind === 'line' ? s.length : s.length;
+    const cx = s.kind === 'line' ? s.x + Math.cos(s.angle) * len / 2 : s.x;
+    const cy = s.kind === 'line' ? s.y + Math.sin(s.angle) * len / 2 : s.y;
+    const dx = x - cx;
+    const dy = y - cy;
+    const along = dx * Math.cos(s.angle) + dy * Math.sin(s.angle);
+    const across = -dx * Math.sin(s.angle) + dy * Math.cos(s.angle);
+    return Math.abs(along) <= len / 2 + pad && Math.abs(across) <= (s.width ?? 40) / 2 + pad;
+  }
+  if (s.kind === 'cone') {
+    const d = Math.hypot(x - s.x, y - s.y);
+    let a = Math.atan2(y - s.y, x - s.x) - s.angle;
+    a = Math.atan2(Math.sin(a), Math.cos(a));
+    return d <= s.radius + pad && Math.abs(a) <= s.arc / 2;
+  }
+  return false;
+}
+
+function ShapeView({ s }) {
+  const color = s.team < 0 ? '#9a8f7a' : TEAM[s.team];
+  const fill = s.team < 0 ? 'rgba(154,143,122,.6)' : TEAM_SOFT[s.team];
+  if (s.kind === 'circle') return <circle cx={s.x} cy={s.y} r={s.radius ?? 20} fill={fill} stroke={color} strokeWidth={6} />;
+  if (s.kind === 'rect') {
+    const deg = (s.angle * 180) / Math.PI;
+    return (
+      <rect x={s.x - s.length / 2} y={s.y - s.width / 2} width={s.length} height={s.width} fill={fill} stroke={color} strokeWidth={6}
+        transform={`rotate(${deg} ${s.x} ${s.y})`} />
+    );
+  }
+  if (s.kind === 'line') {
+    const deg = (s.angle * 180) / Math.PI;
+    return (
+      <rect x={s.x} y={s.y - (s.width ?? 60) / 2} width={s.length} height={s.width ?? 60} fill={fill} stroke={color} strokeWidth={4} strokeDasharray="20 14"
+        transform={`rotate(${deg} ${s.x} ${s.y})`} />
+    );
+  }
+  if (s.kind === 'cone') {
+    const a1 = s.angle - s.arc / 2;
+    const a2 = s.angle + s.arc / 2;
+    const p1 = [s.x + Math.cos(a1) * s.radius, s.y + Math.sin(a1) * s.radius];
+    const p2 = [s.x + Math.cos(a2) * s.radius, s.y + Math.sin(a2) * s.radius];
+    return <path d={`M ${s.x} ${s.y} L ${p1[0]} ${p1[1]} A ${s.radius} ${s.radius} 0 0 1 ${p2[0]} ${p2[1]} Z`} fill={fill} stroke={color} strokeWidth={6} />;
+  }
+  return null;
+}
+
+function UnitView({ u, i, name, team, span }) {
+  const r = 80;
+  const dead = u.state === 'dead';
+  const pct = u.maxHp > 0 ? Math.max(0, u.hp / u.maxHp) : 0;
+  const font = Math.max(60, span / 45);
+  return (
+    <g opacity={dead ? 0.3 : u.invisible ? 0.45 : 1}>
+      <circle cx={u.x} cy={u.y} r={r} fill={TEAM[team]} stroke={u.state === 'stun' || u.state === 'air' ? '#fff' : '#0b1621'} strokeWidth={u.state === 'stun' || u.state === 'air' ? 18 : 8}
+        strokeDasharray={u.state === 'stasis' ? '20 12' : undefined} />
+      <rect x={u.x - 110} y={u.y + r + 30} width={220} height={26} fill="#0b1621" />
+      <rect x={u.x - 110} y={u.y + r + 30} width={220 * pct} height={26} fill={team === 0 ? '#6fd486' : '#f39a4a'} />
+      {u.shield > 0 && <rect x={u.x - 110} y={u.y + r + 60} width={Math.min(220, (220 * u.shield) / Math.max(1, u.maxHp))} height={14} fill="#e8e2d4" />}
+      <g transform={`translate(${u.x},${u.y}) scale(1,-1)`}>
+        <text x={0} y={font / 3} textAnchor="middle" fontSize={font} fill="#fff" fontWeight="700">{i + 1}</text>
+        <text x={0} y={-r - 70} textAnchor="middle" fontSize={font * 0.7} fill="#e8e2d4">{name}</text>
+      </g>
+    </g>
+  );
+}
+
+/**
+ * Timeline: one track per champion with its orders (drag to move, click to edit; click an empty place to add one) and,
+ * under it, a bar per ability / active showing when it is on cooldown, from the run.
+ */
+function Timeline({ sc, result, time, names, editing, onTime, onAdd, onEdit, onMove }) {
+  const width = sc.duration * PX_PER_S;
+  const [drag, setDrag] = useState(null);
+  const ref = useRef(null);
+  const toTime = (ev) => {
+    const box = ref.current.getBoundingClientRect();
+    return Math.max(0, Math.min(sc.duration, (ev.clientX - box.left + ref.current.scrollLeft - 110) / PX_PER_S));
+  };
+  const cds = useMemo(() => cooldownBars(result), [result]);
+  return (
+    <div className="arena-timeline" ref={ref}
+      onMouseMove={(ev) => { if (drag) onMove(drag, toTime(ev)); }} onMouseUp={() => setDrag(null)} onMouseLeave={() => setDrag(null)}>
+      <div className="tl-row tl-axis" style={{ width: width + 110 }}>
+        <span className="tl-label" />
+        <div className="tl-track" style={{ width }} onClick={(ev) => onTime(toTime(ev))}>
+          {Array.from({ length: Math.floor(sc.duration) + 1 }, (_, s) => (
+            <span key={s} className={`tl-tick${s % 5 === 0 ? ' major' : ''}`} style={{ left: s * PX_PER_S }}>{s % 5 === 0 ? `${s}s` : ''}</span>
+          ))}
+          <span className="tl-cursor" style={{ left: time * PX_PER_S }} />
+        </div>
+      </div>
+      {sc.fighters.map((f, fi) => (
+        <Fragment key={fi}>
+          <div className="tl-row" style={{ width: width + 110 }}>
+            <span className="tl-label" style={{ color: TEAM[f.team] }}>{fi + 1} · {names[fi]}</span>
+            <div className="tl-track orders" style={{ width }}
+              onClick={(ev) => { if (ev.target === ev.currentTarget) onAdd(fi, toTime(ev)); }} title={t('arena.addHint')}>
+              {sc.actions.map((a, ai) => (a.fighter !== fi ? null : (
+                <button key={ai} className={`tl-order${editing === ai ? ' active' : ''}`} style={{ left: a.time * PX_PER_S }}
+                  onMouseDown={(ev) => { ev.stopPropagation(); setDrag(ai); }} onClick={(ev) => { ev.stopPropagation(); onEdit(ai); }}
+                  title={orderText(a, names)}>
+                  {shortOrder(a)}
+                </button>
+              )))}
+              {result && (result.skipped ?? []).filter((e) => e.fighter === fi).map((e, k) => (
+                <span key={`s${k}`} className="tl-skip" style={{ left: e.t * PX_PER_S }} title={e.text}>⊘</span>
+              ))}
+              <span className="tl-cursor" style={{ left: time * PX_PER_S }} />
+            </div>
+          </div>
+          {(cds[fi] ?? []).map((c) => (
+            <div key={c.name} className="tl-row tl-cd" style={{ width: width + 110 }}>
+              <span className="tl-label sub">{c.name}</span>
+              <div className="tl-track" style={{ width }}>
+                {c.bars.map(([a, b], k) => (
+                  <span key={k} className="tl-cdbar" style={{ left: a * PX_PER_S, width: Math.max(2, (b - a) * PX_PER_S) }}
+                    title={t('arena.cdBar', { name: c.name, from: n1(a), to: n1(b) })} />
+                ))}
+                <span className="tl-cursor" style={{ left: time * PX_PER_S }} />
+              </div>
+            </div>
+          ))}
+        </Fragment>
+      ))}
+    </div>
+  );
+}
+
+/** Cooldown intervals of each ability / active of each fighter, from the frames. */
+function cooldownBars(result) {
+  if (!result?.frames?.length) return [];
+  const out = result.fighters.map(() => new Map());
+  result.frames.forEach((f, k) => {
+    f.units.forEach((u, i) => {
+      Object.entries(u.cooldowns).forEach(([name, left]) => {
+        if (!out[i].has(name)) out[i].set(name, { name, bars: [], open: null });
+        const c = out[i].get(name);
+        if (left > 0.05 && c.open == null) c.open = f.t;
+        if (left <= 0.05 && c.open != null) {
+          c.bars.push([c.open, f.t]);
+          c.open = null;
+        }
+        if (k === result.frames.length - 1 && c.open != null) c.bars.push([c.open, f.t + left]);
+      });
+    });
+  });
+  return out.map((m) => [...m.values()]);
+}
+
+const shortOrder = (a) => (a.type === 'ability' ? a.slot : a.type === 'recast' ? `${a.slot}²` : a.type === 'item' ? '◆'
+  : a.type === 'spell' ? '✦' : a.type === 'move' ? '➜' : a.type === 'attack' ? '⚔' : '■');
+
+function orderText(a, names) {
+  const what = a.type === 'ability' || a.type === 'recast' ? `${t(`arena.type.${a.type}`)} ${a.slot}` : a.name ? `${t(`arena.type.${a.type}`)}: ${a.name}` : t(`arena.type.${a.type}`);
+  const where = a.target != null ? ` → ${a.target + 1} · ${names[a.target]}` : a.x != null ? ` → (${n0(a.x)}, ${n0(a.y)})` : '';
+  return `${n1(a.time)}s: ${what}${where}`;
+}
+
+function ActionEditor({ action, fighters, names, stats, onChange, onRemove, onClose, onPickPoint, picking }) {
+  const me = stats?.[action.fighter];
+  const enemies = fighters.map((f, i) => ({ f, i })).filter(({ f }) => f.team !== fighters[action.fighter].team);
+  const allies = fighters.map((f, i) => ({ f, i })).filter(({ f, i }) => f.team === fighters[action.fighter].team && i !== action.fighter);
+  return (
+    <div className="arena-editor" role="dialog" aria-label={t('arena.editOrder')}>
+      <div className="row">
+        <strong>{action.fighter + 1} · {names[action.fighter]}</strong>
+        <label className="inline">{t('arena.at')}
+          <input type="number" step={0.1} min={0} value={action.time} onChange={(e) => onChange({ time: Math.max(0, Number(e.target.value)) })} />s
+        </label>
+        <select value={action.type} onChange={(e) => onChange({ type: e.target.value })} aria-label={t('arena.orderType')}>
+          {ORDER_TYPES.map((k) => <option key={k} value={k}>{t(`arena.type.${k}`)}</option>)}
+        </select>
+        {(action.type === 'ability' || action.type === 'recast') && (
+          <select value={action.slot ?? '1'} onChange={(e) => onChange({ slot: e.target.value })} aria-label={t('arena.slot')}>
+            {SLOTS.map((s) => {
+              const ab = me?.abilities?.find((a) => a.slot === s);
+              return <option key={s} value={s}>{s}{ab ? ` · ${ab.name}` : ''}</option>;
+            })}
+          </select>
+        )}
+        {(action.type === 'item' || action.type === 'spell') && (
+          <select value={action.name ?? ''} onChange={(e) => onChange({ name: e.target.value })} aria-label={t(`arena.type.${action.type}`)}>
+            <option value="">—</option>
+            {Object.entries(me?.actives ?? {}).filter(([n]) => SPELLS.includes(n) === (action.type === 'spell')).map(([n, cd]) => (
+              <option key={n} value={n}>{n} · {n0(cd)}s</option>
+            ))}
+          </select>
+        )}
+        {(action.type === 'ability' && action.slot === '2' && me?.champion === "K'Sante") && (
+          <label className="inline">{t('arena.charge')}
+            <input type="number" step={0.1} min={0.4} max={1} value={action.charge ?? 1} onChange={(e) => onChange({ charge: Number(e.target.value) })} />s
+          </label>
+        )}
+      </div>
+      {action.type !== 'stop' && (
+        <div className="row">
+          <label className="inline">{t('arena.target')}
+            <select value={action.target ?? ''} onChange={(e) => onChange({ target: e.target.value === '' ? null : Number(e.target.value), x: null, y: null })}>
+              <option value="">{action.x != null ? t('arena.point', { x: n0(action.x), y: n0(action.y) }) : t('arena.current')}</option>
+              {enemies.map(({ i }) => <option key={i} value={i}>{i + 1} · {names[i]}</option>)}
+              {allies.map(({ i }) => <option key={i} value={i}>{i + 1} · {names[i]} ({t('arena.ally')})</option>)}
+            </select>
+          </label>
+          <button className={picking ? 'active' : ''} onClick={onPickPoint}>{t('arena.pickPoint')}</button>
+        </div>
+      )}
+      <div className="spread">
+        <button className="link danger" onClick={onRemove}>{t('arena.removeOrder')}</button>
+        <button className="link" onClick={onClose}>{t('close')}</button>
+      </div>
+    </div>
+  );
+}
+
+function ArenaReport({ result, names }) {
+  const fr = result.fighters;
+  const items = result.ledger.filter((l) => l.damage + l.extraShred + l.extraAmp + l.prevented + l.shieldCut + l.healCut
+    + l.shieldAbsorbed + l.healed > 0.5);
+  return (
+    <section className="panel">
+      <h3>{t('combat.fighters')}</h3>
+      <div className="table-wrap">
+        <table className="data">
+          <thead>
+            <tr>
+              <th className="l">{t('combat.champion')}</th><th>{t('combat.lvMin')}</th><th>Vida</th><th>{t('combat.dealt')}</th>
+              <th>{t('combat.taken')}</th><th>{t('combat.mitigated')}</th><th>{t('combat.shieldAbs')}</th><th>{t('combat.healed')}</th>
+              <th>{t('combat.healLost')}</th><th>{t('combat.alive')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {fr.map((f, i) => (
+              <tr key={i}>
+                <td className="l"><span className="swatch" style={{ background: TEAM[f.team] }} />{i + 1} · {names[i]} <small className="muted">{f.build}</small></td>
+                <td>{f.level} · {n1(f.minute)}</td>
+                <td>{n0(f.health)} / {n0(f.maxHealth)}</td>
+                <td>{n0(f.dealt)}</td><td>{n0(f.taken)}</td><td>{n0(f.mitigated)}</td><td>{n0(f.shieldAbsorbed)}</td>
+                <td>{n0(f.healed)}</td><td>{n0(f.healLost)}</td>
+                <td>{f.deathTime != null ? `✝ ${n1(f.deathTime)}s` : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <details className="combat-details" open>
+        <summary>{t('arena.ledger')}</summary>
+        <div className="table-wrap">
+          <table className="data">
+            <thead>
+              <tr><th className="l">{t('arena.source')}</th><th>{t('combat.col.damage')}</th><th>{t('combat.col.extra')}</th>
+                <th>{t('combat.col.prevented')}</th><th>{t('combat.col.cancel')}</th><th>{t('combat.col.own')}</th><th>{t('combat.col.lost')}</th></tr>
+            </thead>
+            <tbody>
+              {items.map((l, k) => (
+                <tr key={k}>
+                  <td className="l"><span className="swatch" style={{ background: TEAM[fr[l.fighter]?.team ?? 0] }} />{l.fighter + 1} · {l.source}</td>
+                  <td>{l.damage > 0.5 ? n0(l.damage) : '—'}</td>
+                  <td>{l.extraShred + l.extraAmp > 0.5 ? `+${n0(l.extraShred + l.extraAmp)}` : '—'}</td>
+                  <td>{l.prevented > 0.5 ? n0(l.prevented) : '—'}</td>
+                  <td>{l.shieldCut + l.healCut > 0.5 ? n0(l.shieldCut + l.healCut) : '—'}</td>
+                  <td>{l.shieldAbsorbed + l.healed > 0.5 ? n0(l.shieldAbsorbed + l.healed) : '—'}</td>
+                  <td className={l.shieldLost + l.healLost > 0.5 ? 'warn' : ''}>{l.shieldLost + l.healLost > 0.5 ? n0(l.shieldLost + l.healLost) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+      <details className="combat-details">
+        <summary>{t('combat.events')} ({result.events.length})</summary>
+        <ul className="combat-events">{result.events.map((e, k) => <li key={k}>{n1(e.t)}s: {e.text}</li>)}</ul>
+      </details>
+      {result.skipped.length > 0 && (
+        <details className="combat-details" open>
+          <summary className="warn">{t('arena.skipped', { n: result.skipped.length })}</summary>
+          <ul className="combat-events">{result.skipped.map((e, k) => <li key={k}>{e.text}</li>)}</ul>
+        </details>
+      )}
+    </section>
+  );
+}

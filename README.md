@@ -350,6 +350,36 @@ Limites desta versão: sem posições, alcance, controle de grupo ou custo de ma
 alvo; dano por % da Vida **perdida** ou atual do alvo (execuções) não é lido (o de % da Vida máxima, como o Fôlego
 do Fole, é); o dano de uma habilidade é o primeiro do texto (o Dizimar do Darius conta o cabo, não a lâmina).
 
+## Confronto orquestrado (Arena)
+
+Aba **Arena**: o confronto vira um **cenário** salvo — campeões (build salva num minuto de jogo, lado, posição
+inicial, alvo) e uma **linha do tempo de ordens** (habilidade, reconjurar, ativo de item, feitiço, mover, focar, parar)
+— que o backend executa num mapa 2D: o Howling Abyss como uma rota reta entre paredes, os campeões nascendo junto ao
+Nexus (ou onde você os colocar).
+
+- **Fichas de habilidades** em [`seed/kits_7_3.yml`](backend/src/main/resources/seed/kits_7_3.yml) para Ornn, Darius,
+  Renekton, Rumble, Vayne e K'Sante: recargas, conjuração, durações e dano da wiki do Wild Rift; alcance, largura,
+  raio e velocidades da wiki de PC quando a do Wild Rift não tem; estimativas marcadas como EST. Cada habilidade é uma
+  forma genérica (projétil em linha, área, cone, canal, avanço, alvo, ataque fortalecido, efeito próprio, campo no
+  chão) com seus efeitos (lentidão, atordoamento, arremesso, puxar, empurrar contra parede, Frágil, Hemorragia, Dardos
+  de Prata, marcas, fúria e calor); a ultimate do Ornn, o Condenar da Vayne e a Forma Irrestrita do K'Sante têm
+  tratamento próprio. Os efeitos de forma (Poder de Noxus, Superaquecido, Forma Irrestrita) entram pela diferença de
+  status calculada pela build. Campeões sem ficha usam o dano lido do texto do jogo numa habilidade com alvo.
+- **Ordens**: uma ordem em recarga espera ficar pronta (e o registro mostra quanto esperou); fora de alcance, o
+  campeão anda até o alvo. Sem ordens, ele persegue e ataca, e (com "auto") usa as habilidades prontas na prioridade.
+  A reconjuração da ultimate do Ornn espera o elemental chegar perto para a cabeçada.
+- **Recargas em cada instante**: embaixo da faixa de cada campeão, uma barra por habilidade, ativo de item e feitiço
+  mostra quando está em recarga; o quadro de cada instante traz o tempo que falta de cada uma.
+- **Mapa**: círculos para os campeões (com vida e escudo) e formas simples para o resto (projéteis, áreas, cones,
+  campos, pilar de magma, elemental). Pausado, passar o mouse identifica cada forma; nos campeões mostra vida,
+  estado, marcas e recargas.
+- O motor anda em passos de 0,02s para movimento e colisões, com cada efeito no seu segundo exato; é determinístico
+  (o mesmo cenário dá sempre o mesmo resultado), o que permite comparar linhas do tempo automaticamente. Uma luta de
+  40s roda em menos de um segundo.
+
+Limites: o mapa é uma rota reta (medidas estimadas em `kits_7_3.yml`, `mapa`); custo de mana não é cobrado; campeões
+não colidem entre si; parte da geometria vem do LoL de PC (conferir no Treino).
+
 ## Aproximações assumidas
 
 - **Tabela de XP por nível é uma estimativa**: não há fonte pública confiável para o Wild Rift. Os valores iniciais

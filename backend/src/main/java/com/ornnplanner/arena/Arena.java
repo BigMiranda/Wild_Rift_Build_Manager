@@ -494,6 +494,7 @@ public class Arena {
         r.level = in.f.level;
         r.minute = in.f.minute;
         r.maxHealth = u.maxHp;
+        r.actives.putAll(in.activeCooldowns);
         if (in.kit == null) {
             r.notes.add("sem ficha de habilidades: habilidades com alvo a 550 de alcance e o dano lido do texto do jogo");
         }
@@ -552,7 +553,7 @@ public class Arena {
             if ("done".equals(outcome)) {
                 u.orders.remove(0);
                 if (now - a.time > 0.05) {
-                    event(u, describe(a) + " (esperou " + fmt(now - a.time) + "s)");
+                    event(u, "cumpriu a ordem de " + describe(a) + " depois de esperar " + fmt(now - a.time) + "s");
                 }
                 acted = true;
                 if (now < u.busyUntil || u.dash != null) {
@@ -1549,6 +1550,14 @@ public class Arena {
                 return "drop";
             }
             Map<String, Object> rec = map(ab.get("reconjurar"));
+            // Like a player: the headbutt waits for the elemental to come within reach.
+            double reach = e.width / 2 + u.radius() + num(rec.get("cabecada"), 200) + 60;
+            if (dist(u.x, u.y, e.x, e.y) > reach) {
+                u.recast.put(slot, w);
+                return "wait";
+            }
+            tx = e.x;
+            ty = e.y;
             double a = Math.atan2(ty - u.y, tx - u.x);
             u.facing = a;
             double headbutt = num(rec.get("cabecada"), 200);

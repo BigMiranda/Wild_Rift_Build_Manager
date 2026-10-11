@@ -825,3 +825,48 @@ td.warn, .combat-items td.warn { color: var(--warn, #f0c75e); }
 .sale-tag, .swap-tag { font-size: 10px; padding: 0 4px; border-radius: 3px; border: 1px solid currentColor; }
 .sale-tag { color: var(--error); }
 .swap-tag { color: var(--gold-bright); cursor: help; }
+
+/* Orchestrated matchup (arena) */
+.arena-files { gap: 6px; flex-wrap: wrap; }
+.arena-head { gap: 12px; align-items: flex-end; }
+.arena-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 10px; }
+@media (max-width: 1000px) { .arena-sides { grid-template-columns: 1fr; } }
+.arena-side h4 { margin: 0 0 6px; }
+.arena-slot { border: 1px solid var(--border); border-left: 4px solid; border-radius: 6px; padding: 6px 8px; margin-bottom: 6px;
+  display: flex; flex-direction: column; gap: 4px; }
+.arena-slot .row { gap: 6px 10px; flex-wrap: wrap; align-items: center; }
+.arena-slot select { max-width: 240px; }
+.arena-slot label.inline { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); }
+.arena-slot label.inline input { width: 70px; }
+.arena-idx { min-width: 18px; color: var(--gold-bright); }
+.arena-clock { min-width: 60px; font-variant-numeric: tabular-nums; }
+.arena-stage .row { gap: 8px; align-items: center; }
+.arena-map { position: relative; margin: 8px 0; }
+.arena-map.empty { padding: 40px; text-align: center; border: 1px dashed var(--border); border-radius: 6px; }
+.arena-map svg { background: #0a1520; border: 1px solid var(--border); border-radius: 6px; display: block; }
+.arena-lane { fill: #13212f; stroke: #2a3c4f; stroke-width: 10; }
+.arena-map-tools { gap: 12px; margin-bottom: 4px; }
+.arena-tip { position: fixed; z-index: 20; max-width: 340px; padding: 6px 8px; border-radius: 6px; pointer-events: none;
+  background: rgba(8, 17, 28, .96); border: 1px solid var(--border-strong); font-size: 12px; display: flex; flex-direction: column; gap: 6px; }
+.arena-timeline { overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; padding: 4px 0; user-select: none; }
+.tl-row { display: flex; align-items: center; min-height: 26px; }
+.tl-row.tl-cd { min-height: 12px; }
+.tl-label { position: sticky; left: 0; z-index: 2; width: 110px; flex: none; padding: 0 6px; font-size: 12px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; background: var(--surface); }
+.tl-label.sub { font-size: 10px; color: var(--text-2); padding-left: 18px; }
+.tl-track { position: relative; height: 24px; flex: none; border-left: 1px solid var(--border); }
+.tl-cd .tl-track { height: 10px; }
+.tl-track.orders { background: repeating-linear-gradient(90deg, transparent 0 35px, rgba(255,255,255,.04) 35px 36px); cursor: copy; }
+.tl-axis .tl-track { cursor: pointer; }
+.tl-tick { position: absolute; top: 0; height: 100%; border-left: 1px solid rgba(255,255,255,.08); font-size: 10px; color: var(--text-2); padding-left: 2px; }
+.tl-tick.major { border-left-color: rgba(255,255,255,.2); }
+.tl-cursor { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--gold-bright); pointer-events: none; z-index: 1; }
+.tl-order { position: absolute; top: 2px; height: 20px; min-width: 22px; transform: translateX(-11px); padding: 0 4px; font-size: 11px;
+  font-weight: 700; border-radius: 4px; background: var(--surface-3); border: 1px solid var(--gold); color: var(--gold-bright); cursor: grab; z-index: 2; }
+.tl-order.active { background: var(--gold); color: var(--accent-ink); }
+.tl-skip { position: absolute; top: 3px; transform: translateX(-6px); color: var(--error); font-size: 13px; z-index: 2; }
+.tl-cdbar { position: absolute; top: 2px; height: 6px; border-radius: 3px; background: rgba(240, 106, 95, .55); }
+.arena-editor { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 6px; display: flex; flex-direction: column; gap: 6px; }
+.arena-editor .row { gap: 8px; flex-wrap: wrap; align-items: center; }
+.arena-editor label.inline { display: inline-flex; align-items: center; gap: 4px; }
+.arena-editor input[type=number] { width: 70px; }
