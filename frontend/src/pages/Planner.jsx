@@ -283,8 +283,11 @@ export default function Planner({ meta, items }) {
       try {
         const r = await api.post('/api/calculate', { ...payload, steps });
         const last = r.steps.find((x) => x.buildIndex === steps.length - 1 && !x.implied);
-        if (last?.violations?.length) {
-          setMessage(t('rule.blocked', { name: itemsById.get(id)?.name ?? id, reason: last.violations.map(violationText).join(' · ') }));
+        // Over the item limit a purchase is kept (and left out); boots of another tier the shop does not sell at all.
+        const skipped = r.ignored?.find((x) => x.buildIndex === steps.length - 1);
+        const blocking = last?.violations?.length ? last.violations : skipped?.violations?.filter((v) => v.code === 'bootsTier') ?? [];
+        if (blocking.length) {
+          setMessage(t('rule.blocked', { name: itemsById.get(id)?.name ?? id, reason: blocking.map(violationText).join(' · ') }));
           return;
         }
       } catch (e) {

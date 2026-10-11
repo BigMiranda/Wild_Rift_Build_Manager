@@ -226,7 +226,8 @@ public class TimelineEngine {
             boolean cond = i < in.conditional.size() && in.conditional.get(i) != null
                     ? in.conditional.get(i) : in.includeConditional;
             // Build options: the missing components are bought first, one by one as gold allows, towards this item.
-            // A boot swap (other boots held that are not in the recipe) assumes no components: the old boots pay for it.
+            // Other boots held that are not in the recipe: a boot swap (same tier) or a purchase the shop does not allow;
+            // either way no components are assumed (the old boots pay for a swap).
             boolean swap = item.boots() && inventory.stream().anyMatch(o -> o.item.boots() && !inRecipe(item, o.item.id));
             List<ItemDef> queue = swap ? new ArrayList<>()
                     : impliedComponents(item, inventory, in.assumeHalfItems, in.assumeSmallItems);
@@ -257,13 +258,19 @@ public class TimelineEngine {
                     step.consumedComponents.add(o.item.name);
                 }
                 step.paidCost = Math.max(0, buy.cost - discount);
-                // Boot swap: other boots still held (not a component of these) leave and count towards the new ones.
+                // Boot swap: other boots of the same tier still held (not a component of these) are sold and the new
+                // ones bought. Boots of another tier cannot be bought over them (the shop locks them).
+                Owned otherTier = null;
                 if (!implied && buy.boots()) {
                     Owned old = null;
                     for (Owned o : inventory) {
                         if (o.item.boots()) {
                             old = o;
                         }
+                    }
+                    if (old != null && bootTier(old.item) != bootTier(buy)) {
+                        otherTier = old;
+                        old = null;
                     }
                     if (old != null) {
                         inventory.remove(old);
@@ -297,6 +304,10 @@ public class TimelineEngine {
                     step.inventoryIds.add(o.item.id);
                 }
                 step.violations = violations(buy, inventory);
+                if (otherTier != null) {
+                    step.violations.removeIf(v -> "boots".equals(v.code));
+                    step.violations.add(new Model.Violation("bootsTier", null, List.of(otherTier.item.name, buy.name)));
+                }
                 if (implied && !step.violations.isEmpty()) {
                     // An assumed component that would break a shop rule (e.g. no free slot) is simply not bought.
                     inventory.clear();
@@ -405,6 +416,11 @@ public class TimelineEngine {
         }
     }
 
+    /** Tier of boots: 1 basic, 2 mid tier, 3 upgraded. */
+    private static int bootTier(ItemDef boots) {
+        return "aprimorado".equals(boots.section) ? 3 : "tier_medio".equals(boots.section) ? 2 : 1;
+    }
+
     /** Whether {@code id} is somewhere in the recipe tree of {@code item}. */
     private boolean inRecipe(ItemDef item, long id) {
         for (ComponentRef c : item.components) {
@@ -510,7 +526,7 @@ public class TimelineEngine {
     /** Slot limits (five items + one boots): a purchase breaking them is ignored instead of counted. */
     static boolean exceedsLimit(List<Model.Violation> violations) {
         for (Model.Violation v : violations) {
-            if ("slots".equals(v.code) || "boots".equals(v.code)) {
+            if ("slots".equals(v.code) || "boots".equals(v.code) || "bootsTier".equals(v.code)) {
                 return true;
             }
         }

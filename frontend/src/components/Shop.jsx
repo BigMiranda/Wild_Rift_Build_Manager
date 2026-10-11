@@ -124,7 +124,7 @@ function ItemDetail({ tile, variant, items, itemsById, buildPayload, purchase, o
   const preview = usePurchasePreview(purchase ? null : buildPayload, variant.id);
   const current = preview && preview.itemId === variant.id ? preview : null;
   // Over the item limit the purchase is allowed (and left out of the calculation); other rules block it.
-  const blocked = current && !current.ignored ? current.violations ?? [] : [];
+  const blocked = current ? (current.violations ?? []).filter((v) => !current.ignored || v.code === 'bootsTier') : [];
 
   return (
     <>
@@ -219,7 +219,7 @@ function ItemDetail({ tile, variant, items, itemsById, buildPayload, purchase, o
           <h4>{t('shop.preview')}</h4>
           {!buildPayload && <small>{t('shop.previewHint')}</small>}
           {buildPayload && !current && <small>{t('shop.calculating')}</small>}
-          {current?.ignored && <p className="ignored-note">⊘ {t('shop.wouldBeIgnored')}</p>}
+          {current?.ignored && !blocked.length && <p className="ignored-note">⊘ {t('shop.wouldBeIgnored')}</p>}
           {blocked.length > 0 && (
             <div className="violation">
               {blocked.map((v, i) => <p key={i}>⛔ {violationText(v)}</p>)}

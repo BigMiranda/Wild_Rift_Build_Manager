@@ -721,6 +721,19 @@ class TimelineEngineTest {
         // As in the game's shop with Passos de Mercúrio (1200): the 1000 boots cost 160, the 1200 ones 360.
         TimelineResult back = new TimelineEngine(ref).run(input(List.of(22L, 21L), List.of(false, false)));
         assertEquals(160, back.steps.get(1).paidCost);
+        // Boots of another tier cannot be bought over them: left out, the old boots stay.
+        boots(23, "Mobilização Blindada", 2200, ref.items.get(22L), StatLine.flat(ARMOR, 30));
+        boots(24, "Lucidez Escarlate", 2000, ref.items.get(21L), StatLine.flat(Stats.ABILITY_HASTE, 25));
+        TimelineResult up = new TimelineEngine(ref).run(input(List.of(22L, 24L), List.of(false, false)));
+        assertEquals(1, up.steps.size());
+        assertEquals("bootsTier", up.ignored.get(0).violations.get(0).code);
+        TimelineResult down = new TimelineEngine(ref).run(input(List.of(23L, 21L), List.of(false, false)));
+        assertEquals("bootsTier", down.ignored.get(0).violations.get(0).code);
+        assertEquals(List.of("Mobilização Blindada"), down.ignored.get(0).inventory);
+        // The upgrade of the same line is still an upgrade, not a swap.
+        TimelineResult upgrade = new TimelineEngine(ref).run(input(List.of(22L, 23L), List.of(false, false)));
+        assertEquals(null, upgrade.steps.get(1).swappedOut);
+        assertEquals(1000, upgrade.steps.get(1).paidCost);
     }
 
     @Test
