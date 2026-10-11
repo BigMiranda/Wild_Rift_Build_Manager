@@ -60,8 +60,11 @@ function EffectiveSheet({ total }) {
   if (!held.length) return null;
   const v = (s) => total[s] ?? 0;
   const rows = held.map((s) => ({ key: s, stat: s, label: statLabel(s), value: statValue(s, v(s)) }));
-  if (v('Shield') + v('Heal') > 0) {
-    rows.unshift({ key: 'eff', stat: 'Max Health', label: t('sheet.effHealth'), value: n0(v('Max Health') + v('Shield') + v('Heal')), strong: true });
+  const eff = v('Max Health') + v('Shield') + v('Heal');
+  if (v('Magic Shield') > 0) rows.unshift({ key: 'effM', stat: 'Magic Shield', label: t('sheet.effHealthMagic'), value: n0(eff + v('Magic Shield')) });
+  if (v('Physical Shield') > 0) rows.unshift({ key: 'effP', stat: 'Physical Shield', label: t('sheet.effHealthPhysical'), value: n0(eff + v('Physical Shield')) });
+  if (eff > v('Max Health') || v('Magic Shield') + v('Physical Shield') > 0) {
+    rows.unshift({ key: 'eff', stat: 'Max Health', label: t('sheet.effHealth'), value: n0(eff), strong: true });
   }
   if (v('Ultimate Haste') > 0) rows.push({ key: 'ult', stat: 'Ability Haste', label: t('sheet.ultHaste'), value: n0(v('Ability Haste') + v('Ultimate Haste')) });
   if (v('Basic Ability Haste') > 0) rows.push({ key: 'basic', stat: 'Ability Haste', label: t('sheet.basicHaste'), value: n0(v('Ability Haste') + v('Basic Ability Haste')) });

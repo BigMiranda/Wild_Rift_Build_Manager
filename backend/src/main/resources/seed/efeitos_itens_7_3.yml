@@ -17,6 +17,7 @@
 #
 # Status efetivos (precos_status.yml): não mudam a Vida máxima nem a Aceleração mostradas, têm preço próprio:
 #   Escudo / Cura                vida extra temporária numa luta (um acionamento): preço da Vida
+#   Escudo Mágico / Físico       só absorve aquele tipo de dano: metade do preço da Vida (numa luta de dano misto)
 #   Escudo / Cura em Aliados     o mesmo dado a aliados (opção "aliados"): preço da Vida
 #   Aceleração da Ultimate       soma-se à Aceleração de Habilidade só na ultimate (medido: Ornn nível 15, ult 70s;
 #                                10 AH + 10 da ult = 20 AH = 58,3s): 1/4 do preço da AH (1 de 4 habilidades)
@@ -142,15 +143,15 @@ itens:
       condicional: true
       nota: "escudo só contra Dano Mágico"
       linhas:
-      - {tipo: Escudo, valor: 50, valor_nv15: 150}
-      - {tipo: Escudo, ratio: 0.14, ref: Vida Máxima, escopo: total}
+      - {tipo: Escudo Mágico, valor: 50, valor_nv15: 150}
+      - {tipo: Escudo Mágico, ratio: 0.14, ref: Vida Máxima, escopo: total}
   Mandíbula de Malmortius:
     Salva-Vidas:
       passiva: Salva-Vidas
       condicional: true
       nota: "escudo só contra Dano Mágico, abaixo de 35% de Vida"
       linhas:
-      - {tipo: Escudo, valor: 220, valor_nv15: 530}
+      - {tipo: Escudo Mágico, valor: 220, valor_nv15: 530}
       - {tipo: "% Vampirismo Universal", valor: 10}
   Sedenta por Sangue:
     Ícor-escudo:
@@ -177,19 +178,19 @@ itens:
       passiva: Persistência Noxiana
       condicional: true
       opcao: {nome: Acionamentos por luta, min: 0, max: 5, padrao: 1}
-      nota: "escudo mágico; 12s de recarga"
+      nota: "escudo só contra Dano Mágico; 12s de recarga"
       linhas:
-      - {tipo: Escudo, valor: 0, valor_por_opcao: 20, valor_por_opcao_nv15: 140}
-      - {tipo: Escudo, ratio: 0, ratio_por_opcao: 0.05, ref: Vida Máxima, escopo: total}
+      - {tipo: Escudo Mágico, valor: 0, valor_por_opcao: 20, valor_por_opcao_nv15: 140}
+      - {tipo: Escudo Mágico, ratio: 0, ratio_por_opcao: 0.05, ref: Vida Máxima, escopo: total}
   Mobilização Blindada:
     Tolerância Noxiana:
       passiva: Tolerância Noxiana
       condicional: true
       opcao: {nome: Acionamentos por luta, min: 0, max: 5, padrao: 1}
-      nota: "escudo físico; 12s de recarga"
+      nota: "escudo só contra Dano Físico; 12s de recarga"
       linhas:
-      - {tipo: Escudo, valor: 0, valor_por_opcao: 20, valor_por_opcao_nv15: 140}
-      - {tipo: Escudo, ratio: 0, ratio_por_opcao: 0.05, ref: Vida Máxima, escopo: total}
+      - {tipo: Escudo Físico, valor: 0, valor_por_opcao: 20, valor_por_opcao_nv15: 140}
+      - {tipo: Escudo Físico, ratio: 0, ratio_por_opcao: 0.05, ref: Vida Máxima, escopo: total}
 
   # ------------------------------------------------------------------ Curas
   Manto da Meia-noite:
@@ -232,6 +233,8 @@ itens:
       passiva: Abençoado
       linhas:
       - {tipo: Escudo, ratio: 0.3, ref: Escudo, escopo: total}
+      - {tipo: Escudo Mágico, ratio: 0.3, ref: Escudo Mágico, escopo: total}
+      - {tipo: Escudo Físico, ratio: 0.3, ref: Escudo Físico, escopo: total}
       - {tipo: Cura, ratio: 0.3, ref: Cura, escopo: total}
   Anjo Guardião:
     Ressurreição:
@@ -380,6 +383,8 @@ itens:
       nota: "abaixo de 50% de Vida: +12% de cura e escudo recebidos (o dano a mais fica para o simulador)"
       linhas:
       - {tipo: Escudo, ratio: 0.12, ref: Escudo, escopo: total}
+      - {tipo: Escudo Mágico, ratio: 0.12, ref: Escudo Mágico, escopo: total}
+      - {tipo: Escudo Físico, ratio: 0.12, ref: Escudo Físico, escopo: total}
       - {tipo: Cura, ratio: 0.12, ref: Cura, escopo: total}
   Criafendas:
     Corrupção do Vazio:

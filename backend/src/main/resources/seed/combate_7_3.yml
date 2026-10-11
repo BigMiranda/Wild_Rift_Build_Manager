@@ -135,3 +135,50 @@ feiticos:
   Exaustão: {reduz_dano_causado: 0.40, duracao: 2.5}
   Barreira: {escudo: 120, escudo_nv15: 560}
   Curar: {cura: 110, cura_nv15: 400}
+
+# Status da build que só valem depois de um tempo ou de acertos na luta: até lá são descontados (a build conta com eles
+# ligados no simulador, mesmo com o condicional da compra / do campeão desligado). Chave: item, runa ou efeito de
+# campeão; `passiva` limita às linhas daquela passiva do item. Condições (todas precisam valer):
+#   segundos          a partir deste tempo de luta (Duplaguarda: 1 acúmulo por segundo, 5 acúmulos)
+#   acertos           ataques / habilidades que o campeão acertou em Campeões
+#   acertos_sofridos  habilidades de Campeões que ele sofreu
+# O momento de ativação pode ser fixado por campeão na tela do confronto.
+ativacao:
+  Duplaguarda de Amaranto: {passiva: Tolerância, segundos: 5}
+  Força da Natureza: {passiva: Absorção, acertos_sofridos: 4}
+  Ritmo Fatal: {acertos: 6}
+  Conquistador: {acertos: 6}
+  Hemorragia: {acertos: 5, segundos: 3}   # Darius: 5 acúmulos, no mínimo ~3s
+
+# Mecânicas de campeões na luta.
+#   fragil     habilidades `aplica` deixam o alvo Frágil por 3s; a próxima habilidade que imobiliza (de qualquer aliado)
+#              quebra o Frágil: `vida_max_alvo` (até `vida_max_alvo_nv15`, pelo nível de quem aplicou) como Dano Mágico
+#   acumulos   acúmulos no alvo (Hemorragia do Darius): ataques e as habilidades de `habilidades` aplicam 1 (todos com o
+#              efeito `cheio_com` ativo); cada acúmulo causa `por_s` + `dda_bonus_por_s` x DdA adicional por segundo
+#              (`dano_tipo`) por `duracao` s; `habilidade_por_acumulo`: dano a mais da habilidade por acúmulo no alvo
+#   habilidades.<slot>  habilidade que chega depois de conjurada: `golpes` [{em: segundos após conjurar, imobiliza,
+#              fragil}], cada um com o dano da habilidade; `abre_luta`: como primeira ação da luta, o contato (ataques,
+#              outras habilidades, efeitos ao contato e em combate) só começa no 1º golpe
+campeoes:
+  Ornn:
+    fragil: {aplica: ["2", "R"], vida_max_alvo: 0.07, vida_max_alvo_nv15: 0.22}
+    habilidades:
+      # Chamado do Deus da Forja: o elemental leva ~3s até o alvo (1º golpe: dano + Frágil); a reconjuração (cabeçada)
+      # o devolve logo depois e arremessa ao ar (quebra o Frágil do 1º golpe, dano e Frágil de novo). Como primeira
+      # ação da luta, ninguém entra em contato antes de o elemental chegar.
+      R:
+        abre_luta: true
+        golpes:
+        - {em: 3.0, fragil: true}
+        - {em: 3.5, imobiliza: true, fragil: true}
+  Darius:
+    acumulos:
+      nome: Hemorragia
+      por_s: 3.6
+      dda_bonus_por_s: 0.08
+      dano_tipo: fisico
+      duracao: 5
+      max: 5
+      habilidades: ["1", "R"]
+      cheio_com: Hemorragia
+      habilidade_por_acumulo: {R: 0.20}

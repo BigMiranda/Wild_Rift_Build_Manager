@@ -105,6 +105,107 @@ class CombatSimulatorTest {
     }
 
     @Test
+    void ornnBreathReadsTheTargetsHealthNotTheMinionsDamage() {
+        List<AbilityParser.Ability> ornn = AbilityParser.abilities(champions.find("ORNN").orElseThrow());
+        AbilityParser.Damage w = ornn.get(1).damage;
+        assertEquals("magico", w.type);
+        assertEquals(0.12 * 3000, w.at(3, s -> 0.0, s -> 0.0, 3000), EPS);   // 10/11/12/13% of the target's health
+        assertTrue(ornn.get(1).brittle);
+        assertTrue(ornn.get(2).immobilizes);   // Investida Calcinante: knock-up
+        assertTrue(ornn.get(3).immobilizes && ornn.get(3).brittle);
+    }
+
+    @Test
+    void delayedStatusCountsOnlyAfterItsTime() {
+        Fighter a = fighter("A", 3000, 0, 0, 100, 1);
+        Fighter b = fighter("B", 100000, 100, 0, 0, 0);
+        b.total.put(Stats.ARMOR, 200.0);   // 100 of them from Duplaguarda's Tolerância, only from 5s on
+        CombatSimulator.Delay d = new CombatSimulator.Delay();
+        d.source = "Duplaguarda de Amaranto";
+        d.amounts.put(Stats.ARMOR, 100.0);
+        d.seconds = 5.0;
+        b.delays.add(d);
+        Result r = new CombatSimulator(catalog).run(List.of(a), List.of(b), 9.99);
+        // attacks at 0..4 s at 100 armor, 5..9 s at 200 armor
+        assertEquals(5 * 50 + 5 * 100 / 3.0, r.fighters.get(1).taken, 1e-6);
+        assertTrue(r.events.stream().anyMatch(e -> e.startsWith("5,0s") && e.contains("Duplaguarda de Amaranto ativo")));
+    }
+
+    @Test
+    void magicShieldOnlyAbsorbsMagicDamage() {
+        Fighter a = fighter("A", 3000, 0, 0, 100, 1);
+        Fighter b = fighter("B", 100000, 0, 0, 0, 0);
+        b.magicShieldSources.put("Rookern Lamúrico", 500.0);
+        Result r = new CombatSimulator(catalog).run(List.of(a), List.of(b), 5);
+        assertEquals(0, r.fighters.get(1).shieldAbsorbed, EPS);   // physical attacks go through
+    }
+
+    @Test
+    void brittleBreaksOnTheNextImmobilize() {
+        Fighter ornn = fighter("Ornn", 3000, 0, 0, 0, 0);
+        ornn.champion = "Ornn";
+        ornn.abilities = AbilityParser.abilities(champions.find("ORNN").orElseThrow());
+        ornn.ranks = new int[] {0, 1, 1, 0};
+        ornn.order = List.of("2", "3");
+        ornn.mechanics.putAll(catalog.champion("Ornn"));
+        Fighter b = fighter("B", 10000, 0, 0, 0, 0);
+        Result r = new CombatSimulator(catalog).run(List.of(ornn), List.of(b), 1);
+        Ledger brittle = ledger(r, 0, "Frágil");
+        assertNotNull(brittle, "the charge breaks the Brittle of the breath");
+        assertEquals(0.22 * 10000, brittle.damage, 1e-6);   // level 15
+    }
+
+    @Test
+    void ornnOpeningWithTheUltimateDelaysTheContact() {
+        Fighter ornn = fighter("Ornn", 5000, 0, 0, 0, 0);
+        ornn.champion = "Ornn";
+        ornn.abilities = AbilityParser.abilities(champions.find("ORNN").orElseThrow());
+        ornn.ranks = new int[] {0, 0, 1, 1};
+        ornn.order = List.of("R", "3");
+        ornn.mechanics.putAll(catalog.champion("Ornn"));
+        Fighter darius = fighter("Darius", 10000, 0, 0, 100, 1);
+        darius.champion = "Darius";
+        darius.mechanics.putAll(catalog.champion("Darius"));
+        CombatSimulator.Delay might = new CombatSimulator.Delay();
+        might.source = "Hemorragia";
+        might.amounts.put(Stats.ATTACK_DAMAGE, 32.0);
+        might.hits = 5;
+        might.seconds = 3.0;
+        darius.delays.add(might);
+        darius.total.put(Stats.ATTACK_DAMAGE, 132.0);
+        Result r = new CombatSimulator(catalog).run(List.of(ornn), List.of(darius), 3.4);
+        assertEquals(3.0, r.contact, EPS);
+        // Darius only attacks from 3s on: at 3.0s (and no bleed tick yet)
+        assertEquals(100, r.fighters.get(0).taken, 1e-6);
+        // the elemental's first pass (damage + Brittle) landed, the recast (3.5s) did not yet
+        assertNull(ledger(r, 0, "Frágil"));
+        Result full = new CombatSimulator(catalog).run(List.of(ornn), List.of(darius), 4);
+        // the recast's knock-up breaks the first pass' Brittle, then the charge breaks the recast's one
+        assertEquals(2 * 0.22 * 10000, ledger(full, 0, "Frágil").damage, 1e-6);
+        // Noxian Might needs 3s in contact: not before 6s
+        assertTrue(full.events.stream().noneMatch(e -> e.contains("Hemorragia ativo")));
+    }
+
+    @Test
+    void dariusBleedStacksAndMightComesAfterFiveHits() {
+        Fighter darius = fighter("Darius", 3000, 0, 0, 100, 2);
+        darius.champion = "Darius";
+        darius.mechanics.putAll(catalog.champion("Darius"));
+        darius.total.put(Stats.ATTACK_DAMAGE, 132.0);   // +32 from Hemorragia (Noxian Might)
+        CombatSimulator.Delay d = new CombatSimulator.Delay();
+        d.source = "Hemorragia";
+        d.amounts.put(Stats.ATTACK_DAMAGE, 32.0);
+        d.hits = 5;
+        d.seconds = 3.0;
+        darius.delays.add(d);
+        Fighter b = fighter("B", 100000, 0, 0, 0, 0);
+        Result r = new CombatSimulator(catalog).run(List.of(darius), List.of(b), 6);
+        assertTrue(ledger(r, 0, "Hemorragia").damage > 0);
+        // 5th hit at 2s, but the Might waits for 3s
+        assertTrue(r.events.stream().anyMatch(e -> e.startsWith("3,0s") && e.contains("Hemorragia ativo")), r.events.toString());
+    }
+
+    @Test
     void frozenHeartSlowsTheEnemysAttacks() {
         Fighter a = fighter("A", 3000, 0, 0, 100, 1);
         Fighter b = fighter("B", 100000, 0, 0, 0, 0);

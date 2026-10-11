@@ -32,10 +32,14 @@
 # Não mudam a Vida máxima nem a Aceleração mostradas; valem pelo que equivalem numa luta.
 #   Aceleração da Ultimate: soma-se à AH só na ultimate (medido no jogo), 1 de 4 habilidades -> 1/4 do preço da AH.
 #   Escudo / Cura (em você ou em aliados): vida extra temporária, um acionamento por luta -> preço da Vida.
+#   Escudo Mágico / Físico: só um tipo de dano -> metade do preço da Vida.
 #   Estase: segundos invulnerável em que as recargas correm; numa luta de ~20s, 1s = 5% do tempo ≈ 5 de AH.
 "Ultimate Haste":       {loja: "Aceleração da Ultimate", alias: "Ability Haste", factor: 0.25, type: Magic}
 "Basic Ability Haste":  {loja: "Aceleração de Habilidade Básica", alias: "Ability Haste", factor: 0.75, type: Magic}
 "Shield":               {loja: "Escudo", alias: "Max Health", type: Defence}
+# Escudo que só absorve Dano Mágico (Rookern, Malmortius, Esmagadores) ou só Dano Físico (Mobilização Blindada).
+"Magic Shield":         {loja: "Escudo Mágico", alias: "Max Health", factor: 0.5, type: Defence}
+"Physical Shield":      {loja: "Escudo Físico", alias: "Max Health", factor: 0.5, type: Defence}
 "Heal":                 {loja: "Cura", alias: "Max Health", type: Defence}
 "Ally Shield":          {loja: "Escudo em Aliados", alias: "Max Health", type: Defence}
 "Ally Heal":            {loja: "Cura em Aliados", alias: "Max Health", type: Defence}

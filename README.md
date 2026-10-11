@@ -301,6 +301,26 @@ item) e seu **alvo** (primeiro vivo, menor % de Vida ou um inimigo).
 - **Escudos** da build estão de pé no começo e as **curas** voltam ao longo de 5s enquanto o campeão está ferido;
   escudos e curas em aliados vão para os aliados. **Estase** aciona uma vez abaixo de 30% de Vida (ou num golpe
   letal). Incendiar e Exaustão no começo, Barreira e Curar abaixo de 35% de Vida.
+- **Status que demoram a ativar** (`ativacao` em `combate_7_3.yml`): ficam de fora até a condição valer — Duplaguarda
+  de Amaranto só depois de 5s em combate, Hemorragia do Darius (Poder de Noxus) com 5 acertos e no mínimo 3s, Força da
+  Natureza com 4 habilidades sofridas, Ritmo Fatal e Conquistador com 6 acertos. No simulador eles contam como ligados
+  na build (mesmo com o condicional desligado), e depois da primeira simulação cada campeão mostra esses status com um
+  campo para **fixar o segundo em que ativam**.
+- **Mecânicas de campeões**: o **Frágil do Ornn** (Fôlego do Fole e Chamado do Deus da Forja deixam o alvo Frágil por
+  3s; a próxima habilidade que imobiliza, dele ou de um aliado, quebra o Frágil com 7–22% da Vida máxima do alvo como
+  Dano Mágico, pelo nível do Ornn) e a **Hemorragia do Darius** (acúmulos de sangramento no alvo, todos de uma vez com
+  o Poder de Noxus, e +20% de dano da ultimate por acúmulo). Habilidades que imobilizam são reconhecidas pelo texto
+  (atordoar, arremessar ao ar, enraizar, puxar, suprimir, encantar, provocar, amedrontar).
+- **Abertura com a ultimate do Ornn**: o elemental leva ~3s até o alvo (1º golpe: dano + Frágil) e a reconjuração
+  (cabeçada) o devolve logo depois, aos 3,5s, arremessando ao ar: quebra o Frágil do 1º golpe e aplica outro, que a
+  próxima habilidade que imobiliza (a Investida Calcinante, por exemplo) quebra de novo. Como primeira ação da luta,
+  ninguém entra em contato antes de o elemental chegar: sem ataques, sem as outras habilidades, sem efeitos ao contato
+  (o sangramento do Darius) nem em combate; os tempos em combate (5s da Duplaguarda, 3s do Darius) contam a partir
+  do contato. Configurável por habilidade em `campeoes.<campeão>.habilidades` (`golpes`, `abre_luta`).
+- **Tipos de escudo**: escudos só contra Dano Mágico (Rookern Lamúrico, Mandíbula de Malmortius, Esmagadores
+  Acorrentados, passiva do Kassadin) e só contra Dano Físico (Mobilização Blindada) absorvem apenas aquele dano; no
+  valor em ouro valem metade da Vida (status Escudo Mágico / Escudo Físico), e a ficha mostra a Vida efetiva contra
+  cada tipo de dano.
 - **Efeitos de combate** dos itens em [`seed/combate_7_3.yml`](backend/src/main/resources/seed/combate_7_3.yml):
   Feridas Dolorosas (cortam curas e roubo de vida), corte de escudo (Presa da Serpente, Tridente da Oceânide: cortam
   os escudos que o alvo tem e os que receber), redução de resistência em % (Cutelo Negro, Maldição Sanguinária),
@@ -314,7 +334,8 @@ item) e seu **alvo** (primeiro vivo, menor % de Vida ou um inimigo).
   resistência fixa aparece nessa comparação.
 
 Limites desta versão: sem posições, alcance, controle de grupo ou custo de mana; habilidades em área acertam só o
-alvo; dano baseado na Vida do alvo dentro das habilidades (execuções, % da Vida perdida) não é lido.
+alvo; dano por % da Vida **perdida** ou atual do alvo (execuções) não é lido (o de % da Vida máxima, como o Fôlego
+do Fole, é); o dano de uma habilidade é o primeiro do texto (o Dizimar do Darius conta o cabo, não a lâmina).
 
 ## Aproximações assumidas
 

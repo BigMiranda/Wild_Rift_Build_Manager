@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 9;
+    static final int VERSION = 10;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -88,6 +88,9 @@ public class SchemaManager {
         }
         if (version < 9 && tableExists("build") && !columnExists("build", "item_setup")) {
             jdbc.execute("ALTER TABLE build ADD COLUMN item_setup TEXT");
+        }
+        if (version < 10 && tableExists("stat_def")) {
+            catalogReimportNeeded = true;   // v10: shields only against magic / physical damage (new stat prices)
         }
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {

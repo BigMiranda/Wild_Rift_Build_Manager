@@ -38,7 +38,7 @@ export const SHEET_STATS = [
  * Effective stats of modeled effects (items, runes, champion): what shields, heals, stasis and ability haste of one
  * ability are worth in a fight. They never change the max health or the ability haste shown.
  */
-export const EFFECTIVE_STATS = ['Shield', 'Heal', 'Ally Shield', 'Ally Heal', 'Ultimate Haste', 'Basic Ability Haste', 'Stasis'];
+export const EFFECTIVE_STATS = ['Shield', 'Magic Shield', 'Physical Shield', 'Heal', 'Ally Shield', 'Ally Heal', 'Ultimate Haste', 'Basic Ability Haste', 'Stasis'];
 
 /** Stats whose value is a percentage. */
 export const PERCENT_STATS = new Set(['Physical Reduction', 'Magic Reduction', '% Attack Speed', '% Critical Rate', '% Armor Penetration', '% Magic Penetration',

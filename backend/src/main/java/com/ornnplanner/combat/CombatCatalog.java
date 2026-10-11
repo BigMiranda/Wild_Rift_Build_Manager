@@ -17,6 +17,8 @@ public class CombatCatalog {
 
     private final Map<String, List<Map<String, Object>>> items = new LinkedHashMap<>();
     private final Map<String, Map<String, Object>> spells = new LinkedHashMap<>();
+    private final Map<String, Map<String, Object>> activations = new LinkedHashMap<>();
+    private final Map<String, Map<String, Object>> champions = new LinkedHashMap<>();
 
     @SuppressWarnings("unchecked")
     public CombatCatalog(@Value("${planner.seed.combat:classpath:seed/combate_7_3.yml}") Resource file) {
@@ -24,6 +26,8 @@ public class CombatCatalog {
             Map<String, Object> root = new Yaml().load(in);
             items.putAll((Map<String, List<Map<String, Object>>>) root.get("itens"));
             spells.putAll((Map<String, Map<String, Object>>) root.get("feiticos"));
+            activations.putAll((Map<String, Map<String, Object>>) root.getOrDefault("ativacao", Map.of()));
+            champions.putAll((Map<String, Map<String, Object>>) root.getOrDefault("campeoes", Map.of()));
         } catch (IOException e) {
             throw new IllegalStateException("Cannot read seed file " + file, e);
         }
@@ -35,6 +39,20 @@ public class CombatCatalog {
 
     public Map<String, Object> spell(String name) {
         return spells.get(name);
+    }
+
+    /** When a status of the build (item, rune or champion effect) starts to count in a fight; null = from the start. */
+    public Map<String, Object> activation(String source) {
+        return activations.get(source);
+    }
+
+    public Map<String, Map<String, Object>> activations() {
+        return activations;
+    }
+
+    /** Fight mechanics of a champion (by name), or an empty map. */
+    public Map<String, Object> champion(String name) {
+        return champions.getOrDefault(name, Map.of());
     }
 
     public Map<String, List<Map<String, Object>>> items() {

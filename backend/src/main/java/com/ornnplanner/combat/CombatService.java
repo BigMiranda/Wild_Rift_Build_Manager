@@ -43,6 +43,8 @@ public class CombatService {
         public Double minute;
         public List<String> order;
         public String target;
+        /** Seconds of the fight at which a delayed status turns on (source -> s), instead of its own conditions. */
+        public Map<String, Double> activations;
     }
 
     public static class Request {
@@ -65,6 +67,8 @@ public class CombatService {
         public List<Map<String, Object>> abilities = new ArrayList<>();
         public double attackSpeed;
         public Map<String, Double> stats = new LinkedHashMap<>();
+        /** Statuses that only count after some time / hits, with their conditions. */
+        public List<Map<String, Object>> delays = new ArrayList<>();
     }
 
     /** What an item did in the fight, and how the fight goes without it. */
@@ -248,9 +252,54 @@ public class CombatService {
         return r;
     }
 
+    /**
+     * The build with the delayed statuses switched on (purchases, runes, champion effects): the fight decides when they
+     * count.
+     */
+    private Build withDelayedOn(Build original) {
+        Build b = JSON.convertValue(original, Build.class);
+        java.util.Set<String> names = catalog.activations().keySet();
+        if (b.steps != null) {
+            for (BuildRepository.Step s : b.steps) {
+                if (!s.moment() && s.itemId != null) {
+                    String name = itemName(s.itemId);
+                    if (name != null && names.contains(name)) {
+                        s.includeConditional = true;
+                    }
+                }
+            }
+        }
+        for (String n : names) {
+            if (b.championSetup != null) {
+                b.championSetup.conditional.put(n, true);
+            }
+            if (b.runePage != null) {
+                b.runePage.conditional.put(n, true);
+            }
+        }
+        if (b.championSetup == null) {
+            b.championSetup = new BuildRepository.ChampionSetup();
+            for (String n : names) {
+                b.championSetup.conditional.put(n, true);
+            }
+        }
+        return b;
+    }
+
+    private String itemName(long id) {
+        if (!itemNames.containsKey(id)) {
+            planner.itemViews().forEach(i -> itemNames.put(i.id, i.name));
+        }
+        return itemNames.get(id);
+    }
+
+    private final Map<Long, String> itemNames = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper()
+            .configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
     @SuppressWarnings("unchecked")
     private Fighter fighter(Resolved r, List<Long> items) {
-        Build b = r.build;
+        Build b = withDelayedOn(r.build);
         MinutePoint p = planner.snapshot(b, items, r.level, r.minute);
         Fighter f = new Fighter();
         Map<String, Object> champ = champions.find(b.unitCode).orElse(null);
@@ -274,7 +323,30 @@ public class CombatService {
             for (PassivePart part : c.passiveParts) {
                 source(f, c.itemName, part.stat, part.amount, healInFight);
             }
+            Map<String, Object> act = catalog.activation(c.itemName);
+            if (act != null) {
+                CombatSimulator.Delay d = new CombatSimulator.Delay();
+                d.source = c.itemName;
+                Object passive = act.get("passiva");
+                for (PassivePart part : c.passiveParts) {
+                    if (passive == null || passive.equals(part.passive)) {
+                        d.amounts.merge(part.stat, part.amount, Double::sum);
+                    }
+                }
+                d.seconds = act.get("segundos") == null ? null : ((Number) act.get("segundos")).doubleValue();
+                d.hits = act.get("acertos") == null ? null : ((Number) act.get("acertos")).intValue();
+                d.hitsTaken = act.get("acertos_sofridos") == null ? null : ((Number) act.get("acertos_sofridos")).intValue();
+                Double fixed = r.c.activations == null ? null : r.c.activations.get(c.itemName);
+                if (fixed != null) {
+                    d.seconds = Math.max(0, fixed);
+                    d.fixed = true;
+                }
+                if (!d.amounts.isEmpty()) {
+                    f.delays.add(d);
+                }
+            }
         }
+        f.mechanics.putAll(catalog.champion(f.champion));
         if (champ != null) {
             f.abilities = AbilityParser.abilities(champ);
             com.ornnplanner.repo.BuildRepository.ChampionSetup setup = b.championSetup;
@@ -308,6 +380,12 @@ public class CombatService {
         switch (stat) {
             case "Shield":
                 f.shieldSources.merge(name, v, Double::sum);
+                break;
+            case "Magic Shield":
+                f.magicShieldSources.merge(name, v, Double::sum);
+                break;
+            case "Physical Shield":
+                f.physicalShieldSources.merge(name, v, Double::sum);
                 break;
             case "Heal":
                 f.healSources.merge(name, v, Double::sum);
@@ -353,6 +431,7 @@ public class CombatService {
             m.put("rank", rank);
             if (a.damage != null && rank > 0) {
                 m.put("damage", a.damage.at(rank, f.total, f.base));
+                m.put("targetBased", a.damage.targetBased());
                 m.put("type", a.damage.type);
                 m.put("source", a.damage.source);
             }
@@ -363,9 +442,20 @@ public class CombatService {
             }
             i.abilities.add(m);
         }
+        for (CombatSimulator.Delay d : f.delays) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("source", d.source);
+            m.put("seconds", d.seconds);
+            m.put("hits", d.hits);
+            m.put("hitsTaken", d.hitsTaken);
+            m.put("fixed", d.fixed);
+            m.put("amounts", d.amounts);
+            i.delays.add(m);
+        }
         for (String s : List.of("Max Health", "Armor", "Magic Resistance", "Attack Damage", "Ability Power",
                 "% Critical Rate", "% Attack Speed", "Armor Penetration", "% Armor Penetration", "Magic Penetration",
-                "% Magic Penetration", "% Lifesteal", "% Omnivamp", "Ability Haste", "Shield", "Heal", "Stasis")) {
+                "% Magic Penetration", "% Lifesteal", "% Omnivamp", "Ability Haste", "Shield", "Magic Shield",
+                "Physical Shield", "Heal", "Stasis")) {
             double v = f.total.getOrDefault(s, 0.0);
             if (Math.abs(v) > 1e-9) {
                 i.stats.put(s, v);

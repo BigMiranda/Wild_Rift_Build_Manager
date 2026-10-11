@@ -26,6 +26,20 @@ import java.util.Map;
  * stasis triggers once below 30% of health (or on a lethal hit). Ignite and Exhaust are used on the target at the
  * start, Barrier and Heal below 35% of health.
  *
+ * <h2>Over the fight</h2>
+ * Statuses that need time or hits (Duplaguarda: 5s in combat; Darius' Hemorragia: 5 hits, ~3s) are left out until
+ * they activate (or until the time set for them). Shields only against magic or physical damage absorb only that
+ * damage. Ornn's Brittle: his abilities that apply it leave the target Brittle for 3s and the next immobilizing ability
+ * of his side breaks it for 7–22% (by his level) of the target's max health as magic damage. Darius' bleed stacks on
+ * the target (all 5 at once with Noxian Might) and raises his ultimate's damage by 20% per stack.
+ *
+ * <h2>Abilities that take time (Ornn's ultimate)</h2>
+ * An ability with `golpes` in the champion's mechanics lands in hits after its cast (Ornn's elemental reaches the
+ * target ~3s later, then the recast headbutt knocks it up: it breaks the Brittle of the first pass and applies it
+ * again). Used as the first action of the fight (`abre_luta`), nobody is in contact until its first hit lands: no
+ * attacks, no other abilities, on-hit or in-combat effects before it; times in combat (Duplaguarda's 5s, Darius'
+ * 3s...) count from that moment.
+ *
  * <h2>Ledger</h2>
  * Every effect is credited to the item (or ability, spell) behind it: damage dealt, damage added by resistance
  * reduction and by amplification, damage prevented, enemy shields and heals cut, own shields absorbed / lost, heals
@@ -81,6 +95,13 @@ public class CombatSimulator {
         public List<String> spells = new ArrayList<>();
         /** Where the effective stats come from (item / rune / champion effect name -> amount). */
         public Map<String, Double> shieldSources = new LinkedHashMap<>();
+        /** Shields that absorb only magic / only physical damage. */
+        public Map<String, Double> magicShieldSources = new LinkedHashMap<>();
+        public Map<String, Double> physicalShieldSources = new LinkedHashMap<>();
+        /** Statuses of the build that only count after some time or hits in the fight. */
+        public List<Delay> delays = new ArrayList<>();
+        /** Fight mechanics of the champion (combate_<patch>.yml, campeoes). */
+        public Map<String, Object> mechanics = new LinkedHashMap<>();
         public Map<String, Double> healSources = new LinkedHashMap<>();
         public Map<String, Double> allyShieldSources = new LinkedHashMap<>();
         public Map<String, Double> allyHealSources = new LinkedHashMap<>();
@@ -93,6 +114,17 @@ public class CombatSimulator {
         double bonus(String s) {
             return stat(s) - base.getOrDefault(s, 0.0);
         }
+    }
+
+    /** Statuses (stat -> amount) of a source that only count once its conditions hold. */
+    public static class Delay {
+        public String source;
+        public Map<String, Double> amounts = new LinkedHashMap<>();
+        public Double seconds;
+        public Integer hits;
+        public Integer hitsTaken;
+        /** Seconds set by the user: then only the time counts. */
+        public boolean fixed;
     }
 
     /** What one source (item, ability, spell) of a fighter did in the fight. */
@@ -143,6 +175,19 @@ public class CombatSimulator {
         /** Health (+ shield) of every fighter every half second. */
         public List<double[]> series = new ArrayList<>();
         public List<String> events = new ArrayList<>();
+        /** Second the sides got in contact (the landing of an opening ability; 0 without one). */
+        public double contact;
+        public String opener;
+    }
+
+    /** A hit of an ability that lands some time after its cast. */
+    private static final class Pending {
+        State caster;
+        State target;
+        AbilityParser.Ability ability;
+        int rank;
+        Map<String, Object> hit;
+        double at;
     }
 
     /** Runtime state of a fighter. */
@@ -188,8 +233,42 @@ public class CombatSimulator {
         double exhaustUntil = -1;
         List<Burn> burns = new ArrayList<>();
 
+        int hitsDealt;
+        int abilityHitsTaken;
+        /** Busy with a delayed ability until its last hit (Ornn waits for the elemental and the recast). */
+        double busyUntil;
+        boolean[] delayOn;
+        /** Shield left by source key, for any damage / only magic / only physical. */
+        Map<String, Double> shieldMagic = new LinkedHashMap<>();
+        Map<String, Double> shieldPhysical = new LinkedHashMap<>();
+        double brittleUntil = -1;
+        State brittleBy;
+        /** Stacks of this fighter's mechanic (bleed) on each enemy: count and until when. */
+        Map<State, double[]> stacks = new LinkedHashMap<>();
+        double nextStackTick;
+
         State(Fighter f) {
             this.f = f;
+            delayOn = new boolean[f.delays.size()];
+        }
+
+        /** A stat now: the build's total minus what is not active yet. */
+        double stat(String s) {
+            double v = f.stat(s);
+            for (int i = 0; i < delayOn.length; i++) {
+                if (!delayOn[i]) {
+                    v -= f.delays.get(i).amounts.getOrDefault(s, 0.0);
+                }
+            }
+            return v;
+        }
+
+        double base(String s) {
+            return f.base.getOrDefault(s, 0.0);
+        }
+
+        double bonus(String s) {
+            return stat(s) - base(s);
         }
 
         boolean targetable() {
@@ -197,7 +276,19 @@ public class CombatSimulator {
         }
 
         double shieldLeft() {
-            return shield.values().stream().mapToDouble(Double::doubleValue).sum();
+            return sum(shield) + sum(shieldMagic) + sum(shieldPhysical);
+        }
+
+        /** Shields that absorb a damage type: only-that-type ones first, then the general ones. */
+        List<Map<String, Double>> pools(String type) {
+            List<Map<String, Double>> out = new ArrayList<>();
+            if ("magico".equals(type)) {
+                out.add(shieldMagic);
+            } else if ("fisico".equals(type)) {
+                out.add(shieldPhysical);
+            }
+            out.add(shield);
+            return out;
         }
     }
 
@@ -215,6 +306,10 @@ public class CombatSimulator {
     private final Result result = new Result();
     private final CombatCatalog catalog;
     private double now;
+    /** Second the sides get in contact; until then only the opening abilities are cast. */
+    private double contact;
+    private final List<Pending> pending = new ArrayList<>();
+    private final java.util.Set<State> openers = new java.util.HashSet<>();
 
     public CombatSimulator(CombatCatalog catalog) {
         this.catalog = catalog;
@@ -241,6 +336,7 @@ public class CombatSimulator {
             }
             s.r.shieldStart = s.shieldLeft();
         }
+        openingContact();
         double nextSeries = 0;
         for (now = 0; now <= duration + 1e-9; now += DT) {
             if (now >= nextSeries - 1e-9) {
@@ -249,9 +345,15 @@ public class CombatSimulator {
             }
             for (State s : all) {
                 if (!s.dead) {
+                    activate(s);
+                }
+            }
+            for (State s : all) {
+                if (!s.dead) {
                     act(s);
                 }
             }
+            land();
             tickPeriodic();
             int alive0 = alive(0);
             int alive1 = alive(1);
@@ -261,6 +363,7 @@ public class CombatSimulator {
             }
         }
         result.duration = Math.min(now, duration);
+        result.contact = contact;
         record();
         for (State s : all) {
             s.r.health = Math.max(0, s.hp);
@@ -273,14 +376,16 @@ public class CombatSimulator {
 
     private State start(Fighter f) {
         State s = new State(f);
-        s.maxHp = Math.max(1, f.stat(Stats.MAX_HEALTH));
+        s.maxHp = Math.max(1, s.stat(Stats.MAX_HEALTH));
         s.hp = s.maxHp;
         f.shieldSources.forEach((src, v) -> s.shield.merge(key(s, src), v, Double::sum));
+        f.magicShieldSources.forEach((src, v) -> s.shieldMagic.merge(key(s, src), v, Double::sum));
+        f.physicalShieldSources.forEach((src, v) -> s.shieldPhysical.merge(key(s, src), v, Double::sum));
         s.healPool = f.healSources.values().stream().mapToDouble(Double::doubleValue).sum();
         s.healRate = s.healPool / 5;
         s.allyHealPool = f.allyHealSources.values().stream().mapToDouble(Double::doubleValue).sum();
         s.allyHealRate = s.allyHealPool / 5;
-        s.attackTimer = 0;
+        s.attackTimer = DT;   // the first step's countdown brings it to 0: first attack at 0s, then every 1 / AS
         FighterResult r = s.r;
         r.index = f.index;
         r.team = f.team;
@@ -315,6 +420,14 @@ public class CombatSimulator {
         if (target == null) {
             return;
         }
+        if (now < contact - 1e-9) {
+            // Not in contact yet: only the opening ability is cast (at the start), nothing else happens.
+            if (openers.remove(s)) {
+                cast(s, target, s.f.order.stream().filter(x -> golpes(s, x) != null).findFirst().orElseThrow());
+            }
+            s.attackTimer = DT;
+            return;
+        }
         if (!s.startSpells) {
             s.startSpells = true;
             for (String sp : s.f.spells) {
@@ -340,7 +453,7 @@ public class CombatSimulator {
                 }
             }
         }
-        if (s.castLock <= 0) {
+        if (s.castLock <= 0 && now >= s.busyUntil - 1e-9) {
             for (String a : s.f.order) {
                 if (cast(s, target, a)) {
                     s.castLock = CAST_LOCK;
@@ -348,7 +461,7 @@ public class CombatSimulator {
                 }
             }
         }
-        if (s.f.attackSpeed > 0 && s.attackTimer <= 0 && target.targetable()) {
+        if (s.f.attackSpeed > 0 && s.attackTimer <= 1e-9 && target.targetable()) {
             attack(s, target);
             s.attackTimer += 1 / (s.f.attackSpeed * (1 - attackSlow(s)));
         }
@@ -373,13 +486,13 @@ public class CombatSimulator {
         if ("ATIVO".equals(action)) {
             for (ItemEffect e : s.f.effects) {
                 if ("ativo".equals(e.kind()) && now >= s.activeReady) {
-                    double dmg = level(e.p, "dano", s.f.level) + num(e.p, "dda", 0) * s.f.stat(Stats.ATTACK_DAMAGE)
-                            + num(e.p, "dda_base", 0) * s.f.base.getOrDefault(Stats.ATTACK_DAMAGE, 0.0)
-                            + num(e.p, "dda_bonus", 0) * s.f.bonus(Stats.ATTACK_DAMAGE)
-                            + num(e.p, "pdh", 0) * s.f.stat(Stats.ABILITY_POWER)
+                    double dmg = level(e.p, "dano", s.f.level) + num(e.p, "dda", 0) * s.stat(Stats.ATTACK_DAMAGE)
+                            + num(e.p, "dda_base", 0) * s.base(Stats.ATTACK_DAMAGE)
+                            + num(e.p, "dda_bonus", 0) * s.bonus(Stats.ATTACK_DAMAGE)
+                            + num(e.p, "pdh", 0) * s.stat(Stats.ABILITY_POWER)
                             + num(e.p, "vida_max_alvo", 0) * target.maxHp;
                     deal(s, target, dmg, type(e.p), e.item, ITEM, 0);
-                    double heal = num(e.p, "cura_dda", 0) * s.f.stat(Stats.ATTACK_DAMAGE);
+                    double heal = num(e.p, "cura_dda", 0) * s.stat(Stats.ATTACK_DAMAGE);
                     if (heal > 0) {
                         heal(s, heal, Map.of(key(s, e.item), heal));
                     }
@@ -390,20 +503,116 @@ public class CombatSimulator {
             return false;
         }
         int slot = "R".equals(action) ? 3 : "1".equals(action) ? 0 : "2".equals(action) ? 1 : "3".equals(action) ? 2 : -1;
-        if (slot < 0 || slot >= s.f.abilities.size() || s.f.ranks[slot] <= 0 || s.cd[slot] > 0) {
+        if (slot < 0 || slot >= s.f.abilities.size() || s.f.ranks[slot] <= 0 || s.cd[slot] > 1e-9) {
             return false;
         }
         AbilityParser.Ability a = s.f.abilities.get(slot);
         int rank = s.f.ranks[slot];
-        if (a.damage != null) {
-            double dmg = a.damage.at(rank, s.f.total, s.f.base);
-            deal(s, target, dmg, a.damage.type, a.slot + " · " + a.name, ABILITY, 0);
+        List<Map<String, Object>> hits = golpes(s, a.slot);
+        if (hits != null) {
+            // Lands later, hit by hit (each one: damage, immobilize / Brittle as configured).
+            for (Map<String, Object> h : hits) {
+                Pending p = new Pending();
+                p.caster = s;
+                p.target = target;
+                p.ability = a;
+                p.rank = rank;
+                p.hit = h;
+                p.at = now + num(h, "em", 0);
+                pending.add(p);
+                s.busyUntil = Math.max(s.busyUntil, p.at + DT);
+            }
+        } else {
+            if (a.damage != null) {
+                double dmg = a.damage.at(rank, s::stat, s::base, target.maxHp);
+                dmg *= 1 + stackBonus(s, target, a.slot);
+                deal(s, target, dmg, a.damage.type, a.slot + " · " + a.name, ABILITY, 0);
+            }
+            if (a.immobilizes) {
+                breakBrittle(s, target);
+            }
+            applyBrittle(s, target, a.slot);
+            addStacks(s, target, a.slot);
+            onAbility(s, target);
         }
-        onAbility(s, target);
-        double haste = s.f.stat(Stats.ABILITY_HASTE) + s.f.stat(slot == 3 ? "Ultimate Haste" : "Basic Ability Haste");
+        double haste = s.stat(Stats.ABILITY_HASTE) + s.stat(slot == 3 ? "Ultimate Haste" : "Basic Ability Haste");
         double base = a.cooldown[Math.max(0, Math.min(a.cooldown.length, rank) - 1)];
         s.cd[slot] = base / (1 + haste / 100);
         return true;
+    }
+
+    /** Hits of an ability that lands after its cast (champion mechanics `habilidades.<slot>.golpes`), or null. */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> golpes(State s, String slot) {
+        Map<String, Object> abilities = (Map<String, Object>) s.f.mechanics.get("habilidades");
+        Map<String, Object> cfg = abilities == null ? null : (Map<String, Object>) abilities.get(slot);
+        return cfg == null ? null : (List<Map<String, Object>>) cfg.get("golpes");
+    }
+
+    /**
+     * A fighter whose first action is an opening ability (`abre_luta`) starts the fight with it: contact comes when its
+     * first hit lands (the earliest one if several open).
+     */
+    @SuppressWarnings("unchecked")
+    private void openingContact() {
+        contact = 0;
+        for (State s : all) {
+            for (String action : s.f.order) {
+                int slot = "R".equals(action) ? 3 : "1".equals(action) ? 0 : "2".equals(action) ? 1 : "3".equals(action) ? 2 : -1;
+                if (slot < 0 || slot >= s.f.abilities.size() || s.f.ranks[slot] <= 0) {
+                    continue;   // not learned: the next action would be the first one
+                }
+                Map<String, Object> abilities = (Map<String, Object>) s.f.mechanics.get("habilidades");
+                Map<String, Object> cfg = abilities == null ? null : (Map<String, Object>) abilities.get(action);
+                List<Map<String, Object>> hits = golpes(s, action);
+                if (cfg != null && Boolean.TRUE.equals(cfg.get("abre_luta")) && hits != null && !hits.isEmpty()) {
+                    double at = num(hits.get(0), "em", 0);
+                    if (openers.isEmpty() || at < contact) {
+                        contact = at;
+                        result.opener = s.f.name + " · " + action + " (" + s.f.abilities.get(slot).name + ")";
+                    }
+                    openers.add(s);
+                }
+                break;
+            }
+        }
+        if (!openers.isEmpty()) {
+            event("Abertura: " + result.opener + "; contato aos " + fmt(contact) + "s");
+        }
+    }
+
+    /** Hits of delayed abilities that land now. */
+    private void land() {
+        for (Pending p : new ArrayList<>(pending)) {
+            if (now < p.at - 1e-9) {
+                continue;
+            }
+            pending.remove(p);
+            State s = p.caster;
+            State t = p.target.targetable() ? p.target : target(s);
+            if (s.dead || t == null) {
+                continue;
+            }
+            AbilityParser.Ability a = p.ability;
+            if (a.damage != null) {
+                double dmg = a.damage.at(p.rank, s::stat, s::base, t.maxHp) * (1 + stackBonus(s, t, a.slot));
+                deal(s, t, dmg, a.damage.type, a.slot + " · " + a.name, ABILITY, 0);
+            }
+            if (Boolean.TRUE.equals(p.hit.get("imobiliza"))) {
+                breakBrittle(s, t);
+            }
+            if (Boolean.TRUE.equals(p.hit.get("fragil")) && !t.dead) {
+                t.brittleUntil = now + 3;
+                t.brittleBy = s;
+            }
+            addStacks(s, t, a.slot);
+            onAbility(s, t);
+        }
+    }
+
+    /** Seconds in contact (times in combat count from the contact, not from the start). */
+    private double fightTime() {
+        return Math.max(0, now - contact);
     }
 
     /** Item effects triggered by an ability: burns, strikes and the next attack's spellblade. */
@@ -428,8 +637,8 @@ public class CombatSimulator {
 
     private void attack(State s, State t) {
         s.attacks++;
-        double ad = s.f.stat(Stats.ATTACK_DAMAGE);
-        double c = Math.min(1, s.f.stat("% Critical Rate") / 100);
+        double ad = s.stat(Stats.ATTACK_DAMAGE);
+        double c = Math.min(1, s.stat("% Critical Rate") / 100);
         double mult = 2.0;
         for (ItemEffect e : s.f.effects) {
             if ("critico".equals(e.kind())) {
@@ -438,37 +647,38 @@ public class CombatSimulator {
         }
         double raw = ad * (1 + c * (mult - 1));
         deal(s, t, raw, "fisico", "Ataque", ATTACK, ad * c * mult);
+        addStacks(s, t, "ataque");
         for (ItemEffect e : s.f.effects) {
             if (t.dead) {
                 break;
             }
             switch (e.kind()) {
                 case "ao_contato":
-                    deal(s, t, num(e.p, "dano", 0) + num(e.p, "pdh", 0) * s.f.stat(Stats.ABILITY_POWER)
+                    deal(s, t, num(e.p, "dano", 0) + num(e.p, "pdh", 0) * s.stat(Stats.ABILITY_POWER)
                             + num(e.p, "vida_atual_alvo", 0) * Math.max(0, t.hp)
-                            + num(e.p, "mana", 0) * s.f.stat(Stats.MAX_MANA), type(e.p), e.item, ITEM, 0);
+                            + num(e.p, "mana", 0) * s.stat(Stats.MAX_MANA), type(e.p), e.item, ITEM, 0);
                     break;
                 case "a_cada_ataque":
                     int n = (int) num(e.p, "n", 3);
                     if (s.attacks % n == 0) {
                         deal(s, t, level(e.p, "dano", s.f.level)
-                                + num(e.p, "dda_base", 0) * s.f.base.getOrDefault(Stats.ATTACK_DAMAGE, 0.0)
-                                + num(e.p, "vida", 0) * s.maxHp + num(e.p, "vida_bonus", 0) * s.f.bonus(Stats.MAX_HEALTH),
+                                + num(e.p, "dda_base", 0) * s.base(Stats.ATTACK_DAMAGE)
+                                + num(e.p, "vida", 0) * s.maxHp + num(e.p, "vida_bonus", 0) * s.bonus(Stats.MAX_HEALTH),
                                 type(e.p), e.item, ITEM, 0);
                     }
                     break;
                 case "lamina":
                     if (s.bladeArmed && now >= s.bladeReady) {
-                        double adBase = s.f.base.getOrDefault(Stats.ATTACK_DAMAGE, 0.0);
+                        double adBase = s.base(Stats.ATTACK_DAMAGE);
                         double dmg = num(e.p, "dda_base", 0) * adBase + num(e.p, "dda", 0) * ad
-                                + num(e.p, "pdh", 0) * s.f.stat(Stats.ABILITY_POWER)
-                                + num(e.p, "armadura_bonus", 0) * s.f.bonus(Stats.ARMOR)
+                                + num(e.p, "pdh", 0) * s.stat(Stats.ABILITY_POWER)
+                                + num(e.p, "armadura_bonus", 0) * s.bonus(Stats.ARMOR)
                                 + num(e.p, "vida_max_alvo", 0) * t.maxHp
                                 + num(e.p, "critico_dano", 0) * c;
                         deal(s, t, dmg, type(e.p), e.item, ITEM, 0);
                         double heal = num(e.p, "cura_vida_max_alvo", 0) * t.maxHp
-                                + num(e.p, "cura_vida_bonus", 0) * s.f.bonus(Stats.MAX_HEALTH)
-                                + num(e.p, "cura_pdh", 0) * s.f.stat(Stats.ABILITY_POWER);
+                                + num(e.p, "cura_vida_bonus", 0) * s.bonus(Stats.MAX_HEALTH)
+                                + num(e.p, "cura_pdh", 0) * s.stat(Stats.ABILITY_POWER);
                         if (heal > 0) {
                             heal(s, heal, Map.of(key(s, e.item), heal));
                         }
@@ -489,8 +699,8 @@ public class CombatSimulator {
         // Thorns of the target answer the attack.
         for (ItemEffect e : t.f.effects) {
             if ("espinhos".equals(e.kind()) && !s.dead) {
-                deal(t, s, num(e.p, "dano", 0) + num(e.p, "armadura_bonus", 0) * t.f.bonus(Stats.ARMOR)
-                        + num(e.p, "vida_bonus", 0) * t.f.bonus(Stats.MAX_HEALTH), type(e.p), e.item, REFLECT, 0);
+                deal(t, s, num(e.p, "dano", 0) + num(e.p, "armadura_bonus", 0) * t.bonus(Stats.ARMOR)
+                        + num(e.p, "vida_bonus", 0) * t.bonus(Stats.MAX_HEALTH), type(e.p), e.item, REFLECT, 0);
             } else if ("feridas".equals(e.kind()) && Boolean.TRUE.equals(e.p.get("ao_ser_atingido"))) {
                 applyGw(s, num(e.p, "pct", 0.4), 3, key(t, e.item));
             }
@@ -502,10 +712,10 @@ public class CombatSimulator {
             return;
         }
         double dmg = level(e.p, "dano", s.f.level) + num(e.p, "vida_max", 0) * s.maxHp
-                + num(e.p, "vida_max_alvo", 0) * t.maxHp + num(e.p, "pdh", 0) * s.f.stat(Stats.ABILITY_POWER)
-                + num(e.p, "dda_bonus", 0) * s.f.bonus(Stats.ATTACK_DAMAGE)
-                + num(e.p, "vida_bonus", 0) * s.f.bonus(Stats.MAX_HEALTH)
-                + num(e.p, "mana", 0) * s.f.stat(Stats.MAX_MANA);
+                + num(e.p, "vida_max_alvo", 0) * t.maxHp + num(e.p, "pdh", 0) * s.stat(Stats.ABILITY_POWER)
+                + num(e.p, "dda_bonus", 0) * s.bonus(Stats.ATTACK_DAMAGE)
+                + num(e.p, "vida_bonus", 0) * s.bonus(Stats.MAX_HEALTH)
+                + num(e.p, "mana", 0) * s.stat(Stats.MAX_MANA);
         deal(s, t, dmg, type(e.p), e.item, ITEM, 0);
         s.strikeReady.put(e.item, now + num(e.p, "recarga", 10));
     }
@@ -515,7 +725,7 @@ public class CombatSimulator {
         b.from = s;
         b.source = e.item;
         b.ticks = (int) num(e.p, "duracao", 3);
-        b.perTick = num(e.p, "por_s", 0) + num(e.p, "pdh_por_s", 0) * s.f.stat(Stats.ABILITY_POWER)
+        b.perTick = num(e.p, "por_s", 0) + num(e.p, "pdh_por_s", 0) * s.stat(Stats.ABILITY_POWER)
                 + num(e.p, "vida_max_alvo_por_s", 0) * t.maxHp;
         b.next = now + 1;
         b.type = type(e.p);
@@ -539,19 +749,23 @@ public class CombatSimulator {
                 }
             }
             s.burns.removeIf(b -> b.ticks <= 0);
+            tickStacks(s);
             if (s.dead || now < s.invulnerableUntil) {
                 continue;
+            }
+            if (now < contact - 1e-9) {
+                continue;   // not in contact yet
             }
             // Auras of s on every enemy.
             for (ItemEffect e : s.f.effects) {
                 if (!"aura".equals(e.kind())) {
                     continue;
                 }
-                double next = s.auraNext.getOrDefault(e.item, num(e.p, "a_cada", 1));
+                double next = s.auraNext.getOrDefault(e.item, contact + num(e.p, "a_cada", 1));
                 if (now >= next - 1e-9) {
                     double dealt = 0;
                     for (State t : enemies(s)) {
-                        double dmg = level(e.p, "dano", s.f.level) + num(e.p, "vida_bonus", 0) * s.f.bonus(Stats.MAX_HEALTH)
+                        double dmg = level(e.p, "dano", s.f.level) + num(e.p, "vida_bonus", 0) * s.bonus(Stats.MAX_HEALTH)
                                 + num(e.p, "vida_max", 0) * s.maxHp;
                         dealt += deal(s, t, dmg, type(e.p), e.item, DOT, 0);
                     }
@@ -624,10 +838,10 @@ public class CombatSimulator {
             }
             double pct = num(e.p, "pct", 0);
             if (e.p.get("pct_por_s") != null) {
-                pct = Math.min(num(e.p, "max", 1), num(e.p, "pct_por_s", 0) * now);
+                pct = Math.min(num(e.p, "max", 1), num(e.p, "pct_por_s", 0) * fightTime());
             }
             if (e.p.get("alvo_vida_bonus") != null) {
-                pct = num(e.p, "max", 0) * Math.min(1, Math.max(0, t.f.bonus(Stats.MAX_HEALTH)) / num(e.p, "alvo_vida_bonus", 1200));
+                pct = num(e.p, "max", 0) * Math.min(1, Math.max(0, t.bonus(Stats.MAX_HEALTH)) / num(e.p, "alvo_vida_bonus", 1200));
             }
             amps.merge(key(a, e.item), pct, Math::max);
         }
@@ -650,10 +864,10 @@ public class CombatSimulator {
         double multNoShred = 1;
         int res = "fisico".equals(type) ? 0 : "magico".equals(type) ? 1 : -1;
         if (res >= 0) {
-            double resist = t.f.stat(res == 0 ? Stats.ARMOR : Stats.MAGIC_RESIST);
+            double resist = t.stat(res == 0 ? Stats.ARMOR : Stats.MAGIC_RESIST);
             double shred = now < t.shredUntil[res] ? t.shred[res] : 0;
-            double pen = a.f.stat(res == 0 ? "% Armor Penetration" : "% Magic Penetration") / 100;
-            double flat = a.f.stat(res == 0 ? "Armor Penetration" : "Magic Penetration");
+            double pen = a.stat(res == 0 ? "% Armor Penetration" : "% Magic Penetration") / 100;
+            double flat = a.stat(res == 0 ? "Armor Penetration" : "Magic Penetration");
             mult = mitigation(resist, shred, pen, flat);
             multNoShred = mitigation(resist, 0, pen, flat);
         }
@@ -678,6 +892,12 @@ public class CombatSimulator {
             }
         }
         dmg = Math.max(0, dmg - prevented);
+        if (kind == ATTACK || kind == ABILITY) {
+            a.hitsDealt++;
+        }
+        if (kind == ABILITY) {
+            t.abilityHitsTaken++;
+        }
         a.r.dealt += dmg;
         t.r.taken += dmg;
         t.r.mitigated += amped - amped * mult;
@@ -698,19 +918,21 @@ public class CombatSimulator {
             reaver(a, t);
         }
         double left = dmg;
-        double shield = t.shieldLeft();
-        if (shield > 0) {
-            double absorbed = Math.min(shield, left);
-            consumeShield(t, absorbed);
-            t.r.shieldAbsorbed += absorbed;
-            left -= absorbed;
+        for (Map<String, Double> pool : t.pools(type)) {
+            double shield = sum(pool);
+            if (shield > 0 && left > 0) {
+                double absorbed = Math.min(shield, left);
+                consume(pool, absorbed, false);
+                t.r.shieldAbsorbed += absorbed;
+                left -= absorbed;
+            }
         }
         t.hp -= left;
-        if (t.hp <= 0.3 * t.maxHp && !t.stasisUsed && t.f.stat("Stasis") > 0) {
+        if (t.hp <= 0.3 * t.maxHp && !t.stasisUsed && t.stat("Stasis") > 0) {
             t.stasisUsed = true;
             t.hp = Math.max(t.hp, 1);
-            t.invulnerableUntil = now + t.f.stat("Stasis");
-            event(t.f.name + " entrou em Estase (" + fmt(t.f.stat("Stasis")) + "s)");
+            t.invulnerableUntil = now + t.stat("Stasis");
+            event(t.f.name + " entrou em Estase (" + fmt(t.stat("Stasis")) + "s)");
         }
         if (t.hp <= 0) {
             t.dead = true;
@@ -719,7 +941,7 @@ public class CombatSimulator {
         }
         // Healing of the attacker and the effects its hit applies.
         if (kind != REFLECT && !a.dead) {
-            double vamp = (kind == ATTACK ? a.f.stat("% Lifesteal") : 0) + a.f.stat("% Omnivamp");
+            double vamp = (kind == ATTACK ? a.stat("% Lifesteal") : 0) + a.stat("% Omnivamp");
             if (vamp > 0 && dmg > 0) {
                 double h = dmg * vamp / 100;
                 heal(a, h, share(a, a.f.vampSources, h));
@@ -784,12 +1006,14 @@ public class CombatSimulator {
                 continue;
             }
             double cut = Math.min(num(e.p, "max", 0.6), num(e.p, "base", 0)
-                    + num(e.p, "dda_bonus", 0) * a.f.bonus(Stats.ATTACK_DAMAGE)
-                    + num(e.p, "pdh", 0) * a.f.stat(Stats.ABILITY_POWER));
+                    + num(e.p, "dda_bonus", 0) * a.bonus(Stats.ATTACK_DAMAGE)
+                    + num(e.p, "pdh", 0) * a.stat(Stats.ABILITY_POWER));
             if (now >= t.shieldCutUntil) {
                 double cutAmount = t.shieldLeft() * cut;
                 if (cutAmount > 0) {
-                    consumeShieldAsLost(t, cutAmount);
+                    for (Map<String, Double> pool : List.of(t.shield, t.shieldMagic, t.shieldPhysical)) {
+                        consume(pool, sum(pool) * cut, true);
+                    }
                     led(key(a, e.item)).shieldCut += cutAmount;
                 }
             }
@@ -837,21 +1061,138 @@ public class CombatSimulator {
         s.shield.merge(source, amount * (1 - cut), Double::sum);
     }
 
-    private void consumeShield(State s, double amount) {
-        double total = s.shieldLeft();
-        for (Map.Entry<String, Double> e : s.shield.entrySet()) {
+    /** Takes an amount from a shield pool, proportionally to its sources (absorbed, or lost to a shield reaver). */
+    private void consume(Map<String, Double> pool, double amount, boolean lost) {
+        double total = sum(pool);
+        if (total <= 0) {
+            return;
+        }
+        for (Map.Entry<String, Double> e : pool.entrySet()) {
             double part = amount * e.getValue() / total;
             e.setValue(e.getValue() - part);
-            led(e.getKey()).shieldAbsorbed += part;
+            if (lost) {
+                led(e.getKey()).shieldLost += part;
+            } else {
+                led(e.getKey()).shieldAbsorbed += part;
+            }
         }
     }
 
-    private void consumeShieldAsLost(State s, double amount) {
-        double total = s.shieldLeft();
-        for (Map.Entry<String, Double> e : s.shield.entrySet()) {
-            double part = amount * e.getValue() / total;
-            e.setValue(e.getValue() - part);
-            led(e.getKey()).shieldLost += part;
+    private static double sum(Map<String, Double> pool) {
+        return pool.values().stream().mapToDouble(Double::doubleValue).sum();
+    }
+
+    // ------------------------------------------------------------------ activations and champion mechanics
+
+    /** Turns on the delayed statuses whose conditions hold (health granted by one also heals that much). */
+    private void activate(State s) {
+        for (int i = 0; i < s.delayOn.length; i++) {
+            if (s.delayOn[i]) {
+                continue;
+            }
+            Delay d = s.f.delays.get(i);
+            boolean on = now >= contact - 1e-9 && (d.seconds == null || fightTime() >= d.seconds - 1e-9)
+                    && (d.fixed || (d.hits == null || s.hitsDealt >= d.hits)
+                    && (d.hitsTaken == null || s.abilityHitsTaken >= d.hitsTaken));
+            if (on) {
+                s.delayOn[i] = true;
+                double hp = d.amounts.getOrDefault(Stats.MAX_HEALTH, 0.0);
+                s.maxHp += hp;
+                s.hp += hp;
+                event(s.f.name + ": " + d.source + " ativo");
+            }
+        }
+    }
+
+    private boolean delayActive(State s, String source) {
+        for (int i = 0; i < s.delayOn.length; i++) {
+            if (s.f.delays.get(i).source.equals(source)) {
+                return s.delayOn[i];
+            }
+        }
+        return false;
+    }
+
+    /** Brittle: an ability listed by the champion's mechanic leaves the target Brittle for 3s. */
+    @SuppressWarnings("unchecked")
+    private void applyBrittle(State s, State t, String slot) {
+        Map<String, Object> m = (Map<String, Object>) s.f.mechanics.get("fragil");
+        if (m != null && ((List<Object>) m.getOrDefault("aplica", List.of())).contains(slot) && !t.dead) {
+            t.brittleUntil = now + 3;
+            t.brittleBy = s;
+        }
+    }
+
+    /** An immobilizing ability of the Brittle-giver's side breaks it: % of the target's max health as magic damage. */
+    @SuppressWarnings("unchecked")
+    private void breakBrittle(State s, State t) {
+        State by = t.brittleBy;
+        if (by == null || now >= t.brittleUntil || by.f.team != s.f.team || t.dead) {
+            return;
+        }
+        Map<String, Object> m = (Map<String, Object>) by.f.mechanics.get("fragil");
+        double pct = level(m, "vida_max_alvo", by.f.level);
+        t.brittleUntil = -1;
+        t.brittleBy = null;
+        event(s.f.name + " quebrou o Frágil de " + t.f.name);
+        deal(by, t, pct * t.maxHp, "magico", "Frágil", DOT, 0);
+    }
+
+    /** Stacks of the champion's mechanic on the target (Darius' bleed): 1 per hit, all of them with its effect on. */
+    @SuppressWarnings("unchecked")
+    private void addStacks(State s, State t, String hit) {
+        Map<String, Object> m = (Map<String, Object>) s.f.mechanics.get("acumulos");
+        if (m == null || t.dead) {
+            return;
+        }
+        boolean applies = "ataque".equals(hit) || ((List<Object>) m.getOrDefault("habilidades", List.of())).contains(hit);
+        if (!applies) {
+            return;
+        }
+        int max = (int) num(m, "max", 5);
+        boolean bleeding = s.stacks.values().stream().anyMatch(x -> now < x[1] && x[0] > 0);
+        double[] st = s.stacks.computeIfAbsent(t, k -> new double[2]);
+        if (now >= st[1]) {
+            st[0] = 0;
+        }
+        String full = (String) m.get("cheio_com");
+        st[0] = full != null && delayActive(s, full) ? max : Math.min(max, st[0] + 1);
+        st[1] = now + num(m, "duracao", 5);
+        if (!bleeding) {
+            s.nextStackTick = now + 1;   // a new bleed ticks a second after it starts
+        }
+    }
+
+    /** Extra damage of an ability per stack on the target (Darius' ultimate: +20% per bleed stack). */
+    @SuppressWarnings("unchecked")
+    private double stackBonus(State s, State t, String slot) {
+        Map<String, Object> m = (Map<String, Object>) s.f.mechanics.get("acumulos");
+        if (m == null) {
+            return 0;
+        }
+        Map<String, Object> per = (Map<String, Object>) m.getOrDefault("habilidade_por_acumulo", Map.of());
+        double[] st = s.stacks.get(t);
+        if (per.get(slot) == null || st == null || now >= st[1]) {
+            return 0;
+        }
+        return num(per, slot, 0) * st[0];
+    }
+
+    /** Bleed ticks once a second on every enemy with stacks. */
+    @SuppressWarnings("unchecked")
+    private void tickStacks(State s) {
+        Map<String, Object> m = (Map<String, Object>) s.f.mechanics.get("acumulos");
+        if (m == null || s.stacks.isEmpty() || now < s.nextStackTick - 1e-9) {
+            return;
+        }
+        s.nextStackTick = now + 1;
+        double perStack = num(m, "por_s", 0) + num(m, "dda_bonus_por_s", 0) * s.bonus(Stats.ATTACK_DAMAGE);
+        for (Map.Entry<State, double[]> e : s.stacks.entrySet()) {
+            double[] st = e.getValue();
+            if (now < st[1] && st[0] > 0 && !e.getKey().dead) {
+                deal(s, e.getKey(), perStack * st[0], String.valueOf(m.getOrDefault("dano_tipo", "fisico")),
+                        String.valueOf(m.getOrDefault("nome", "Acúmulos")), DOT, 0);
+            }
         }
     }
 

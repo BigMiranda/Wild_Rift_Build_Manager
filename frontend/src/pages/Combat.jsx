@@ -119,6 +119,7 @@ export default function Combat() {
               <h4>{t(`combat.team${k}`)}</h4>
               {teams[k].map((slot, i) => (
                 <SlotEditor key={i} slot={slot} builds={builds} enemies={teams[1 - k].length}
+                  delays={result?.fighters?.[k === 0 ? i : teams[0].length + i]?.delays ?? []}
                   color={TEAM_COLORS[k][i % 6]} onChange={(patch) => setSlot(k, i, patch)} />
               ))}
             </div>
@@ -131,7 +132,7 @@ export default function Combat() {
   );
 }
 
-function SlotEditor({ slot, builds, enemies, color, onChange }) {
+function SlotEditor({ slot, builds, enemies, delays, color, onChange }) {
   const build = builds.find((b) => b.id === slot.buildId);
   const move = (i, d) => {
     const order = [...slot.order];
@@ -178,6 +179,28 @@ function SlotEditor({ slot, builds, enemies, color, onChange }) {
           <button key={a} className="opt" onClick={() => toggle(a)}>+ {a === 'ATIVO' ? t('combat.active') : a}</button>
         ))}
       </div>
+      {delays.length > 0 && (
+        <div className="combat-order" title={t('combat.delaysTitle')}>
+          <small className="muted">{t('combat.delays')}</small>
+          {delays.map((d) => {
+            const rule = [
+              d.seconds != null && !d.fixed && t('combat.rule.seconds', { n: n1(d.seconds) }),
+              d.hits != null && t('combat.rule.hits', { n: d.hits }),
+              d.hitsTaken != null && t('combat.rule.hitsTaken', { n: d.hitsTaken }),
+            ].filter(Boolean).join(' + ');
+            const value = slot.activations?.[d.source];
+            return (
+              <label key={d.source} className="inline delay">
+                {d.source}
+                <input type="number" min={0} step={0.5} value={value ?? ''} placeholder={rule || t('combat.delayAuto')}
+                  title={Object.entries(d.amounts).map(([k, v]) => `${statLabel(k)} +${n1(v)}`).join(' · ')}
+                  onChange={(e) => onChange({ activations: { ...slot.activations, [d.source]: e.target.value === '' ? undefined : Number(e.target.value) } })} />
+                s
+              </label>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -200,6 +223,7 @@ function CombatResult({ data }) {
           <h3>{outcome}</h3>
           <small className="muted">{t('combat.healthLeft', { a: n0(data.teamHealth), b: n0(data.enemyHealth) })}</small>
         </div>
+        {result.contact > 0 && <p className="muted" style={{ marginTop: 0 }}>{t('combat.contact', { who: result.opener, s: n1(result.contact) })}</p>}
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={series} margin={{ top: 8, right: 16, bottom: 4, left: 8 }}>
             <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
@@ -260,7 +284,7 @@ function CombatResult({ data }) {
                   {f.abilities.map((a) => (
                     <li key={a.slot} title={a.source ?? ''}>
                       <strong>{a.slot}</strong> {a.name} · {t('combat.rank', { n: a.rank })}
-                      {a.damage != null ? ` · ${n0(a.damage)} ${t(`combat.type.${a.type}`)}` : a.rank > 0 ? ` · ${t('combat.noDamage')}` : ''}
+                      {a.damage != null ? ` · ${a.targetBased ? t('combat.targetPct') : n0(a.damage)} ${t(`combat.type.${a.type}`)}` : a.rank > 0 ? ` · ${t('combat.noDamage')}` : ''}
                       {a.cooldown != null ? ` · ${n1(a.cooldown)}s` : ''}
                     </li>
                   ))}

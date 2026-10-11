@@ -51,6 +51,8 @@ export const STAT_META = {
   'Ultimate Haste': { icon: 'hourglass', color: 'var(--stat-ah)' },
   'Basic Ability Haste': { icon: 'hourglass', color: 'var(--stat-ah)' },
   Shield: { icon: 'shield', color: 'var(--stat-shield)' },
+  'Magic Shield': { icon: 'shield', color: 'var(--stat-mr)' },
+  'Physical Shield': { icon: 'shield', color: 'var(--stat-armor)' },
   Heal: { icon: 'heal', color: 'var(--stat-hp)' },
   'Ally Shield': { icon: 'shield', color: 'var(--stat-shield)' },
   'Ally Heal': { icon: 'heal', color: 'var(--stat-hp)' },

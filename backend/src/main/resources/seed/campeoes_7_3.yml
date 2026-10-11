@@ -3118,8 +3118,8 @@ campeoes:
         padrao: true
         nota: "só contra Dano Mágico"
         linhas:
-        - {tipo: Escudo, valor: 50}
-        - {tipo: Escudo, ratio: 0.3, ref: Poder de Habilidade}
+        - {tipo: Escudo Mágico, valor: 50}
+        - {tipo: Escudo Mágico, ratio: 0.3, ref: Poder de Habilidade}
     passiva:
       nome: Pedra do Vazio
       tipos: [Passivo]

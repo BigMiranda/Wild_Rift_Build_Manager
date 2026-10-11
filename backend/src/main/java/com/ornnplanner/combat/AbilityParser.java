@@ -39,7 +39,7 @@ public final class AbilityParser {
     /** One term of a damage formula: a constant, or ratio x stat (total or bonus), each by ability rank. */
     public static class Term {
         public double[] byRank;
-        /** Null for a constant. */
+        /** Null for a constant; {@link #TARGET_MAX_HEALTH} for a % of the target's max health. */
         public String stat;
         public boolean bonus;
         public String marker;
@@ -55,17 +55,30 @@ public final class AbilityParser {
         public String source;
 
         public double at(int rank, Map<String, Double> total, Map<String, Double> base) {
+            return at(rank, s -> total.getOrDefault(s, 0.0), s -> base.getOrDefault(s, 0.0), 0);
+        }
+
+        /** Damage at a rank with the caster's stats (total, base) and the target's max health. */
+        public double at(int rank, java.util.function.ToDoubleFunction<String> total,
+                         java.util.function.ToDoubleFunction<String> base, double targetMaxHealth) {
             double v = 0;
             for (Term t : terms) {
                 double r = t.byRank[Math.max(0, Math.min(t.byRank.length, rank) - 1)];
                 if (t.stat == null) {
                     v += r;
+                } else if (TARGET_MAX_HEALTH.equals(t.stat)) {
+                    v += r * targetMaxHealth;
                 } else {
-                    double amount = total.getOrDefault(t.stat, 0.0) - (t.bonus ? base.getOrDefault(t.stat, 0.0) : 0);
+                    double amount = total.applyAsDouble(t.stat) - (t.bonus ? base.applyAsDouble(t.stat) : 0);
                     v += r * amount;
                 }
             }
             return v * hits;
+        }
+
+        /** Whether part of it scales with the target's max health (shown as "% da Vida do alvo"). */
+        public boolean targetBased() {
+            return terms.stream().anyMatch(t -> TARGET_MAX_HEALTH.equals(t.stat));
         }
     }
 
@@ -77,7 +90,16 @@ public final class AbilityParser {
         public double[] cooldown;
         /** Null when no damage could be read. */
         public Damage damage;
+        /** It immobilizes (stun, knock-up, root, pull, suppression, charm, taunt, fear): breaks Brittle. */
+        public boolean immobilizes;
+        /** It leaves the target Brittle (Ornn). */
+        public boolean brittle;
     }
+
+    public static final String TARGET_MAX_HEALTH = "target max health";
+    private static final Pattern IMMOBILIZE = Pattern.compile(
+            "atordo|arremess\\S* ao ar|enraiz|imobiliz|puxa|suprim|encant|provoc|amedront|temor",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
     private static final String NUM = "\\d+(?:\\.\\d{3})*(?:,\\d+)?";
     private static final Pattern FORMULA = Pattern.compile(
@@ -85,6 +107,12 @@ public final class AbilityParser {
     private static final Pattern PLAIN = Pattern.compile("(" + NUM + ")(%?) de (Dano (?:Físico|Mágico|Verdadeiro))");
     private static final Pattern EQUAL = Pattern.compile("(Dano (?:Físico|Mágico|Verdadeiro)) (?:igual|equivalente) a (" + NUM + ")(?!\\s*%| ?mais \\d+%)");
     private static final Pattern TYPE = Pattern.compile("Dano (Físico|Mágico|Verdadeiro)");
+    /** "10% da Vida máxima como Dano Mágico" (of the target): a damage by the target's max health. */
+    private static final Pattern TARGET_PCT = Pattern.compile(
+            "(" + NUM + ")% da Vida máxima(?: do alvo)? como (Dano (?:Físico|Mágico|Verdadeiro))");
+    /** Damage only against minions / monsters: not a champion's damage. */
+    private static final Pattern NOT_CHAMPIONS = Pattern.compile(
+            "^\\s*(?:adicional\\s+)?(?:a|às|aos|contra) (?:tropas|monstros|estruturas)");
 
     /** The 4 abilities (1, 2, 3, R) of a champion entry of the seed file. */
     @SuppressWarnings("unchecked")
@@ -99,7 +127,10 @@ public final class AbilityParser {
             ab.name = String.valueOf(a.get("nome"));
             Map<String, Object> table = (Map<String, Object>) a.getOrDefault("niveis", Map.of());
             ab.cooldown = cooldown(a, table);
-            ab.damage = damage(String.valueOf(a.getOrDefault("texto", "")), table);
+            String text = String.valueOf(a.getOrDefault("texto", ""));
+            ab.damage = damage(text, table);
+            ab.immobilizes = IMMOBILIZE.matcher(text).find();
+            ab.brittle = text.contains("Frág");
             out.add(ab);
         }
         return out;
@@ -129,7 +160,8 @@ public final class AbilityParser {
         Damage found = null;
         while (m.find()) {
             String type = typeNear(text, m.start(), m.end(), m.group(3));
-            if (type == null || !m.group(2).isEmpty() || m.group(4).contains(" - ")) {
+            if (type == null || !m.group(2).isEmpty() || m.group(4).contains(" - ")
+                    || NOT_CHAMPIONS.matcher(text.substring(m.end())).find()) {
                 continue;
             }
             List<Term> terms = new ArrayList<>();
@@ -153,20 +185,32 @@ public final class AbilityParser {
             firstFormula = m.start();
             break;
         }
-        // A plain "N de Dano X" (or "Dano X igual a N") before the first formula wins.
-        for (Pattern p : List.of(PLAIN, EQUAL)) {
+        // A plain "N de Dano X" (or "Dano X igual a N", or "N% da Vida máxima como Dano X") before the first formula
+        // wins; damage only against minions or monsters is skipped.
+        for (Pattern p : List.of(PLAIN, EQUAL, TARGET_PCT)) {
             Matcher q = p.matcher(text);
             while (q.find() && q.start() < firstFormula) {
-                boolean plain = p == PLAIN;
-                if (plain && !q.group(2).isEmpty()) {
+                if (NOT_CHAMPIONS.matcher(text.substring(q.end())).find()) {
                     continue;
                 }
-                String num = plain ? q.group(1) : q.group(2);
-                String type = typeOf(plain ? q.group(3) : q.group(1));
                 Damage d = new Damage();
-                d.type = type;
                 Term t = new Term();
-                t.byRank = byRank(rows, parseNum(num), false, null);
+                if (p == TARGET_PCT) {
+                    d.type = typeOf(q.group(2));
+                    double[] pct = byRank(rows, parseNum(q.group(1)), true, "Vida");
+                    t.byRank = new double[pct.length];
+                    for (int i = 0; i < pct.length; i++) {
+                        t.byRank[i] = pct[i] / 100;
+                    }
+                    t.stat = TARGET_MAX_HEALTH;
+                } else {
+                    boolean plain = p == PLAIN;
+                    if (plain && !q.group(2).isEmpty()) {
+                        continue;
+                    }
+                    d.type = typeOf(plain ? q.group(3) : q.group(1));
+                    t.byRank = byRank(rows, parseNum(plain ? q.group(1) : q.group(2)), false, null);
+                }
                 d.terms.add(t);
                 d.source = q.group();
                 found = d;
