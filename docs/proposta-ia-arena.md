@@ -266,3 +266,79 @@ Andamento, parte a parte (cada parte é um commit no `arena-ia`).
   - troca abaixo de 25% (o alvo baixo morre antes);
   - `chainCc`: o puxão do Darius só fica liberado nos últimos 0,3 s do atordoamento do Renekton;
   - JSON antigo sem `teams` → `teams == null`.
+
+### Parte 3 — Treino em cadeia com platô ✅
+- **Etapa reutilizável:** `ArenaTraining.trainStage(StageSpec, Listener)` é uma classe comum, testável sem Spring. Ela define:
+  - campeão, objetivo e sementes;
+  - a rede inicial;
+  - as versões da cadeia para aliados e inimigos;
+  - o platô e o limiar de aceite.
+  O job individual e a cadeia usam a mesma etapa. A cadeia é a `ArenaChain` e roda na mesma thread única
+  (`arena-training`).
+- **Episódios na cadeia:**
+  - Aliados usam sempre a versão atual da cadeia, ou o cérebro do slot enquanto não houver.
+  - Metade das lutas de treino põe a versão atual da cadeia nos inimigos; a outra metade alterna Roteiro, Tático,
+    hall da fama e self-play.
+  - Seleção e validação usam só os aliados e inimigos atuais da cadeia.
+  - Também se mede a validação contra a versão anterior dos adversários: `Stage.vsOldOpponents`.
+- **Partida quente:** a etapa começa da versão aceita mais recente da cadeia. Na 1ª rodada, começa da última versão
+  aceita salva do campeão para o objetivo. Uma versão incompatível (`obs_schema`, ações ou camadas) é ignorada:
+  começa de zeros e grava um aviso em `Stage.warning`.
+  - A versão a superar é a mesma da partida quente. Sem ela, é a melhor compatível salva (`policies.best`).
+- **Mesmo campeão em dois slots:** a política é por campeão. Só o primeiro slot treina na rodada; o outro fica
+  `skipped` com `sameAs`, e a versão vale para os dois (`Job.latest`).
+- **Determinismo:** semente da etapa = `seed·1000003 + rodada·1009 + índice`. O hall da fama vem do banco, então
+  "mesma configuração ⇒ mesmos pesos" vale partindo do mesmo banco (o teste usa dois bancos novos).
+- **Fim da cadeia:**
+  - `done`: rodadas máximas;
+  - `converged`: uma rodada inteira sem nenhuma versão aceita;
+  - `stopped`: "parar após o atual" (`stopping` enquanto a etapa termina, com validação e salvamento);
+  - `cancelled`: cancelar agora, sem salvar a etapa;
+  - `failed`: erro.
+- **Platô:** `Plateau(pct, window, minGenerations)`, com padrão 2 / 6 / 8 e `pct = 0` desliga.
+  - O `Trainer.Listener` ganhou `stop()`, separado de `cancelled()`: `stop()` encerra e segue para a validação,
+    `cancelled()` aborta.
+  - O treino individual também aceita o platô; `Job.plateau` diz se parou por ele.
+- **Métrica do platô:** a seleção agora é medida em todas as gerações (antes, a cada 5), com **`SELECTION = 16`**.
+  As duas candidatas são calculadas e mostradas (`Point.fitnessPct`, `Point.betterPct`).
+  - No teste `plateauMetricsOnARealTraining` (Darius × Vayne, 20 gerações, população 16):
+    - fitness normalizada: −144 a +265 pontos. Um único combate de seleção que vira de derrota para vitória
+      (`win_fast`) desloca a média em centenas de pontos, então a "evolução mínima de 2%" não tem significado
+      estável;
+    - % de lutas de seleção melhores que o Roteiro: limitada a 0–100, em degraus de ~3 pontos, e com a mesma escala
+      para todos os objetivos.
+  - **Escolhida a segunda** (`ArenaTraining.METRIC = "better"`).
+  - Ressalva: na mesma curva, a regra 2/6/8 parou na geração 10, e a métrica subiu de novo depois (de 34% para 41%).
+    Com 16 lutas a métrica é discreta; a janela de 6 é o mínimo razoável. A tela deixa ajustar janela e mínimo.
+- **Melhor geração:** a com mais lutas de seleção melhores que o Roteiro; em empate, a de maior fitness de seleção.
+  Antes valia "a mais recente". Num duelo que o campeão sempre vence (100% em todas as gerações), isso deixava
+  vitórias mais lentas substituírem a versão de partida, e ela perdia para a anterior em 100% da validação.
+- **Banco (v15):** `arena_policy.chain_id`, `chain_round`, `team_plan` (JSON) e `parent_id`. O `SchemaManager` faz
+  `ALTER TABLE` em bancos v14, e o `schema.sql` já cria as colunas. A migração foi testada numa cópia do banco real.
+- **API:**
+  - `POST /api/arena/train/chain` e `GET /api/arena/train/chain/{id}`;
+  - `POST /api/arena/train/chain/{id}/stop-after-current`;
+  - `DELETE /api/arena/train/chain/{id}`;
+  - `GET /api/arena/train` lista jobs e cadeias, cada um com `kind` (`single` | `chain`).
+- **Tela:** o painel "Treinar IA" tem os modos Um campeão / Em cadeia.
+  - **Configuração da cadeia:** campeões com caixa de seleção e ordem arrastável; objetivo único ou por campeão;
+    gerações máximas, população, semente e rodadas máximas; platô (%), janela e mínimo, com a frase explicativa
+    (também no modo individual).
+  - **Progresso da cadeia:**
+    - rodada atual e gráfico da força por rodada (% da validação melhor que o Roteiro, com a linha de 55%);
+    - uma linha por IA com status, geração com barra, minigráfico da métrica do platô e a última validação;
+    - "Parar após o campeão atual" (vira "Parando após {campeão}…" e fica desabilitado) e "Cancelar agora";
+    - ao terminar, o motivo e "Usar estas IAs no cenário".
+  - O ícone do campeão é o avatar de iniciais que o projeto já usa; não há retratos.
+  - O polling é de 1×/s.
+- **Testes (`ArenaChainTest`):**
+  - mesma semente ⇒ mesmos pesos, em 2 rodadas;
+  - partida quente e `vsOldOpponents`;
+  - versão incompatível ⇒ zeros e aviso;
+  - "parar após o atual" salva a etapa e não inicia a próxima;
+  - "cancelar" não salva nada;
+  - convergência;
+  - mesmo campeão em dois slots;
+  - platô numa curva achatada, sem disparar antes do mínimo nem com ganho real;
+  - etapa que para por platô e ainda valida;
+  - o relatório das duas métricas.

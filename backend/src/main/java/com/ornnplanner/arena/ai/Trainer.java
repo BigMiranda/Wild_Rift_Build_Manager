@@ -48,11 +48,17 @@ public final class Trainer {
         public Network center;
     }
 
-    /** Hears every generation; may stop the training. */
+    /** Hears every generation; may end the training early. */
     public interface Listener {
         void generation(Generation g);
 
+        /** Abort: the caller throws the result away. */
         default boolean cancelled() {
+            return false;
+        }
+
+        /** Stop here (a plateau): the weights so far are the result, and the caller goes on to validate them. */
+        default boolean stop() {
             return false;
         }
     }
@@ -73,7 +79,7 @@ public final class Trainer {
         Network center = start;
         ExecutorService pool = Executors.newFixedThreadPool(Math.max(1, cfg.threads));
         try {
-            for (int gen = 1; gen <= cfg.generations && !listener.cancelled(); gen++) {
+            for (int gen = 1; gen <= cfg.generations && !listener.cancelled() && !listener.stop(); gen++) {
                 Random rnd = new Random(cfg.seed * 1_000_003L + gen);
                 int[] chosen = pick(episodes, cfg.episodesPerGeneration, rnd);
                 double[][] noise = new double[pairs][n];

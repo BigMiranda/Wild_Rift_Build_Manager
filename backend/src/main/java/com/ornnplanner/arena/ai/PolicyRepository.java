@@ -47,8 +47,43 @@ public class PolicyRepository {
         public int obsSchema;
         public int actions;
         public String createdAt;
+        /** The chain training that made it (null = trained alone) and its round there. */
+        public String chainId;
+        public Integer chainRound;
+        /** The side's plan used in its training fights (null = none). */
+        public com.ornnplanner.arena.ArenaModel.TeamPlan teamPlan;
+        /** The version its training started from (null = from the tactical autopilot, zero weights). */
+        public Long parentId;
         /** {layers, weights, bonus}. */
         public Weights weights;
+
+        /** The same numbers without the weights (what jobs and lists show). */
+        public Record withoutWeights() {
+            Record r = new Record();
+            r.id = id;
+            r.champion = champion;
+            r.objective = objective;
+            r.version = version;
+            r.fitness = fitness;
+            r.betterVsScript = betterVsScript;
+            r.betterVsTactical = betterVsTactical;
+            r.betterVsPrevious = betterVsPrevious;
+            r.winrate = winrate;
+            r.winrateScript = winrateScript;
+            r.accepted = accepted;
+            r.generations = generations;
+            r.population = population;
+            r.seed = seed;
+            r.scenario = scenario;
+            r.obsSchema = obsSchema;
+            r.actions = actions;
+            r.createdAt = createdAt;
+            r.chainId = chainId;
+            r.chainRound = chainRound;
+            r.teamPlan = teamPlan;
+            r.parentId = parentId;
+            return r;
+        }
 
         /** Weights of the current observation and action layout. */
         public boolean compatible() {
@@ -76,7 +111,8 @@ public class PolicyRepository {
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String COLUMNS = "id, champion, objective, version, fitness, better_vs_script, winrate, winrate_script, "
-            + "better_vs_tactical, better_vs_previous, accepted, generations, population, seed, scenario, obs_schema, actions, created_at";
+            + "better_vs_tactical, better_vs_previous, accepted, generations, population, seed, scenario, obs_schema, actions, created_at, "
+            + "chain_id, chain_round, team_plan, parent_id";
 
     private final JdbcTemplate jdbc;
     /** Weights never change once saved: read once. */
@@ -109,6 +145,15 @@ public class PolicyRepository {
                 .findFirst().flatMap(r -> find(r.id));
     }
 
+    /**
+     * The latest accepted version of a champion for an objective, compatible or not, with its weights: where a chain
+     * stage starts from (an incompatible one is reported and skipped).
+     */
+    public Optional<Record> latestAccepted(String champion, String objective) {
+        return list(champion).stream().filter(r -> r.accepted && r.objective.equals(objective))
+                .findFirst().flatMap(r -> find(r.id));
+    }
+
     public int nextVersion(String champion) {
         Integer v = jdbc.queryForObject("SELECT MAX(version) FROM arena_policy WHERE champion = ? COLLATE NOCASE",
                 Integer.class, champion);
@@ -122,14 +167,20 @@ public class PolicyRepository {
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(e);
         }
+        String plan;
+        try {
+            plan = r.teamPlan == null ? null : JSON.writeValueAsString(r.teamPlan);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
         r.createdAt = Instant.now().toString();
         r.version = nextVersion(r.champion);
         KeyHolder key = new GeneratedKeyHolder();
         jdbc.update(c -> {
             PreparedStatement ps = c.prepareStatement("INSERT INTO arena_policy (champion, objective, version, fitness, "
                     + "better_vs_script, winrate, winrate_script, better_vs_tactical, better_vs_previous, accepted, generations, "
-                    + "population, seed, scenario, weights_json, obs_schema, actions, created_at) "
-                    + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS);
+                    + "population, seed, scenario, weights_json, obs_schema, actions, created_at, chain_id, chain_round, team_plan, "
+                    + "parent_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS);
             int i = 1;
             ps.setString(i++, r.champion);
             ps.setString(i++, r.objective);
@@ -148,7 +199,11 @@ public class PolicyRepository {
             ps.setString(i++, weights);
             ps.setInt(i++, r.obsSchema);
             ps.setInt(i++, r.actions);
-            ps.setString(i, r.createdAt);
+            ps.setString(i++, r.createdAt);
+            ps.setString(i++, r.chainId);
+            ps.setObject(i++, r.chainRound);
+            ps.setString(i++, plan);
+            ps.setObject(i, r.parentId);
             return ps;
         }, key);
         r.id = key.getKey() == null ? null : key.getKey().longValue();
@@ -180,6 +235,17 @@ public class PolicyRepository {
         r.obsSchema = rs.getInt("obs_schema");
         r.actions = rs.getInt("actions");
         r.createdAt = rs.getString("created_at");
+        r.chainId = rs.getString("chain_id");
+        r.chainRound = integer(rs, "chain_round");
+        r.parentId = lng(rs, "parent_id");
+        String plan = rs.getString("team_plan");
+        if (plan != null) {
+            try {
+                r.teamPlan = JSON.readValue(plan, com.ornnplanner.arena.ArenaModel.TeamPlan.class);
+            } catch (JsonProcessingException e) {
+                r.teamPlan = null;   // unreadable plan: the policy itself is still usable
+            }
+        }
         return r;
     }
 

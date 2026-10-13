@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 14;
+    static final int VERSION = 15;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -97,6 +97,13 @@ public class SchemaManager {
         }
         if (version < 12 && tableExists("build_step") && !columnExists("build_step", "sell")) {
             jdbc.execute("ALTER TABLE build_step ADD COLUMN sell INTEGER NOT NULL DEFAULT 0");   // v12: sales
+        }
+        if (version < 15 && tableExists("arena_policy") && !columnExists("arena_policy", "chain_id")) {
+            // v15: chain training (which chain and round made a policy, the team plan, the version it started from).
+            jdbc.execute("ALTER TABLE arena_policy ADD COLUMN chain_id TEXT");
+            jdbc.execute("ALTER TABLE arena_policy ADD COLUMN chain_round INTEGER");
+            jdbc.execute("ALTER TABLE arena_policy ADD COLUMN team_plan TEXT");
+            jdbc.execute("ALTER TABLE arena_policy ADD COLUMN parent_id INTEGER");
         }
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {

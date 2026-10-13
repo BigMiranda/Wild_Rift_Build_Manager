@@ -1,5 +1,6 @@
 package com.ornnplanner.api;
 
+import com.ornnplanner.arena.ArenaChain;
 import com.ornnplanner.arena.ArenaModel;
 import com.ornnplanner.arena.ArenaService;
 import com.ornnplanner.arena.ArenaTrainingService;
@@ -40,9 +41,33 @@ public class ArenaController {
         return training.start(request);
     }
 
+    /** Single trainings and chains (each with its kind: single | chain). */
     @GetMapping("/train")
-    public List<ArenaTrainingService.Job> trainings() {
+    public List<Object> trainings() {
         return training.jobs();
+    }
+
+    /** Starts a chain training: the scenario's champions one after the other, round after round. */
+    @PostMapping("/train/chain")
+    public ArenaChain.Job trainChain(@RequestBody ArenaChain.Request request) {
+        return training.startChain(request);
+    }
+
+    @GetMapping("/train/chain/{id}")
+    public ArenaChain.Job chain(@PathVariable String id) {
+        return training.chain(id);
+    }
+
+    /** The stage under way finishes (validated and saved), then the chain stops. */
+    @PostMapping("/train/chain/{id}/stop-after-current")
+    public ArenaChain.Job stopChainAfterCurrent(@PathVariable String id) {
+        return training.stopAfterCurrent(id);
+    }
+
+    /** Cancels now: the stage under way is not saved. */
+    @DeleteMapping("/train/chain/{id}")
+    public ArenaChain.Job cancelChain(@PathVariable String id) {
+        return training.cancelChain(id);
     }
 
     @GetMapping("/train/{job}")

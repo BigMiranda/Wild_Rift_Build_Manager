@@ -12,6 +12,7 @@
 -- Version 12: a purchase step can be a sale of a held item (build_step.sell).
 -- Version 13: orchestrated matchup scenarios (arena_scenario).
 -- Version 14: learned arena policies (arena_policy).
+-- Version 15: chain training of arena policies (arena_policy.chain_id, chain_round, team_plan, parent_id).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -183,6 +184,10 @@ CREATE TABLE IF NOT EXISTS arena_policy (
     weights_json       TEXT NOT NULL,
     obs_schema         INTEGER NOT NULL,
     actions            INTEGER NOT NULL,
-    created_at         TEXT NOT NULL
+    created_at         TEXT NOT NULL,
+    chain_id           TEXT,          -- chain training that made it (NULL = trained alone)
+    chain_round        INTEGER,
+    team_plan          TEXT,          -- JSON: the side's plan used in its training fights
+    parent_id          INTEGER        -- version its training started from (NULL = zero weights)
 );
 CREATE INDEX IF NOT EXISTS idx_arena_policy_champion ON arena_policy (champion);
