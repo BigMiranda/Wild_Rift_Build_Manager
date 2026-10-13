@@ -871,10 +871,9 @@ td.warn, .combat-items td.warn { color: var(--warn, #f0c75e); }
 .arena-editor label.inline { display: inline-flex; align-items: center; gap: 4px; }
 .arena-editor input[type=number] { width: 70px; }
 
-.arena-search .row { gap: 10px; flex-wrap: wrap; align-items: center; }
-.arena-search label.inline { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); }
-.arena-search input[type=number] { width: 80px; }
-.arena-search-list { font-size: 12px; columns: 2 260px; margin: 6px 0 10px; }
+.arena-train .row { gap: 10px; flex-wrap: wrap; align-items: center; }
+.arena-train label.inline { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); }
+.arena-train input[type=number] { width: 80px; }
 
 .arena-triggers td.small, .arena-triggers .small { font-size: 12px; }
 .arena-triggers tr.muted td { opacity: .6; }

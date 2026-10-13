@@ -209,3 +209,18 @@ campeões com one-hot do campeão na observação, ou ponte Python/PPO usando a 
   português (via `i18n.js` no frontend).
 - Determinismo: mesma seed ⇒ mesmo treino ⇒ mesmos pesos.
 - Não quebrar cenários salvos: `Slot.brain` ausente = `"script"`.
+
+## Rodada 2 — remover a busca, prioridades do time e treino em cadeia
+
+Andamento, parte a parte (cada parte é um commit no `arena-ia`).
+
+### Parte 1 — Remover a busca automática ✅
+- Backend: saíram `ArenaService.search`, `SearchRequest`, `SearchResult`, `mutate`, `SPELLS` e os auxiliares
+  privados que só a busca usava (`simulate`, `score`, `summary`, `copy` de `Action`), além de `POST /api/arena/search`.
+  Os comentários que citavam a busca (`withoutFrames`, `prepare`, `Policy`, `ArenaScore`, `ArenaModel`) agora citam o treino.
+- Frontend: saiu o `SearchPanel`. As chaves reaproveitadas pelo painel de treino foram renomeadas (pt e en):
+  `arena.search.obj.*` → `arena.obj.*`; `arena.search.{fighter,objective,seed,seedTitle}` → `arena.train.*`
+  (o texto da dica da semente passou a falar de lutas e variações). O CSS `.arena-search` virou `.arena-train`.
+- Cenários salvos: `Scenario` nunca teve campo da busca (a busca recebia o cenário no corpo da requisição), então
+  não há nada a migrar.
+- `./mvnw test` (94 testes, golden intacto) e `npm run build` limpos.

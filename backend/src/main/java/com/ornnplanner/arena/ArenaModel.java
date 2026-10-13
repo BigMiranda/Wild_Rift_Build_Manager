@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Data of an orchestrated matchup (arena): the scenario a user (or a search) writes, and what a run gives back. Plain
+ * Data of an orchestrated matchup (arena): the scenario a user writes, and what a run gives back. Plain
  * DTOs, exposed as JSON and stored as JSON (arena_scenario.data).
  */
 public final class ArenaModel {

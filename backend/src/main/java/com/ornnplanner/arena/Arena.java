@@ -37,7 +37,7 @@ import java.util.Set;
  * Steps of {@value #DT}s move the champions, projectiles, dashes and displacements and test their hits (circles against
  * segments, cones and rectangles); everything that happens at a given time (end of a cast, a delayed hit, a damage
  * tick, the end of a crowd control) is a timed event run at that exact second. The run is deterministic: the same
- * scenario always gives the same result, so a search can compare thousands of timelines.
+ * scenario always gives the same result, so training can compare thousands of fights.
  *
  * <h2>Orders</h2>
  * Each champion follows the scenario's timeline (abilities, recasts, item actives, spells, moves, focus); an order that
@@ -457,7 +457,7 @@ public class Arena {
     /** Time limit of the run (s). */
     private double duration;
 
-    /** Records the frames for the screen (a search turns it off: only the totals matter). */
+    /** Records the frames for the screen (training turns it off: only the totals matter). */
     private boolean recordFrames = true;
 
     public Arena(CombatCatalog catalog, Map<String, Object> map) {

@@ -1,6 +1,6 @@
 package com.ornnplanner.arena;
 
-/** How good a fight went for one champion and its side: the objectives of the search and of training. */
+/** How good a fight went for one champion and its side: the objectives of training. */
 public final class ArenaScore {
 
     public static final java.util.List<String> OBJECTIVES = java.util.List.of("win_fast", "damage", "survive", "team");

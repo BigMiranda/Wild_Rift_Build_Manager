@@ -4,8 +4,8 @@ package com.ornnplanner.arena.ai;
  * Decides what a champion does when the timeline leaves it free. The arena asks every step the champion can act; a
  * decision the arena cannot carry out (a cast that fails) is masked and the policy is asked again in the same step.
  *
- * <p>A policy may be shared by arenas running on several threads at once (a search, a training): it must not keep
- * state between calls, or must keep it per fight.
+ * <p>A policy may be shared by arenas running on several threads at once (training): it must not keep state between
+ * calls, or must keep it per fight.
  */
 public interface Policy {
 

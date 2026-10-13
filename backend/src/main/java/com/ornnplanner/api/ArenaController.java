@@ -78,11 +78,6 @@ public class ArenaController {
         return arena.run(scenario);
     }
 
-    @PostMapping("/search")
-    public ArenaService.SearchResult search(@RequestBody ArenaService.SearchRequest request) {
-        return arena.search(request);
-    }
-
     @GetMapping("/scenarios")
     public List<Map<String, Object>> scenarios() {
         return arena.list();
