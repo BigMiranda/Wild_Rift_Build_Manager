@@ -111,12 +111,17 @@ public class CombatService {
     private final PlannerService planner;
     private final ChampionCatalog champions;
     private final CombatCatalog catalog;
+    private final com.ornnplanner.seed.ItemEffectCatalog itemEffects;
+    private final com.ornnplanner.seed.RuneCatalog runes;
 
-    public CombatService(BuildRepository builds, PlannerService planner, ChampionCatalog champions, CombatCatalog catalog) {
+    public CombatService(BuildRepository builds, PlannerService planner, ChampionCatalog champions, CombatCatalog catalog,
+                         com.ornnplanner.seed.ItemEffectCatalog itemEffects, com.ornnplanner.seed.RuneCatalog runes) {
         this.builds = builds;
         this.planner = planner;
         this.champions = champions;
         this.catalog = catalog;
+        this.itemEffects = itemEffects;
+        this.runes = runes;
     }
 
     public Response simulate(Request req) {
@@ -219,10 +224,230 @@ public class CombatService {
         return sum;
     }
 
-    /** A fighter for the arena: the build at the minute, with the champion's form effects off (the arena turns them on). */
-    public Fighter arenaFighter(Combatant c, java.util.Set<String> formsOff) {
+    /** A conditional effect of the planner (item passive, rune, champion effect) and when it counts in the arena. */
+    public static class Triggered {
+        /** "Item|Effect" (item effects and the shop's conditional lines), rune or champion effect name. */
+        public String key;
+        /** Item, rune or champion effect it belongs to (the ledger's source). */
+        public String source;
+        public String effect;
+        /** item | loja | runa | campeao */
+        public String kind;
+        /** The trigger (gatilhos of the combat file); null = none written: it follows the build's switch. */
+        public Map<String, Object> spec;
+        /** The trigger's "quando", or "estatico". */
+        public String mode;
+        /** The build's own switch for it. */
+        public boolean buildOn;
+        /** What it adds when it is on (stats, and shields / heals / stasis as effective stats). */
+        public Map<String, Double> delta = new LinkedHashMap<>();
+        /** Second of the fight at which it turns on, set by hand on the scenario (instead of its trigger). */
+        public Double fixedAt;
+        Long itemId;
+
+        /** Counts the whole fight as the build says: no trigger, it depends on the match (kills, stacks, mana). */
+        public boolean followsBuild() {
+            return "estatico".equals(mode);
+        }
+
+        /** Turned on by something in the fight (not static, not done by a fight effect, not impossible). */
+        public boolean fightTriggered() {
+            return !followsBuild() && !"modelado".equals(mode) && !"nunca".equals(mode);
+        }
+    }
+
+    /** A champion for the arena: the build at the minute with its conditional effects off, and those effects. */
+    public static class ArenaBuild {
+        public Fighter fighter;
+        public List<Triggered> triggers = new ArrayList<>();
+    }
+
+    /** The champion's name of a combatant's build (decides its ability sheet). */
+    public String championName(Combatant c) {
         Resolved r = resolve(c);
-        return fighter(r, r.items, formsOff);
+        Map<String, Object> champ = champions.find(r.build.unitCode).orElse(null);
+        return champ == null ? r.build.unitCode : String.valueOf(champ.get("nome"));
+    }
+
+    /**
+     * The fighter of the arena: every conditional effect of the build that the fight decides is off (it turns on by
+     * its trigger, with the stats it adds measured as the build with it on minus off: Living Forge and the rest of the
+     * build included); the ones that depend on the match follow the build's switch; form effects stay off (the arena
+     * switches them with the champion's sheet).
+     */
+    public ArenaBuild arenaBuild(Combatant c, java.util.Set<String> formsOff) {
+        Resolved r = resolve(c);
+        List<Triggered> all = discover(r, formsOff);
+        Build base = variant(r.build, all, null, formsOff);
+        MinutePoint p0 = planner.snapshot(base, r.items, r.level, r.minute);
+        ArenaBuild out = new ArenaBuild();
+        out.fighter = fighter(r, base, r.items, p0, formsOff, true);
+        for (Triggered t : all) {
+            if (!t.fightTriggered()) {
+                continue;
+            }
+            MinutePoint p1 = planner.snapshot(variant(r.build, all, t, formsOff), r.items, r.level, r.minute);
+            p1.total.forEach((stat, v) -> {
+                double d = v - p0.total.getOrDefault(stat, 0.0);
+                if (Math.abs(d) > 1e-9) {
+                    t.delta.put(stat, d);
+                }
+            });
+            if (r.c.activations != null) {
+                Double at = r.c.activations.containsKey(t.key) ? r.c.activations.get(t.key) : r.c.activations.get(t.source);
+                if (at != null) {
+                    t.fixedAt = Math.max(0, at);
+                }
+            }
+        }
+        out.triggers = all;
+        return out;
+    }
+
+    /** The conditional effects of the build at the minute: of its items, the shop's lines, its runes and champion. */
+    private List<Triggered> discover(Resolved r, java.util.Set<String> formsOff) {
+        Build b = r.build;
+        List<Triggered> out = new ArrayList<>();
+        Set<Long> seen = new LinkedHashSet<>();
+        for (Long id : r.items) {
+            String name = seen.add(id) ? itemName(id) : null;
+            if (name == null) {
+                continue;
+            }
+            for (com.ornnplanner.seed.EffectSpec.Effect e : itemEffects.effects(name)) {
+                if (!e.hasConditional) {
+                    continue;
+                }
+                String key = com.ornnplanner.seed.ItemEffectCatalog.key(name, e.name);
+                Boolean on = b.itemSetup == null ? null : b.itemSetup.conditional.get(key);
+                out.add(triggered(key, name, e.name, "item", on != null ? on : e.defaultOn, id));
+            }
+            Boolean purchase = null;
+            for (BuildRepository.Step s : b.steps == null ? List.<BuildRepository.Step>of() : b.steps) {
+                if (!s.moment() && id.equals(s.itemId)) {
+                    purchase = s.includeConditional;
+                }
+            }
+            for (String passive : shopConditionalPassives(id)) {
+                out.add(triggered(name + "|" + passive, name, passive, "loja", purchase == null || purchase, id));
+            }
+        }
+        if (b.runePage != null) {
+            for (String name : b.runePage.chosen()) {
+                com.ornnplanner.seed.RuneCatalog.Rune rune = runes.find(name).orElse(null);
+                if (rune != null && rune.hasConditional) {
+                    boolean on = b.runePage.conditional == null || !Boolean.FALSE.equals(b.runePage.conditional.get(name));
+                    out.add(triggered(name, name, name, "runa", on, null));
+                }
+            }
+        }
+        for (com.ornnplanner.seed.EffectSpec.Effect e : champions.effects(b.unitCode)) {
+            if (!e.hasConditional || formsOff.contains(e.name)) {
+                continue;
+            }
+            Boolean on = b.championSetup == null ? null : b.championSetup.conditional.get(e.name);
+            out.add(triggered(e.name, e.name, e.name, "campeao", on != null ? on : e.defaultOn, null));
+        }
+        return out;
+    }
+
+    private Triggered triggered(String key, String source, String effect, String kind, boolean buildOn, Long itemId) {
+        Triggered t = new Triggered();
+        t.key = key;
+        t.source = source;
+        t.effect = effect;
+        t.kind = kind;
+        t.buildOn = buildOn;
+        t.itemId = itemId;
+        t.spec = catalog.trigger(key);
+        t.mode = t.spec == null ? "estatico" : String.valueOf(t.spec.getOrDefault("quando", "estatico"));
+        return t;
+    }
+
+    /** Passives of an item (shop data) with conditional lines. */
+    private List<String> shopConditionalPassives(long id) {
+        return shopConditional.computeIfAbsent(id, k -> {
+            List<String> out = new ArrayList<>();
+            for (PlannerService.ItemView v : planner.itemViews()) {
+                if (v.id != k) {
+                    continue;
+                }
+                for (com.ornnplanner.engine.Model.StatLine l : v.stats) {
+                    if (l.conditional && !l.switched && l.passive != null && !out.contains(l.passive)) {
+                        out.add(l.passive);
+                    }
+                }
+            }
+            return out;
+        });
+    }
+
+    private final Map<Long, List<String>> shopConditional = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The build with the switches of its conditional effects set: the ones the fight decides off (or {@code onlyOn}
+     * on, with its option at 1 when each activation is worth one), the others as the build has them; forms off.
+     */
+    private Build variant(Build original, List<Triggered> all, Triggered onlyOn, java.util.Set<String> formsOff) {
+        Build b = JSON.convertValue(original, Build.class);
+        if (b.itemSetup == null) {
+            b.itemSetup = new BuildRepository.ItemSetup();
+        }
+        if (b.championSetup == null) {
+            b.championSetup = new BuildRepository.ChampionSetup();
+        }
+        b.itemSetup.conditional = b.itemSetup.conditional == null ? new LinkedHashMap<>() : b.itemSetup.conditional;
+        b.itemSetup.options = b.itemSetup.options == null ? new LinkedHashMap<>() : b.itemSetup.options;
+        b.championSetup.conditional = b.championSetup.conditional == null ? new LinkedHashMap<>() : b.championSetup.conditional;
+        b.championSetup.options = b.championSetup.options == null ? new LinkedHashMap<>() : b.championSetup.options;
+        if (b.runePage != null) {
+            b.runePage.conditional = b.runePage.conditional == null ? new LinkedHashMap<>() : b.runePage.conditional;
+            b.runePage.options = b.runePage.options == null ? new LinkedHashMap<>() : b.runePage.options;
+        }
+        for (Triggered t : all) {
+            boolean on = t == onlyOn || t.followsBuild() && t.buildOn;
+            switch (t.kind) {
+                case "item":
+                    b.itemSetup.conditional.put(t.key, on);
+                    break;
+                case "loja":
+                    for (BuildRepository.Step s : b.steps == null ? List.<BuildRepository.Step>of() : b.steps) {
+                        if (!s.moment() && t.itemId.equals(s.itemId)) {
+                            s.includeConditional = on;
+                        }
+                    }
+                    break;
+                case "runa":
+                    if (b.runePage != null) {
+                        b.runePage.conditional.put(t.key, on);
+                    }
+                    break;
+                default:
+                    b.championSetup.conditional.put(t.key, on);
+                    break;
+            }
+        }
+        if (onlyOn != null && onlyOn.spec != null && Boolean.TRUE.equals(onlyOn.spec.get("por_acionamento"))) {
+            switch (onlyOn.kind) {
+                case "item":
+                    b.itemSetup.options.put(onlyOn.key, 1);
+                    break;
+                case "runa":
+                    if (b.runePage != null) {
+                        b.runePage.options.put(onlyOn.key, 1);
+                    }
+                    break;
+                case "campeao":
+                    b.championSetup.options.put(onlyOn.key, 1);
+                    break;
+                default:
+                    break;
+            }
+        }
+        for (String form : formsOff) {
+            b.championSetup.conditional.put(form, false);
+        }
+        return b;
     }
 
     /**
@@ -346,10 +571,18 @@ public class CombatService {
         return fighter(r, items, java.util.Set.of());
     }
 
-    @SuppressWarnings("unchecked")
     private Fighter fighter(Resolved r, List<Long> items, java.util.Set<String> formsOff) {
         Build b = withDelayedOn(r.build, formsOff, Map.of());
-        MinutePoint p = planner.snapshot(b, items, r.level, r.minute);
+        return fighter(r, b, items, planner.snapshot(b, items, r.level, r.minute), formsOff, false);
+    }
+
+    /**
+     * A fighter from the build's stats at the minute. The arena's ({@code arena}) also gets its runes' fight effects and
+     * no delayed statuses (its triggers turn them on).
+     */
+    @SuppressWarnings("unchecked")
+    private Fighter fighter(Resolved r, Build b, List<Long> items, MinutePoint p, java.util.Set<String> formsOff,
+                            boolean arena) {
         Fighter f = new Fighter();
         Map<String, Object> champ = champions.find(b.unitCode).orElse(null);
         f.champion = champ == null ? b.unitCode : String.valueOf(champ.get("nome"));
@@ -359,20 +592,22 @@ public class CombatService {
         f.total.putAll(p.total);
         f.base.putAll(p.base);
         for (ItemContribution c : p.contributions) {
+            List<Map<String, Object>> fx = !c.rune ? catalog.effects(c.itemName)
+                    : arena && !c.champion ? catalog.runeEffects(c.itemName) : List.of();
             if (!c.rune) {
                 f.items.put(c.itemName, c.itemId);
-                for (Map<String, Object> e : catalog.effects(c.itemName)) {
-                    f.effects.add(new ItemEffect(c.itemName, e));
-                }
             }
-            // An item whose heal the fight models (Desespero Eterno, Aurora e Crepúsculo...) keeps it out of the pool.
-            boolean healInFight = catalog.effects(c.itemName).stream()
-                    .anyMatch(e -> e.keySet().stream().anyMatch(k -> k.startsWith("cura")));
+            for (Map<String, Object> e : fx) {
+                f.effects.add(new ItemEffect(c.itemName, e));
+            }
+            // An item / rune whose heal the fight models (Desespero Eterno, Aurora e Crepúsculo, Aperto...) keeps it out
+            // of the pool.
+            boolean healInFight = fx.stream().anyMatch(e -> e.keySet().stream().anyMatch(k -> k.startsWith("cura")));
             c.flat.forEach((stat, v) -> source(f, c.itemName, stat, v, healInFight));
             for (PassivePart part : c.passiveParts) {
                 source(f, c.itemName, part.stat, part.amount, healInFight);
             }
-            Map<String, Object> act = formsOff.contains(c.itemName) ? null : catalog.activation(c.itemName);
+            Map<String, Object> act = arena || formsOff.contains(c.itemName) ? null : catalog.activation(c.itemName);
             if (act != null) {
                 CombatSimulator.Delay d = new CombatSimulator.Delay();
                 d.source = c.itemName;

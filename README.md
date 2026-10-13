@@ -368,11 +368,32 @@ Nexus (ou onde você os colocar).
 - **Ordens**: uma ordem em recarga espera ficar pronta (e o registro mostra quanto esperou); fora de alcance, o
   campeão anda até o alvo. Sem ordens, ele persegue e ataca, e (com "auto") usa as habilidades prontas na prioridade.
   A reconjuração da ultimate do Ornn espera o elemental chegar perto para a cabeçada.
+- **Cérebro** de cada campeão (o que ele faz quando a linha do tempo não dá ordem): **Roteiro** (padrão, o descrito
+  acima) ou **Tático**, que também desvia de projéteis, recua quando perde a troca com pouca vida (Flash e Fantasma
+  para fugir), faz kite se ataca à distância, reconjura e usa ativos de dano e feitiços (Barreira/Curar com pouca vida,
+  Incendiar num alvo enfraquecido, Exaustão) — ou uma **IA treinada** daquele campeão.
+- **Treinar IA**: ensina ao campeão uma política que reage à luta. Uma rede neural pequena parte do cérebro Tático e
+  uma estratégia evolutiva (Java puro, sem dependências) guarda as mudanças que melhoram o objetivo, em lutas do
+  cenário com inícios, minutos das builds e oponentes variados (Roteiro, Tático, IAs salvas dos inimigos, ela mesma
+  num espelho). Validada em lutas nunca usadas no treino; cada versão fica salva com o quanto supera o Roteiro e o
+  Tático. "→ linha do tempo" transforma o que o cérebro fez em ordens editáveis, e o relatório mostra as decisões da
+  IA com seus placares. Detalhes em [docs/proposta-ia-arena.md](docs/proposta-ia-arena.md).
 - **Recargas em cada instante**: embaixo da faixa de cada campeão, uma barra por habilidade, ativo de item e feitiço
   mostra quando está em recarga; o quadro de cada instante traz o tempo que falta de cada uma.
 - **Mapa**: círculos para os campeões (com vida e escudo) e formas simples para o resto (projéteis, áreas, cones,
   campos, pilar de magma, elemental). Pausado, passar o mouse identifica cada forma; nos campeões mostra vida,
   estado, marcas e recargas.
+- **Efeitos do planejador na luta**: todo efeito condicional da build (passivas e ativos dos itens, linhas
+  condicionais da loja, runas, efeitos do campeão) liga pelo seu **gatilho**, escrito em `gatilhos` de
+  [`seed/combate_7_3.yml`](backend/src/main/resources/seed/combate_7_3.yml), em vez de valer a luta toda. Exemplos:
+  Salva-Vidas abaixo de 35% de Vida, Duplaguarda depois de 5s em combate, Conquistador no 6º acerto, Esmagadores ao
+  sofrer Dano Mágico, Hexoplaca ao usar a ultimate, Anjo Guardião no dano letal, Zhonya / Placa / Medalhão pela ordem
+  ou sozinhos com a Vida baixa, Mercurial ao ser imobilizado. O status que cada um dá é a build com ele ligado menos
+  desligado (com a Forja Viva e o resto da build). Os que dependem da partida (abates, acúmulos, mana) seguem a escolha
+  da build. As **runas** também agem na luta (`runas` do mesmo arquivo): Eletrocutar, Aperto dos Mortos-Vivos,
+  Fortalecimento, Ritmo Fatal, Primeiro Ataque, Cometa, Brutal, Tirano, Golpe de Misericórdia, Zelo de Combate e as
+  demais. A regeneração de Vida corre o tempo todo, e os ataques do Ornn num alvo Frágil o empurram e quebram o
+  Frágil. O relatório lista cada efeito: quando conta, quantas vezes ativou, quanto tempo ficou ligado e o que deu.
 - O motor anda em passos de 0,02s para movimento e colisões, com cada efeito no seu segundo exato; é determinístico
   (o mesmo cenário dá sempre o mesmo resultado), o que permite comparar linhas do tempo automaticamente. Uma luta de
   40s roda em menos de um segundo.

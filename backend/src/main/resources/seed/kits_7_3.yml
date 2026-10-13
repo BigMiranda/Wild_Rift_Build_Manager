@@ -40,6 +40,7 @@ campeoes:
     fragil:                  # passiva da W e da R: imobilizar um alvo Frágil
       dano: {tipo: magico, vida_max_alvo: 0.07, vida_max_alvo_nv15: 0.22}   # WR (pelo nível do Ornn)
       aumento_controle: 0.30                                                 # WR: +30% de duração
+      ataques: {empurra: 150}   # WR: os ataques do Ornn num alvo Frágil o empurram e quebram o Frágil; distância EST
     habilidades:
       "1":
         nome: Ruptura Vulcânica
@@ -59,15 +60,15 @@ campeoes:
         nome: Fôlego do Fole
         forma: canal
         recarga: [11.5, 11, 10.5, 10]
-        duracao: 1.0
-        intervalo: 0.2
+        duracao: 0.75
+        intervalo: 0.15
         alcance: 500
         largura: 350
         avanca: 0.35         # anda 35% da velocidade de movimento durante o canal
         imparavel: true
         dano: {tipo: magico, vida_max_alvo: [0.10, 0.11, 0.12, 0.13]}   # total do canal
         ultimo_golpe: {fragil: 3}
-        fontes: "recarga, duração, dano, Frágil: WR; alcance: PC; largura: PC (raio 175); avanço: PC"
+        fontes: "recarga, duração (0,75s), dano, Frágil: WR; alcance: PC; largura: PC (raio 175); avanço: PC"
       "3":
         nome: Investida Calcinante
         forma: avanco

@@ -233,6 +233,25 @@ class CombatSimulatorTest {
         assertTrue(thornmail.damage > 0, "Espinhos reflects damage");
         Ledger lifesteal = ledger(r, 0, "Sedenta por Sangue");
         assertTrue(lifesteal.healLost > 0);
+        // Armadura de Espinhos cuts 50%: what landed equals what was cut, not more
+        assertEquals(lifesteal.healed, lifesteal.healLost, 1e-6);
+    }
+
+    @Test
+    void grievousWoundsOnlyCountsTheHealThatWouldHaveLanded() {
+        Fighter a = fighter("A", 100000, 0, 0, 100, 1);   // barely hurt: most of the lifesteal goes over full health
+        a.total.put("% Lifesteal", 20.0);
+        a.vampSources.put("Sedenta por Sangue", 20.0);
+        Fighter b = fighter("B", 100000, 0, 0, 5, 1);
+        b.items.put("Colete Espinhoso", 1L);
+        for (Map<String, Object> e : catalog.effects("Colete Espinhoso")) {
+            b.effects.add(new ItemEffect("Colete Espinhoso", e));
+        }
+        Result r = new CombatSimulator(catalog).run(List.of(a), List.of(b), 10);
+        CombatSimulator.FighterResult fa = r.fighters.get(0);
+        // A loses 5 a second and heals 20 a hit cut to 12: the cut never passes 40% of what would have healed
+        assertTrue(fa.healLost <= 0.4 / 0.6 * fa.healed + 1e-6, fa.healed + " healed, " + fa.healLost + " cut");
+        assertTrue(fa.healLost < fa.taken, "a cut heal can't be more than the health missing");
     }
 
     @Test

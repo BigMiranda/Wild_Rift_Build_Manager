@@ -19,6 +19,8 @@ public class CombatCatalog {
     private final Map<String, Map<String, Object>> spells = new LinkedHashMap<>();
     private final Map<String, Map<String, Object>> activations = new LinkedHashMap<>();
     private final Map<String, Map<String, Object>> champions = new LinkedHashMap<>();
+    private final Map<String, List<Map<String, Object>>> runes = new LinkedHashMap<>();
+    private final Map<String, Map<String, Object>> triggers = new LinkedHashMap<>();
 
     @SuppressWarnings("unchecked")
     public CombatCatalog(@Value("${planner.seed.combat:classpath:seed/combate_7_3.yml}") Resource file) {
@@ -28,6 +30,8 @@ public class CombatCatalog {
             spells.putAll((Map<String, Map<String, Object>>) root.get("feiticos"));
             activations.putAll((Map<String, Map<String, Object>>) root.getOrDefault("ativacao", Map.of()));
             champions.putAll((Map<String, Map<String, Object>>) root.getOrDefault("campeoes", Map.of()));
+            runes.putAll((Map<String, List<Map<String, Object>>>) root.getOrDefault("runas", Map.of()));
+            triggers.putAll((Map<String, Map<String, Object>>) root.getOrDefault("gatilhos", Map.of()));
         } catch (IOException e) {
             throw new IllegalStateException("Cannot read seed file " + file, e);
         }
@@ -53,6 +57,19 @@ public class CombatCatalog {
     /** Fight mechanics of a champion (by name), or an empty map. */
     public Map<String, Object> champion(String name) {
         return champions.getOrDefault(name, Map.of());
+    }
+
+    /** Fight effects of a rune (the arena's procs: Electrocute, Grasp, Brutal...). */
+    public List<Map<String, Object>> runeEffects(String rune) {
+        return runes.getOrDefault(rune, List.of());
+    }
+
+    /**
+     * When a conditional effect of the planner counts in the arena ("Item|Effect", rune or champion effect name);
+     * null = no trigger written (it follows the build's switch for the whole fight).
+     */
+    public Map<String, Object> trigger(String key) {
+        return triggers.get(key);
     }
 
     public Map<String, List<Map<String, Object>>> items() {

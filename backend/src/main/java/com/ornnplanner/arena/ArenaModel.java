@@ -1,5 +1,7 @@
 package com.ornnplanner.arena;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,6 +30,11 @@ public final class ArenaModel {
         /** Uses its abilities on its own when the timeline does not say otherwise (in priority order). */
         public boolean autoAbilities = true;
         public List<String> priority = new ArrayList<>(List.of("R", "3", "1", "2"));
+        /**
+         * What decides when the timeline gives no order: script (null too: chase, attack, abilities in priority) or
+         * tactical (also dodges, retreats, kites, recasts and uses actives and spells).
+         */
+        public String brain;
         /** Second at which a delayed status turns on (source -> s), instead of its own conditions. */
         public Map<String, Double> activations = new LinkedHashMap<>();
     }
@@ -149,6 +156,30 @@ public final class ArenaModel {
         public List<String> notes = new ArrayList<>();
     }
 
+    /** A conditional effect of the planner in the run: when it counts, and what it did. */
+    public static class TriggerReport {
+        public int fighter;
+        public String key;
+        public String source;
+        public String effect;
+        /** item | loja | runa | campeao */
+        public String kind;
+        /** The trigger ("quando"), "fixo" when set by hand, "estatico" / "modelado" / "nunca". */
+        public String mode;
+        /** How the arena counts it, in words. */
+        public String how;
+        /** The build's own switch for it (what the planner counts). */
+        public boolean buildOn;
+        public int activations;
+        public Double first;
+        public double activeSeconds;
+        /** Shields it gave and health it restored. */
+        public double shield;
+        public double healed;
+        /** What it adds when on (stats; shields / heals as effective stats). */
+        public Map<String, Double> delta = new LinkedHashMap<>();
+    }
+
     public static class Result {
         /** 0, 1, or -1 when both sides still stand at the time limit. */
         public int winner = -1;
@@ -165,5 +196,16 @@ public final class ArenaModel {
         public List<Event> skipped = new ArrayList<>();
         /** What each item, rune, ability and spell did (same ledger as the quick matchup). */
         public List<com.ornnplanner.combat.CombatSimulator.Ledger> ledger = new ArrayList<>();
+        /** Every conditional effect of the builds (items, shop lines, runes, champion) and how it went. */
+        public List<TriggerReport> triggers = new ArrayList<>();
+        /**
+         * Casts, recasts, actives and spells a policy (tactical or learned) chose and did, as orders of the timeline:
+         * the fight can be turned into an editable timeline.
+         */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public List<Action> policyOrders = new ArrayList<>();
+        /** What a learned policy chose, each time its choice changed, with its three best scores. */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public List<Event> decisions = new ArrayList<>();
     }
 }

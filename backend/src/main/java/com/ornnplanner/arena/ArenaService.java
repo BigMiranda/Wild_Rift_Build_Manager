@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ornnplanner.arena.ArenaModel.Scenario;
 import com.ornnplanner.arena.ArenaModel.Slot;
+import com.ornnplanner.arena.ai.NeuralPolicy;
+import com.ornnplanner.arena.ai.PolicyRepository;
+import com.ornnplanner.arena.ai.TacticalPolicy;
 import com.ornnplanner.combat.CombatCatalog;
 import com.ornnplanner.combat.CombatService;
 import com.ornnplanner.combat.CombatSimulator.Fighter;
@@ -47,13 +50,15 @@ public class ArenaService {
     /** Cooldowns of item actives the combat file does not carry (s). */
     private static final Map<String, Double> ITEM_COOLDOWNS = Map.of(
             "Ampulheta de Zhonya", 90.0, "Armaguarda da Caçadora", 150.0, "Placa Gargolítica", 60.0,
-            "Medalhão dos Solari de Ferro", 60.0);
+            "Medalhão dos Solari de Ferro", 60.0, "Bênção de Mikael", 120.0, "Cimitarra Mercurial", 90.0,
+            "Bandana de Mercúrio", 90.0);
 
     private final CombatService combat;
     private final CombatCatalog catalog;
     private final BuildRepository builds;
     private final RuneCatalog runes;
     private final JdbcTemplate jdbc;
+    private final PolicyRepository policies;
     private final Map<String, Object> kits = new LinkedHashMap<>();
     private final Map<String, Object> map = new LinkedHashMap<>();
     private static final ObjectMapper JSON = new ObjectMapper()
@@ -61,12 +66,13 @@ public class ArenaService {
 
     @SuppressWarnings("unchecked")
     public ArenaService(CombatService combat, CombatCatalog catalog, BuildRepository builds, RuneCatalog runes,
-                        JdbcTemplate jdbc, @Value("${planner.seed.kits:classpath:seed/kits_7_3.yml}") Resource kitsFile) {
+                        JdbcTemplate jdbc, PolicyRepository policies, @Value("${planner.seed.kits:classpath:seed/kits_7_3.yml}") Resource kitsFile) {
         this.combat = combat;
         this.catalog = catalog;
         this.builds = builds;
         this.runes = runes;
         this.jdbc = jdbc;
+        this.policies = policies;
         try (InputStream in = kitsFile.getInputStream()) {
             Map<String, Object> root = new Yaml().load(in);
             kits.putAll((Map<String, Object>) root.get("campeoes"));
@@ -89,7 +95,7 @@ public class ArenaService {
         return new Arena(catalog, map).run(inputs, sc.actions == null ? List.of() : sc.actions, duration(sc));
     }
 
-    private static double duration(Scenario sc) {
+    static double duration(Scenario sc) {
         return Math.max(5, Math.min(MAX_DURATION, sc.duration <= 0 ? 60 : sc.duration));
     }
 
@@ -197,30 +203,9 @@ public class ArenaService {
         return new Arena(catalog, map).withoutFrames().run(inputs, all, duration);
     }
 
-    /** Higher is better. */
+    /** Higher is better (see {@link ArenaScore}). */
     private static double score(ArenaModel.Result r, String objective, int me, int team) {
-        ArenaModel.FighterStats f = r.fighters.get(me);
-        double teamDealt = 0;
-        double teamHp = 0;
-        double enemyHp = 0;
-        for (ArenaModel.FighterStats x : r.fighters) {
-            if (x.team == team) {
-                teamDealt += x.dealt;
-                teamHp += Math.max(0, x.health);
-            } else {
-                enemyHp += Math.max(0, x.health);
-            }
-        }
-        switch (objective == null ? "" : objective) {
-            case "damage":
-                return f.dealt;
-            case "survive":
-                return (f.deathTime != null ? f.deathTime : r.duration + 1000) + f.health / 100;
-            case "team":
-                return teamHp - enemyHp;
-            default: // win_fast: winning first (sooner is better), else the damage dealt and the enemy health left
-                return r.winner == team ? 100000 - r.duration * 100 : teamDealt - enemyHp;
-        }
+        return ArenaScore.score(r, objective, me, team);
     }
 
     private static String summary(ArenaModel.Result r, int me, int team) {
@@ -311,7 +296,7 @@ public class ArenaService {
 
     /** The arena's champions for a scenario (builds resolved once; a search reuses them for every try). */
     @SuppressWarnings("unchecked")
-    private List<Arena.Input> prepare(Scenario sc) {
+    List<Arena.Input> prepare(Scenario sc) {
 
         if (sc.fighters == null || sc.fighters.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "O cenário não tem campeões.");
@@ -338,16 +323,17 @@ public class ArenaService {
             c.minute = slot.minute;
             c.activations = slot.activations;
             // The champion's name decides its sheet; the sheet's form effects are switched by the arena itself.
-            Fighter probe = combat.arenaFighter(c, Set.of());
-            Map<String, Object> kit = (Map<String, Object>) kits.get(probe.champion);
+            Map<String, Object> kit = (Map<String, Object>) kits.get(combat.championName(c));
             Set<String> forms = new LinkedHashSet<>();
             if (kit != null && kit.get("efeitos_de_forma") instanceof Map) {
                 forms.addAll(((Map<String, Object>) kit.get("efeitos_de_forma")).keySet());
             }
-            Fighter f = forms.isEmpty() ? probe : combat.arenaFighter(c, forms);
+            CombatService.ArenaBuild ab = combat.arenaBuild(c, forms);
+            Fighter f = ab.fighter;
             f.team = slot.team;
             Arena.Input in = new Arena.Input();
             in.f = f;
+            in.triggers = ab.triggers;
             in.build = build.name;
             in.kit = kit;
             in.forms = forms.isEmpty() ? new LinkedHashMap<>() : combat.formDeltas(c, forms);
@@ -356,6 +342,7 @@ public class ArenaService {
             if (slot.priority != null && !slot.priority.isEmpty()) {
                 in.priority = new ArrayList<>(slot.priority);
             }
+            in.policy = policy(slot.brain, in);
             in.baseAttackSpeed = f.baseAttackSpeed > 0 ? f.baseAttackSpeed : 0.7;
             double[] start = start(slot.team, perTeam[slot.team]++, ofTeam[slot.team]);
             in.x = slot.x != null ? slot.x : start[0];
@@ -378,6 +365,39 @@ public class ArenaService {
             inputs.add(in);
         }
         return inputs;
+    }
+
+    /**
+     * The policy of a brain: script (null), tactical, or ai:&lt;id&gt; (a saved learned policy of that champion, with
+     * weights of the current observation and action layout).
+     */
+    com.ornnplanner.arena.ai.Policy policy(String brain, Arena.Input in) {
+        if (brain == null || brain.isBlank() || "script".equals(brain)) {
+            return null;
+        }
+        if ("tactical".equals(brain)) {
+            return new TacticalPolicy(in.priority);
+        }
+        if (brain.startsWith("ai:")) {
+            long id;
+            try {
+                id = Long.parseLong(brain.substring(3));
+            } catch (NumberFormatException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cérebro desconhecido: " + brain + ".");
+            }
+            PolicyRepository.Record r = policies.find(id).orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "A IA " + id + " não existe mais."));
+            if (!r.compatible()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A IA v" + r.version + " de " + r.champion
+                        + " foi treinada para outra versão da arena; treine de novo.");
+            }
+            if (!r.champion.equalsIgnoreCase(in.f.champion)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A IA v" + r.version + " é de " + r.champion
+                        + ", não de " + in.f.champion + ".");
+            }
+            return new NeuralPolicy(r.weights.network(), in.priority, r.weights.bonus);
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cérebro desconhecido: " + brain + ".");
     }
 
     /** Default start: next to the side's Nexus, side by side. */

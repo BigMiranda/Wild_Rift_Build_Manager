@@ -875,3 +875,15 @@ td.warn, .combat-items td.warn { color: var(--warn, #f0c75e); }
 .arena-search label.inline { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); }
 .arena-search input[type=number] { width: 80px; }
 .arena-search-list { font-size: 12px; columns: 2 260px; margin: 6px 0 10px; }
+
+.arena-triggers td.small, .arena-triggers .small { font-size: 12px; }
+.arena-triggers tr.muted td { opacity: .6; }
+.arena-triggers td.l.small { max-width: 320px; white-space: normal; }
+
+/* Arena: training a learned policy */
+.arena-train-job { margin-top: 8px; }
+.arena-train-bar { height: 6px; background: var(--border, rgba(127,127,127,.25)); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+.arena-train-bar > div { height: 100%; background: #4fa8ff; transition: width .3s; }
+.arena-train-chart { margin: 8px 0; }
+.arena-train-chart svg { width: 100%; height: 120px; display: block; background: rgba(127,127,127,.06); border-radius: 4px; }
+

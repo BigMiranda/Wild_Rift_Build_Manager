@@ -2,6 +2,9 @@ package com.ornnplanner.api;
 
 import com.ornnplanner.arena.ArenaModel;
 import com.ornnplanner.arena.ArenaService;
+import com.ornnplanner.arena.ArenaTrainingService;
+import com.ornnplanner.arena.ai.PolicyRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -9,7 +12,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -20,9 +25,47 @@ import java.util.Map;
 public class ArenaController {
 
     private final ArenaService arena;
+    private final ArenaTrainingService training;
+    private final PolicyRepository policies;
 
-    public ArenaController(ArenaService arena) {
+    public ArenaController(ArenaService arena, ArenaTrainingService training, PolicyRepository policies) {
         this.arena = arena;
+        this.training = training;
+        this.policies = policies;
+    }
+
+    /** Starts training a learned policy in the background; poll the job for its progress. */
+    @PostMapping("/train")
+    public ArenaTrainingService.Job train(@RequestBody ArenaTrainingService.TrainRequest request) {
+        return training.start(request);
+    }
+
+    @GetMapping("/train")
+    public List<ArenaTrainingService.Job> trainings() {
+        return training.jobs();
+    }
+
+    @GetMapping("/train/{job}")
+    public ArenaTrainingService.Job training(@PathVariable String job) {
+        return training.job(job);
+    }
+
+    @DeleteMapping("/train/{job}")
+    public ArenaTrainingService.Job cancelTraining(@PathVariable String job) {
+        return training.cancel(job);
+    }
+
+    /** Saved learned policies (without weights), a champion's only when given. */
+    @GetMapping("/policies")
+    public List<PolicyRepository.Record> policies(@RequestParam(required = false) String champion) {
+        return policies.list(champion);
+    }
+
+    @DeleteMapping("/policies/{id}")
+    public void deletePolicy(@PathVariable long id) {
+        if (!policies.delete(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "IA " + id + " não encontrada.");
+        }
     }
 
     @GetMapping("/kits")

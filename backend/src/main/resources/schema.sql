@@ -11,6 +11,7 @@
 -- Version 11: no table change; re-imports the catalog (Maldição Sanguinária in the % magic penetration group).
 -- Version 12: a purchase step can be a sale of a held item (build_step.sell).
 -- Version 13: orchestrated matchup scenarios (arena_scenario).
+-- Version 14: learned arena policies (arena_policy).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -159,3 +160,29 @@ CREATE TABLE IF NOT EXISTS arena_scenario (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+
+-- Learned arena policies (v14): a network trained for one champion and objective, its validation against the scripted
+-- and tactical autopilots, and its weights as JSON ({layers, weights, bonus}). obs_schema / actions guard against
+-- loading weights made for another observation or action layout.
+CREATE TABLE IF NOT EXISTS arena_policy (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    champion           TEXT NOT NULL,
+    objective          TEXT NOT NULL,
+    version            INTEGER NOT NULL,
+    fitness            REAL,
+    better_vs_script   REAL,
+    winrate            REAL,
+    winrate_script     REAL,
+    better_vs_tactical REAL,
+    better_vs_previous REAL,
+    accepted           INTEGER NOT NULL DEFAULT 0,
+    generations        INTEGER,
+    population         INTEGER,
+    seed               INTEGER,
+    scenario           TEXT,
+    weights_json       TEXT NOT NULL,
+    obs_schema         INTEGER NOT NULL,
+    actions            INTEGER NOT NULL,
+    created_at         TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_arena_policy_champion ON arena_policy (champion);

@@ -688,6 +688,18 @@ public class CombatSimulator {
                         s.bladeReady = now + 1.5;
                     }
                     break;
+                case "lumescudo":   // Céu Dividido: the first attack every 6s is a crit (160%) that heals
+                    if (now >= s.strikeReady.getOrDefault(e.item, 0.0)) {
+                        s.strikeReady.put(e.item, now + num(e.p, "recarga", 6));
+                        double extra = ad * num(e.p, "mult", 1.6) - ad * (1 + c);
+                        if (extra > 0) {
+                            deal(s, t, extra, "fisico", e.item, ITEM, 0);
+                        }
+                        double h = num(e.p, "cura_dda_base", 1.25) * s.base(Stats.ATTACK_DAMAGE)
+                                + num(e.p, "cura_vida_perdida", 0.06) * Math.max(0, s.maxHp - s.hp);
+                        heal(s, h, Map.of(key(s, e.item), h));
+                    }
+                    break;
                 case "golpe":
                     String g = String.valueOf(e.p.getOrDefault("gatilho", "qualquer"));
                     if (!"habilidade".equals(g)) {
@@ -1040,17 +1052,20 @@ public class CombatSimulator {
         }
         double gw = now < s.gwUntil ? s.gw : 0;
         double total = sources.values().stream().mapToDouble(Double::doubleValue).sum();
-        if (gw > 0 && s.gwSource != null) {
-            led(s.gwSource).healCut += amount * gw;
-            s.r.healLost += amount * gw;
+        double missing = Math.max(0, s.maxHp - s.hp);
+        double effective = Math.min(amount * (1 - gw), missing);
+        // Only the part that would have healed counts as cut (a heal over full health was never going to land).
+        double cut = Math.min(amount, missing) - effective;
+        if (cut > 0 && s.gwSource != null) {
+            led(s.gwSource).healCut += cut;
         }
-        double effective = Math.min(amount * (1 - gw), Math.max(0, s.maxHp - s.hp));
+        s.r.healLost += cut;
         s.hp += effective;
         s.r.healed += effective;
         for (Map.Entry<String, Double> e : sources.entrySet()) {
             double share = total > 0 ? e.getValue() / total : 0;
             led(e.getKey()).healed += effective * share;
-            led(e.getKey()).healLost += amount * gw * share;
+            led(e.getKey()).healLost += cut * share;
         }
     }
 

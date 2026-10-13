@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
-import { n0, n1 } from '../format.js';
+import { n0, n1, statAbbr, statValue } from '../format.js';
 import MinuteInput from '../components/MinuteInput.jsx';
 
 /**
@@ -18,7 +18,7 @@ const STORE = 'ornn-planner-arena';
 const PX_PER_S = 36;
 
 const emptyScenario = () => ({ id: null, name: t('arena.newName'), note: '', duration: 40, fighters: [newSlot(0), newSlot(1)], actions: [] });
-const newSlot = (team) => ({ team, buildId: null, minute: null, x: null, y: null, target: null, autoAbilities: true, priority: ['R', '3', '1', '2'], activations: {} });
+const newSlot = (team) => ({ team, buildId: null, minute: null, x: null, y: null, target: null, autoAbilities: true, priority: ['R', '3', '1', '2'], brain: 'script', activations: {} });
 
 function loadDraft() {
   try {
@@ -50,10 +50,13 @@ export default function Arena() {
   const [editing, setEditing] = useState(null);   // index of the action being edited
   const [pickPoint, setPickPoint] = useState(null); // action index waiting for a click on the map
   const [message, setMessage] = useState(null);
+  const [policies, setPolicies] = useState([]);
+  const loadPolicies = () => api.get('/api/arena/policies').then(setPolicies).catch(() => {});
 
   useEffect(() => {
     api.get('/api/builds').then(setBuilds).catch((e) => setError(e.message));
     api.get('/api/arena/scenarios').then(setSaved).catch(() => {});
+    loadPolicies();
   }, []);
   useEffect(() => {
     try {
@@ -131,6 +134,15 @@ export default function Arena() {
     setEditing(sc.actions.length);
   };
   const setAction = (i, patch) => set({ actions: sc.actions.map((a, k) => (k === i ? { ...a, ...patch } : a)) });
+  // What a tactical or learned brain did (casts, recasts, actives, spells) becomes timeline orders; the brain goes back
+  // to the script, so the user can edit them (moves are not exported, so the replay can differ).
+  const toTimeline = (i) => {
+    const orders = (result?.policyOrders ?? []).filter((o) => o.fighter === i).map((o) => ({
+      fighter: i, time: o.time, type: o.type, slot: o.slot ?? null, name: o.name ?? null, target: o.target ?? null, x: o.x ?? null, y: o.y ?? null,
+    }));
+    set({ actions: [...sc.actions, ...orders], fighters: sc.fighters.map((f, k) => (k === i ? { ...f, brain: 'script' } : f)) });
+    setMessage(t('arena.toTimelineDone', { n: orders.length, i: i + 1 }));
+  };
   const removeAction = (i) => {
     set({ actions: sc.actions.filter((_, k) => k !== i) });
     setEditing(null);
@@ -198,7 +210,9 @@ export default function Arena() {
               <h4 style={{ color: TEAM[team] }}>{t(`combat.team${team}`)}</h4>
               {sc.fighters.map((f, i) => (f.team !== team ? null : (
                 <FighterSlot key={i} index={i} slot={f} builds={builds} names={names} fighters={sc.fighters}
-                  stats={result?.fighters?.[i]} onChange={(p) => setFighter(i, p)} onRemove={() => removeFighter(i)} />
+                  stats={result?.fighters?.[i]} onChange={(p) => setFighter(i, p)} onRemove={() => removeFighter(i)}
+                  policies={policies} brainOrders={(result?.policyOrders ?? []).filter((o) => o.fighter === i).length}
+                  onToTimeline={() => toTimeline(i)} />
               )))}
               <button className="link" onClick={() => addFighter(team)}>{t('arena.addFighter')}</button>
             </div>
@@ -237,6 +251,10 @@ export default function Arena() {
       {ready && (
         <SearchPanel sc={sc} names={names}
           onApply={(fighter, actions) => set({ actions: [...sc.actions.filter((a) => a.fighter !== fighter), ...actions] })} />
+      )}
+      {ready && (
+        <TrainPanel sc={sc} names={names} policies={policies} onTrained={loadPolicies}
+          onUse={(fighter, id) => setFighter(fighter, { brain: `ai:${id}` })} />
       )}
       {result && <ArenaReport result={result} names={names} />}
     </div>
@@ -309,14 +327,185 @@ function SearchPanel({ sc, names, onApply }) {
   );
 }
 
+/** Champion names compared loosely (K'Sante / KSANTE). */
+const champKey = (s) => (s ?? '').normalize('NFD').replace(/[^a-z]/gi, '').toLowerCase();
+const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`);
+const policyLabel = (p) => t('arena.brain.ai', { v: p.version, obj: t(`arena.search.obj.${p.objective}`), pct: pct(p.betterVsScript) })
+  + (p.accepted ? '' : ` ${t('arena.train.notAccepted')}`);
+
+/**
+ * Trains a learned policy for one champion of the scenario (backend, in the background): an evolution strategy over a
+ * small network that starts from the tactical autopilot, against varied starts, build minutes and opponents. Shows the
+ * progress, the validation numbers, and the saved versions of that champion.
+ */
+function TrainPanel({ sc, names, policies, onTrained, onUse }) {
+  const [fighter, setFighter] = useState(0);
+  const [objective, setObjective] = useState('win_fast');
+  const [generations, setGenerations] = useState(30);
+  const [population, setPopulation] = useState(32);
+  const [seed, setSeed] = useState(1);
+  const [job, setJob] = useState(null);
+  const [error, setError] = useState(null);
+  const running = job != null && (job.status === 'queued' || job.status === 'running');
+
+  useEffect(() => {
+    if (!running) return undefined;
+    const timer = setInterval(async () => {
+      try {
+        const j = await api.get(`/api/arena/train/${job.id}`);
+        setJob(j);
+        if (j.status !== 'queued' && j.status !== 'running') onTrained();
+      } catch (e) {
+        setError(e.message);
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [running, job?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const start = async () => {
+    setError(null);
+    try {
+      setJob(await api.post('/api/arena/train', { scenario: sc, fighter, objective, generations, population, episodesPerGeneration: 8, seed }));
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const cancel = async () => {
+    try {
+      setJob(await api.del(`/api/arena/train/${job.id}`));
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const remove = async (p) => {
+    if (!window.confirm(t('arena.train.deleteConfirm', { v: p.version, champion: p.champion }))) return;
+    try {
+      await api.del(`/api/arena/policies/${p.id}`);
+      onTrained();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const mine = policies.filter((p) => champKey(p.champion) === champKey(names[fighter]));
+  const done = job?.status === 'done' ? job.policy : null;
+
+  return (
+    <section className="panel arena-search arena-train">
+      <h3>{t('arena.train.title')}</h3>
+      <p className="muted" style={{ marginTop: 0 }}>{t('arena.train.help')}</p>
+      <div className="row">
+        <label className="inline">{t('arena.search.fighter')}
+          <select value={fighter} onChange={(e) => setFighter(Number(e.target.value))} disabled={running}>
+            {sc.fighters.map((f, i) => <option key={i} value={i}>{i + 1} · {names[i]}</option>)}
+          </select>
+        </label>
+        <label className="inline">{t('arena.search.objective')}
+          <select value={objective} onChange={(e) => setObjective(e.target.value)} disabled={running}>
+            {['win_fast', 'damage', 'survive', 'team'].map((o) => <option key={o} value={o}>{t(`arena.search.obj.${o}`)}</option>)}
+          </select>
+        </label>
+        <label className="inline" title={t('arena.train.generationsTitle')}>{t('arena.train.generations')}
+          <input type="number" min={1} max={200} value={generations} disabled={running} onChange={(e) => setGenerations(Number(e.target.value) || 30)} />
+        </label>
+        <label className="inline" title={t('arena.train.populationTitle')}>{t('arena.train.population')}
+          <input type="number" min={4} max={128} step={2} value={population} disabled={running} onChange={(e) => setPopulation(Number(e.target.value) || 32)} />
+        </label>
+        <label className="inline" title={t('arena.search.seedTitle')}>{t('arena.search.seed')}
+          <input type="number" value={seed} disabled={running} onChange={(e) => setSeed(Number(e.target.value) || 1)} />
+        </label>
+        {running
+          ? <button className="danger" onClick={cancel}>{t('arena.train.cancel')}</button>
+          : <button className="primary" onClick={start}>{t('arena.train.run')}</button>}
+      </div>
+      {error && <p className="error">{error}</p>}
+      {job && (
+        <div className="arena-train-job">
+          <div className="arena-train-bar"><div style={{ width: `${(100 * job.generation) / Math.max(1, job.generations)}%` }} /></div>
+          <small className="muted">
+            {t('arena.train.status', { g: job.generation, n: job.generations, msg: job.message ?? job.status })}
+            {job.opponents?.length > 0 && ` · ${t('arena.train.opponents')}: ${job.opponents.join(', ')}`}
+          </small>
+          {job.progress?.length > 1 && <TrainChart points={job.progress} />}
+          {done && (
+            <p>
+              <strong>{t('arena.train.saved', { v: done.version, champion: done.champion })}</strong>
+              {' — '}{t('arena.train.numbers', { script: pct(done.betterVsScript), tactical: pct(done.betterVsTactical), win: pct(done.winrate), scriptWin: pct(done.winrateScript) })}
+              {done.betterVsPrevious != null && ` · ${t('arena.train.vsPrevious', { p: pct(done.betterVsPrevious) })}`}
+              {!done.accepted && <span className="warn"> · {t('arena.train.notAcceptedLong')}</span>}
+              <br />
+              <button onClick={() => onUse(fighter, done.id)}>{t('arena.train.use', { n: fighter + 1 })}</button>
+            </p>
+          )}
+        </div>
+      )}
+      {mine.length > 0 && (
+        <details className="combat-details" open>
+          <summary>{t('arena.train.savedList', { champion: names[fighter], n: mine.length })}</summary>
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr><th className="l">{t('arena.train.version')}</th><th>{t('arena.search.objective')}</th><th>{t('arena.train.vsScript')}</th>
+                  <th>{t('arena.train.vsTactical')}</th><th>{t('arena.train.vsPreviousCol')}</th><th>{t('arena.train.wins')}</th><th /></tr>
+              </thead>
+              <tbody>
+                {mine.map((p) => (
+                  <tr key={p.id}>
+                    <td className="l">v{p.version}{p.accepted ? ' ✓' : ''} <small className="muted">{p.scenario}</small></td>
+                    <td>{t(`arena.search.obj.${p.objective}`)}</td>
+                    <td>{pct(p.betterVsScript)}</td><td>{pct(p.betterVsTactical)}</td><td>{pct(p.betterVsPrevious)}</td>
+                    <td>{pct(p.winrate)} <small className="muted">({pct(p.winrateScript)})</small></td>
+                    <td>
+                      <button className="link" onClick={() => onUse(fighter, p.id)}>{t('arena.train.useShort')}</button>
+                      <button className="icon danger" onClick={() => remove(p)} aria-label={t('arena.train.delete')}>✕</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
+    </section>
+  );
+}
+
+/** Mean and best fitness per generation (left scale) and the selection checks against the script (0–100%, dots). */
+function TrainChart({ points }) {
+  const W = 600;
+  const H = 120;
+  const vals = points.flatMap((p) => [p.mean, p.best]);
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  const n = points[points.length - 1].generation;
+  const x = (g) => 8 + ((W - 16) * (g - 1)) / Math.max(1, n - 1);
+  const y = (v) => H - 8 - ((H - 16) * (v - lo)) / Math.max(1e-9, hi - lo);
+  const line = (key) => points.map((p) => `${x(p.generation).toFixed(1)},${y(p[key]).toFixed(1)}`).join(' ');
+  return (
+    <figure className="arena-train-chart">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={t('arena.train.chart')}>
+        <polyline points={line('best')} fill="none" stroke="var(--text-3, #888)" strokeWidth="1" strokeDasharray="3 3" />
+        <polyline points={line('mean')} fill="none" stroke={TEAM[0]} strokeWidth="2" />
+        {points.filter((p) => p.selection != null).map((p) => (
+          <circle key={p.generation} cx={x(p.generation)} cy={H - 8 - (H - 16) * p.selection} r="3.5" fill="#5fbf6a">
+            <title>{t('arena.train.selectionDot', { g: p.generation, p: pct(p.selection) })}</title>
+          </circle>
+        ))}
+      </svg>
+      <figcaption className="muted"><small>{t('arena.train.legend')}</small></figcaption>
+    </figure>
+  );
+}
+
 function Outcome({ result }) {
   const text = result.winner < 0 ? t('combat.draw', { s: n1(result.duration) })
     : t('combat.win', { team: t(`combat.team${result.winner}`), s: n1(result.duration) });
   return <strong>{text}</strong>;
 }
 
-function FighterSlot({ index, slot, builds, names, fighters, stats, onChange, onRemove }) {
+function FighterSlot({ index, slot, builds, names, fighters, stats, onChange, onRemove, policies, brainOrders, onToTimeline }) {
   const enemies = fighters.map((f, i) => ({ f, i })).filter(({ f }) => f.team !== slot.team);
+  const mine = policies.filter((p) => champKey(p.champion) === champKey(names[index]));
+  const brain = slot.brain ?? 'script';
   return (
     <div className="arena-slot" style={{ borderLeftColor: TEAM[slot.team] }}>
       <div className="row">
@@ -345,6 +534,17 @@ function FighterSlot({ index, slot, builds, names, fighters, stats, onChange, on
           <input type="checkbox" checked={slot.autoAbilities} onChange={(e) => onChange({ autoAbilities: e.target.checked })} />
           {t('arena.auto')}
         </label>
+        <label className="inline" title={t('arena.brainTitle')}>{t('arena.brain')}
+          <select value={brain} onChange={(e) => onChange({ brain: e.target.value })}>
+            <option value="script">{t('arena.brain.script')}</option>
+            <option value="tactical">{t('arena.brain.tactical')}</option>
+            {mine.map((p) => <option key={p.id} value={`ai:${p.id}`}>{policyLabel(p)}</option>)}
+            {brain.startsWith('ai:') && !mine.some((p) => `ai:${p.id}` === brain) && <option value={brain}>{t('arena.brain.missing')}</option>}
+          </select>
+        </label>
+        {brain !== 'script' && brainOrders > 0 && (
+          <button className="link" title={t('arena.toTimelineTitle')} onClick={onToTimeline}>{t('arena.toTimeline', { n: brainOrders })}</button>
+        )}
       </div>
       {stats && (
         <small className="muted">
@@ -646,6 +846,63 @@ function ActionEditor({ action, fighters, names, stats, onChange, onRemove, onCl
   );
 }
 
+/** Every conditional effect of the builds: when the arena counts it, how often it fired and what it gave. */
+function TriggerTable({ result, names }) {
+  const rows = result.triggers || [];
+  if (!rows.length) return null;
+  const fr = result.fighters;
+  const byKey = {};
+  for (const l of result.ledger) byKey[`${l.fighter}|${l.source}`] = l;
+  const idle = (r) => r.mode === 'nunca' || (r.mode === 'estatico' && !r.buildOn);
+  return (
+    <details className="combat-details" open>
+      <summary>{t('arena.trig.title', { n: rows.length })}</summary>
+      <p className="muted small">{t('arena.trig.help')}</p>
+      <div className="table-wrap">
+        <table className="data arena-triggers">
+          <thead>
+            <tr>
+              <th className="l">{t('arena.trig.effect')}</th><th className="l">{t('arena.trig.how')}</th>
+              <th title={t('arena.trig.timesTitle')}>{t('arena.trig.times')}</th><th>{t('arena.trig.first')}</th>
+              <th title={t('arena.trig.onTitle')}>{t('arena.trig.on')}</th><th>{t('arena.trig.gave')}</th>
+              <th className="l">{t('arena.trig.stats')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, k) => {
+              const l = r.mode === 'modelado' ? byKey[`${r.fighter}|${r.source}`] : null;
+              const gave = [
+                r.shield > 0.5 && t('arena.trig.shield', { v: n0(r.shield) }),
+                r.healed > 0.5 && t('arena.trig.heal', { v: n0(r.healed) }),
+                l && l.damage > 0.5 && t('arena.trig.damage', { v: n0(l.damage) }),
+                l && l.healed > 0.5 && t('arena.trig.heal', { v: n0(l.healed) }),
+              ].filter(Boolean).join(' · ');
+              const stats = Object.entries(r.delta || {}).map(([s, v]) => `${v > 0 ? '+' : ''}${statValue(s, v)} ${statAbbr(s)}`).join(', ');
+              return (
+                <tr key={k} className={idle(r) ? 'muted' : ''}>
+                  <td className="l">
+                    <span className="swatch" style={{ background: TEAM[fr[r.fighter]?.team ?? 0] }} />{r.fighter + 1} · {r.source}
+                    {r.effect !== r.source && <small className="muted"> · {r.effect}</small>}
+                    <small className="muted"> ({t(`arena.trig.kind.${r.kind}`)})</small>
+                  </td>
+                  <td className="l small">{r.how}</td>
+                  <td className={r.activations === 0 && r.mode !== 'estatico' && r.mode !== 'modelado' && r.mode !== 'nunca' ? 'warn' : ''}>
+                    {r.mode === 'estatico' || r.mode === 'modelado' || r.mode === 'nunca' ? '—' : r.activations}
+                  </td>
+                  <td>{r.first != null ? `${n1(r.first)}s` : '—'}</td>
+                  <td>{r.activeSeconds > 0.05 ? `${n1(r.activeSeconds)}s` : '—'}</td>
+                  <td>{gave || '—'}</td>
+                  <td className="l small">{stats || '—'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  );
+}
+
 function ArenaReport({ result, names }) {
   const fr = result.fighters;
   const items = result.ledger.filter((l) => l.damage + l.extraShred + l.extraAmp + l.prevented + l.shieldCut + l.healCut
@@ -700,6 +957,13 @@ function ArenaReport({ result, names }) {
           </table>
         </div>
       </details>
+      <TriggerTable result={result} names={names} />
+      {result.decisions?.length > 0 && (
+        <details className="combat-details">
+          <summary>{t('arena.decisions', { n: result.decisions.length })}</summary>
+          <ul className="combat-events">{result.decisions.map((e, k) => <li key={k}>{n1(e.t)}s: {e.text}</li>)}</ul>
+        </details>
+      )}
       <details className="combat-details">
         <summary>{t('combat.events')} ({result.events.length})</summary>
         <ul className="combat-events">{result.events.map((e, k) => <li key={k}>{n1(e.t)}s: {e.text}</li>)}</ul>
