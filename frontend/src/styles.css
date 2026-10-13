@@ -844,8 +844,8 @@ td.warn, .combat-items td.warn { color: var(--warn, #f0c75e); }
 .arena-plan .row { gap: 6px 10px; flex-wrap: wrap; align-items: center; }
 .arena-plan label.inline { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); }
 .arena-plan label.inline input { width: 56px; }
-.arena-drag { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
-.arena-drag.inline { flex-direction: row; flex-wrap: wrap; }
+.arena-drag { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.arena-drag.inline { flex-direction: row; flex-wrap: wrap; align-items: center; }
 .arena-drag li { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border); border-radius: 4px;
   padding: 1px 4px; font-size: 12px; cursor: grab; background: rgba(127,127,127,.06); }
 .arena-drag li.dragging { opacity: .5; }

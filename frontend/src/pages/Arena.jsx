@@ -712,6 +712,7 @@ function DragList({ items, label, onChange, className = '' }) {
     next.splice(j, 0, x);
     onChange(next);
   };
+  const across = className.includes('inline');   // a row: earlier / later are left / right, else up / down
   return (
     <ol className={`arena-drag ${className}`}>
       {items.map((x, i) => (
@@ -719,8 +720,8 @@ function DragList({ items, label, onChange, className = '' }) {
           onDrop={() => { if (from != null) move(from, i); setFrom(null); }} className={from === i ? 'dragging' : ''}>
           <span className="arena-drag-handle" aria-hidden>⋮⋮</span>
           {label(x, i)}
-          <button className="icon" onClick={() => move(i, i - 1)} disabled={i === 0} aria-label={t('arena.up')}>‹</button>
-          <button className="icon" onClick={() => move(i, i + 1)} disabled={i === items.length - 1} aria-label={t('arena.down')}>›</button>
+          <button className="icon" onClick={() => move(i, i - 1)} disabled={i === 0} aria-label={t('arena.up')}>{across ? '‹' : '▲'}</button>
+          <button className="icon" onClick={() => move(i, i + 1)} disabled={i === items.length - 1} aria-label={t('arena.down')}>{across ? '›' : '▼'}</button>
         </li>
       ))}
     </ol>
