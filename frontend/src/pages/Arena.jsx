@@ -17,8 +17,11 @@ const SPELLS = ['Flash', 'Incendiar', 'Exaustão', 'Barreira', 'Curar', 'Fantasm
 const STORE = 'ornn-planner-arena';
 const PX_PER_S = 36;
 
-const emptyScenario = () => ({ id: null, name: t('arena.newName'), note: '', duration: 40, fighters: [newSlot(0), newSlot(1)], actions: [] });
-const newSlot = (team) => ({ team, buildId: null, minute: null, x: null, y: null, target: null, autoAbilities: true, priority: ['R', '3', '1', '2'], brain: 'script', activations: {} });
+const FOCUS = ['nearest', 'lowest_hp', 'lowest_effective_hp', 'most_damage', 'order'];
+// Scenarios saved before team plans have none (teams: null): each champion picks its own target, as before.
+const newPlan = () => ({ focus: 'nearest', order: [], shared: true, switchBelow: 0.25, chainCc: false });
+const emptyScenario = () => ({ id: null, name: t('arena.newName'), note: '', duration: 40, fighters: [newSlot(0), newSlot(1)], actions: [], teams: [newPlan(), newPlan()] });
+const newSlot = (team) => ({ team, buildId: null, minute: null, x: null, y: null, target: null, followTeam: true, autoAbilities: true, priority: ['R', '3', '1', '2'], brain: 'script', activations: {} });
 
 function loadDraft() {
   try {
@@ -121,8 +124,10 @@ export default function Arena() {
     if (sc.fighters.filter((f) => f.team === team).length >= 6) return;
     set({ fighters: [...sc.fighters, newSlot(team)] });
   };
+  const setPlan = (team, patch) => set({ teams: sc.teams.map((p, k) => (k === team ? { ...p, ...patch } : p)) });
   const removeFighter = (i) => set({
     fighters: sc.fighters.filter((_, k) => k !== i),
+    teams: sc.teams?.map((p) => ({ ...p, order: (p.order ?? []).filter((k) => k !== i).map((k) => (k > i ? k - 1 : k)) })) ?? null,
     actions: sc.actions.filter((a) => a.fighter !== i).map((a) => ({
       ...a, fighter: a.fighter > i ? a.fighter - 1 : a.fighter, target: a.target == null ? null : a.target > i ? a.target - 1 : a.target === i ? null : a.target,
     })),
@@ -208,8 +213,10 @@ export default function Arena() {
           {[0, 1].map((team) => (
             <div key={team} className={`arena-side team-${team}`}>
               <h4 style={{ color: TEAM[team] }}>{t(`combat.team${team}`)}</h4>
+              <TeamPlanEditor team={team} plan={sc.teams?.[team]} fighters={sc.fighters} names={names}
+                onChange={(p) => setPlan(team, p)} onEnable={() => set({ teams: [newPlan(), newPlan()] })} />
               {sc.fighters.map((f, i) => (f.team !== team ? null : (
-                <FighterSlot key={i} index={i} slot={f} builds={builds} names={names} fighters={sc.fighters}
+                <FighterSlot key={i} index={i} slot={f} builds={builds} names={names} fighters={sc.fighters} planned={sc.teams != null}
                   stats={result?.fighters?.[i]} onChange={(p) => setFighter(i, p)} onRemove={() => removeFighter(i)}
                   policies={policies} brainOrders={(result?.policyOrders ?? []).filter((o) => o.fighter === i).length}
                   onToTimeline={() => toTimeline(i)} />
@@ -432,7 +439,86 @@ function Outcome({ result }) {
   return <strong>{text}</strong>;
 }
 
-function FighterSlot({ index, slot, builds, names, fighters, stats, onChange, onRemove, policies, brainOrders, onToTimeline }) {
+/**
+ * A short list reordered by dragging (or with the arrow buttons, for keyboards): the side's enemy priority, a
+ * champion's ability order.
+ */
+function DragList({ items, label, onChange, className = '' }) {
+  const [from, setFrom] = useState(null);
+  const move = (i, j) => {
+    if (j < 0 || j >= items.length || i === j) return;
+    const next = [...items];
+    const [x] = next.splice(i, 1);
+    next.splice(j, 0, x);
+    onChange(next);
+  };
+  return (
+    <ol className={`arena-drag ${className}`}>
+      {items.map((x, i) => (
+        <li key={x} draggable onDragStart={() => setFrom(i)} onDragOver={(e) => e.preventDefault()}
+          onDrop={() => { if (from != null) move(from, i); setFrom(null); }} className={from === i ? 'dragging' : ''}>
+          <span className="arena-drag-handle" aria-hidden>⋮⋮</span>
+          {label(x, i)}
+          <button className="icon" onClick={() => move(i, i - 1)} disabled={i === 0} aria-label={t('arena.up')}>‹</button>
+          <button className="icon" onClick={() => move(i, i + 1)} disabled={i === items.length - 1} aria-label={t('arena.down')}>›</button>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** How a side picks its targets: criterion, enemy order, shared focus, switch threshold, chained control. */
+function TeamPlanEditor({ team, plan, fighters, names, onChange, onEnable }) {
+  if (!plan) {
+    return team !== 0 ? null : (
+      <div className="arena-plan legacy">
+        <small className="muted">{t('arena.team.legacy')}</small>{' '}
+        <button className="link" onClick={onEnable}>{t('arena.team.enable')}</button>
+      </div>
+    );
+  }
+  const enemies = fighters.map((f, i) => ({ f, i })).filter(({ f }) => f.team !== team).map(({ i }) => i);
+  // The saved order first (only enemies still in the scenario), then the others in slot order.
+  const order = [...(plan.order ?? []).filter((i) => enemies.includes(i)), ...enemies.filter((i) => !(plan.order ?? []).includes(i))];
+  const switching = plan.switchBelow != null;
+  return (
+    <div className="arena-plan">
+      <strong className="arena-plan-title">{t('arena.team.title')}</strong>
+      <div className="row">
+        <label className="inline">{t('arena.team.focus')}
+          <select value={plan.focus ?? 'nearest'} onChange={(e) => onChange({ focus: e.target.value })}>
+            {FOCUS.map((f) => <option key={f} value={f}>{t(`arena.team.focus.${f}`)}</option>)}
+          </select>
+        </label>
+        <label className="check" title={t('arena.team.sharedTitle')}>
+          <input type="checkbox" checked={plan.shared} onChange={(e) => onChange({ shared: e.target.checked })} />
+          {t('arena.team.shared')}
+        </label>
+        <label className="check" title={t('arena.team.switchTitle')}>
+          <input type="checkbox" checked={switching} onChange={(e) => onChange({ switchBelow: e.target.checked ? 0.25 : null })} />
+          {t('arena.team.switch')}
+        </label>
+        {switching && (
+          <label className="inline">
+            <input type="number" min={1} max={99} step={1} value={Math.round(plan.switchBelow * 100)} aria-label={t('arena.team.switch')}
+              onChange={(e) => onChange({ switchBelow: Math.max(0.01, Math.min(0.99, (Number(e.target.value) || 25) / 100)) })} />%
+          </label>
+        )}
+        <label className="check" title={t('arena.team.chainCcTitle')}>
+          <input type="checkbox" checked={plan.chainCc} onChange={(e) => onChange({ chainCc: e.target.checked })} />
+          {t('arena.team.chainCc')}
+        </label>
+      </div>
+      <div className="row" title={t('arena.team.orderTitle')}>
+        <small className="muted">{t('arena.team.order')}</small>
+        {order.length === 0 ? <small className="muted">{t('arena.team.noEnemies')}</small>
+          : <DragList className="inline" items={order} label={(i, k) => <span>{k + 1}. {names[i]}</span>} onChange={(o) => onChange({ order: o })} />}
+      </div>
+    </div>
+  );
+}
+
+function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onChange, onRemove, policies, brainOrders, onToTimeline }) {
   const enemies = fighters.map((f, i) => ({ f, i })).filter(({ f }) => f.team !== slot.team);
   const mine = policies.filter((p) => champKey(p.champion) === champKey(names[index]));
   const brain = slot.brain ?? 'script';
@@ -460,6 +546,12 @@ function FighterSlot({ index, slot, builds, names, fighters, stats, onChange, on
             {enemies.map(({ i }) => <option key={i} value={i}>{i + 1} · {names[i]}</option>)}
           </select>
         </label>
+        {planned && (
+          <label className="check" title={t('arena.followTeamTitle')}>
+            <input type="checkbox" checked={slot.followTeam ?? true} onChange={(e) => onChange({ followTeam: e.target.checked })} />
+            {t('arena.followTeam')}
+          </label>
+        )}
         <label className="check" title={t('arena.autoTitle')}>
           <input type="checkbox" checked={slot.autoAbilities} onChange={(e) => onChange({ autoAbilities: e.target.checked })} />
           {t('arena.auto')}
@@ -475,6 +567,11 @@ function FighterSlot({ index, slot, builds, names, fighters, stats, onChange, on
         {brain !== 'script' && brainOrders > 0 && (
           <button className="link" title={t('arena.toTimelineTitle')} onClick={onToTimeline}>{t('arena.toTimeline', { n: brainOrders })}</button>
         )}
+      </div>
+      <div className="row" title={t('arena.priorityTitle')}>
+        <small className="muted">{t('arena.priority')}</small>
+        <DragList className="inline" items={slot.priority?.length ? slot.priority : ['R', '3', '1', '2']}
+          label={(x) => <strong>{x}</strong>} onChange={(priority) => onChange({ priority })} />
       </div>
       {stats && (
         <small className="muted">

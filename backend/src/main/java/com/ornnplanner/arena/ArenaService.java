@@ -142,6 +142,8 @@ public class ArenaService {
             in.kit = kit;
             in.forms = forms.isEmpty() ? new LinkedHashMap<>() : combat.formDeltas(c, forms);
             in.target = slot.target;
+            in.team = plan(sc, slot.team);
+            in.followTeam = slot.followTeam;
             in.autoAbilities = slot.autoAbilities;
             if (slot.priority != null && !slot.priority.isEmpty()) {
                 in.priority = new ArrayList<>(slot.priority);
@@ -169,6 +171,15 @@ public class ArenaService {
             inputs.add(in);
         }
         return inputs;
+    }
+
+    /** A side's plan (null when the scenario has none, as the ones saved before plans). */
+    private static ArenaModel.TeamPlan plan(Scenario sc, int team) {
+        ArenaModel.TeamPlan p = sc.teams != null && team < sc.teams.length ? sc.teams[team] : null;
+        if (p != null && p.focus != null && !ArenaModel.TeamPlan.FOCUS.contains(p.focus)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Critério de foco desconhecido: " + p.focus + ".");
+        }
+        return p;
     }
 
     /**

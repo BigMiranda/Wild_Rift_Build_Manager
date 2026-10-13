@@ -37,6 +37,27 @@ public final class ArenaModel {
         public String brain;
         /** Second at which a delayed status turns on (source -> s), instead of its own conditions. */
         public Map<String, Double> activations = new LinkedHashMap<>();
+        /**
+         * Takes the target its side's plan picks ({@link Scenario#teams}); false = its fixed {@link #target} or the
+         * nearest enemy, as before team plans. Ignored when the scenario has no plans.
+         */
+        public boolean followTeam = true;
+    }
+
+    /** How a side picks its targets, shared by every champion of the side that follows it. */
+    public static class TeamPlan {
+        public static final List<String> FOCUS = List.of("nearest", "lowest_hp", "lowest_effective_hp", "most_damage", "order");
+
+        /** nearest | lowest_hp | lowest_effective_hp | most_damage | order */
+        public String focus = "nearest";
+        /** Priority of the enemies (fighter indexes): what "order" follows, and the tie-break of the other criteria. */
+        public List<Integer> order = new ArrayList<>();
+        /** Everyone attacks the side's one target (true), or each applies the criterion from where it stands (false). */
+        public boolean shared = true;
+        /** Switches to another enemy in reach that is below this fraction of its health (null = never). */
+        public Double switchBelow = 0.25;
+        /** Does not stack crowd control: waits until an ally's control on the target is about to end before its own. */
+        public boolean chainCc = false;
     }
 
     /** One order of the timeline. */
@@ -68,6 +89,11 @@ public final class ArenaModel {
         public List<Action> actions = new ArrayList<>();
         /** Time limit of the run (s). */
         public double duration = 60;
+        /**
+         * Plan of each side (blue, red). Null = no plans, as in scenarios saved before them: each champion picks its
+         * own target (its fixed one, else the nearest).
+         */
+        public TeamPlan[] teams;
     }
 
     // ------------------------------------------------------------------ results

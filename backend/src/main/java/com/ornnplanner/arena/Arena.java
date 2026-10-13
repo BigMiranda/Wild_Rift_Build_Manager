@@ -6,6 +6,7 @@ import com.ornnplanner.arena.ArenaModel.FighterStats;
 import com.ornnplanner.arena.ArenaModel.Frame;
 import com.ornnplanner.arena.ArenaModel.Result;
 import com.ornnplanner.arena.ArenaModel.Shape;
+import com.ornnplanner.arena.ArenaModel.TeamPlan;
 import com.ornnplanner.arena.ArenaModel.UnitFrame;
 import com.ornnplanner.arena.ai.ActionMask;
 import com.ornnplanner.arena.ai.ActionSpace;
@@ -43,6 +44,8 @@ import java.util.Set;
  * Each champion follows the scenario's timeline (abilities, recasts, item actives, spells, moves, focus); an order that
  * cannot be done yet (on cooldown, casting, crowd controlled, out of range) waits until it can, and the wait is logged.
  * When nothing is ordered, it chases its target and attacks, and (if allowed) uses ready abilities in its priority.
+ * Its target is the ordered focus, else the one its side's plan picks (when it follows the plan), else its fixed target,
+ * else the nearest enemy.
  *
  * <h2>Abilities</h2>
  * From the champion's sheet ({@code kits_<patch>.yml}): line projectiles, areas, cones, channels, dashes, targeted
@@ -81,6 +84,10 @@ public class Arena {
         public Policy policy;
         /** Base attack speed at the fighter's level (attacks / s); bonus % comes from its stats. */
         public double baseAttackSpeed;
+        /** Its side's plan (the same object for every champion of the side; null = no plan, each picks its own). */
+        public TeamPlan team;
+        /** Takes the target the side's plan picks (see {@link ArenaModel.Slot#followTeam}). */
+        public boolean followTeam = true;
         /** Item actives and spells with their cooldown (s). */
         public Map<String, Double> activeCooldowns = new LinkedHashMap<>();
         /** Conditional effects of the build (items, shop lines, runes, champion) and when they count. */
@@ -102,6 +109,8 @@ public class Arena {
             c.autoAbilities = autoAbilities;
             c.priority = priority;
             c.policy = policy;
+            c.team = team;
+            c.followTeam = followTeam;
             c.baseAttackSpeed = baseAttackSpeed;
             c.activeCooldowns = activeCooldowns;
             c.triggers = triggers;
@@ -142,6 +151,11 @@ public class Arena {
         Double moveY;
         boolean hold;
         U focus;
+        /** The plan's target picked from where this champion stands (plans that do not share), and when to pick again. */
+        U pick;
+        double pickAt = -1;
+        /** Abilities that immobilize (stun, knock-up, pull, push), by slot: what a chained-control plan holds back. */
+        final Map<String, Boolean> controls = new LinkedHashMap<>();
         Dash dash;
         Forced forced;
         double combatSince = -1;
@@ -440,6 +454,8 @@ public class Arena {
     private final CombatCatalog catalog;
     private final Map<String, Object> map;
     private final List<U> units = new ArrayList<>();
+    /** Each side's plan and shared target (blue, red). */
+    private final Side[] sides = {new Side(), new Side()};
     private final List<Projectile> projectiles = new ArrayList<>();
     private final List<Field> fields = new ArrayList<>();
     private final List<Elemental> elementals = new ArrayList<>();
@@ -491,6 +507,9 @@ public class Arena {
             U u = start(i, in, manual);
             u.manualItems = manual;
             units.add(u);
+            if (in.team != null && sides[u.team()].plan == null) {
+                sides[u.team()].plan = in.team;
+            }
         }
         for (U u : units) {
             startTriggers(u);
@@ -989,6 +1008,10 @@ public class Arena {
                 if (ab == null || !isReady(u, slot) || !inUseRange(u, t, ab)) {
                     return false;
                 }
+                TeamPlan plan = sides[u.team()].plan;
+                if (plan != null && plan.chainCc && controlLeft(t) > CHAIN_SLACK && controls(u, slot)) {
+                    return false;   // the target is still held by an ally's control
+                }
                 for (Action o : u.orders) {
                     if (o.time <= now + 1e-9 && slot.equals(o.slot)) {
                         return false;   // kept for the ordered cast
@@ -1183,6 +1206,12 @@ public class Arena {
         if (u.focus != null && !u.focus.dead && u.focus.targetable() && u.focus.visible()) {
             return u.focus;
         }
+        if (u.in.followTeam && sides[u.team()].plan != null) {
+            U t = teamTarget(u);
+            if (t != null) {
+                return t;
+            }
+        }
         if (u.in.target != null && u.in.target < units.size()) {
             U t = units.get(u.in.target);
             if (!t.dead && t.targetable() && t.visible() && t.team() != u.team()) {
@@ -1197,6 +1226,203 @@ public class Arena {
             }
         }
         return best;
+    }
+
+    // ------------------------------------------------------------------ team plans
+
+    /** Seconds between two picks of a plan's target (sooner when the target is gone). */
+    static final double PICK_EVERY = 0.25;
+    /** A new pick replaces the current target only when it is this much better (relative): no back and forth. */
+    static final double PICK_MARGIN = 0.10;
+    /** Chained control: an immobilize with more than this left on the target holds back the allies' own. */
+    static final double CHAIN_SLACK = 0.3;
+    /** "In reach" for switching to a low enemy: attack reach plus this. */
+    private static final double SWITCH_REACH = 150;
+
+    /** A side's plan and the target it shares. */
+    private static final class Side {
+        TeamPlan plan;
+        U target;
+        double pickAt = -1;
+    }
+
+    /** The target of the champion's side plan: the side's shared one, or its own pick by the plan's criterion. */
+    private U teamTarget(U u) {
+        Side side = sides[u.team()];
+        if (side.plan.shared) {
+            if (side.target == null || !aimable(u, side.target) || now >= side.pickAt - 1e-9) {
+                List<U> from = new ArrayList<>();
+                for (U a : units) {
+                    if (a.team() == u.team() && !a.dead && a.in.followTeam) {
+                        from.add(a);
+                    }
+                }
+                side.target = pick(side.plan, from.isEmpty() ? List.of(u) : from, side.target);
+                side.pickAt = now + PICK_EVERY;
+            }
+            return side.target;
+        }
+        if (u.pick == null || !aimable(u, u.pick) || now >= u.pickAt - 1e-9) {
+            u.pick = pick(side.plan, List.of(u), u.pick);
+            u.pickAt = now + PICK_EVERY;
+        }
+        return u.pick;
+    }
+
+    private static boolean aimable(U u, U e) {
+        return e.team() != u.team() && !e.dead && e.targetable() && e.visible();
+    }
+
+    /**
+     * The plan's pick seen from these champions (one, or the side's followers): an enemy in reach below the switch
+     * threshold first, else the best by the criterion, ties by the plan's order, then distance. The current target
+     * stays unless the new one is better by {@link #PICK_MARGIN}.
+     */
+    private U pick(TeamPlan plan, List<U> from, U current) {
+        U me = from.get(0);
+        List<U> enemies = new ArrayList<>();
+        for (U e : units) {
+            if (aimable(me, e)) {
+                enemies.add(e);
+            }
+        }
+        if (enemies.isEmpty()) {
+            return null;
+        }
+        double cx = 0;
+        double cy = 0;
+        for (U a : from) {
+            cx += a.x / from.size();
+            cy += a.y / from.size();
+        }
+        double fx = cx;
+        double fy = cy;
+        List<Integer> order = plan.order == null ? List.of() : plan.order;
+        Comparator<U> ties = Comparator.<U>comparingInt(e -> rank(order, e))
+                .thenComparingDouble(e -> dist(fx, fy, e.x, e.y)).thenComparingInt(e -> e.idx);
+        boolean keep = current != null && enemies.contains(current);
+        if (plan.switchBelow != null) {
+            U low = null;
+            for (U e : enemies) {
+                double f = e.hp / e.maxHp;
+                if (f < plan.switchBelow && inReach(from, e) && (low == null || f < low.hp / low.maxHp - 1e-9
+                        || Math.abs(f - low.hp / low.maxHp) <= 1e-9 && ties.compare(e, low) < 0)) {
+                    low = e;
+                }
+            }
+            if (low != null) {
+                return keep && current.hp / current.maxHp < plan.switchBelow ? current : low;
+            }
+        }
+        java.util.function.ToDoubleFunction<U> score = score(plan.focus, me.team(), order, fx, fy);
+        U best = null;
+        double bestScore = 0;
+        for (U e : enemies) {
+            double sc = score.applyAsDouble(e);
+            if (best == null || sc < bestScore - 1e-9 || Math.abs(sc - bestScore) <= 1e-9 && ties.compare(e, best) < 0) {
+                best = e;
+                bestScore = sc;
+            }
+        }
+        if (keep && best != current) {
+            double cur = score.applyAsDouble(current);
+            if (bestScore >= cur - PICK_MARGIN * Math.abs(cur) - 1e-9) {
+                return current;
+            }
+        }
+        return best;
+    }
+
+    private static int rank(List<Integer> order, U e) {
+        int i = order.indexOf(e.idx);
+        return i < 0 ? order.size() : i;
+    }
+
+    /** A plan's criterion as a score, lower is better. */
+    private java.util.function.ToDoubleFunction<U> score(String focus, int team, List<Integer> order, double fx, double fy) {
+        switch (focus == null ? "nearest" : focus) {
+            case "lowest_hp":
+                return e -> e.hp;
+            case "lowest_effective_hp":
+                return e -> (e.hp + e.shieldLeft()) / Math.max(0.05, damageThrough(team, e));
+            case "most_damage":
+                return e -> -e.r.dealt;
+            case "order":
+                return e -> rank(order, e);
+            default:
+                return e -> dist(fx, fy, e.x, e.y);
+        }
+    }
+
+    private static boolean inReach(List<U> from, U e) {
+        for (U a : from) {
+            if (dist(a.x, a.y, e.x, e.y) <= a.attackRange() + a.radius() + e.radius() + SWITCH_REACH) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Share of a side's damage that gets through an enemy's resistances: each living champion of the side counts by
+     * its attack damage plus ability power, split physical / magic in that proportion, with its penetration.
+     */
+    private double damageThrough(int team, U e) {
+        double sum = 0;
+        double weight = 0;
+        for (U a : units) {
+            if (a.team() != team || a.dead) {
+                continue;
+            }
+            double ad = Math.max(0, a.stat(Stats.ATTACK_DAMAGE));
+            double ap = Math.max(0, a.stat(Stats.ABILITY_POWER));
+            double physical = ad + ap <= 0 ? 1 : ad / (ad + ap);
+            double[] mult = new double[2];
+            for (int res = 0; res < 2; res++) {
+                double resist = e.stat(res == 0 ? Stats.ARMOR : Stats.MAGIC_RESIST);
+                double shred = now < e.shredUntil[res] ? e.shred[res] : 0;
+                double pen = a.stat(res == 0 ? "% Armor Penetration" : "% Magic Penetration") / 100;
+                double flat = a.stat(res == 0 ? "Armor Penetration" : "Magic Penetration");
+                mult[res] = com.ornnplanner.combat.CombatSimulator.mitigation(resist, shred, pen, flat);
+            }
+            double w = Math.max(1, ad + ap);
+            sum += w * (physical * mult[0] + (1 - physical) * mult[1]);
+            weight += w;
+        }
+        return weight <= 0 ? 1 : sum / weight;
+    }
+
+    /** Seconds left of the immobilize on a champion (stun, knock-up, a pull or push still moving it). */
+    private double controlLeft(U t) {
+        double left = Math.max(t.stunUntil, t.airUntil) - now;
+        if (t.forced != null) {
+            left = Math.max(left, dist(t.x, t.y, t.forced.tx, t.forced.ty) / Math.max(1, t.forced.speed));
+        }
+        return Math.max(0, left);
+    }
+
+    /** The ability immobilizes somewhere in its sheet (stun, knock-up, pull, push, Condemn). */
+    private boolean controls(U u, String slot) {
+        return u.controls.computeIfAbsent(slot, k -> immobilizes(ability(u, k)));
+    }
+
+    private static boolean immobilizes(Object o) {
+        if (o instanceof Map) {
+            for (Map.Entry<?, ?> e : ((Map<?, ?>) o).entrySet()) {
+                Object k = e.getKey();
+                if ("atordoa".equals(k) || "arremessa".equals(k) || "puxa".equals(k) || "empurra".equals(k)
+                        || "forma".equals(k) && "empurrao".equals(e.getValue()) || immobilizes(e.getValue())) {
+                    return true;
+                }
+            }
+        } else if (o instanceof List) {
+            for (Object x : (List<?>) o) {
+                if (immobilizes(x)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------ attacks

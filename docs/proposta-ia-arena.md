@@ -224,3 +224,45 @@ Andamento, parte a parte (cada parte é um commit no `arena-ia`).
 - Cenários salvos: `Scenario` nunca teve campo da busca (a busca recebia o cenário no corpo da requisição), então
   não há nada a migrar.
 - `./mvnw test` (94 testes, golden intacto) e `npm run build` limpos.
+
+### Parte 2 — Prioridades do time ✅
+- Modelo: `ArenaModel.TeamPlan` (`focus`, `order`, `shared`, `switchBelow`, `chainCc`), `Scenario.teams` e
+  `Slot.followTeam` (padrão `true`). O `TeamPlan` de cada lado vai para o `Arena.Input` (o mesmo objeto para os
+  campeões do lado), então as cópias dos episódios de treino já o levam, sem mudar o `Gym`.
+- Compatibilidade: **`Scenario.teams` é `null` por padrão** (não `{new TeamPlan(), new TeamPlan()}`). Sem `teams` no
+  JSON nada muda: cada campeão escolhe o próprio alvo como antes. Cenários novos criados na tela já vêm com os dois
+  planos; um cenário antigo mostra um aviso e o botão "Usar prioridades do time". O golden não mudou.
+- `Arena.target(u)`: foco da ordem > (se `followTeam` e há plano) alvo do plano > `Slot.target` > mais próximo.
+  - Escolha refeita a cada 0,25 s (`PICK_EVERY`), ou na hora se o alvo morreu ou sumiu. Histerese: o novo
+    só substitui o atual se for 10% melhor no critério (`PICK_MARGIN`).
+  - `shared=true`: um alvo por lado, medido do centro dos campeões que seguem o plano. `shared=false`: cada um
+    aplica o critério a partir de onde está.
+  - Desempate: a `order`, depois a distância, depois o índice.
+  - `switchBelow`: um inimigo ao alcance de ataque (+150) de quem segue o plano e abaixo da fração vira o alvo. Se o
+    atual também está abaixo, fica o atual.
+  - `lowest_effective_hp` = (vida + escudo) ÷ fração do dano do lado que passa pelas resistências do inimigo.
+    Cada aliado vivo pesa pelo seu DA + PH, dividido em físico e mágico nessa proporção, com a sua penetração.
+    É uma estimativa pelos atributos, não pelo dano já causado.
+  - `most_damage`: quem mais causou dano até agora.
+- `chainCc`: na máscara (`Turn.valid`), vale para Roteiro, Tático e IA. Uma habilidade que imobiliza fica inválida
+  enquanto o alvo tiver mais de 0,3 s (`CHAIN_SLACK`) de controle restante.
+  - Conta como controle: atordoamento, arremesso, ou puxão/empurrão ainda em curso.
+  - Conta como habilidade que imobiliza a que tem, em qualquer nível da ficha, `atordoa`, `arremessa`, `puxa`,
+    `empurra` ou `forma: empurrao`.
+  - Ordens explícitas da linha do tempo não são bloqueadas.
+  - Conta o controle de qualquer um do lado, inclusive o do próprio campeão: sobrepor o próprio controle também
+    desperdiça.
+- `Observation.SCHEMA_VERSION` não mudou. A IA vê o foco do time porque o slot 0 de inimigos é o alvo atual. As
+  features opcionais ("é o foco do time", "aliados mirando nele", "CC de aliado restante") **não** foram feitas
+  nesta parte.
+- Tela:
+  - Em cada lado, um bloco "Prioridades do time": critério, compartilhar o foco, trocar abaixo de X%, encadear
+    controle e a ordem dos inimigos, que se arrasta ou se move com ‹ ›.
+  - Em cada slot: "seguir o time" (só quando há planos) e o editor da ordem das habilidades (`priority`).
+  - Ao remover um campeão, a `order` dos planos é reindexada.
+- Testes (`ArenaTeamPlanTest`):
+  - 2v2 sem plano (cada um bate no da frente) e com `lowest_hp` compartilhado (só o de menos vida apanha);
+  - `order`, `followTeam=false` e `nearest` não compartilhado igual a sem plano;
+  - troca abaixo de 25% (o alvo baixo morre antes);
+  - `chainCc`: o puxão do Darius só fica liberado nos últimos 0,3 s do atordoamento do Renekton;
+  - JSON antigo sem `teams` → `teams == null`.

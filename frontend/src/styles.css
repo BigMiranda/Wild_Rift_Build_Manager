@@ -838,6 +838,19 @@ td.warn, .combat-items td.warn { color: var(--warn, #f0c75e); }
 .arena-slot select { max-width: 240px; }
 .arena-slot label.inline { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); }
 .arena-slot label.inline input { width: 70px; }
+.arena-plan { border: 1px dashed var(--border); border-radius: 6px; padding: 6px 8px; margin-bottom: 8px; }
+.arena-plan.legacy { border-style: dotted; }
+.arena-plan-title { display: block; font-size: 12px; margin-bottom: 4px; }
+.arena-plan .row { gap: 6px 10px; flex-wrap: wrap; align-items: center; }
+.arena-plan label.inline { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); }
+.arena-plan label.inline input { width: 56px; }
+.arena-drag { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.arena-drag.inline { flex-direction: row; flex-wrap: wrap; }
+.arena-drag li { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border); border-radius: 4px;
+  padding: 1px 4px; font-size: 12px; cursor: grab; background: rgba(127,127,127,.06); }
+.arena-drag li.dragging { opacity: .5; }
+.arena-drag-handle { color: var(--text-2); font-size: 10px; letter-spacing: -2px; }
+.arena-drag button.icon { padding: 0 3px; min-width: 0; line-height: 1.2; }
 .arena-idx { min-width: 18px; color: var(--gold-bright); }
 .arena-clock { min-width: 60px; font-variant-numeric: tabular-nums; }
 .arena-stage .row { gap: 8px; align-items: center; }
