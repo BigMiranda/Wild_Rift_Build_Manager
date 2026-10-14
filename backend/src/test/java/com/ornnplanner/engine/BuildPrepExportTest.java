@@ -64,6 +64,29 @@ class BuildPrepExportTest {
     }
 
     @Test
+    void skillPlanReplacesOrderAndLevelsKeepingTheOtherChoices(@TempDir Path dir) {
+        BuildRepository repo = repo(dir);
+        long folder = repo.insertFolder("Pasta");
+        Build b = build(folder, "alvo", "Aftershock", List.of("Flash"));
+        b.championSetup = new BuildRepository.ChampionSetup();
+        b.championSetup.skillLevels = List.of("1", "2", "3", "1", "R", "1", "1", "2", "R", "2", "2", "3", "R", "3", "3");
+        b.championSetup.options.put("Efeito", 2);
+        long target = repo.insertBuild(b);
+        long empty = repo.insertBuild(build(folder, "vazia", "Aftershock", List.of()));
+
+        assertTrue(repo.updateSkillPlan(target, List.of(3, 1, 2), null));
+        Build after = repo.findBuild(target).orElseThrow();
+        assertEquals(List.of(3, 1, 2), after.championSetup.skillOrder);
+        assertEquals(null, after.championSetup.skillLevels);
+        assertEquals(Integer.valueOf(2), after.championSetup.options.get("Efeito"));
+
+        List<String> plan = List.of("2", "1", "3", "2", "R", "2", "2", "1", "R", "1", "1", "3", "R", "3", "3");
+        assertTrue(repo.updateSkillPlan(empty, List.of(2, 1, 3), plan));
+        assertEquals(plan, repo.findBuild(empty).orElseThrow().championSetup.skillLevels);
+        assertFalse(repo.updateSkillPlan(9999, List.of(1, 2, 3), null));
+    }
+
+    @Test
     void onlySpellsKeepsTheRunes(@TempDir Path dir) {
         BuildRepository repo = repo(dir);
         long folder = repo.insertFolder("Pasta");

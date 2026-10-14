@@ -23,6 +23,7 @@ import BuildDock, { ItemReaderContext } from '../components/BuildDock.jsx';
 import RuneEditor from '../components/RuneEditor.jsx';
 import SpellEditor from '../components/SpellEditor.jsx';
 import PrepExport from '../components/PrepExport.jsx';
+import SkillExport from '../components/SkillExport.jsx';
 
 const emptyBuild = (folderId) => ({
   id: null,
@@ -406,7 +407,8 @@ export default function Planner({ meta, items }) {
 
         {!isRagdoll && (
           <ChampionPanel code={draft.unitCode} setup={draft.championSetup} matchEnd={draft.matchEnd} point={point}
-            onChange={(championSetup) => update({ championSetup })} />
+            onChange={(championSetup) => update({ championSetup })}
+            onExportSkills={builds.some((b) => b.id !== draft.id && b.unitCode !== 'RAGDOLL') ? () => setPrepEditor('skills') : null} />
         )}
 
         {runesReady && (
@@ -553,6 +555,16 @@ export default function Planner({ meta, items }) {
       )}
       {prepEditor === 'spells' && (
         <SpellEditor spells={draft.spells} onChange={(spells) => update({ spells })} onClose={() => setPrepEditor(null)} />
+      )}
+      {prepEditor === 'skills' && (
+        <SkillExport setup={draft.championSetup ?? emptyChampionSetup()} unitCode={draft.unitCode} builds={builds} folders={folders}
+          currentId={draft.id}
+          onClose={() => setPrepEditor(null)}
+          onDone={async (n) => {
+            setPrepEditor(null);
+            setMessage(t('skillExport.done', { n }));
+            await loadTree();
+          }} />
       )}
       {prepEditor === 'export' && (
         <PrepExport page={draft.runePage} spells={draft.spells} builds={builds} folders={folders} currentId={draft.id}

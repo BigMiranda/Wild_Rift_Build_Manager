@@ -115,7 +115,7 @@ function Ability({ a, tag, stats, planRank, level }) {
  * point to the ability, swapping with another level of it so the plan stays one the game allows (cells that cannot be
  * chosen are disabled). The priority order fills a whole plan at once.
  */
-function SkillPlan({ abilities, setup, set }) {
+function SkillPlan({ abilities, setup, set, onExport }) {
   const plan = planOf(setup);
   const custom = validPlan(setup.skillLevels);
   const name = (a) => (a === 'R' ? abilities?.[3]?.nome : abilities?.[Number(a) - 1]?.nome) ?? a;
@@ -135,6 +135,7 @@ function SkillPlan({ abilities, setup, set }) {
         </label>
         {custom && <button className="link" onClick={() => set({ skillLevels: null })}>{t('champ.resetPlan')}</button>}
         <small className="muted">{t('champ.planHint')}</small>
+        {onExport && <button className="link" onClick={onExport} title={t('skillExport.hint')}>{t('skillExport.open')}</button>}
       </div>
       <div className="champ-plan-scroll">
         <table className="champ-plan-grid">
@@ -171,7 +172,7 @@ function SkillPlan({ abilities, setup, set }) {
 }
 
 /** Modeled effects of the champion and the build's choices for them. */
-function CalcEffects({ effects, abilities, setup, onChange, matchEnd }) {
+function CalcEffects({ effects, abilities, setup, onChange, matchEnd, onExportSkills }) {
   const set = (patch) => onChange({ ...setup, ...patch });
   const controls = effects.filter((e) => e.option || e.hasConditional || e.rate);
   return (
@@ -189,7 +190,7 @@ function CalcEffects({ effects, abilities, setup, onChange, matchEnd }) {
           ))}
         </ul>
       )}
-      <SkillPlan abilities={abilities} setup={setup} set={set} />
+      <SkillPlan abilities={abilities} setup={setup} set={set} onExport={onExportSkills} />
       <EffectOptions entries={controls} state={setup} set={set} matchEnd={matchEnd} title={t('champ.choices')} />
     </div>
   );
@@ -207,7 +208,7 @@ function levelStats(status, level) {
   return { total, base: { ...total } };
 }
 
-export default function ChampionPanel({ code, setup, onChange, matchEnd, point }) {
+export default function ChampionPanel({ code, setup, onChange, matchEnd, point, onExportSkills }) {
   const [champ, setChamp] = useState(null);
   const [open, setOpen] = useState(() => load(OPEN_KEY, '1') === '1');
   const [mode, setMode] = useState(() => load(MODE_KEY, 'moment'));
@@ -255,7 +256,7 @@ export default function ChampionPanel({ code, setup, onChange, matchEnd, point }
         {champ.modelados?.length > 0 && <small className="champ-count">{t('champ.effectsCount', { n: champ.modelados.length })}</small>}
       </summary>
       {onChange && (
-        <CalcEffects effects={champ.modelados ?? []} abilities={champ.habilidades} setup={s} onChange={onChange} matchEnd={matchEnd} />
+        <CalcEffects effects={champ.modelados ?? []} abilities={champ.habilidades} setup={s} onChange={onChange} matchEnd={matchEnd} onExportSkills={onExportSkills} />
       )}
       <div className="champ-body">
         <div className="champ-stats">

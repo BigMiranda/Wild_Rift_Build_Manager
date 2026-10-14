@@ -350,6 +350,27 @@ public class BuildRepository {
         return jdbc.queryForObject("SELECT COUNT(*) FROM build WHERE id = ?", Integer.class, id) > 0;
     }
 
+    /**
+     * Replaces a build's skill order and its point-by-point plan (null = generated from the order), keeping the other
+     * champion choices (options, conditional effects, rates).
+     */
+    public boolean updateSkillPlan(long id, List<Integer> skillOrder, List<String> skillLevels) {
+        List<String> found = jdbc.query("SELECT champion_setup FROM build WHERE id = ?", (rs, n) -> rs.getString(1), id);
+        if (found.isEmpty()) {
+            return false;
+        }
+        ChampionSetup setup;
+        try {
+            setup = found.get(0) == null ? new ChampionSetup() : JSON.readValue(found.get(0), ChampionSetup.class);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Escolhas do campeão inválidas na build " + id, e);
+        }
+        setup.skillOrder = new ArrayList<>(skillOrder);
+        setup.skillLevels = skillLevels == null ? null : new ArrayList<>(skillLevels);
+        return jdbc.update("UPDATE build SET champion_setup = ?, updated_at = ? WHERE id = ?",
+                json(setup), Instant.now().toString(), id) > 0;
+    }
+
     public boolean moveBuild(long id, long folderId) {
         return jdbc.update("UPDATE build SET folder_id = ?, updated_at = ? WHERE id = ?",
                 folderId, Instant.now().toString(), id) > 0;

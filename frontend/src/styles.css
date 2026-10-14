@@ -538,7 +538,13 @@ table.timeline td small.dr { display: block; font-size: 10px; color: var(--muted
 .prep-export-list label.on { border-color: var(--gold); background: rgba(200, 170, 110, .07); }
 .prep-export-name { display: flex; flex-direction: column; min-width: 0; }
 .prep-export-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 600px) { .prep-export-list label { grid-template-columns: auto 1fr; } .prep-export-list label .prep-export-icons { grid-column: 2; } }
+.skill-export-order { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.skill-export-order strong { font-size: 13px; white-space: nowrap; }
+.skill-export-plan { display: inline-flex; gap: 2px; }
+.skill-export-plan span { width: 16px; height: 18px; display: inline-grid; place-items: center; font-size: 11px; border-radius: 3px;
+  background: rgba(255, 255, 255, .06); color: var(--text); }
+.skill-export-plan span.ult { background: rgba(200, 170, 110, .25); color: var(--gold); }
+@media (max-width: 600px) { .prep-export-list label { grid-template-columns: auto 1fr; } .prep-export-list label .prep-export-icons, .prep-export-list label .skill-export-order { grid-column: 2; } }
 .prep-row:hover:not(:disabled) { background: rgba(200, 170, 110, .06); border-color: var(--border); }
 .prep-label { font-weight: 700; letter-spacing: .08em; color: var(--text); }
 .prep-icons { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }

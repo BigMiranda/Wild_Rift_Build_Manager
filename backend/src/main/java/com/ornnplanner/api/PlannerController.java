@@ -184,6 +184,42 @@ public class PlannerController {
         return out;
     }
 
+    /** Skill order (and point-by-point plan) copied to other builds (the open one's champion panel). */
+    public static class SkillExport {
+        public List<Long> buildIds;
+        public List<Integer> skillOrder;
+        /** Null = the targets' plan comes from the order. */
+        public List<String> skillLevels;
+    }
+
+    private static final java.util.Set<String> ORDERS = java.util.Set.of("1,2,3", "1,3,2", "2,1,3", "2,3,1", "3,1,2", "3,2,1");
+
+    @PutMapping("/builds/skills")
+    @Transactional
+    public Map<String, Object> exportSkills(@RequestBody SkillExport body) {
+        if (body.buildIds == null || body.buildIds.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha ao menos uma build.");
+        }
+        if (body.skillOrder == null || !ORDERS.contains(body.skillOrder.stream().map(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(",")))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ordem de habilidades inválida.");
+        }
+        if (body.skillLevels != null && (body.skillLevels.size() != 15
+                || !body.skillLevels.stream().allMatch(a -> List.of("1", "2", "3", "R").contains(a)))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pontos por nível inválidos.");
+        }
+        int updated = 0;
+        for (Long id : new java.util.LinkedHashSet<>(body.buildIds)) {
+            if (id == null || !builds.updateSkillPlan(id, body.skillOrder, body.skillLevels)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Build " + id + " não existe.");
+            }
+            updated++;
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("updated", updated);
+        return out;
+    }
+
     @PutMapping("/builds/{id}/folder")
     public void moveBuild(@PathVariable long id, @RequestBody Map<String, Long> body) {
         Long folderId = body.get("folderId");
