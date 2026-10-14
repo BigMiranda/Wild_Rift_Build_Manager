@@ -907,6 +907,8 @@ td.warn, .combat-items td.warn { color: var(--warn, #f0c75e); }
 .arena-chain-table tr.current td { background: rgba(79,168,255,.08); }
 .arena-chain-table .champ-avatar { vertical-align: middle; }
 .arena-chain-gen { min-width: 110px; }
-.arena-spark { width: 120px; height: 24px; display: block; }
+.arena-spark-wrap { display: inline-flex; align-items: center; gap: 6px; }
+.arena-spark { width: 120px; height: 28px; display: block; }
+.arena-spark-wrap small.good { color: #5fbf6a; }
 @media (max-width: 700px) { .arena-chain-table td:nth-child(4) { display: none; } }
 

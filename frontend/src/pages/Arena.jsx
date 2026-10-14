@@ -607,18 +607,34 @@ function ChainProgress({ chain, names, running, onStop, onCancel, onUse }) {
   );
 }
 
-/** The plateau metric of a stage, generation by generation. */
+/**
+ * The plateau metric of a stage, generation by generation, on a fixed 0–100% scale (100 always at the top, so 100 ->
+ * 94 looks like a small dip and 0 -> 4 like a small rise), with the 55% acceptance line and the last value.
+ */
 function Sparkline({ values }) {
-  const v = values.filter((x) => x != null);
-  if (v.length < 2) return <svg className="arena-spark" viewBox="0 0 120 24" aria-hidden />;
-  const lo = Math.min(...v);
-  const hi = Math.max(...v);
-  const pts = v.map((x, i) => `${((118 * i) / (v.length - 1) + 1).toFixed(1)},${(22 - (20 * (x - lo)) / Math.max(1e-9, hi - lo)).toFixed(1)}`).join(' ');
+  const v = values.filter((x) => x != null).map((x) => Math.max(0, Math.min(100, x)));
+  const W = 120;
+  const H = 28;
+  const y = (x) => H - 2 - ((H - 4) * x) / 100;
+  const x = (i) => (v.length < 2 ? W / 2 : 1 + ((W - 2) * i) / (v.length - 1));
+  const pts = v.map((val, i) => `${x(i).toFixed(1)},${y(val).toFixed(1)}`).join(' ');
+  const last = v[v.length - 1];
   return (
-    <svg className="arena-spark" viewBox="0 0 120 24" role="img" aria-label={t('arena.chain.metric')}>
-      <title>{`${t('arena.chain.metric')}: ${v.map((x) => Math.round(x)).join(' · ')}`}</title>
-      <polyline points={pts} fill="none" stroke={TEAM[0]} strokeWidth="1.5" />
-    </svg>
+    <span className="arena-spark-wrap">
+      <svg className="arena-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={t('arena.chain.metric')}>
+        <title>{`${t('arena.chain.metric')}: ${v.map((val) => Math.round(val)).join(' · ')}`}</title>
+        <rect x="0" y="0" width={W} height={H} rx="3" fill="rgba(127,127,127,.08)" />
+        <line x1="0" x2={W} y1={y(55)} y2={y(55)} stroke="var(--border)" strokeDasharray="3 2" />
+        {v.length > 1 && (
+          <>
+            <polygon points={`${x(0)},${y(0)} ${pts} ${x(v.length - 1)},${y(0)}`} fill={TEAM[0]} opacity="0.18" />
+            <polyline points={pts} fill="none" stroke={TEAM[0]} strokeWidth="1.5" />
+          </>
+        )}
+        {v.length > 0 && <circle cx={x(v.length - 1)} cy={y(last)} r="2.5" fill={TEAM[0]} />}
+      </svg>
+      {v.length > 0 && <small className={last >= 55 ? 'good' : 'muted'}>{Math.round(last)}%</small>}
+    </span>
   );
 }
 
