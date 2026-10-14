@@ -283,7 +283,8 @@ const CHAIN_COLORS = ['#4fa8ff', '#f06a5f', '#5fbf6a', '#f0c75e', '#b48cf0', '#4
  * Trains learned policies (backend, in the background): one champion, or a chain of them trained one after the other
  * round after round, each against the others' latest accepted versions. An evolution strategy over a small network
  * that starts from the tactical autopilot (or, in a chain, from the champion's previous version); a stage stops at its
- * last generation or at a plateau. Shows the progress, the validation numbers and the saved versions.
+ * last generation, at total victory (it wins every selection fight; in a chain, a champion that already does keeps its
+ * version and the chain moves on) or at a plateau. Shows the progress, the validation numbers and the saved versions.
  */
 function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
   const [mode, setMode] = useState('single');
@@ -292,6 +293,7 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
   const [generations, setGenerations] = useState(30);
   const [population, setPopulation] = useState(32);
   const [seed, setSeed] = useState(1);
+  const [stopWhen, setStopWhen] = useState('victory');
   const [plateau, setPlateau] = useState({ pct: 2, window: 6, min: 8 });
   const [order, setOrder] = useState([]);   // chain: slots in training order, with their checkbox
   const [perChampion, setPerChampion] = useState(false);
@@ -346,7 +348,7 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
 
   const common = {
     scenario: sc, objective, generations, population, episodesPerGeneration: 8, seed,
-    plateauPct: plateau.pct, plateauWindow: plateau.window, minGenerations: plateau.min,
+    stopWhen, plateauPct: plateau.pct, plateauWindow: plateau.window, minGenerations: plateau.min,
   };
   const start = async () => {
     setError(null);
@@ -462,22 +464,32 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
         )}
       </div>
       <div className="row">
-        <label className="inline">{t('arena.train.plateau')}
-          <input type="number" min={0} max={100} step={0.5} value={plateau.pct} disabled={busy} onChange={(e) => setPlateau({ ...plateau, pct: num(e.target.value, 0) })} />
+        <label className="inline">{t('arena.train.stopWhen')}
+          <select value={stopWhen} disabled={busy} onChange={(e) => setStopWhen(e.target.value)}>
+            {['victory', 'plateau'].map((w) => <option key={w} value={w}>{t(`arena.train.stopWhen.${w}`)}</option>)}
+          </select>
         </label>
-        <label className="inline">{t('arena.train.plateauWindow')}
-          <input type="number" min={1} max={100} value={plateau.window} disabled={busy || !plateau.pct} onChange={(e) => setPlateau({ ...plateau, window: num(e.target.value, 6) })} />
-        </label>
-        <label className="inline">{t('arena.train.plateauMin')}
-          <input type="number" min={1} max={200} value={plateau.min} disabled={busy || !plateau.pct} onChange={(e) => setPlateau({ ...plateau, min: num(e.target.value, 8) })} />
-        </label>
+        {stopWhen === 'plateau' && (
+          <>
+            <label className="inline">{t('arena.train.plateau')}
+              <input type="number" min={0} max={100} step={0.5} value={plateau.pct} disabled={busy} onChange={(e) => setPlateau({ ...plateau, pct: num(e.target.value, 0) })} />
+            </label>
+            <label className="inline">{t('arena.train.plateauWindow')}
+              <input type="number" min={1} max={100} value={plateau.window} disabled={busy || !plateau.pct} onChange={(e) => setPlateau({ ...plateau, window: num(e.target.value, 6) })} />
+            </label>
+            <label className="inline">{t('arena.train.plateauMin')}
+              <input type="number" min={1} max={200} value={plateau.min} disabled={busy || !plateau.pct} onChange={(e) => setPlateau({ ...plateau, min: num(e.target.value, 8) })} />
+            </label>
+          </>
+        )}
         {mode === 'single' && (running
           ? <button className="danger" onClick={cancel}>{t('arena.train.cancel')}</button>
           : <button className="primary" onClick={start} disabled={busy}>{t('arena.train.run')}</button>)}
         {mode === 'chain' && !chainRunning && <button className="primary" onClick={startChain} disabled={busy}>{t('arena.train.chainRun')}</button>}
       </div>
       <p className="muted"><small>
-        {plateau.pct > 0 ? t('arena.train.plateauHelp', { p: plateau.pct, w: plateau.window, min: plateau.min }) : t('arena.train.plateauOff')}
+        {stopWhen === 'victory' ? t(mode === 'chain' ? 'arena.train.victoryHelpChain' : 'arena.train.victoryHelp')
+          : plateau.pct > 0 ? t('arena.train.plateauHelp', { p: plateau.pct, w: plateau.window, min: plateau.min }) : t('arena.train.plateauOff')}
       </small></p>
       {error && <p className="error">{error}</p>}
       {mode === 'single' && job && (
@@ -492,6 +504,7 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
             <p>
               <strong>{t('arena.train.saved', { v: done.version, champion: done.champion })}</strong>
               {job.plateau && <span className="muted"> ({t('arena.train.plateauHit', { g: done.generations })})</span>}
+              {job.victory && <span className="good"> ({t('arena.train.victoryHit', { g: done.generations })})</span>}
               {' — '}{t('arena.train.numbers', { script: pct(done.betterVsScript), tactical: pct(done.betterVsTactical), win: pct(done.winrate), scriptWin: pct(done.winrateScript) })}
               {done.betterVsPrevious != null && ` · ${t('arena.train.vsPrevious', { p: pct(done.betterVsPrevious) })}`}
               {!done.accepted && <span className="warn"> · {t('arena.train.notAcceptedLong')}</span>}
@@ -548,6 +561,8 @@ function ChainProgress({ chain, names, running, onStop, onCancel, onUse }) {
   const current = chain.current >= 0 ? chain.stages[chain.current] : null;
   const status = (s) => {
     if (s.status === 'accepted') return t('arena.chain.status.accepted', { v: s.policy?.version });
+    if (s.status === 'kept') return t('arena.chain.status.kept', { v: s.policy?.version });
+    if (s.status === 'training' && s.message?.startsWith('vitória')) return t('arena.chain.status.victory');
     if (s.status === 'training' && s.message?.startsWith('platô')) return t('arena.chain.status.plateau');
     return t(`arena.chain.status.${s.status}`);
   };
@@ -583,6 +598,7 @@ function ChainProgress({ chain, names, running, onStop, onCancel, onUse }) {
                 <td className="l"><ChampionAvatar name={s.champion} size={22} /> {slot + 1} · {names[slot] ?? s.champion}</td>
                 <td className="l">
                   {status(s)}{s.plateau && s.status !== 'training' ? ` · ${t('arena.chain.status.plateau')}` : ''}
+                  {s.victory && s.status !== 'kept' && s.status !== 'training' && <span className="good"> · {t('arena.chain.status.victory')}</span>}
                   {s.warning && <><br /><small className="warn">{s.warning}</small></>}
                 </td>
                 <td className="arena-chain-gen">

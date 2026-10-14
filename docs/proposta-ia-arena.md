@@ -342,3 +342,26 @@ Andamento, parte a parte (cada parte é um commit no `arena-ia`).
   - platô numa curva achatada, sem disparar antes do mínimo nem com ganho real;
   - etapa que para por platô e ainda valida;
   - o relatório das duas métricas.
+
+### Depois da Rodada 2 — parar na vitória total
+- **Novo critério de parada (padrão):** `stopWhen = victory`. O platô continua disponível como `stopWhen = plateau`.
+- **O que é vitória total:** o lado da IA vence **todas** as lutas de seleção de uma geração (empate conta meio).
+  Cada `Point` passa a ter `winPct`; nesse modo, ele é também a métrica de parada que aparece no minigráfico.
+- **Etapa:**
+  - A primeira geração com vitória total encerra a etapa, e **são esses pesos** que vão para a validação e o banco.
+    Eles não passam pela escolha da "melhor geração".
+  - A versão é aceita pela regra de 55% de sempre, ou se também vencer todas as lutas de validação. Uma vitória
+    total confirmada não é descartada só por não ser mais rápida que a anterior.
+  - Sem vitória total, a etapa vai até as gerações máximas.
+- **Cadeia:**
+  - Na vitória total, a etapa salva e a cadeia passa para o próximo campeão.
+  - No início de cada etapa, se a versão atual do campeão já vence todas as lutas de seleção contra os adversários
+    atuais, ele **não é treinado de novo**. A etapa fica `kept` ("mantida vN (já vence tudo)"), nada é salvo, e a
+    versão vitoriosa continua sendo a da cadeia.
+  - Se os adversários melhorarem e ele deixar de vencer tudo, volta a treinar.
+  - Uma rodada sem versão nova aceita encerra como `converged`. Se todos foram mantidos, a mensagem é "todos já
+    vencem todas as lutas".
+- **Testes:**
+  - a etapa para na primeira geração com 100% de vitórias;
+  - a cadeia mantém a versão vitoriosa na rodada seguinte, sem salvar outra versão desse campeão;
+  - a rodada em que todos já vencem converge.

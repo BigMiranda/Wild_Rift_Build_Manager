@@ -44,6 +44,8 @@ public class ArenaTrainingService {
         public int population = 32;
         public int episodesPerGeneration = 8;
         public long seed = 1;
+        /** Stop rule: victory (when it wins every selection fight) | plateau. */
+        public String stopWhen = "victory";
         /** Plateau: least gain in points over the window, after a minimum of generations (0 = off). */
         public double plateauPct = 2;
         public int plateauWindow = 6;
@@ -67,6 +69,8 @@ public class ArenaTrainingService {
         public volatile String message;
         /** Stopped by the plateau rule before its last generation. */
         public volatile boolean plateau;
+        /** Stopped at total victory. */
+        public volatile boolean victory;
         /** The saved version (without weights) when done. */
         public volatile PolicyRepository.Record policy;
         public long startedAt;
@@ -181,6 +185,7 @@ public class ArenaTrainingService {
         st.seed = req.seed;
         st.previous = policies.best(job.champion, req.objective).orElse(null);
         st.teamPlan = plan(sc, base.get(req.fighter).f.team);
+        st.stopAtVictory = victory(req.stopWhen);
         st.plateau = plateau(req.plateauPct, req.plateauWindow, req.minGenerations);
         ArenaTraining.StageResult r = training.trainStage(st, new ArenaTraining.Listener() {
             @Override
@@ -211,9 +216,11 @@ public class ArenaTrainingService {
             return;
         }
         job.plateau = r.plateau;
+        job.victory = r.victory;
         job.policy = r.policy.withoutWeights();
         job.status = "done";
-        job.message = (r.plateau ? "platô na geração " + r.generations + "; " : "")
+        job.message = (r.victory ? "vitória total na geração " + r.generations + "; "
+                : r.plateau ? "platô na geração " + r.generations + "; " : "")
                 + (r.policy.accepted ? "versão aceita" : "versão salva, mas não aceita (não superou o roteiro e a anterior em 55%)");
         job.finishedAt = System.currentTimeMillis();
     }
@@ -252,6 +259,7 @@ public class ArenaTrainingService {
         spec.episodesPerGeneration = Math.max(1, Math.min(ArenaTraining.POOL, req.episodesPerGeneration));
         spec.seed = req.seed;
         spec.maxRounds = Math.max(1, Math.min(20, req.maxRounds));
+        spec.stopAtVictory = victory(req.stopWhen);
         spec.plateau = plateau(req.plateauPct, req.plateauWindow, req.minGenerations);
         ArenaChain.Job job = new ArenaChain.Job();
         job.id = "c" + ids.incrementAndGet();
@@ -324,6 +332,13 @@ public class ArenaTrainingService {
 
     private static int generations(int n) {
         return Math.max(1, Math.min(200, n));
+    }
+
+    private static boolean victory(String stopWhen) {
+        if (stopWhen != null && !"victory".equals(stopWhen) && !"plateau".equals(stopWhen)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Critério de parada desconhecido: " + stopWhen + ".");
+        }
+        return !"plateau".equals(stopWhen);
     }
 
     private static Plateau plateau(double pct, int window, int min) {

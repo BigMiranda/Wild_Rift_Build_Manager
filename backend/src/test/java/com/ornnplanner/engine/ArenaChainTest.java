@@ -189,6 +189,87 @@ class ArenaChainTest {
         assertEquals(1, repo.list(null).size());
     }
 
+    // ------------------------------------------------------------------ total victory
+
+    /** A Darius far stronger than Vayne: he can win every fight. */
+    private static ArenaChain.Spec lopsided(double accept) {
+        ArenaChain.Spec s = spec(accept);
+        s.variants = List.of(List.of(ArenaScenarios.champion("Darius", 0, 3000, 0, 4500, 400, 120),
+                ArenaScenarios.champion("Vayne", 1, 3900, 0, 1200, 40, 40)));
+        s.generations = 6;
+        s.stopAtVictory = true;
+        return s;
+    }
+
+    @Test
+    void stageStopsAtTotalVictoryWithThoseWeights(@TempDir Path dir) {
+        PolicyRepository repo = repo(dir, "t.db");
+        ArenaTraining t = new ArenaTraining(ArenaScenarios.CATALOG, ArenaScenarios.MAP, repo);
+        ArenaTraining.StageSpec s = new ArenaTraining.StageSpec();
+        ArenaChain.Spec c = lopsided(0);
+        s.variants = c.variants;
+        s.duration = 30;
+        s.generations = 6;
+        s.population = 4;
+        s.episodesPerGeneration = 2;
+        s.pool = 4;
+        s.selection = 4;
+        s.validation = 4;
+        s.stopAtVictory = true;
+        s.plateau = new Plateau(100, 1, 1);   // ignored under total victory
+        List<ArenaTraining.Point> points = new ArrayList<>();
+        ArenaTraining.StageResult r = t.trainStage(s, new ArenaTraining.Listener() {
+            @Override
+            public void point(ArenaTraining.Point p) {
+                points.add(p);
+            }
+        });
+        assertTrue(r.victory);
+        assertFalse(r.plateau);
+        ArenaTraining.Point last = points.get(points.size() - 1);
+        assertEquals(100, last.winPct, 1e-9);
+        assertEquals(last.winPct, last.metric, 1e-9);
+        for (ArenaTraining.Point p : points.subList(0, points.size() - 1)) {
+            assertTrue(p.winPct < 100, "stopped at the first total victory");
+        }
+        assertEquals(points.size(), r.generations);
+        assertNotNull(r.policy);
+    }
+
+    @Test
+    void chainKeepsAVictoriousVersionAndMovesOn(@TempDir Path dir) {
+        PolicyRepository repo = repo(dir, "t.db");
+        ArenaChain.Job j = job();
+        chain(repo).run(j, lopsided(0));
+        ArenaChain.Stage darius1 = j.stages.get(0);
+        ArenaChain.Stage darius2 = j.stages.get(2);
+        assertTrue(darius1.victory, darius1.message);
+        assertTrue(darius1.generation < 6, "round 1 stopped early: " + darius1.generation);
+        // round 2: he already wins everything with that version, so it is kept, not trained again
+        assertEquals("kept", darius2.status, darius2.message);
+        assertEquals(darius1.policy.id, darius2.policy.id);
+        assertEquals(0, darius2.generation);
+        assertEquals(darius1.policy.id, j.latest.get(0));
+        long dariusVersions = repo.list("Darius").size();
+        assertEquals(1, dariusVersions);
+        // Vayne cannot win: she trains every generation each round
+        assertEquals(6, j.stages.get(1).generation);
+        assertEquals(6, j.stages.get(3).generation);
+    }
+
+    @Test
+    void aRoundWhereEveryoneAlreadyWinsConverges(@TempDir Path dir) {
+        PolicyRepository repo = repo(dir, "t.db");
+        ArenaChain.Spec s = lopsided(0);
+        s.slots = List.of(0);   // only Darius
+        s.maxRounds = 3;
+        ArenaChain.Job j = job();
+        chain(repo).run(j, s);
+        assertEquals("converged", j.status);
+        assertEquals(2, j.round);
+        assertTrue(j.message.contains("todos já vencem"), j.message);
+    }
+
     // ------------------------------------------------------------------ plateau
 
     private static List<Double> curve(double... v) {

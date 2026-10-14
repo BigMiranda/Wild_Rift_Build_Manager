@@ -31,7 +31,9 @@ import java.util.stream.IntStream;
  *
  * <p>The trainer ({@link Trainer}) learns on a pool of these episodes. Each generation its weights are measured on a
  * separate selection set against the scripted autopilot in the same fights; that measure picks the best generation
- * and drives the plateau rule ({@link Plateau}). A validation set never used before gives the saved numbers: how
+ * and drives the stop rule: a plateau ({@link Plateau}), or total victory (the side wins every selection fight; those
+ * weights are the result, and in a chain a champion that already wins them all at the start is not trained again, so
+ * its victorious version is kept). A validation set never used before gives the saved numbers: how
  * often it does better than the scripted and the tactical autopilots and than the previous accepted version. A version
  * is accepted when it does better than the script and the previous one in at least {@link #ACCEPT} of them.
  */
@@ -75,6 +77,11 @@ public final class ArenaTraining {
         public Integer chainRound;
         public ArenaModel.TeamPlan teamPlan;
         public Plateau plateau = Plateau.off();
+        /**
+         * Stop at total victory instead of a plateau: the first generation whose side wins every selection fight ends
+         * the stage with those weights; a start (warm) that already does is kept without training.
+         */
+        public boolean stopAtVictory;
         /** Share of validation fights to beat the script and the previous version in (to be accepted). */
         public double accept = ACCEPT;
         public int pool = POOL;
@@ -99,6 +106,8 @@ public final class ArenaTraining {
         public Double fitnessPct;
         /** Same as {@link #selection}, in %. */
         public Double betterPct;
+        /** Selection fights the side won, in % (draws count half). */
+        public Double winPct;
         /** The value the plateau rule reads. */
         public Double metric;
     }
@@ -125,6 +134,10 @@ public final class ArenaTraining {
         public boolean cancelled;
         /** Stopped by the plateau rule before its last generation. */
         public boolean plateau;
+        /** Stopped at total victory (the saved weights win every selection fight). */
+        public boolean victory;
+        /** The start already won every selection fight: nothing trained or saved, the start version is kept. */
+        public boolean kept;
         public int generations;
         /** Validation against the opponents' previous chain versions: better than the script in this share. */
         public Double vsOldOpponents;
@@ -207,13 +220,19 @@ public final class ArenaTraining {
         // the script's fitness on the selection fights, once: every generation is measured against it
         double[] scriptFit = fitness(selection, reference, objective);
         double scriptMean = mean(scriptFit);
-        Point first = measure(selection, scriptFit, scriptMean, new NeuralPolicy(start, priority), objective);
+        Point first = measure(selection, scriptFit, scriptMean, new NeuralPolicy(start, priority), objective, spec);
+        if (spec.stopAtVictory && spec.start != null && first.winPct >= 100 - 1e-9) {
+            out.kept = true;   // the version it starts from already wins them all: keep it as it is
+            listener.message("já vence todas as lutas de seleção: versão mantida");
+            return out;
+        }
         // the best generation: most selection fights better than the script, ties by selection fitness (a share that
         // saturates, e.g. always winning, must not let slower wins replace faster ones)
         Network[] best = {start};
         double[] bestSelection = {first.selection, first.fitnessPct};
         List<Double> metric = new ArrayList<>();
         boolean[] plateau = {false};
+        boolean[] victory = {false};
         int[] done = {0};
         listener.message("treinando");
         new Trainer(cfg).train(start, pool.size(), (net, e) -> {
@@ -223,11 +242,14 @@ public final class ArenaTraining {
             @Override
             public void generation(Trainer.Generation g) {
                 NeuralPolicy now = new NeuralPolicy(g.center, priority);
-                Point p = measure(selection, scriptFit, scriptMean, now, objective);
+                Point p = measure(selection, scriptFit, scriptMean, now, objective, spec);
                 p.generation = g.index;
                 p.mean = g.mean;
                 p.best = g.best;
-                if (p.selection > bestSelection[0] + 1e-9
+                if (spec.stopAtVictory && p.winPct >= 100 - 1e-9) {
+                    victory[0] = true;   // these very weights are the result
+                    best[0] = g.center;
+                } else if (p.selection > bestSelection[0] + 1e-9
                         || Math.abs(p.selection - bestSelection[0]) <= 1e-9 && p.fitnessPct >= bestSelection[1]) {
                     bestSelection[0] = p.selection;
                     bestSelection[1] = p.fitnessPct;
@@ -238,7 +260,7 @@ public final class ArenaTraining {
                 }
                 metric.add(p.metric);
                 done[0] = g.index;
-                plateau[0] = g.index < cfg.generations && spec.plateau.reached(metric);
+                plateau[0] = !spec.stopAtVictory && g.index < cfg.generations && spec.plateau.reached(metric);
                 listener.point(p);
             }
 
@@ -249,17 +271,19 @@ public final class ArenaTraining {
 
             @Override
             public boolean stop() {
-                return plateau[0];
+                return plateau[0] || victory[0];
             }
         });
         out.generations = done[0];
         out.plateau = plateau[0];
+        out.victory = victory[0];
         if (listener.cancelled()) {
             out.cancelled = true;
             return out;
         }
 
-        listener.message(out.plateau ? "platô na geração " + done[0] + "; validando" : "validando");
+        listener.message(out.victory ? "vitória total na geração " + done[0] + "; validando"
+                : out.plateau ? "platô na geração " + done[0] + "; validando" : "validando");
         NeuralPolicy ai = new NeuralPolicy(best[0], priority);
         Gym.Report vsScript = gym.compare(validation, ai, reference, objective);
         Gym.Report vsTactical = gym.compare(validation, ai, new TacticalPolicy(priority), objective);
@@ -280,7 +304,9 @@ public final class ArenaTraining {
         r.betterVsPrevious = vsPrevious;
         r.winrate = vsScript.winRate;
         r.winrateScript = vsScript.referenceWinRate;
-        r.accepted = vsScript.better >= spec.accept && (vsPrevious == null || vsPrevious >= spec.accept);
+        // a total victory that holds on validation (every fight won) is kept even when it is not faster than before
+        r.accepted = vsScript.better >= spec.accept && (vsPrevious == null || vsPrevious >= spec.accept)
+                || out.victory && vsScript.winRate >= 1 - 1e-9;
         r.generations = done[0];
         r.population = cfg.population;
         r.seed = spec.seed;
@@ -296,27 +322,46 @@ public final class ArenaTraining {
         return out;
     }
 
-    /** The weights' plateau metrics on the selection fights, against the script's fitness there. */
-    private Point measure(List<Gym.Episode> selection, double[] scriptFit, double scriptMean, Policy policy, String objective) {
-        double[] fit = fitness(selection, policy, objective);
+    /**
+     * The weights on the selection fights: share better than the script there, fitness over the script's, wins. The
+     * stop metric is the wins under total victory, else the share better than the script.
+     */
+    private Point measure(List<Gym.Episode> selection, double[] scriptFit, double scriptMean, Policy policy, String objective,
+                          StageSpec spec) {
+        ArenaModel.Result[] results = results(selection, policy);
+        double[] fit = new double[results.length];
         double better = 0;
+        double wins = 0;
         for (int i = 0; i < fit.length; i++) {
+            Gym.Episode e = selection.get(i);
+            fit[i] = ArenaScore.fitness(results[i], objective, e.me, e.team());
             better += fit[i] > scriptFit[i] + 1e-9 ? 1 : Math.abs(fit[i] - scriptFit[i]) <= 1e-9 ? 0.5 : 0;
+            wins += results[i].winner == e.team() ? 1 : results[i].winner < 0 ? 0.5 : 0;
         }
         Point p = new Point();
         p.selection = fit.length == 0 ? 0 : better / fit.length;
         p.betterPct = 100 * p.selection;
+        p.winPct = fit.length == 0 ? 0 : 100 * wins / fit.length;
         p.fitnessPct = 100 * (mean(fit) - scriptMean) / Math.max(1, Math.abs(scriptMean));
-        p.metric = "fitness".equals(METRIC) ? p.fitnessPct : p.betterPct;
+        p.metric = spec.stopAtVictory ? p.winPct : "fitness".equals(METRIC) ? p.fitnessPct : p.betterPct;
         return p;
     }
 
-    /** The policy's fitness on each episode (fights in parallel; the order of the results is the episodes'). */
+    /** The policy's fight on each episode (in parallel; the order of the results is the episodes'). */
+    private ArenaModel.Result[] results(List<Gym.Episode> episodes, Policy policy) {
+        return IntStream.range(0, episodes.size()).parallel().mapToObj(i -> gym.play(episodes.get(i), policy))
+                .toArray(ArenaModel.Result[]::new);
+    }
+
+    /** The policy's fitness on each episode. */
     private double[] fitness(List<Gym.Episode> episodes, Policy policy, String objective) {
-        return IntStream.range(0, episodes.size()).parallel().mapToDouble(i -> {
+        ArenaModel.Result[] r = results(episodes, policy);
+        double[] out = new double[r.length];
+        for (int i = 0; i < r.length; i++) {
             Gym.Episode e = episodes.get(i);
-            return ArenaScore.fitness(gym.play(e, policy), objective, e.me, e.team());
-        }).toArray();
+            out[i] = ArenaScore.fitness(r[i], objective, e.me, e.team());
+        }
+        return out;
     }
 
     private static double mean(double[] x) {
