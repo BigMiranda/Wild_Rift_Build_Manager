@@ -418,3 +418,30 @@ Andamento, parte a parte (cada parte é um commit no `arena-ia`, com `./mvnw tes
   perdida: R (não tentou)". O roteiro nunca reconjura a R, e agora isso aparece.
 - Testes: `ArenaEventsTest` (Frágil consumido pelo ataque, tempo controlado = controle causado, reconjuração que
   consome o Frágil, sobrescrita, marcas da Vayne e do K'Sante, encadeado, resumo).
+
+### Parte B — Fichas: mecânicas que o texto do jogo não diz ✅
+Campos novos, documentados no cabeçalho do `kits_7_3.yml`:
+- **`mobilidade`** por campeão (slot → avanco | salto | corrida | imune): Ornn E, Darius R (salto), Renekton E, Rumble
+  W (corrida), Vayne Q e K'Sante W e E. `Arena.dashReady(u)` diz se um avanço ou salto próprio está pronto (o Flash
+  fica à parte). Sem o campo, a arena lê das fichas (forma `avanco`, `alvo` com `salta`), de modo que um campeão novo
+  já tem uma mobilidade lida da ficha.
+- **`imune_deslocamento`** num avanço ou na reconjuração que avança: puxões, empurrões e arremessos no campeão são
+  anulados só enquanto o avanço dura (evento `deslocamento_anulado:<tipo>`). `cc_durante_avanco`:
+  - `continua_depois` (padrão): o avanço segue e o atordoamento cai no fim dele com o tempo que sobrar; se acabou
+    antes, não cai. Evento `atordoamento_adiado`.
+  - `interrompe`: como sem imunidade.
+  - Aplicado na **cabeçada da R do Ornn** (`reconjurar`) com `continua_depois`. **Suposição a confirmar com o
+    usuário** (anotada na ficha).
+- **`imparavel`** (W do Ornn) passou a usar a mesma regra: um canal com `imparavel` é `imune_deslocamento` com os
+  atordoamentos anulados (`ignora`); um canal pode ter `imune_deslocamento` com `cc_durante_avanco` também. O W
+  joga igual (golden intacto). O antigo `unstoppableUntil` virou `immuneUntil` + `immuneCc`.
+- **Ataque num alvo Frágil (Ornn):** `fragil.ataques.efeito` = `empurra` (padrão, distância em `empurra`, como antes)
+  ou `arremessa` (com `duracao`; encadeia com um arremesso em curso pelo maior fim, a regra do `airborne`). **Pergunta
+  aberta** no relatório final.
+- **Lentidão e controle visíveis:** `U.slowPct()` (a maior lentidão ativa) e `U.slowUntil()` (quando ela acaba), além
+  do `controlLeft(u)` que já existia. São calculados na hora a partir das listas do `U`, em vez de campos guardados,
+  para não haver duas fontes da mesma informação.
+- Testes (`ArenaSheetsTest`), com fichas sintéticas: atordoamento num avanço imune cai no fim com o resto do tempo;
+  `interrompe` igual a sem imunidade; puxão anulado no avanço imune. Com a ficha real, em 86 tempos de um E do Darius
+  em volta da cabeçada, alguns puxões caem nela e são anulados e a maioria não. O ataque no Frágil como arremesso
+  aplica `cc_aplicado:arremesso` no lugar do empurrão.

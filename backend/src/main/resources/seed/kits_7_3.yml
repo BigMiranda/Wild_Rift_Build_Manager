@@ -24,6 +24,18 @@
 #   efeitos       aplicados em quem é atingido: lentidao + duracao, atordoa, arremessa (no ar), puxa, fragil, marca,
 #                 acumulos (sangramento), reduz_rm / reduz_arm {pct, duracao}, cura_propria, escudo_proprio
 #   recursos      furia: ganho / limiar; calor: ganho / zona de perigo / superaquecimento (Renekton, Rumble)
+#   imune_deslocamento  num avanço (ou na reconjuração que avança): enquanto o avanço dura, puxões, empurrões e
+#                 arremessos no campeão são anulados (só durante o avanço). cc_durante_avanco diz o que um atordoamento
+#                 faz nesse tempo: continua_depois (padrão: o avanço segue e o atordoamento cai no fim, com o tempo que
+#                 sobrar) ou interrompe (como sem imunidade). Num canal (forma canal), vale pela duração do canal.
+#   imparavel     num canal: imune_deslocamento com os atordoamentos anulados (W do Ornn)
+#
+# Mecânicas que o texto do jogo não diz (por campeão):
+#   mobilidade    slot -> avanco | salto | corrida | imune: os avanços próprios que tiram de uma habilidade de mira ou
+#                 alcançam o alvo (a IA vê "o alvo tem avanço pronto"; o Flash é contado à parte). Sem o campo, a
+#                 arena lê das fichas: forma avanco e alvo com salta.
+#   fragil.ataques  o ataque do Ornn num alvo Frágil: efeito empurra (padrão; distância em empurra) ou arremessa
+#                 (duracao em s, encadeando com um arremesso em curso pelo maior fim)
 mapa:
   # Howling Abyss simplificado: uma rota reta entre os dois Nexus, com paredes dos dois lados. EST: a wiki não traz as
   # medidas do mapa do Wild Rift; ajuste aqui quando medir.
@@ -40,7 +52,10 @@ campeoes:
     fragil:                  # passiva da W e da R: imobilizar um alvo Frágil
       dano: {tipo: magico, vida_max_alvo: 0.07, vida_max_alvo_nv15: 0.22}   # WR (pelo nível do Ornn)
       aumento_controle: 0.30                                                 # WR: +30% de duração
-      ataques: {empurra: 150}   # WR: os ataques do Ornn num alvo Frágil o empurram e quebram o Frágil; distância EST
+      ataques: {efeito: empurra, empurra: 150}   # WR: os ataques do Ornn num alvo Frágil o empurram e quebram o Frágil; distância EST
+      # PERGUNTA ABERTA: o usuário joga contando que esse ataque "mantém o alvo no ar mais um pouco"; para testar,
+      # use {efeito: arremessa, duracao: <s>} (o padrão continua o empurrão de ~0,15s)
+    mobilidade: {"3": avanco}
     habilidades:
       "1":
         nome: Ruptura Vulcânica
@@ -100,6 +115,10 @@ campeoes:
           distancia: 1500        # EST: até onde o elemental devolvido corre
           dano: {tipo: magico, base: [125, 175, 225], pdh: 0.2}
           efeitos: {arremessa: 1.0, arremessa_demais: 0.5, fragil: 3}
+          # SUPOSIÇÃO a confirmar com o usuário: a cabeçada anula puxões / empurrões / arremessos no Ornn enquanto dura,
+          # e um atordoamento nesse tempo cai no fim dela
+          imune_deslocamento: true
+          cc_durante_avanco: continua_depois
         fontes: "recarga, conjuração, dano, lentidão, Frágil, janela da reconjuração, arremesso: WR; distância, largura, velocidades: PC; aceleração, cabeçada, distância da volta: EST"
 
   Darius:
@@ -113,6 +132,7 @@ campeoes:
       duracao: 5
       por_s: {tipo: fisico, base: 3.6, base_nv15: 9.2, dda_bonus: 0.08}   # WR, por acúmulo
       cheio_ativa: Hemorragia   # 5 acúmulos num Campeão: Poder de Noxus (e os ataques aplicam 5 de uma vez)
+    mobilidade: {"R": salto}
     habilidades:
       "1":
         nome: Dizimar
@@ -167,6 +187,7 @@ campeoes:
       por_ataque: 5
       por_campeao: 10        # habilidade que acerta Campeão (até 30 por conjuração)
       limiar: 50             # a próxima habilidade básica gasta 50 e fica fortalecida
+    mobilidade: {"3": avanco}
     habilidades:
       "1":
         nome: Abater os Indefesos
@@ -230,6 +251,7 @@ campeoes:
       superaquece: 150       # WR: habilidades bloqueadas, o calor some em 4s
       superaquecido_por: 4
       ao_contato_superaquecido: {tipo: magico, base: 5, base_nv15: 40, pdh: 0.2, vida_max_alvo: 0.05}
+    mobilidade: {"2": corrida}
     habilidades:
       "1":
         nome: Cospe-Fogo
@@ -288,6 +310,7 @@ campeoes:
       duracao: 3.5
       dano: {tipo: verdadeiro, vida_max_alvo: [0.02, 0.05, 0.08, 0.11], minimo: [50, 65, 80, 95]}
       habilidade: "2"
+    mobilidade: {"1": avanco}
     habilidades:
       "1":
         nome: Rolamento
@@ -338,6 +361,7 @@ campeoes:
     marcas_ksante:           # passiva: habilidades marcam; o próximo ataque consome
       duracao: 4
       dano: {tipo: fisico, base: 12, vida_max_alvo: 0.01, vida_max_alvo_nv15: 0.0212}
+    mobilidade: {"2": avanco, "3": avanco}
     habilidades:
       "1":
         nome: Golpes de Ntofo

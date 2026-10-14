@@ -145,7 +145,12 @@ public class Arena {
         double airUntil = -1;
         double stasisUntil = -1;
         double invisibleUntil = -1;
-        double unstoppableUntil = -1;
+        /**
+         * Displacement immunity of a channel (Ornn's Bellows Breath): pulls, pushes and knock-ups are void until then,
+         * and stuns follow {@link #immuneCc} (see {@link Arena#ccRule}).
+         */
+        double immuneUntil = -1;
+        String immuneCc = CC_IGNORE;
         double nextAttack;
         Double moveX;
         Double moveY;
@@ -346,6 +351,28 @@ public class Arena {
             return Math.max(0.2, Math.min(3.0, as));
         }
 
+        /** The strongest slow on now (0..1) and when it ends (-1 = none). */
+        double slowPct() {
+            double slow = 0;
+            for (double[] s : slows) {
+                if (now < s[1]) {
+                    slow = Math.max(slow, s[0]);
+                }
+            }
+            return slow;
+        }
+
+        double slowUntil() {
+            double pct = slowPct();
+            double until = -1;
+            for (double[] s : slows) {
+                if (now < s[1] && s[0] >= pct - 1e-9) {
+                    until = Math.max(until, s[1]);
+                }
+            }
+            return until;
+        }
+
         double moveSpeed() {
             double ms = stat(Stats.MOVE_SPEED) * (1 + stat("% Move Speed") / 100);
             double up = 0;
@@ -389,6 +416,13 @@ public class Arena {
     private static final class Dash {
         /** The second dash of a recast (Renekton's Dice): its hits count for the recast. */
         boolean recast;
+        /** {@code imune_deslocamento}: pulls, pushes and knock-ups on the champion are void while it lasts. */
+        boolean immune;
+        /** What a stun does meanwhile ({@code cc_durante_avanco}): continua_depois (default) or interrompe. */
+        String ccMode = CC_AFTER;
+        /** A stun held until the dash ends (continua_depois): when it would end, and who applied it. */
+        double heldStunUntil = -1;
+        U heldStunBy;
         double tx;
         double ty;
         double speed;
@@ -1517,10 +1551,15 @@ public class Arena {
             if (fr != null && fr.get("ataques") != null && t.brittleBy != null && now < t.brittleUntil
                     && t.brittleBy.team() == s.team() && !t.dead) {
                 breakBrittle(s, t, "ataque");
-                double a = Math.atan2(t.y - s.y, t.x - s.x);
-                double push = num(map(fr.get("ataques")).get("empurra"), 150);
-                forcedMove(s, t, "empurrao", t.x + Math.cos(a) * push, t.y + Math.sin(a) * push, 1000, null, null);
-                controlled(s, t, true);
+                Map<String, Object> atk = map(fr.get("ataques"));
+                if ("arremessa".equals(atk.get("efeito"))) {
+                    airborne(t, num(atk.get("duracao"), 0.25), s);   // longest of the knock-ups on (airborne's rule)
+                } else {
+                    double a = Math.atan2(t.y - s.y, t.x - s.x);
+                    double push = num(atk.get("empurra"), 150);
+                    forcedMove(s, t, "empurrao", t.x + Math.cos(a) * push, t.y + Math.sin(a) * push, 1000, null, null);
+                    controlled(s, t, true);
+                }
             }
         }
         // Empowered attack of an ability (Darius' Crippling Strike, Renekton's Ruthless Predator, Vayne's Tumble).
@@ -2097,8 +2136,10 @@ public class Arena {
         double mult = strong && "calor".equals(resType(u)) ? 1.5 : 1;
         u.busyUntil = now + duration;
         u.busyState = "channel:" + slot;
-        if (Boolean.TRUE.equals(ab.get("imparavel"))) {
-            u.unstoppableUntil = now + duration;
+        if (Boolean.TRUE.equals(ab.get("imparavel")) || Boolean.TRUE.equals(ab.get("imune_deslocamento"))) {
+            u.immuneUntil = now + duration;
+            u.immuneCc = Boolean.TRUE.equals(ab.get("imparavel")) ? CC_IGNORE
+                    : String.valueOf(ab.getOrDefault("cc_durante_avanco", CC_AFTER));
         }
         double advance = num(ab.get("avanca"), 0);
         double start = now;
@@ -2188,6 +2229,7 @@ public class Arena {
         dash.ty = u.y + Math.sin(a) * d;
         dash.speed = num(ab.get("velocidade"), 1200) + (Boolean.TRUE.equals(ab.get("velocidade_mais_vdm")) ? u.moveSpeed() : 0);
         dash.hitRadius = num(ab.get("raio"), 100);
+        immunity(dash, ab);
         u.facing = a;
         boolean noDamage = Boolean.TRUE.equals(ab.get("sem_dano"));
         Map<String, Object> spec = strongSpec(ab, strong);
@@ -2405,6 +2447,7 @@ public class Arena {
             dash.ty = u.y + Math.sin(a) * headbutt;
             dash.speed = 1600;
             dash.hitRadius = 0;
+            immunity(dash, rec);
             dash.onEnd = () -> {
                 if (dist(u.x, u.y, e.x, e.y) <= e.width / 2 + u.radius() + 150 && elementals.contains(e)) {
                     e.redirected = true;
@@ -2868,11 +2911,18 @@ public class Arena {
                 dash.onEnd.run();
             }
             u.busyUntil = Math.max(u.busyUntil, now);
+            if (dash.heldStunUntil > now + 1e-9) {
+                stun(u, dash.heldStunUntil - now, dash.heldStunBy);   // the stun lands now, with the time it has left
+            }
         }
     }
 
     private void forcedMove(U by, U t, String type, double tx, double ty, double speed, Runnable onWall, Runnable onEnd) {
-        if (t.dead || !t.targetable() || now < t.unstoppableUntil) {
+        if (t.dead || !t.targetable()) {
+            return;
+        }
+        if (displacementImmune(t)) {
+            count(t, "deslocamento_anulado:" + type);
             return;
         }
         ccNoted(by, t, type, controlLeft(t), dist(t.x, t.y, tx, ty) / Math.max(1, speed));
@@ -2917,7 +2967,29 @@ public class Arena {
     }
 
     private void stun(U t, double seconds, U by) {
-        if (t.dead || !t.targetable() || seconds <= 0 || now < t.unstoppableUntil) {
+        if (t.dead || !t.targetable() || seconds <= 0) {
+            return;
+        }
+        String rule = ccRule(t);
+        if (CC_IGNORE.equals(rule)) {
+            return;
+        }
+        if (CC_AFTER.equals(rule)) {
+            // the dash goes on; the stun lands when it ends, with the time it has left then
+            if (t.dash != null) {
+                if (now + seconds > t.dash.heldStunUntil) {
+                    t.dash.heldStunUntil = now + seconds;
+                    t.dash.heldStunBy = by;
+                }
+            } else {
+                double end = now + seconds;
+                at(t.immuneUntil, () -> {
+                    if (end > now + 1e-9) {
+                        stun(t, end - now, by);
+                    }
+                });
+            }
+            count(t, "atordoamento_adiado");
             return;
         }
         double before = controlLeft(t);
@@ -2930,7 +3002,11 @@ public class Arena {
     }
 
     private void airborne(U t, double seconds, U by) {
-        if (t.dead || !t.targetable() || seconds <= 0 || now < t.unstoppableUntil) {
+        if (t.dead || !t.targetable() || seconds <= 0) {
+            return;
+        }
+        if (displacementImmune(t)) {
+            count(t, "deslocamento_anulado:arremesso");
             return;
         }
         ccNoted(by, t, "arremesso", controlLeft(t), seconds);
@@ -4400,6 +4476,69 @@ public class Arena {
         if (per5 > 0 && u.hp < u.maxHp && now >= u.stasisUntil) {
             heal(u, per5 / 10, Map.of(key(u, "Regeneração de Vida"), per5 / 10));
         }
+    }
+
+    // ------------------------------------------------------------------ displacement immunity and mobility
+
+    /** Stuns during an immunity: void (Ornn's W, unstoppable). */
+    static final String CC_IGNORE = "ignora";
+    /** Stuns during an immune dash: the dash goes on and the stun lands at its end, with its time left (default). */
+    static final String CC_AFTER = "continua_depois";
+    /** Stuns during an immune dash: they stop it, as without immunity. */
+    static final String CC_BREAKS = "interrompe";
+
+    /** {@code imune_deslocamento} and {@code cc_durante_avanco} of a sheet (an ability or its recast) on a dash. */
+    private static void immunity(Dash dash, Map<String, Object> spec) {
+        if (spec != null && Boolean.TRUE.equals(spec.get("imune_deslocamento"))) {
+            dash.immune = true;
+            dash.ccMode = String.valueOf(spec.getOrDefault("cc_durante_avanco", CC_AFTER));
+        }
+    }
+
+    /** Pulls, pushes and knock-ups are void now: an immune channel or dash. */
+    private boolean displacementImmune(U t) {
+        return now < t.immuneUntil || t.dash != null && t.dash.immune;
+    }
+
+    /** What a stun does on the unit now: null (as always), ignora, continua_depois or interrompe. */
+    private String ccRule(U t) {
+        if (now < t.immuneUntil) {
+            return t.immuneCc;
+        }
+        return t.dash != null && t.dash.immune ? t.dash.ccMode : null;
+    }
+
+    /**
+     * The champion's mobility (slot -> avanco | salto | corrida | imune): its sheet's {@code mobilidade}, else read from
+     * its abilities (dashes; targeted abilities that leap).
+     */
+    Map<String, String> mobility(U u) {
+        Map<String, Object> m = map(u.kit("mobilidade"));
+        Map<String, String> out = new LinkedHashMap<>();
+        if (m != null) {
+            m.forEach((slot, kind) -> out.put(slot, String.valueOf(kind)));
+            return out;
+        }
+        for (String slot : ActionSpace.SLOTS) {
+            Map<String, Object> ab = ability(u, slot);
+            if (ab != null && "avanco".equals(ab.get("forma"))) {
+                out.put(slot, "avanco");
+            } else if (ab != null && Boolean.TRUE.equals(ab.get("salta"))) {
+                out.put(slot, "salto");
+            }
+        }
+        return out;
+    }
+
+    /** A dash or leap of its own is up (Flash aside): it can step out of a skillshot or follow. */
+    boolean dashReady(U u) {
+        for (Map.Entry<String, String> e : mobility(u).entrySet()) {
+            String k = e.getValue();
+            if (("avanco".equals(k) || "salto".equals(k) || "imune".equals(k)) && isReady(u, e.getKey())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------ structured events
