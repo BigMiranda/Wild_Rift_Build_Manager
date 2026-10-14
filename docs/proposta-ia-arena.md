@@ -345,7 +345,9 @@ Andamento, parte a parte (cada parte é um commit no `arena-ia`).
 
 ### Depois da Rodada 2 — parar na vitória total
 - **Novo critério de parada (padrão):** `stopWhen = victory`. O platô continua disponível como `stopWhen = plateau`.
-- **O que é vitória total:** o lado da IA vence **todas** as lutas de seleção de uma geração (empate conta meio).
+- **O que é vitória total:** em cada luta, o lado da IA vence no final (`Result.winner` = o lado dela: todos os
+  inimigos caem, mesmo que a própria IA tenha caído; empate por tempo ou com todos caídos conta meio). A etapa exige
+  isso em **todas** as lutas de seleção de uma geração.
   Cada `Point` passa a ter `winPct`; nesse modo, ele é também a métrica de parada que aparece no minigráfico.
 - **Etapa:**
   - A primeira geração com vitória total encerra a etapa, e **são esses pesos** que vão para a validação e o banco.
