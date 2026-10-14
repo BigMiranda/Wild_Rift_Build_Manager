@@ -152,6 +152,38 @@ public class PlannerController {
         return getBuild(id);
     }
 
+    /** Rune page and / or summoner spells copied to other builds (the open one's "Preparações"). */
+    public static class PrepExport {
+        public List<Long> buildIds;
+        /** Null = the targets keep theirs. */
+        public BuildRepository.RunePage runePage;
+        public List<String> spells;
+    }
+
+    @PutMapping("/builds/prep")
+    @Transactional
+    public Map<String, Object> exportPrep(@RequestBody PrepExport body) {
+        if (body.buildIds == null || body.buildIds.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha ao menos uma build.");
+        }
+        if (body.runePage == null && body.spells == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha exportar as runas, os feitiços ou os dois.");
+        }
+        if (body.spells != null && body.spells.size() > 2) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Uma build tem no máximo 2 feitiços.");
+        }
+        int updated = 0;
+        for (Long id : new java.util.LinkedHashSet<>(body.buildIds)) {
+            if (id == null || !builds.updatePrep(id, body.runePage, body.spells)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Build " + id + " não existe.");
+            }
+            updated++;
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("updated", updated);
+        return out;
+    }
+
     @PutMapping("/builds/{id}/folder")
     public void moveBuild(@PathVariable long id, @RequestBody Map<String, Long> body) {
         Long folderId = body.get("folderId");

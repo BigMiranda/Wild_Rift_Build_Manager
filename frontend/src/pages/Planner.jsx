@@ -22,6 +22,7 @@ import ItemEffectsPanel, { emptyItemSetup } from '../components/ItemEffectsPanel
 import BuildDock, { ItemReaderContext } from '../components/BuildDock.jsx';
 import RuneEditor from '../components/RuneEditor.jsx';
 import SpellEditor from '../components/SpellEditor.jsx';
+import PrepExport from '../components/PrepExport.jsx';
 
 const emptyBuild = (folderId) => ({
   id: null,
@@ -414,6 +415,7 @@ export default function Planner({ meta, items }) {
             spells={draft.spells}
             onRunes={() => setPrepEditor('runes')}
             onSpells={() => setPrepEditor('spells')}
+            onExport={builds.some((b) => b.id !== draft.id) ? () => setPrepEditor('export') : null}
           />
         )}
 
@@ -551,6 +553,15 @@ export default function Planner({ meta, items }) {
       )}
       {prepEditor === 'spells' && (
         <SpellEditor spells={draft.spells} onChange={(spells) => update({ spells })} onClose={() => setPrepEditor(null)} />
+      )}
+      {prepEditor === 'export' && (
+        <PrepExport page={draft.runePage} spells={draft.spells} builds={builds} folders={folders} currentId={draft.id}
+          onClose={() => setPrepEditor(null)}
+          onDone={async (n) => {
+            setPrepEditor(null);
+            setMessage(t('prepExport.done', { n }));
+            await loadTree();
+          }} />
       )}
     </div>
   );

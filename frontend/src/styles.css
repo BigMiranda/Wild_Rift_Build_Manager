@@ -524,7 +524,21 @@ table.timeline td small.dr { display: block; font-size: 10px; color: var(--muted
   display: grid; grid-template-columns: 110px 1fr 28px; align-items: center; gap: 12px; width: 100%; padding: 10px 4px;
   background: none; border: none; border-bottom: 1px solid var(--border); border-radius: 0; text-align: left; cursor: pointer;
 }
-.prep-row:last-child { border-bottom: none; }
+.prep-row:last-of-type { border-bottom: none; }
+.prep-actions { display: flex; justify-content: flex-end; padding: 2px 4px 8px; border-top: 1px solid var(--border); }
+.prep-export { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.prep-export-source { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.prep-export-icons { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.prep-export-sep { width: 1px; height: 22px; background: var(--border-strong); margin: 0 4px; }
+.prep-export .row { gap: 12px; flex-wrap: wrap; align-items: center; }
+.prep-export-tools input[type=search] { flex: 1; min-width: 200px; }
+.prep-export-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.prep-export-list label { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: rgba(255, 255, 255, .025); cursor: pointer; }
+.prep-export-list label.on { border-color: var(--gold); background: rgba(200, 170, 110, .07); }
+.prep-export-name { display: flex; flex-direction: column; min-width: 0; }
+.prep-export-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 600px) { .prep-export-list label { grid-template-columns: auto 1fr; } .prep-export-list label .prep-export-icons { grid-column: 2; } }
 .prep-row:hover:not(:disabled) { background: rgba(200, 170, 110, .06); border-color: var(--border); }
 .prep-label { font-weight: 700; letter-spacing: .08em; color: var(--text); }
 .prep-icons { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }

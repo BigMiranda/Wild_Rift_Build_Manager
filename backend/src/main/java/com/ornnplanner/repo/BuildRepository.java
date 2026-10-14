@@ -331,6 +331,25 @@ public class BuildRepository {
         return true;
     }
 
+    /**
+     * Replaces a build's rune page (with its settings) and / or its summoner spells, leaving the rest as it is; a null
+     * one is kept.
+     */
+    public boolean updatePrep(long id, RunePage runePage, List<String> spells) {
+        String now = Instant.now().toString();
+        if (runePage != null && spells != null) {
+            return jdbc.update("UPDATE build SET rune_page = ?, spells = ?, updated_at = ? WHERE id = ?",
+                    json(runePage), json(spells), now, id) > 0;
+        }
+        if (runePage != null) {
+            return jdbc.update("UPDATE build SET rune_page = ?, updated_at = ? WHERE id = ?", json(runePage), now, id) > 0;
+        }
+        if (spells != null) {
+            return jdbc.update("UPDATE build SET spells = ?, updated_at = ? WHERE id = ?", json(spells), now, id) > 0;
+        }
+        return jdbc.queryForObject("SELECT COUNT(*) FROM build WHERE id = ?", Integer.class, id) > 0;
+    }
+
     public boolean moveBuild(long id, long folderId) {
         return jdbc.update("UPDATE build SET folder_id = ?, updated_at = ? WHERE id = ?",
                 folderId, Instant.now().toString(), id) > 0;

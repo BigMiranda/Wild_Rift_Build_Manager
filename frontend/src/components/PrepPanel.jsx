@@ -5,7 +5,7 @@ import { findSpell, pageSlots, runeIcon, spellIcon } from '../runes.js';
  * Rune page and summoner spells, like the game's "Preparações" screen, each row opening its editor (the items are in
  * the build dock fixed at the top of the page).
  */
-export default function PrepPanel({ runePage, spells, onRunes, onSpells }) {
+export default function PrepPanel({ runePage, spells, onRunes, onSpells, onExport }) {
   return (
     <section className="panel prep-panel" aria-label={t('prep.title')}>
       <button className="prep-row" onClick={onRunes}>
@@ -29,6 +29,11 @@ export default function PrepPanel({ runePage, spells, onRunes, onSpells }) {
         </span>
         <span className="prep-go" aria-hidden="true">›</span>
       </button>
+      {onExport && (
+        <div className="prep-actions">
+          <button className="link" onClick={onExport} title={t('prepExport.hint')}>{t('prepExport.open')}</button>
+        </div>
+      )}
     </section>
   );
 }
