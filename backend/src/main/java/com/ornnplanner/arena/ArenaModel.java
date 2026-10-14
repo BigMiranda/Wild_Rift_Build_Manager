@@ -180,6 +180,12 @@ public final class ArenaModel {
         /** What the arena knows of the champion's abilities (kit sheet, or read from the game's text). */
         public List<Map<String, Object>> abilities = new ArrayList<>();
         public List<String> notes = new ArrayList<>();
+        /** Structured events of the fight, counted by key (see {@link ArenaEvents}); never change the fight. */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, Double> events = new LinkedHashMap<>();
+        /** The events in words, for the report. */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public String eventSummary;
     }
 
     /** A conditional effect of the planner in the run: when it counts, and what it did. */

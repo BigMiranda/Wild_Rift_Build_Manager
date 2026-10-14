@@ -1253,6 +1253,17 @@ function ArenaReport({ result, names }) {
           </tbody>
         </table>
       </div>
+      {fr.some((f) => f.eventSummary) && (
+        <details className="combat-details" open>
+          <summary>{t('arena.events.title')}</summary>
+          <p className="muted small">{t('arena.events.help')}</p>
+          <ul className="combat-events">
+            {fr.map((f, i) => f.eventSummary && (
+              <li key={i}><span className="swatch" style={{ background: TEAM[f.team] }} />{i + 1} · {names[i]}: {f.eventSummary}</li>
+            ))}
+          </ul>
+        </details>
+      )}
       <details className="combat-details" open>
         <summary>{t('arena.ledger')}</summary>
         <div className="table-wrap">

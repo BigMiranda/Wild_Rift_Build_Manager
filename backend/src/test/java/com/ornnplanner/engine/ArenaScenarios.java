@@ -160,10 +160,18 @@ final class ArenaScenarios {
         return out;
     }
 
-    /** SHA-256 of the whole result as JSON: any change in any number, event or frame changes it. */
+    /**
+     * Fields of each fighter's totals that only describe the fight (counters and summaries added after the golden file
+     * was recorded): left out of the fingerprint, so describing a fight better never looks like a changed fight.
+     */
+    static final java.util.Set<String> DESCRIPTIVE = java.util.Set.of("events", "eventSummary");
+
+    /** SHA-256 of the whole result as JSON (but {@link #DESCRIPTIVE}): any change in any number, event or frame changes it. */
     static String fingerprint(Result r) {
         try {
-            byte[] d = MessageDigest.getInstance("SHA-256").digest(JSON.writeValueAsString(r).getBytes(StandardCharsets.UTF_8));
+            com.fasterxml.jackson.databind.JsonNode tree = JSON.valueToTree(r);
+            strip(tree);
+            byte[] d = MessageDigest.getInstance("SHA-256").digest(JSON.writeValueAsString(tree).getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();
             for (byte b : d) {
                 sb.append(String.format("%02x", b));
@@ -171,6 +179,12 @@ final class ArenaScenarios {
             return sb.toString();
         } catch (Exception e) {
             throw new IllegalStateException(e);
+        }
+    }
+
+    private static void strip(com.fasterxml.jackson.databind.JsonNode result) {
+        for (com.fasterxml.jackson.databind.JsonNode f : result.path("fighters")) {
+            ((com.fasterxml.jackson.databind.node.ObjectNode) f).remove(DESCRIPTIVE);
         }
     }
 

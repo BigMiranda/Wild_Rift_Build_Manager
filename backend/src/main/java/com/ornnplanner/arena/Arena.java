@@ -240,6 +240,23 @@ public class Arena {
         int cometHits;
         String lastCast;
         double nextRegen;
+        // structured events (counters only: they never change the fight)
+        /** Expiry of the Brittle being followed on this unit (-1 = none), to tell expired from consumed. */
+        double brittleCounted = -1;
+        /** Expiry of the stacks / bolts / marks this unit put on each enemy, being followed. */
+        final Map<U, Double> stackCounted = new LinkedHashMap<>();
+        final Map<U, Double> boltCounted = new LinkedHashMap<>();
+        final Map<U, Double> ksCounted = new LinkedHashMap<>();
+        /** Who applied the immobilize on this unit last, and the last instant it was held. */
+        U ccBy;
+        double ccHeldAt = -100;
+        /** The open cast and recast of each slot (hit yet?), until the next one or the end of the fight. */
+        final Map<String, Cast> casts = new LinkedHashMap<>();
+        final Map<String, Cast> recasts = new LinkedHashMap<>();
+        /** Recast windows followed (slot -> the window), the ones used, and why the last try failed. */
+        final Map<String, double[]> recastWatch = new LinkedHashMap<>();
+        final Set<double[]> recastUsed = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        final Map<String, String> recastTry = new LinkedHashMap<>();
 
         U(int idx, Input in) {
             this.idx = idx;
@@ -356,8 +373,22 @@ public class Arena {
         }
     }
 
+    /** A cast of an ability or of its recast: whether it hit a champion (structured events). */
+    private static final class Cast {
+        final String slot;
+        final boolean recast;
+        boolean hit;
+
+        Cast(String slot, boolean recast) {
+            this.slot = slot;
+            this.recast = recast;
+        }
+    }
+
     /** A dash of a champion (its ability or a recast). */
     private static final class Dash {
+        /** The second dash of a recast (Renekton's Dice): its hits count for the recast. */
+        boolean recast;
         double tx;
         double ty;
         double speed;
@@ -551,6 +582,7 @@ public class Arena {
             moveElementals();
             tickFields();
             tickPeriodic();
+            trackEvents();
             if (now >= nextFrame - 1e-9) {
                 frame();
                 nextFrame += FRAME_EVERY;
@@ -565,6 +597,10 @@ public class Arena {
         }
         result.duration = Math.min(now, duration);
         for (U u : units) {
+            closeCasts(u);
+        }
+        for (U u : units) {
+            u.r.eventSummary = ArenaEvents.summary(u.r.events);
             for (Action a : u.orders) {
                 result.skipped.add(new Event(a.time, u.idx, describe(a) + ": não foi possível até o fim da luta"));
             }
@@ -1480,10 +1516,10 @@ public class Arena {
             Map<String, Object> fr = map(s.kit("fragil"));
             if (fr != null && fr.get("ataques") != null && t.brittleBy != null && now < t.brittleUntil
                     && t.brittleBy.team() == s.team() && !t.dead) {
-                breakBrittle(s, t);
+                breakBrittle(s, t, "ataque");
                 double a = Math.atan2(t.y - s.y, t.x - s.x);
                 double push = num(map(fr.get("ataques")).get("empurra"), 150);
-                forcedMove(t, t.x + Math.cos(a) * push, t.y + Math.sin(a) * push, 1000, null, null);
+                forcedMove(s, t, "empurrao", t.x + Math.cos(a) * push, t.y + Math.sin(a) * push, 1000, null, null);
                 controlled(s, t, true);
             }
         }
@@ -1492,6 +1528,7 @@ public class Arena {
             String slot = s.empowered;
             s.empowered = null;
             Map<String, Object> ab = ability(s, slot);
+            credit(s, slot, false);
             boolean strong = s.buffs.containsKey("fortalecido:" + slot);
             s.buffs.remove("fortalecido:" + slot);
             Map<String, Object> dmg = map(strong && ab.get("fortalecido") != null ? ab.get("fortalecido")
@@ -1510,6 +1547,8 @@ public class Arena {
         Double mk = s.ksMarks.remove(t);
         Map<String, Object> ksm = map(s.kit("marcas_ksante"));
         if (mk != null && now < mk && ksm != null) {
+            s.ksCounted.remove(t);
+            count(s, "marca_consumida:" + ksMark(s) + ":ataque");
             deal(s, t, formula(map(ksm.get("dano")), s, t, 1), "fisico", "Instinto Destemido", ABILITY, 0);
         }
         // Vayne: Silver Bolts on the third hit in a row.
@@ -1563,6 +1602,7 @@ public class Arena {
                                 + num(e.p.get("armadura_bonus"), 0) * s.bonus(Stats.ARMOR)
                                 + num(e.p.get("vida_max_alvo"), 0) * t.maxHp + num(e.p.get("critico_dano"), 0) * crit;
                         deal(s, t, dmg, type(e.p), e.item, ITEM, 0);
+                        count(s, "item_ativou:" + e.item);
                         double heal = num(e.p.get("cura_vida_max_alvo"), 0) * t.maxHp
                                 + num(e.p.get("cura_vida_bonus"), 0) * s.bonus(Stats.MAX_HEALTH)
                                 + num(e.p.get("cura_pdh"), 0) * s.stat(Stats.ABILITY_POWER);
@@ -1593,6 +1633,7 @@ public class Arena {
                 + num(e.p.get("dda_bonus"), 0) * s.bonus(Stats.ATTACK_DAMAGE)
                 + num(e.p.get("vida_bonus"), 0) * s.bonus(Stats.MAX_HEALTH) + num(e.p.get("mana"), 0) * s.stat(Stats.MAX_MANA);
         deal(s, t, dmg, type(e.p), e.item, ITEM, 0);
+        count(s, "item_ativou:" + e.item);
         s.strikeReady.put(e.item, now + num(e.p.get("recarga"), 10));
         fireAll(s, "golpe_do_item", sp -> e.item.equals(sp.get("item")));
     }
@@ -1740,6 +1781,9 @@ public class Arena {
             u.chargeAt.putIfAbsent(slot, now + num(ab.get("recarga_carga"), 6));
         }
         u.ready.put(slot, now + cooldown(u, slot, ab));
+        if (!"proprio".equals(shape) && !(Boolean.TRUE.equals(ab.get("sem_dano")) && ab.get("proximo_ataque") == null)) {
+            openCast(u, slot, false);   // casts that can hit a champion (not self buffs, not a bare dash)
+        }
         boolean strong = spendResource(u, slot);
         if (strong) {
             u.buffs.put("fortalecido:" + slot, new double[] {1, now + 30});
@@ -1805,7 +1849,7 @@ public class Arena {
                     double mult = danger && "calor".equals(resType(u)) ? 1.5 : 1;
                     hitAbility(u, v, ab, rank, source, mult, slot);
                     if (secondStack) {
-                        forcedMove(v, u.x + dirx * num(second.get("puxa"), 150), u.y + diry * num(second.get("puxa"), 150), 1500,
+                        forcedMove(u, v, "puxao", u.x + dirx * num(second.get("puxa"), 150), u.y + diry * num(second.get("puxa"), 150), 1500,
                                 null, null);
                         stun(v, num(second.get("atordoa"), 0.8), u);
                     }
@@ -1886,14 +1930,18 @@ public class Arena {
                 if (ab.get("por_acumulo") != null) {
                     double[] st = u.stacks.get(t);
                     extra = st != null && now < st[1] ? st[0] * num(ab.get("por_acumulo"), 0) : 0;
+                    if (extra > 0) {
+                        count(u, "marca_consumida:" + map(u.kit("acumulos")).get("nome") + ":" + slot);
+                    }
                 }
                 if (ab.get("_parsed") != null) {
                     AbilityParser.Ability pa = (AbilityParser.Ability) ab.get("_parsed");
+                    credit(u, source, false);
                     if (pa.damage != null) {
                         deal(u, t, pa.damage.at(rank, u::stat, u::base, t.maxHp), pa.damage.type, source, ABILITY, 0);
                     }
                     if (pa.immobilizes) {
-                        breakBrittle(u, t);
+                        breakBrittle(u, t, slot);
                         stun(t, 0.75, u);
                     }
                     onAbilityItems(u, t);
@@ -1945,6 +1993,7 @@ public class Arena {
 
     /** Damage and effects of an ability on one enemy (mult: Danger Zone, Decimate's handle, per-stack bonus). */
     private void hitAbility(U u, U v, Map<String, Object> ab, int rank, String source, double mult, String stackSlot) {
+        credit(u, source, u.dash != null && u.dash.recast);
         Map<String, Object> d = map(ab.get("dano"));
         if (d != null) {
             deal(u, v, formula(d, u, v, rank) * mult, type(d), source, ABILITY, 0);
@@ -1959,10 +2008,16 @@ public class Arena {
             effects(u, v, e, rank, source);
         }
         if (Boolean.TRUE.equals(ab.get("marca"))) {
-            boltStack(u, v);
+            boltStack(u, v, slotOf(source));
         }
         if (map(u.kit("marcas_ksante")) != null && ef != null && Boolean.TRUE.equals(ef.get("marca"))) {
+            Double on = u.ksCounted.get(v);
+            if (on != null && now < on) {
+                count(u, "marca_sobrescrita:" + ksMark(u));
+            }
             u.ksMarks.put(v, now + num(map(u.kit("marcas_ksante")).get("duracao"), 4));
+            u.ksCounted.put(v, u.ksMarks.get(v));
+            count(u, "marca_aplicada:" + ksMark(u));
         }
         onAbilityItems(u, v);
     }
@@ -1974,9 +2029,10 @@ public class Arena {
         if (immobilize && t.brittleBy != null && now < t.brittleUntil && t.brittleBy.team() == s.team()) {
             Map<String, Object> fr = map(t.brittleBy.kit("fragil"));
             brittleBoost = 1 + num(fr == null ? null : fr.get("aumento_controle"), 0.3);
-            breakBrittle(s, t);
+            breakBrittle(s, t, slotOf(source));
         }
         if (ef.get("lentidao") != null) {
+            count(s, "cc_aplicado:lentidao");
             t.slows.add(new double[] {val(ef, "lentidao", rank, s.f.level, 0), now + val(ef, "duracao", rank, s.f.level, 1)});
             controlled(s, t, false);
         }
@@ -1989,12 +2045,17 @@ public class Arena {
         if (ef.get("puxa") != null) {
             double d = num(ef.get("puxa"), 150);
             double a = Math.atan2(t.y - s.y, t.x - s.x);
-            forcedMove(t, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 1400, null, null);
+            forcedMove(s, t, "puxao", s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 1400, null, null);
             controlled(s, t, true);
         }
         if (ef.get("fragil") != null && !t.dead) {
+            if (t.brittleCounted > 0 && now < t.brittleCounted) {
+                count(s, "marca_sobrescrita:" + BRITTLE);   // a Brittle that does not immobilize replaces the one on
+            }
             t.brittleUntil = now + num(ef.get("fragil"), 3);
             t.brittleBy = s;
+            t.brittleCounted = t.brittleUntil;
+            count(s, "marca_aplicada:" + BRITTLE);
         }
         if (ef.get("acumulos") != null) {
             addStacks(s, t, false);
@@ -2073,6 +2134,7 @@ public class Arena {
                     if (!in) {
                         continue;
                     }
+                    credit(u, source, false);
                     if (d != null) {
                         deal(u, v, formula(d, u, v, rank) / ticks * mult, type(d), source, ABILITY, 0);
                     }
@@ -2135,7 +2197,7 @@ public class Arena {
             if (map(spec.get("efeitos")) != null && map(spec.get("efeitos")).get("empurra") != null) {
                 double pa = Math.atan2(v.y - u.y, v.x - u.x);
                 double pd = num(map(spec.get("efeitos")).get("empurra"), 200);
-                forcedMove(v, v.x + Math.cos(pa) * pd, v.y + Math.sin(pa) * pd, 1200, null, null);
+                forcedMove(u, v, "empurrao", v.x + Math.cos(pa) * pd, v.y + Math.sin(pa) * pd, 1200, null, null);
                 controlled(u, v, true);
             }
             hits[0]++;
@@ -2328,8 +2390,11 @@ public class Arena {
             double reach = e.width / 2 + u.radius() + num(rec.get("cabecada"), 200) + 60;
             if (dist(u.x, u.y, e.x, e.y) > reach) {
                 u.recast.put(slot, w);
+                u.recastTry.put(slot, "fora de alcance");
                 return "wait";
             }
+            u.recastUsed.add(w);
+            openCast(u, slot, true);
             tx = e.x;
             ty = e.y;
             double a = Math.atan2(ty - u.y, tx - u.x);
@@ -2362,11 +2427,16 @@ public class Arena {
             return "done";
         }
         // A second dash of the same ability (Renekton's Dice): no cooldown, empowered when Fury allows.
+        u.recastUsed.add(w);
+        openCast(u, slot, true);
         u.recast.put(slot + ":used", new double[] {now, now});
         boolean strong = spendResource(u, slot);
         event(u, "reconjurou " + slot + " (" + ab.get("nome") + ")" + (strong ? " fortalecida" : ""));
         startDash(u, slot, ab, u.rank(slot), tx, ty, strong, ab.get("nome") + " (" + u.f.champion + ")",
                 slot + " · " + ab.get("nome"));
+        if (u.dash != null) {
+            u.dash.recast = true;
+        }
         return "done";
     }
 
@@ -2385,13 +2455,14 @@ public class Arena {
         p.width = 40;
         p.left = 3000;
         p.onHit = v -> {
+            credit(u, source, false);
             Map<String, Object> d = map(ab.get("dano"));
             deal(u, v, formula(d, u, v, rank), type(d), source, ABILITY, 0);
-            boltStack(u, v);
+            boltStack(u, v, slotOf(source));
             double a = Math.atan2(v.y - u.y, v.x - u.x);
             double dist = num(ab.get("distancia"), 475);
             Map<String, Object> wall = map(ab.get("terreno"));
-            forcedMove(v, v.x + Math.cos(a) * dist, v.y + Math.sin(a) * dist, num(ab.get("velocidade"), 1000), () -> {
+            forcedMove(u, v, "empurrao", v.x + Math.cos(a) * dist, v.y + Math.sin(a) * dist, num(ab.get("velocidade"), 1000), () -> {
                 Map<String, Object> wd = map(wall.get("dano"));
                 deal(u, v, formula(wd, u, v, rank), type(wd), source + " (parede)", ABILITY, 0);
                 stun(v, num(wall.get("atordoa"), 1.5), u);
@@ -2407,6 +2478,7 @@ public class Arena {
         if (t == null || t.dead) {
             return;
         }
+        credit(u, source, false);
         double a = u.facing;
         double push = num(ab.get("empurra"), 300);
         double wallAt = num(ab.get("terreno_ate"), 350);
@@ -2416,7 +2488,7 @@ public class Arena {
         double ey = t.y + Math.sin(a) * (push + wallAt);
         boolean hitsWall = Math.abs(ey) > halfWidth - t.radius() || ex < 0 || ex > length;
         controlled(u, t, true);
-        forcedMove(t, t.x + Math.cos(a) * push, t.y + Math.sin(a) * push, 1800, null, () -> {
+        forcedMove(u, t, "empurrao", t.x + Math.cos(a) * push, t.y + Math.sin(a) * push, 1800, null, () -> {
             if (hitsWall) {
                 Map<String, Object> wd = map(wall.get("dano"));
                 deal(u, t, formula(wd, u, t, rank), type(wd), source + " (parede)", ABILITY, 0);
@@ -2540,6 +2612,8 @@ public class Arena {
         boolean might = form != null && now < s.formUntil.getOrDefault(form, -1.0);
         st[0] = might ? max : Math.min(max, st[0] + 1);
         st[1] = now + num(m.get("duracao"), 5);
+        count(s, "marca_aplicada:" + m.get("nome"));
+        s.stackCounted.put(t, st[1]);
         if (!bleeding) {
             s.nextStackTick = now + 1;
         }
@@ -2567,13 +2641,22 @@ public class Arena {
 
     /** Vayne's Silver Bolts: the third hit in a row on the same target. */
     private void boltHit(U s, U t) {
-        boltStack(s, t);
+        boltStack(s, t, "ataque");
     }
 
-    private void boltStack(U s, U t) {
+    private void boltStack(U s, U t, String via) {
         Map<String, Object> m = map(s.kit("marcas"));
         if (m == null || s.rank(String.valueOf(m.get("habilidade"))) <= 0) {
             return;
+        }
+        String mark = boltMark(s);
+        for (U k : new ArrayList<>(s.boltCounted.keySet())) {
+            if (k != t && now < s.boltCounted.get(k)) {
+                count(s, "marca_expirou:" + mark);   // lost by hitting another enemy
+            }
+            if (k != t) {
+                s.boltCounted.remove(k);
+            }
         }
         s.bolts.keySet().removeIf(k -> k != t);   // stacks fall off when Vayne hits another enemy
         double[] st = s.bolts.computeIfAbsent(t, k -> new double[2]);
@@ -2582,8 +2665,12 @@ public class Arena {
         }
         st[0]++;
         st[1] = now + num(m.get("duracao"), 3.5);
+        count(s, "marca_aplicada:" + mark);
+        s.boltCounted.put(t, st[1]);
         if (st[0] >= num(m.get("max"), 3)) {
             st[0] = 0;
+            s.boltCounted.remove(t);
+            count(s, "marca_consumida:" + mark + ":" + via);
             Map<String, Object> d = map(m.get("dano"));
             int rank = s.rank(String.valueOf(m.get("habilidade")));
             double v = Math.max(formula(d, s, t, rank), val(d, "minimo", rank, s.f.level, 0));
@@ -2645,6 +2732,7 @@ public class Arena {
         }
         u.ready.put(name, now + cd);
         event(u, "usou " + name);
+        count(u, "item_ativou:" + name);
         return "done";
     }
 
@@ -2783,10 +2871,11 @@ public class Arena {
         }
     }
 
-    private void forcedMove(U t, double tx, double ty, double speed, Runnable onWall, Runnable onEnd) {
+    private void forcedMove(U by, U t, String type, double tx, double ty, double speed, Runnable onWall, Runnable onEnd) {
         if (t.dead || !t.targetable() || now < t.unstoppableUntil) {
             return;
         }
+        ccNoted(by, t, type, controlLeft(t), dist(t.x, t.y, tx, ty) / Math.max(1, speed));
         Forced f = new Forced();
         f.tx = tx;
         f.ty = ty;
@@ -2831,6 +2920,9 @@ public class Arena {
         if (t.dead || !t.targetable() || seconds <= 0 || now < t.unstoppableUntil) {
             return;
         }
+        double before = controlLeft(t);
+        double end = now + seconds * (1 - Math.min(0.9, t.stat("% Tenacity") / 100));
+        ccNoted(by, t, "atordoamento", before, end - now);
         t.stunUntil = Math.max(t.stunUntil, now + seconds * (1 - Math.min(0.9, t.stat("% Tenacity") / 100)));
         t.dash = null;
         t.busyUntil = now;
@@ -2841,13 +2933,14 @@ public class Arena {
         if (t.dead || !t.targetable() || seconds <= 0 || now < t.unstoppableUntil) {
             return;
         }
+        ccNoted(by, t, "arremesso", controlLeft(t), seconds);
         t.airUntil = Math.max(t.airUntil, now + seconds);   // tenacity does not shorten knock-ups
         t.dash = null;
         t.busyUntil = now;
         controlled(by, t, true);
     }
 
-    private void breakBrittle(U s, U t) {
+    private void breakBrittle(U s, U t, String via) {
         U by = t.brittleBy;
         if (by == null || now >= t.brittleUntil || by.team() != s.team() || t.dead) {
             return;
@@ -2858,6 +2951,8 @@ public class Arena {
         }
         t.brittleUntil = -1;
         t.brittleBy = null;
+        t.brittleCounted = -1;
+        count(s, "marca_consumida:" + BRITTLE + ":" + via);
         event(s, "quebrou o Frágil de " + t.f.name);
         Map<String, Object> d = map(m.get("dano"));
         deal(by, t, formula(d, by, t, 1), type(d), "Frágil", DOT, 0);
@@ -2927,6 +3022,7 @@ public class Arena {
                     e.hit.add(v);
                     String source = "R · " + e.spec.get("nome");
                     if (e.redirected) {
+                        credit(e.owner, source, true);
                         Map<String, Object> d = map(rec.get("dano"));
                         deal(e.owner, v, formula(d, e.owner, v, e.rank), type(d), source, ABILITY, 0);
                         Map<String, Object> ef = new LinkedHashMap<>(map(rec.get("efeitos")));
@@ -3589,6 +3685,11 @@ public class Arena {
         if (t.rep.first == null) {
             t.rep.first = Math.round(now * 100) / 100.0;
         }
+        if ("runa".equals(t.d.kind)) {
+            count(u, "runa_ativou:" + t.d.source);
+        } else if (("item".equals(t.d.kind) || "loja".equals(t.d.kind)) && !"ativo".equals(t.when)) {
+            count(u, "item_ativou:" + t.d.source);   // actives count in useItem
+        }
         String src = key(u, t.d.source);
         if (t.hasStats()) {
             boolean per = Boolean.TRUE.equals(s.get("por_acionamento"));
@@ -4078,6 +4179,7 @@ public class Arena {
                     if (hits.size() >= num(e.p.get("acertos"), 3) && runeReady(a, e.item)) {
                         hits.clear();
                         runeCooldown(a, e);
+                        count(a, "runa_ativou:" + e.item);
                         deal(a, t, runeDamage(a, e.p), fxType(a, e.p), e.item, ITEM, 0);
                     }
                     break;
@@ -4086,6 +4188,7 @@ public class Arena {
                 case "tirano":
                     if (hpBefore / Math.max(1, t.maxHp) < num(e.p.get("vida_alvo"), 0.5) && runeReady(a, e.item)) {
                         runeCooldown(a, e);
+                        count(a, "runa_ativou:" + e.item);
                         deal(a, t, runeDamage(a, e.p), fxType(a, e.p), e.item, ITEM, 0);
                     }
                     break;
@@ -4093,6 +4196,7 @@ public class Arena {
                     boolean slowed = t.slows.stream().anyMatch(x -> now < x[1]) || now < t.stunUntil || now < t.airUntil;
                     if (slowed && runeReady(a, e.item)) {
                         runeCooldown(a, e);
+                        count(a, "runa_ativou:" + e.item);
                         deal(a, t, runeDamage(a, e.p), "verdadeiro", e.item, ITEM, 0);
                     }
                     break;
@@ -4100,6 +4204,7 @@ public class Arena {
                 case "impacto":
                     if (now - a.dashedAt <= num(e.p.get("janela"), 4) && runeReady(a, e.item)) {
                         runeCooldown(a, e);
+                        count(a, "runa_ativou:" + e.item);
                         a.dashedAt = -100;
                         deal(a, t, runeDamage(a, e.p), "verdadeiro", e.item, ITEM, 0);
                     }
@@ -4108,6 +4213,7 @@ public class Arena {
                     Integer marks = a.seqMarks.get(t);
                     if (marks != null && marks > 0) {
                         a.seqMarks.put(t, marks - 1);
+                        count(a, "runa_ativou:" + e.item);
                         deal(a, t, runeDamage(a, e.p), fxType(a, e.p), e.item, ITEM, 0);
                     } else if (kind == ABILITY && runeReady(a, e.item)) {
                         runeCooldown(a, e);
@@ -4118,12 +4224,14 @@ public class Arena {
                 case "aery":
                     if (now >= a.aeryBack) {
                         a.aeryBack = now + num(e.p.get("retorno"), 2);
+                        count(a, "runa_ativou:" + e.item);
                         deal(a, t, runeDamage(a, e.p), fxType(a, e.p), e.item, ITEM, 0);
                     }
                     break;
                 case "primeiro_ataque":
                     if (a.firstStrikeUntil < 0 && now - a.combatSince <= num(e.p.get("janela"), 0.25) + 1e-9) {
                         a.firstStrikeUntil = now + num(e.p.get("duracao"), 3);
+                        count(a, "runa_ativou:" + e.item);
                         event(a, "Primeiro Ataque ativo");
                     }
                     break;
@@ -4146,6 +4254,7 @@ public class Arena {
                     if (s.attackChain >= num(e.p.get("ataques"), 3) && runeReady(s, e.item)) {
                         s.attackChain = 0;
                         runeCooldown(s, e);
+                        count(s, "runa_ativou:" + e.item);
                         deal(s, t, runeDamage(s, e.p), fxType(s, e.p), e.item, ITEM, 0);
                         s.buffs.put("fortalecimento", new double[] {Double.MAX_VALUE, Double.MAX_VALUE});
                         event(s, "Fortalecimento: +" + Math.round(num(e.p.get("amplifica"), 0.08) * 100) + "% de dano");
@@ -4161,6 +4270,7 @@ public class Arena {
                     double ready = s.strikeReady.getOrDefault("runa:" + e.item, s.combatSince + num(e.p.get("a_cada"), 3));
                     if (s.combatSince >= 0 && now >= ready - 1e-9) {
                         s.strikeReady.put("runa:" + e.item, now + num(e.p.get("a_cada"), 3));
+                        count(s, "runa_ativou:" + e.item);
                         deal(s, t, num(e.p.get("vida_max"), 0.033) * s.maxHp, String.valueOf(e.p.getOrDefault("dano_tipo", "magico")),
                                 e.item, ITEM, 0);
                         double h = num(e.p.get("cura_vida_max"), 0.013) * s.maxHp;
@@ -4171,6 +4281,7 @@ public class Arena {
                 case "ataque_fortalecido":
                     if (runeReady(s, e.item)) {
                         s.strikeReady.put("runa:" + e.item, now + num(e.p.get("a_cada"), 8));
+                        count(s, "runa_ativou:" + e.item);
                         deal(s, t, runeDamage(s, e.p), fxType(s, e.p), e.item, ITEM, 0);
                     }
                     break;
@@ -4178,6 +4289,7 @@ public class Arena {
                     String k = "lumescudo:" + t.idx;
                     if (now >= s.strikeReady.getOrDefault(k, 0.0) - 1e-9) {
                         s.strikeReady.put(k, now + num(e.p.get("recarga"), 6));
+                        count(s, "runa_ativou:" + e.item);
                         double ad = s.stat(Stats.ATTACK_DAMAGE);
                         double c = Math.min(1, s.stat("% Critical Rate") / 100);
                         double extra = ad * num(e.p.get("mult"), 1.6) - ad * (1 + c);   // the hit was an average crit
@@ -4212,6 +4324,7 @@ public class Arena {
                 case "cometa":
                     if (runeReady(s, e.item)) {
                         runeCooldown(s, e);
+                        count(s, "runa_ativou:" + e.item);
                         double dmg = runeDamage(s, e.p) + num(e.p.get("por_acerto"), 2) * s.cometHits;
                         at(now + num(e.p.get("atraso"), 1), () -> {
                             if (!t.dead && !s.dead) {
@@ -4224,6 +4337,7 @@ public class Arena {
                 case "chamuscar":
                     if (runeReady(s, e.item)) {
                         runeCooldown(s, e);
+                        count(s, "runa_ativou:" + e.item);
                         double dmg = runeDamage(s, e.p);
                         at(now + num(e.p.get("atraso"), 1), () -> deal(s, t, dmg, "magico", e.item, DOT, 0));
                     }
@@ -4232,6 +4346,7 @@ public class Arena {
                     if (s.f.level >= num(e.p.get("nivel_min"), 9) && s.lastCast != null && !"R".equals(s.lastCast)
                             && runeReady(s, e.item)) {
                         runeCooldown(s, e);
+                        count(s, "runa_ativou:" + e.item);
                         double r = s.ready.getOrDefault(s.lastCast, 0.0);
                         if (r > now) {
                             s.ready.put(s.lastCast, r - (r - now) * num(e.p.get("pct"), 0.08));
@@ -4251,6 +4366,7 @@ public class Arena {
             return;
         }
         runeCooldown(by, e);
+        count(by, "runa_ativou:" + e.item);
         double slow = num(e.p.get("lentidao"), 0.15) + num(e.p.get("lentidao_por_vida_bonus"), 0) * by.bonus(Stats.MAX_HEALTH);
         double x = t.x;
         double y = t.y;
@@ -4284,6 +4400,160 @@ public class Arena {
         if (per5 > 0 && u.hp < u.maxHp && now >= u.stasisUntil) {
             heal(u, per5 / 10, Map.of(key(u, "Regeneração de Vida"), per5 / 10));
         }
+    }
+
+    // ------------------------------------------------------------------ structured events
+
+    /** The mark name of Ornn's passive in the events. */
+    static final String BRITTLE = "Frágil";
+
+    private static void count(U u, String key) {
+        count(u, key, 1);
+    }
+
+    private static void count(U u, String key, double v) {
+        if (u != null) {
+            u.r.events.merge(key, v, Double::sum);
+        }
+    }
+
+    /** The slot of an ability source ("R · Name" -> R; a bare slot stays). */
+    private static String slotOf(String source) {
+        int i = source == null ? -1 : source.indexOf(" ·");
+        return i < 0 ? source : source.substring(0, i);
+    }
+
+    private String boltMark(U s) {
+        Map<String, Object> m = map(s.kit("marcas"));
+        Map<String, Object> ab = m == null ? null : ability(s, String.valueOf(m.get("habilidade")));
+        return ab == null ? "Marca" : String.valueOf(ab.get("nome"));
+    }
+
+    private static String ksMark(U s) {
+        Map<String, Object> m = map(s.kit("marcas_ksante"));
+        return m != null && m.get("nome") != null ? String.valueOf(m.get("nome")) : "Instinto Destemido";
+    }
+
+    /** A new cast (or recast) of a slot: the previous one of the slot is settled (hit or missed). */
+    private void openCast(U u, String slot, boolean recast) {
+        Map<String, Cast> open = recast ? u.recasts : u.casts;
+        Cast old = open.put(slot, new Cast(slot, recast));
+        if (old != null) {
+            settle(u, old);
+        }
+    }
+
+    private static void settle(U u, Cast c) {
+        if (!c.hit) {
+            count(u, (c.recast ? "reconjuracao_errou:" : "habilidade_errou:") + c.slot);
+        }
+    }
+
+    private void closeCasts(U u) {
+        for (Cast c : u.casts.values()) {
+            settle(u, c);
+        }
+        for (Cast c : u.recasts.values()) {
+            settle(u, c);
+        }
+        u.casts.clear();
+        u.recasts.clear();
+    }
+
+    /** An ability of `u` (its source) hit a champion: its open cast (or recast) counts as a hit, once. */
+    private void credit(U u, String source, boolean recast) {
+        String slot = slotOf(source);
+        Cast c = (recast ? u.recasts : u.casts).get(slot);
+        if (c != null && !c.hit) {
+            c.hit = true;
+            count(u, (recast ? "reconjuracao_acertou:" : "habilidade_acertou:") + slot);
+        }
+    }
+
+    /**
+     * An immobilize of a kind applied by `by` on `t`, which still had `before` seconds of control left: chained when
+     * it starts as the previous one ends (at most {@link #CHAIN_SLACK} of overlap, or within 0.1s after it ended),
+     * overlapped when more than that is wasted.
+     */
+    private void ccNoted(U by, U t, String type, double before, double seconds) {
+        if (by == null || by.team() == t.team()) {
+            return;
+        }
+        count(by, "cc_aplicado:" + type);
+        if (before > 1e-9) {
+            count(by, Math.min(before, seconds) > CHAIN_SLACK + 1e-9 ? "cc_sobreposto" : "cc_encadeado");
+        } else if (now - t.ccHeldAt <= 0.1 + DT + 1e-9) {
+            count(by, "cc_encadeado");
+        }
+        t.ccBy = by;
+    }
+
+    /** Every step: time under control, marks that expired, recast windows that closed unused. */
+    private void trackEvents() {
+        for (U t : units) {
+            if (t.dead) {
+                continue;
+            }
+            if (now < t.stunUntil || now < t.airUntil || t.forced != null) {
+                count(t, "tempo_controlado", DT);
+                count(t.ccBy, "controle_causado", DT);
+                t.ccHeldAt = now;
+            }
+            if (t.brittleCounted > 0 && now >= t.brittleCounted - 1e-9) {
+                count(t.brittleBy, "marca_expirou:" + BRITTLE);
+                t.brittleCounted = -1;
+            }
+            expire(t, t.stackCounted, () -> String.valueOf(map(t.kit("acumulos")).get("nome")));
+            expire(t, t.boltCounted, () -> boltMark(t));
+            expire(t, t.ksCounted, () -> ksMark(t));
+            watchRecasts(t);
+        }
+    }
+
+    private void expire(U s, Map<U, Double> marks, java.util.function.Supplier<String> name) {
+        if (marks.isEmpty()) {
+            return;
+        }
+        for (java.util.Iterator<Map.Entry<U, Double>> it = marks.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<U, Double> e = it.next();
+            if (now >= e.getValue() - 1e-9) {
+                count(s, "marca_expirou:" + name.get());
+                it.remove();
+            }
+        }
+    }
+
+    /** Recast windows: followed from when they open; one that closes (or goes away) unused is a lost recast. */
+    private void watchRecasts(U u) {
+        for (Map.Entry<String, double[]> e : u.recast.entrySet()) {
+            if (!e.getKey().contains(":") && now <= e.getValue()[1] && u.recastWatch.get(e.getKey()) != e.getValue()) {
+                double[] old = u.recastWatch.put(e.getKey(), e.getValue());
+                if (old != null) {
+                    lostRecast(u, e.getKey(), old);
+                }
+            }
+        }
+        for (java.util.Iterator<Map.Entry<String, double[]>> it = u.recastWatch.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<String, double[]> e = it.next();
+            double[] w = e.getValue();
+            if (u.recastUsed.contains(w)) {
+                it.remove();
+            } else if (u.recast.get(e.getKey()) != w || now > w[1]) {
+                it.remove();
+                lostRecast(u, e.getKey(), w);
+            }
+        }
+    }
+
+    private void lostRecast(U u, String slot, double[] w) {
+        if (u.recastUsed.remove(w)) {
+            return;
+        }
+        String why = u.recastTry.remove(slot);
+        if (why == null) {
+            why = !u.canAct() ? "em controle" : now < u.busyUntil || u.dash != null ? "ocupado com " + u.busyState : "não tentou";
+        }
+        count(u, "reconjuracao_perdida:" + slot + ":" + why);
     }
 
     // ------------------------------------------------------------------ frames and helpers

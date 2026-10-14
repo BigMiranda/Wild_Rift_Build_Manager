@@ -385,3 +385,36 @@ Andamento, parte a parte (cada parte é um commit no `arena-ia`, com `./mvnw tes
   política numa `AtomicReference`), em vez de criar `NeuralPolicy` e `TacticalPolicy` a cada decisão. As lutas
   continuam iguais (a política é sem estado).
 - **Frágil sobrescrito:** entra com a Parte A, que cria os eventos (`marca_sobrescrita`); o comportamento não muda.
+
+### Parte A — Eventos estruturados ✅
+- `FighterStats.events` (contadores por chave) e `FighterStats.eventSummary` (o resumo em palavras), documentados em
+  `ArenaEvents`. Nenhuma luta muda: só contam.
+  - **Marcas:** `marca_aplicada:<marca>`, `marca_consumida:<marca>:<fonte>` (`ataque`, `1`, `2`, `3`, `R`),
+    `marca_sobrescrita:<marca>` e `marca_expirou:<marca>`. As marcas são as das fichas: Frágil (Ornn), Hemorragia
+    (Darius: consumida quando a R usa os acúmulos), Dardos de Prata (Vayne; perder os acúmulos ao bater em outro alvo
+    conta como expirada) e Instinto Destemido (K'Sante; reaplicar sobre uma marca ativa conta como sobrescrita).
+    O nome vem da ficha, não do código: a marca da Vayne é o nome da habilidade de `marcas.habilidade` ("Dardos de
+    Prata", e não "Setas de Prata" como no prompt).
+  - **Frágil sobrescrito (Parte 0):** um `fragil` que não imobiliza, como o último golpe do W ou a ida da R, aplicado
+    com um Frágil ainda ativo, gera `marca_sobrescrita:Frágil`. O comportamento é o mesmo de antes.
+  - **Controle:** `cc_aplicado:<tipo>` (atordoamento, arremesso, puxao, empurrao, lentidao). Um imobilizar aplicado
+    com controle ainda restante no alvo, ou até 0,1 s depois do fim, é `cc_encadeado`. Se desperdiça mais de 0,3 s
+    (`CHAIN_SLACK`) do novo controle, é `cc_sobreposto`; os dois são exclusivos. `tempo_controlado` (s) fica em quem
+    foi controlado e `controle_causado` (s) em quem aplicou o controle atual.
+  - **Habilidades:** cada conjuração abre um registro que fecha na próxima do mesmo slot ou no fim da luta, como
+    `habilidade_acertou:<slot>` ou `habilidade_errou:<slot>`. O mesmo vale para a reconjuração
+    (`reconjuracao_acertou` / `reconjuracao_errou`). Não contam: as formas `proprio` e os avanços `sem_dano` sem
+    `proximo_ataque` (o E do K'Sante), que não têm como acertar alguém.
+  - **Reconjuração perdida:** `reconjuracao_perdida:<slot>:<motivo>`, quando a janela fecha (ou some, como no fim do
+    elemental) sem uso. Os motivos, nessa ordem: "fora de alcance" (tentou e o elemental não estava ao alcance),
+    "em controle", "ocupado com <estado>" e "não tentou". O motivo fica no terceiro campo da chave.
+  - **Runas e itens:** `runa_ativou:<nome>` em cada efeito de runa que dispara (Aperto, Eletrocutar, Cometa,
+    Suserano...), `item_ativou:<nome>` nos golpes, lâminas e ativos. Os gatilhos do planejador contam pelo tipo
+    (runa / item / loja); os ativos contam em `useItem`, uma vez.
+- **Golden:** `ArenaScenarios.fingerprint` tira `events` e `eventSummary` dos lutadores antes do hash. O golden não
+  mudou.
+- **Tela:** "Eventos da luta" no relatório, um resumo por campeão. Por exemplo, Ornn × Rumble: "Frágil: 3 aplicados,
+  2 consumidos (ataque 1, 3 1), 1 sobrescrito · controle: 1,8 s · acertos: 3 2/2, 1 3/3, 2 3/3, R 1/1 · reconjuração
+  perdida: R (não tentou)". O roteiro nunca reconjura a R, e agora isso aparece.
+- Testes: `ArenaEventsTest` (Frágil consumido pelo ataque, tempo controlado = controle causado, reconjuração que
+  consome o Frágil, sobrescrita, marcas da Vayne e do K'Sante, encadeado, resumo).
