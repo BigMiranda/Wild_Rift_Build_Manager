@@ -371,6 +371,34 @@ public class BuildRepository {
                 json(setup), Instant.now().toString(), id) > 0;
     }
 
+    /**
+     * Merges item effect choices ("item|effect" keys) into a build's: each key given replaces the build's (a null rate
+     * removes it, back to no rate); the build's other keys stay.
+     */
+    public boolean mergeItemSetup(long id, ItemSetup patch) {
+        List<String> found = jdbc.query("SELECT item_setup FROM build WHERE id = ?", (rs, n) -> rs.getString(1), id);
+        if (found.isEmpty()) {
+            return false;
+        }
+        ItemSetup setup;
+        try {
+            setup = found.get(0) == null ? new ItemSetup() : JSON.readValue(found.get(0), ItemSetup.class);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Escolhas dos itens inválidas na build " + id, e);
+        }
+        if (patch.options != null) {
+            patch.options.forEach((k, v) -> { if (v == null) setup.options.remove(k); else setup.options.put(k, v); });
+        }
+        if (patch.conditional != null) {
+            patch.conditional.forEach((k, v) -> { if (v == null) setup.conditional.remove(k); else setup.conditional.put(k, v); });
+        }
+        if (patch.rates != null) {
+            patch.rates.forEach((k, v) -> { if (v == null) setup.rates.remove(k); else setup.rates.put(k, v); });
+        }
+        return jdbc.update("UPDATE build SET item_setup = ?, updated_at = ? WHERE id = ?",
+                json(setup), Instant.now().toString(), id) > 0;
+    }
+
     public boolean moveBuild(long id, long folderId) {
         return jdbc.update("UPDATE build SET folder_id = ?, updated_at = ? WHERE id = ?",
                 folderId, Instant.now().toString(), id) > 0;

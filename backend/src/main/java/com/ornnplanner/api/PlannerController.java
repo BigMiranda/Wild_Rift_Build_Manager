@@ -220,6 +220,33 @@ public class PlannerController {
         return out;
     }
 
+    /** Item effect choices copied to other builds (the open one's item effects): merged by "item|effect" key. */
+    public static class ItemSetupExport {
+        public List<Long> buildIds;
+        public BuildRepository.ItemSetup itemSetup;
+    }
+
+    @PutMapping("/builds/item-setup")
+    @Transactional
+    public Map<String, Object> exportItemSetup(@RequestBody ItemSetupExport body) {
+        if (body.buildIds == null || body.buildIds.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha ao menos uma build.");
+        }
+        if (body.itemSetup == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nada para exportar.");
+        }
+        int updated = 0;
+        for (Long id : new java.util.LinkedHashSet<>(body.buildIds)) {
+            if (id == null || !builds.mergeItemSetup(id, body.itemSetup)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Build " + id + " não existe.");
+            }
+            updated++;
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("updated", updated);
+        return out;
+    }
+
     @PutMapping("/builds/{id}/folder")
     public void moveBuild(@PathVariable long id, @RequestBody Map<String, Long> body) {
         Long folderId = body.get("folderId");

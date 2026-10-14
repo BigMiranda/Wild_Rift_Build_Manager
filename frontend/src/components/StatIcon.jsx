@@ -4,6 +4,8 @@ import { statAbbr, statLabel } from '../i18n.js';
  * Stat colors and icons in the spirit of the Wild Rift UI (green health, yellow armor, cyan MR, orange AD, purple AP).
  * Icons are simple original SVGs; colors are CSS variables so they can be tuned in one place (styles.css).
  */
+const BARRIER = 'M8 1.2 2.6 3.1v4.3c0 3.3 2.3 6.1 5.4 7.4 3.1-1.3 5.4-4.1 5.4-7.4V3.1ZM8 2.6 3.9 4v3.4c0 2.6 1.7 4.8 4.1 5.9 2.4-1.1 4.1-3.3 4.1-5.9V4Z';
+
 const ICONS = {
   heart: 'M8 14.2 2.3 8.6C.6 6.9.8 4.2 2.7 3c1.6-1 3.6-.6 4.7.9L8 4.7l.6-.8c1.1-1.5 3.1-1.9 4.7-.9 1.9 1.2 2.1 3.9.4 5.6Z',
   drop: 'M8 1.5c2.6 3.3 4.6 5.9 4.6 8.4A4.6 4.6 0 0 1 3.4 9.9C3.4 7.4 5.4 4.8 8 1.5Z',
@@ -19,6 +21,11 @@ const ICONS = {
   spiral: 'M8 2a6 6 0 1 0 6 6h-2.2A3.8 3.8 0 1 1 8 4.2a2.2 2.2 0 1 1-2.2 2.2H3.6A4.4 4.4 0 1 0 8 2Z',
   pierce: 'M1.5 14.5 10 6l-1.5-1.5 5.5-3-3 5.5L9.5 5.5ZM9 12.5l1.5-3 3 1.5-3 1.5L9 14.5Z',
   heal: 'M6.6 1.5h2.8v3.4h3.4v2.8H9.4v3.4H6.6V7.7H3.2V4.9h3.4Zm-3 10.2h8.8v2.8H3.6Z',
+  // Shield effects (temporary health): a hollow shield, unlike the solid one of armor; the physical one holds a sword
+  // and the magic one a star, so they do not read as armor / MR.
+  barrier: { d: `${BARRIER}`, evenodd: true },
+  barrierPhysical: { d: `${BARRIER}M8 4.4 9 5.6v3.8H7V5.6Zm-2.1 5h4.2v1H5.9Zm1.6 1h1V12h-1Z`, evenodd: true },
+  barrierMagic: { d: `${BARRIER}M8 4.3l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9Z`, evenodd: true },
 };
 
 /** stat code -> { icon, color variable } */
@@ -50,11 +57,11 @@ export const STAT_META = {
   '% Omnivamp': { icon: 'drop', color: 'var(--stat-crit)' },
   'Ultimate Haste': { icon: 'hourglass', color: 'var(--stat-ah)' },
   'Basic Ability Haste': { icon: 'hourglass', color: 'var(--stat-ah)' },
-  Shield: { icon: 'shield', color: 'var(--stat-shield)' },
-  'Magic Shield': { icon: 'shield', color: 'var(--stat-mr)' },
-  'Physical Shield': { icon: 'shield', color: 'var(--stat-armor)' },
+  Shield: { icon: 'barrier', color: 'var(--stat-shield)' },
+  'Magic Shield': { icon: 'barrierMagic', color: 'var(--stat-mr)' },
+  'Physical Shield': { icon: 'barrierPhysical', color: 'var(--stat-armor)' },
   Heal: { icon: 'heal', color: 'var(--stat-hp)' },
-  'Ally Shield': { icon: 'shield', color: 'var(--stat-shield)' },
+  'Ally Shield': { icon: 'barrier', color: 'var(--stat-shield)' },
   'Ally Heal': { icon: 'heal', color: 'var(--stat-hp)' },
   Stasis: { icon: 'hourglass', color: 'var(--stat-shield)' },
 };
@@ -64,9 +71,10 @@ export const statColor = (code) => STAT_META[code]?.color ?? 'var(--text-2)';
 export function StatIcon({ stat, size = 14 }) {
   const meta = STAT_META[stat];
   if (!meta) return null;
+  const icon = ICONS[meta.icon];
   return (
     <svg className="stat-icon" width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" fill={meta.color}>
-      <path d={ICONS[meta.icon]} />
+      <path d={icon.d ?? icon} fillRule={icon.evenodd ? 'evenodd' : undefined} />
     </svg>
   );
 }

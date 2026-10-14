@@ -538,6 +538,9 @@ table.timeline td small.dr { display: block; font-size: 10px; color: var(--muted
 .prep-export-list label.on { border-color: var(--gold); background: rgba(200, 170, 110, .07); }
 .prep-export-name { display: flex; flex-direction: column; min-width: 0; }
 .prep-export-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item-export-icon { border-radius: 4px; border: 1px solid var(--border-strong); }
+.item-export-icon.off { opacity: .3; filter: grayscale(1); }
+.chart-head-tools { gap: 6px 14px; flex-wrap: wrap; align-items: center; font-size: 13px; }
 .skill-export-order { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .skill-export-order strong { font-size: 13px; white-space: nowrap; }
 .skill-export-plan { display: inline-flex; gap: 2px; }

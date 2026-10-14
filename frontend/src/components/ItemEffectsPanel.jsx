@@ -11,7 +11,7 @@ export const itemEffectKey = (item, effect) => `${item}|${effect}`;
  * bonuses...): each one switched on or off for every purchase of the item, with its option (activations per fight,
  * allies...) and stack rate. Effects without a choice are listed as always on.
  */
-export default function ItemEffectsPanel({ steps, itemsById, setup, matchEnd, onChange }) {
+export default function ItemEffectsPanel({ steps, itemsById, setup, matchEnd, onChange, onExport }) {
   const seen = new Set();
   const items = [];
   for (const s of steps) {
@@ -39,6 +39,11 @@ export default function ItemEffectsPanel({ steps, itemsById, setup, matchEnd, on
     <details className="item-effects" open>
       <summary>{t('itemFx.title', { n: entries.length + fixed.length })}</summary>
       <p className="muted">{t('itemFx.help')}</p>
+      {onExport && entries.length > 0 && (
+        <div className="prep-actions">
+          <button className="link" onClick={onExport} title={t('itemExport.hint')}>{t('itemExport.open')}</button>
+        </div>
+      )}
       {fixed.length > 0 && (
         <ul className="item-effects-fixed">
           {fixed.map((e) => (

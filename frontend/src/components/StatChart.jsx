@@ -46,6 +46,9 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
   const plotLeft = MARGIN.left + Y_AXIS_WIDTH;
   const plotWidth = Math.max(1, width - plotLeft - MARGIN.right);
   const x = (minute) => plotLeft + (Math.min(minute, maxMinute) / maxMinute) * plotWidth;
+  const extra = stat === 'Shield' ? shieldLines(lines) : [];
+  const lineVs = (key) => (key.startsWith('v') ? null : SHIELD_VS.find((v) => key.startsWith(v.prefix)));
+  const lineLabel = (key) => lineVs(key)?.label() ?? statLabel(stat);
 
   return (
     <div>
@@ -101,10 +104,10 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
               <Tooltip
                 contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)' }}
                 labelFormatter={(v) => t('chart.minute', { time: mmss(v) })}
-                formatter={(v, name, p) => [`${n1(v)}${PERCENT_STATS.has(stat) ? '%' : ''} ${statLabel(stat)} · ${t('chart.lv', { n: p.payload[`lv${p.dataKey.slice(1)}`] })}`, name]}
+                formatter={(v, name, p) => [`${n1(v)}${PERCENT_STATS.has(stat) ? '%' : ''} ${lineLabel(p.dataKey)} · ${t('chart.lv', { n: p.payload[`lv${p.dataKey.slice(lineVs(p.dataKey)?.prefix.length ?? 1)}`] })}`, name]}
                 cursor={{ stroke: 'var(--muted)', strokeDasharray: '3 3' }}
               />
-              {lines.length >= 2 && <Legend wrapperStyle={{ color: 'var(--text-2)' }} />}
+              {lines.length + extra.length >= 2 && <Legend wrapperStyle={{ color: 'var(--text-2)' }} />}
               {selectedMinute != null && <ReferenceLine x={selectedMinute} stroke="var(--gold)" strokeWidth={1.5} />}
               {lines.map((s) => (
                 <Line
@@ -116,6 +119,20 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
                   strokeWidth={2}
                   dot={false}
                   activeDot={{ r: 5, stroke: 'var(--surface)', strokeWidth: 2 }}
+                  isAnimationActive={false}
+                />
+              ))}
+              {extra.map(({ s, vs }) => (
+                <Line
+                  key={`${vs.prefix}${s.key}`}
+                  name={`${s.name} · ${vs.label()}`}
+                  dataKey={`${vs.prefix}${s.key}`}
+                  type="stepAfter"
+                  stroke={SERIES_COLORS[s.colorIndex % SERIES_COLORS.length]}
+                  strokeWidth={1.5}
+                  strokeDasharray={vs.dash}
+                  dot={false}
+                  activeDot={{ r: 4, stroke: 'var(--surface)', strokeWidth: 2 }}
                   isAnimationActive={false}
                 />
               ))}
@@ -313,6 +330,22 @@ function ChartTip({ tip, wide, light, details }) {
 }
 
 /**
+ * In the Shield chart, besides the shield against any damage, the shield a build has against physical damage (shield +
+ * physical shield) and against magic damage (shield + magic shield): dashed / dotted in the build's color, only for the
+ * builds that ever have that kind of shield.
+ */
+const SHIELD_VS = [
+  { prefix: 'ad', stat: 'Physical Shield', dash: '6 3', label: () => t('chart.shieldVsAd') },
+  { prefix: 'ap', stat: 'Magic Shield', dash: '2 3', label: () => t('chart.shieldVsAp') },
+];
+
+function shieldLines(lines) {
+  return lines.flatMap((s) => SHIELD_VS
+    .filter((vs) => s.result.series.some((p) => (p.total[vs.stat] ?? 0) > 0.05))
+    .map((vs) => ({ s, vs })));
+}
+
+/**
  * One row per minute any build has a point, with every build's value there (its last point at or before that minute,
  * up to its own last point), so the tooltip always lists every compared build.
  */
@@ -330,6 +363,9 @@ function lineData(lines, stat) {
       if (p) {
         row[`v${s.key}`] = statOf(p.total, stat);
         row[`lv${s.key}`] = p.level;
+        if (stat === 'Shield') {
+          for (const vs of SHIELD_VS) row[`${vs.prefix}${s.key}`] = (p.total.Shield ?? 0) + (p.total[vs.stat] ?? 0);
+        }
       }
     }
     return row;

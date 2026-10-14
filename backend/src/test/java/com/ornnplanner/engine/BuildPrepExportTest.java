@@ -87,6 +87,32 @@ class BuildPrepExportTest {
     }
 
     @Test
+    void itemSetupMergesByKeyKeepingTheOthers(@TempDir Path dir) {
+        BuildRepository repo = repo(dir);
+        long folder = repo.insertFolder("Pasta");
+        Build b = build(folder, "alvo", "Aftershock", List.of());
+        b.itemSetup = new BuildRepository.ItemSetup();
+        b.itemSetup.conditional.put("Égide|Escudo", false);
+        b.itemSetup.conditional.put("Outro|Efeito", false);
+        BuildRepository.RatePeriod period = new BuildRepository.RatePeriod();
+        period.perMinute = 2;
+        b.itemSetup.rates.put("Égide|Acúmulos", List.of(period));
+        long target = repo.insertBuild(b);
+
+        BuildRepository.ItemSetup patch = new BuildRepository.ItemSetup();
+        patch.conditional.put("Égide|Escudo", true);
+        patch.options.put("Égide|Escudo", 3);
+        patch.rates.put("Égide|Acúmulos", null);
+        assertTrue(repo.mergeItemSetup(target, patch));
+        BuildRepository.ItemSetup after = repo.findBuild(target).orElseThrow().itemSetup;
+        assertEquals(Boolean.TRUE, after.conditional.get("Égide|Escudo"));
+        assertEquals(Integer.valueOf(3), after.options.get("Égide|Escudo"));
+        assertEquals(Boolean.FALSE, after.conditional.get("Outro|Efeito"));
+        assertFalse(after.rates.containsKey("Égide|Acúmulos"));
+        assertFalse(repo.mergeItemSetup(9999, patch));
+    }
+
+    @Test
     void onlySpellsKeepsTheRunes(@TempDir Path dir) {
         BuildRepository repo = repo(dir);
         long folder = repo.insertFolder("Pasta");

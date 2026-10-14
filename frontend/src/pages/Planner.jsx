@@ -24,6 +24,7 @@ import RuneEditor from '../components/RuneEditor.jsx';
 import SpellEditor from '../components/SpellEditor.jsx';
 import PrepExport from '../components/PrepExport.jsx';
 import SkillExport from '../components/SkillExport.jsx';
+import ItemSetupExport, { configurableItems, explicitItemSetup } from '../components/ItemSetupExport.jsx';
 
 const emptyBuild = (folderId) => ({
   id: null,
@@ -45,6 +46,7 @@ const emptyBuild = (folderId) => ({
 
 const SIDEBAR_KEY = 'ornn-planner-sidebar';
 const TIMELINE_KEY = 'ornn-planner-timeline';
+const SAME_CONDS_KEY = 'ornn-planner-same-conds';
 const loadFlag = (key, fallback) => {
   try {
     const v = localStorage.getItem(key);
@@ -79,6 +81,35 @@ function toPayload(d) {
   return { ...d, goldPerMin: Number(d.goldPerMin), xpPerMin: Number(d.xpPerMin), ragdollStats };
 }
 
+/** Choices maps (options, conditional, rates, gold) of `from` over those of `to`, by key; a null value removes the key. */
+function mergeChoices(to, from) {
+  const out = { ...to };
+  for (const k of ['options', 'conditional', 'rates', 'gold']) {
+    if (!from?.[k]) continue;
+    const m = { ...(to?.[k] ?? {}) };
+    for (const [key, v] of Object.entries(from[k])) {
+      if (v == null) delete m[key]; else m[key] = v;
+    }
+    out[k] = m;
+  }
+  return out;
+}
+
+/**
+ * A compared build with the open build's conditionals: the choices of the items both have (explicit, defaults included),
+ * the rune choices set on the open build and, for the same champion, its champion choices. The compared build's items,
+ * runes and skills stay its own.
+ */
+function withConditionals(b, d, itemsById) {
+  const items = configurableItems(d.steps, itemsById);
+  return {
+    ...b,
+    itemSetup: mergeChoices(b.itemSetup, explicitItemSetup(items, d.itemSetup)),
+    runePage: b.runePage ? mergeChoices(b.runePage, d.runePage) : b.runePage,
+    championSetup: b.unitCode === d.unitCode ? mergeChoices(b.championSetup, { ...d.championSetup, gold: undefined }) : b.championSetup,
+  };
+}
+
 function fromApi(b) {
   const ragdollStats = {};
   for (const [k, v] of Object.entries(b.ragdollStats ?? {})) {
@@ -97,6 +128,7 @@ export default function Planner({ meta, items }) {
   const [calcError, setCalcError] = useState(null);
   const [compareIds, setCompareIds] = useState([]);
   const [compareResults, setCompareResults] = useState({});
+  const [sameConds, setSameConds] = useState(() => loadFlag(SAME_CONDS_KEY, false));
   const [chartStat, setChartStat] = useState('Max Health');
   /** Tab of the moment panel next to the stat sheet: item relevance or passives held. */
   const [momentTab, setMomentTab] = useState('relevance');
@@ -168,17 +200,29 @@ export default function Planner({ meta, items }) {
     return () => clearTimeout(timer);
   }, [draft, items]);
 
-  // Saved builds added for comparison.
+  // Saved builds added for comparison: as saved, or with the open build's conditionals ("same conditionals").
+  const condSource = sameConds && draft
+    ? { steps: draft.steps, itemSetup: draft.itemSetup, runePage: draft.runePage, championSetup: draft.championSetup, unitCode: draft.unitCode }
+    : null;
+  const condKey = JSON.stringify(condSource);
+  const compareSeq = useRef(0);
   useEffect(() => {
-    compareIds.forEach(async (id) => {
-      try {
-        const r = await api.get(`/api/builds/${id}/timeline`);
-        setCompareResults((prev) => ({ ...prev, [id]: r }));
-      } catch (e) {
-        setMessage(e.message);
-      }
-    });
-  }, [compareIds, items, builds]);
+    const seq = ++compareSeq.current;
+    const timer = setTimeout(() => {
+      compareIds.forEach(async (id) => {
+        try {
+          const r = condSource
+            ? await api.get(`/api/builds/${id}`).then((b) => api.post('/api/calculate', toPayload(withConditionals(fromApi(b), condSource, itemsById))))
+            : await api.get(`/api/builds/${id}/timeline`);
+          if (seq === compareSeq.current) setCompareResults((prev) => ({ ...prev, [id]: r }));
+        } catch (e) {
+          setMessage(e.message);
+        }
+      });
+    }, condSource ? 300 : 0);
+    return () => clearTimeout(timer);
+    // condKey stands for the open build's choices, so editing its other fields does not recalculate the compared builds
+  }, [compareIds, items, builds, condKey]);
 
   /** `patch` is an object or a function of the current draft (use the latter when it depends on the draft). */
   const update = (patch) => {
@@ -461,7 +505,8 @@ export default function Planner({ meta, items }) {
             onToggleEvolved={(idx) => updateStep(idx, (s) => ({ ...s, itemId: evoPairs.get(s.itemId)?.id ?? s.itemId }))}
           />
           <ItemEffectsPanel steps={draft.steps} itemsById={itemsById} setup={draft.itemSetup} matchEnd={draft.matchEnd}
-            onChange={(itemSetup) => update({ itemSetup })} />
+            onChange={(itemSetup) => update({ itemSetup })}
+            onExport={builds.some((b) => b.id !== draft.id) ? () => setPrepEditor('items') : null} />
         </section>
 
         <section className="panel timeline-panel">
@@ -501,7 +546,16 @@ export default function Planner({ meta, items }) {
                 {chartStat === EFFECTIVE_VIEW ? t('chart.effectiveTitle') : chartStat === PASSIVES_VIEW ? t('chart.passivesTitle')
                   : <><StatIcon stat={chartStat} size={16} />{t('chart.title', { stat: statLabel(chartStat) })}</>}
               </h3>
-              <small>{t('chart.compareHint')}</small>
+              <span className="row chart-head-tools">
+                {compareIds.length > 0 && (
+                  <label className="check" title={t('compare.sameCondsHint')}>
+                    <input type="checkbox" checked={sameConds}
+                      onChange={(e) => { setSameConds(e.target.checked); saveFlag(SAME_CONDS_KEY, e.target.checked); }} />
+                    {t('compare.sameConds')}
+                  </label>
+                )}
+                <small>{t('chart.compareHint')}</small>
+              </span>
             </div>
             <StatChart
               series={chartSeries} stat={chartStat} onStatChange={setChartStat} xpTable={meta.xpTable}
@@ -555,6 +609,16 @@ export default function Planner({ meta, items }) {
       )}
       {prepEditor === 'spells' && (
         <SpellEditor spells={draft.spells} onChange={(spells) => update({ spells })} onClose={() => setPrepEditor(null)} />
+      )}
+      {prepEditor === 'items' && (
+        <ItemSetupExport steps={draft.steps} setup={draft.itemSetup} itemsById={itemsById} builds={builds} folders={folders}
+          currentId={draft.id}
+          onClose={() => setPrepEditor(null)}
+          onDone={async (n) => {
+            setPrepEditor(null);
+            setMessage(t('itemExport.done', { n }));
+            await loadTree();
+          }} />
       )}
       {prepEditor === 'skills' && (
         <SkillExport setup={draft.championSetup ?? emptyChampionSetup()} unitCode={draft.unitCode} builds={builds} folders={folders}
