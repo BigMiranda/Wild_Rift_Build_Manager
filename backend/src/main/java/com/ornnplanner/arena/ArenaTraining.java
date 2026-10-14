@@ -110,6 +110,8 @@ public final class ArenaTraining {
         public Double winPct;
         /** The value the plateau rule reads. */
         public Double metric;
+        /** Wins on the second selection batch (%), measured only when this generation won every selection fight. */
+        public Double confirmPct;
     }
 
     /** Hears a stage: its messages and generations; may cancel it. */
@@ -171,7 +173,7 @@ public final class ArenaTraining {
         listener.message("preparando os episódios");
 
         // opponents: script, tactical, the hall of fame, self-play in a mirror; in a chain, the chain's versions too
-        AtomicReference<Policy> self = new AtomicReference<>();
+        AtomicReference<Network> self = new AtomicReference<>();
         Opponent script = opponent("roteiro", in -> new ScriptedPolicy(in.priority));
         Opponent tactical = opponent("tático", in -> new TacticalPolicy(in.priority));
         Opponent chain = opponent("cadeia", in -> current(spec.chain, in));
@@ -180,7 +182,7 @@ public final class ArenaTraining {
         for (Arena.Input in : base) {
             String champion = in.f.champion;
             if (in.f.team != team && !hall.containsKey(champion.toLowerCase())) {
-                policies.list(champion).stream().filter(r -> r.accepted && r.compatible()).limit(2).forEach(r -> {
+                hallOfFame(policies.list(champion), objective).forEach(r -> {
                     PolicyRepository.Record full = policies.find(r.id).orElseThrow();
                     hall.put(champion.toLowerCase() + r.id, opponent("IA v" + r.version + " " + champion,
                             x -> x.f.champion.equalsIgnoreCase(champion) ? neural(full, x) : null));
@@ -206,6 +208,9 @@ public final class ArenaTraining {
         List<Gym.Episode> pool = episodes(spec, team, training, spec.pool, rnd);
         List<Gym.Episode> selection = episodes(spec, team, fixed, spec.selection, rnd);
         List<Gym.Episode> validation = episodes(spec, team, fixed, spec.validation, new Random(spec.seed * 7919 + 17));
+        // a total victory on the selection fights is confirmed on a second batch of them (another seed) before it counts
+        List<Gym.Episode> confirmation = spec.stopAtVictory
+                ? episodes(spec, team, fixed, spec.selection, new Random(spec.seed * 104729 + 31)) : List.of();
 
         Trainer.Config cfg = new Trainer.Config();
         cfg.population = Math.max(4, Math.min(128, spec.population));
@@ -214,14 +219,16 @@ public final class ArenaTraining {
         cfg.seed = spec.seed;
         cfg.threads = spec.threads;
         Network start = spec.start != null ? spec.start : Network.zeros(Network.DEFAULT_LAYERS);
-        self.set(new NeuralPolicy(start, priority));
+        self.set(start);
         ScriptedPolicy reference = new ScriptedPolicy(priority);
 
         // the script's fitness on the selection fights, once: every generation is measured against it
         double[] scriptFit = fitness(selection, reference, objective);
         double scriptMean = mean(scriptFit);
-        Point first = measure(selection, scriptFit, scriptMean, new NeuralPolicy(start, priority), objective, spec);
-        if (spec.stopAtVictory && spec.start != null && first.winPct >= 100 - 1e-9) {
+        NeuralPolicy startPolicy = new NeuralPolicy(start, priority);
+        Point first = measure(selection, scriptFit, scriptMean, startPolicy, objective, spec);
+        if (spec.stopAtVictory && spec.start != null && first.winPct >= 100 - 1e-9
+                && confirmed(first, confirmation, startPolicy)) {
             out.kept = true;   // the version it starts from already wins them all: keep it as it is
             listener.message("já vence todas as lutas de seleção: versão mantida");
             return out;
@@ -246,7 +253,7 @@ public final class ArenaTraining {
                 p.generation = g.index;
                 p.mean = g.mean;
                 p.best = g.best;
-                if (spec.stopAtVictory && p.winPct >= 100 - 1e-9) {
+                if (spec.stopAtVictory && p.winPct >= 100 - 1e-9 && confirmed(p, confirmation, now)) {
                     victory[0] = true;   // these very weights are the result
                     best[0] = g.center;
                 } else if (p.selection > bestSelection[0] + 1e-9
@@ -256,7 +263,7 @@ public final class ArenaTraining {
                     best[0] = g.center;
                 }
                 if (g.index % SELF_PLAY_EVERY == 0) {
-                    self.set(now);
+                    self.set(g.center);
                 }
                 metric.add(p.metric);
                 done[0] = g.index;
@@ -345,6 +352,37 @@ public final class ArenaTraining {
         p.fitnessPct = 100 * (mean(fit) - scriptMean) / Math.max(1, Math.abs(scriptMean));
         p.metric = spec.stopAtVictory ? p.winPct : "fitness".equals(METRIC) ? p.fitnessPct : p.betterPct;
         return p;
+    }
+
+    /**
+     * A total victory on the selection fights holds on the confirmation batch too (wins in %, kept on the point): one
+     * lucky generation on the same 16 fights does not end a stage.
+     */
+    private boolean confirmed(Point p, List<Gym.Episode> confirmation, Policy policy) {
+        ArenaModel.Result[] results = results(confirmation, policy);
+        double wins = 0;
+        for (int i = 0; i < results.length; i++) {
+            Gym.Episode e = confirmation.get(i);
+            wins += results[i].winner == e.team() ? 1 : results[i].winner < 0 ? 0.5 : 0;
+        }
+        p.confirmPct = results.length == 0 ? 100 : 100 * wins / results.length;
+        return p.confirmPct >= 100 - 1e-9;
+    }
+
+    /**
+     * The hall of fame of an enemy champion: its two newest accepted, compatible versions trained for the stage's
+     * objective, completed with the newest ones of any other objective when it has fewer.
+     */
+    public static List<PolicyRepository.Record> hallOfFame(List<PolicyRepository.Record> saved, String objective) {
+        List<PolicyRepository.Record> usable = new ArrayList<>();
+        for (PolicyRepository.Record r : saved) {
+            if (r.accepted && r.compatible()) {
+                usable.add(r);
+            }
+        }
+        usable.sort(java.util.Comparator.<PolicyRepository.Record>comparingInt(r -> objective.equals(r.objective) ? 0 : 1)
+                .thenComparing(java.util.Comparator.comparingInt((PolicyRepository.Record r) -> r.version).reversed()));
+        return usable.subList(0, Math.min(2, usable.size()));
     }
 
     /** The policy's fight on each episode (in parallel; the order of the results is the episodes'). */
@@ -451,23 +489,35 @@ public final class ArenaTraining {
         return out;
     }
 
-    /** The trained policy as it was at the last self-play snapshot (the opponent of a mirror match). */
+    /**
+     * The trained policy as it was at the last self-play snapshot (the opponent of a mirror match). The policy of a
+     * snapshot is built once, when the snapshot changes, not at every decision; it is stateless, so the parallel fights
+     * share it.
+     */
     private static final class SelfPlay implements Policy {
-        private final AtomicReference<Policy> current;
+        private final AtomicReference<Network> current;
         private final List<String> priority;
+        /** The snapshot seen last and its policy (replaced together). */
+        private final AtomicReference<Object[]> built = new AtomicReference<>(new Object[2]);
 
-        SelfPlay(AtomicReference<Policy> current, List<String> priority) {
+        SelfPlay(AtomicReference<Network> current, List<String> priority) {
             this.current = current;
             this.priority = priority;
         }
 
+        Policy policy() {
+            Network net = current.get();
+            Object[] b = built.get();
+            if (b[0] != net || b[1] == null) {
+                b = new Object[] {net, new NeuralPolicy(net, priority)};
+                built.set(b);
+            }
+            return (Policy) b[1];
+        }
+
         @Override
         public Decision decide(Observation obs, ActionMask mask) {
-            Policy p = current.get();
-            if (p instanceof NeuralPolicy) {
-                return new NeuralPolicy(((NeuralPolicy) p).network(), priority).decide(obs, mask);
-            }
-            return new TacticalPolicy(priority).decide(obs, mask);
+            return policy().decide(obs, mask);
         }
 
         @Override

@@ -367,3 +367,21 @@ Andamento, parte a parte (cada parte é um commit no `arena-ia`).
   - a etapa para na primeira geração com 100% de vitórias;
   - a cadeia mantém a versão vitoriosa na rodada seguinte, sem salvar outra versão desse campeão;
   - a rodada em que todos já vencem converge.
+
+## Rodada 3 — IA genérica, combos descobertos por busca e laboratório no planejador
+
+Andamento, parte a parte (cada parte é um commit no `arena-ia`, com `./mvnw test` e `npm run build` limpos ao fim).
+
+### Parte 0 — Correções da revisão da Rodada 2 ✅
+- **Hall da fama:** `ArenaTraining.hallOfFame(lista, objetivo)` pega as 2 versões aceitas e compatíveis mais novas do
+  objetivo da etapa; quando há menos de 2, completa com as mais novas de qualquer objetivo. Teste
+  `hallOfFameTakesTheStageObjectiveFirst`.
+- **Vitória total confirmada:** antes de parar, a geração com 100% nas lutas de seleção joga um segundo lote do mesmo
+  tamanho, com outra semente (`seed·104729 + 31`). Só para se vencer todas as lutas dele também. Vale para o `kept`
+  da cadeia (a versão de partida só é mantida se confirmar). `Point.confirmPct` guarda o resultado, medido só nas
+  gerações com 100%. Testes: `stageStopsAtTotalVictoryWithThoseWeights` (a última geração confirmou, as anteriores
+  não venceram tudo ou não confirmaram) e `aLuckyTotalVictoryIsNotConfirmedOnAnotherBatch`.
+- **Self-play:** o snapshot guarda a rede; o `SelfPlay` monta a `NeuralPolicy` uma vez por snapshot (par rede →
+  política numa `AtomicReference`), em vez de criar `NeuralPolicy` e `TacticalPolicy` a cada decisão. As lutas
+  continuam iguais (a política é sem estado).
+- **Frágil sobrescrito:** entra com a Parte A, que cria os eventos (`marca_sobrescrita`); o comportamento não muda.

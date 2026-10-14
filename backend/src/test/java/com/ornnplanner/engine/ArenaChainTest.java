@@ -229,8 +229,9 @@ class ArenaChainTest {
         ArenaTraining.Point last = points.get(points.size() - 1);
         assertEquals(100, last.winPct, 1e-9);
         assertEquals(last.winPct, last.metric, 1e-9);
+        assertEquals(100, last.confirmPct, 1e-9, "confirmed on the second selection batch");
         for (ArenaTraining.Point p : points.subList(0, points.size() - 1)) {
-            assertTrue(p.winPct < 100, "stopped at the first total victory");
+            assertTrue(p.winPct < 100 || p.confirmPct < 100, "stopped at the first confirmed total victory");
         }
         assertEquals(points.size(), r.generations);
         assertNotNull(r.policy);
@@ -268,6 +269,64 @@ class ArenaChainTest {
         assertEquals("converged", j.status);
         assertEquals(2, j.round);
         assertTrue(j.message.contains("todos já vencem"), j.message);
+    }
+
+    @Test
+    void aLuckyTotalVictoryIsNotConfirmedOnAnotherBatch(@TempDir Path dir) {
+        PolicyRepository repo = repo(dir, "t.db");
+        ArenaTraining t = new ArenaTraining(ArenaScenarios.CATALOG, ArenaScenarios.MAP, repo);
+        ArenaTraining.StageSpec s = new ArenaTraining.StageSpec();
+        // a close duel: winning all 4 selection fights does not mean winning the 4 of the other batch
+        s.variants = spec(0).variants;
+        s.duration = 30;
+        s.generations = 4;
+        s.population = 4;
+        s.episodesPerGeneration = 2;
+        s.pool = 4;
+        s.selection = 4;
+        s.validation = 4;
+        s.stopAtVictory = true;
+        List<ArenaTraining.Point> points = new ArrayList<>();
+        ArenaTraining.StageResult r = t.trainStage(s, new ArenaTraining.Listener() {
+            @Override
+            public void point(ArenaTraining.Point p) {
+                points.add(p);
+            }
+        });
+        for (ArenaTraining.Point p : points) {
+            if (p.winPct < 100) {
+                assertNull(p.confirmPct, "measured only on a total victory");
+            } else if (p != points.get(points.size() - 1) || !r.victory) {
+                assertTrue(p.confirmPct < 100, "a victory not confirmed does not stop the stage");
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ hall of fame
+
+    private static PolicyRepository.Record saved(String objective, int version, boolean accepted) {
+        PolicyRepository.Record r = new PolicyRepository.Record();
+        r.champion = "Vayne";
+        r.objective = objective;
+        r.version = version;
+        r.accepted = accepted;
+        r.obsSchema = Observation.SCHEMA_VERSION;
+        r.actions = ActionSpace.SIZE;
+        return r;
+    }
+
+    @Test
+    void hallOfFameTakesTheStageObjectiveFirst() {
+        // as PolicyRepository.list gives them: by objective (alphabetical), newest first
+        List<PolicyRepository.Record> list = List.of(saved("damage", 5, true), saved("damage", 4, true),
+                saved("survive", 6, true), saved("win_fast", 3, true), saved("win_fast", 2, false), saved("win_fast", 1, true));
+        List<PolicyRepository.Record> hall = ArenaTraining.hallOfFame(list, "win_fast");
+        assertEquals(List.of(3, 1), hall.stream().map(r -> r.version).collect(java.util.stream.Collectors.toList()));
+        // fewer than 2 for the objective: the newest of the others fill in
+        hall = ArenaTraining.hallOfFame(list, "survive");
+        assertEquals(List.of(6, 5), hall.stream().map(r -> r.version).collect(java.util.stream.Collectors.toList()));
+        hall = ArenaTraining.hallOfFame(list, "team");
+        assertEquals(List.of(6, 5), hall.stream().map(r -> r.version).collect(java.util.stream.Collectors.toList()));
     }
 
     // ------------------------------------------------------------------ plateau
