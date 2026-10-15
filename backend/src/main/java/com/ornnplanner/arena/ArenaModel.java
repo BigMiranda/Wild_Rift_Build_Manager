@@ -420,12 +420,40 @@ public final class ArenaModel {
         /** Its shields as the fight starts (any, magic, physical). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public Map<String, Double> startShields = new LinkedHashMap<>();
+        /** Items of its build in slot order ({name, id}), its runes (keystone first) and spells, for the report. */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public List<Map<String, Object>> items = new ArrayList<>();
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public List<String> runes = new ArrayList<>();
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public List<String> spells = new ArrayList<>();
+        /** Damage dealt by source and type after resistances (source -> fisico | magico | verdadeiro -> damage). */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, Map<String, Double>> damageBySourceType = new LinkedHashMap<>();
         /** Second of each activation of its runes and items, by source (all parts of one activation count once). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public Map<String, List<Double>> procTimes = new LinkedHashMap<>();
         /** Seconds left of each ability's cooldown at the end (0 = ready). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public Map<String, Double> cooldownsLeft = new LinkedHashMap<>();
+    }
+
+    /**
+     * The same fight without one item of one champion (the item's stats, effects and triggers out): what the item was
+     * worth in that fight. The deltas are the fight with the item minus this.
+     */
+    public static class ItemValue {
+        public int fighter;
+        public String item;
+        public Long itemId;
+        /** Winner of the fight without the item (0, 1, -1 = none). */
+        public int winner;
+        public double duration;
+        /** Damage the champion dealt, seconds it stayed alive, and health left of its side and of the other. */
+        public double dealt;
+        public double alive;
+        public double teamHealth;
+        public double enemyHealth;
     }
 
     /** A conditional effect of the planner in the run: when it counts, and what it did. */

@@ -452,6 +452,7 @@ public class FighterBuilder {
             }
         }
         f.spells = b.spells == null ? new ArrayList<>() : new ArrayList<>(b.spells);
+        f.runes = b.runePage == null ? new ArrayList<>() : b.runePage.chosen();
         return f;
     }
 

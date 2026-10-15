@@ -98,6 +98,80 @@ public class ArenaService {
         return new Arena(catalog, map).withSafeZone(sc.safeZone).run(inputs, sc.actions == null ? List.of() : sc.actions, duration(sc));
     }
 
+    /**
+     * The value of each item of each champion in the scenario: the same fight without the item (no frames, the runs in
+     * parallel). One fight per item, so it is asked for, not run with every fight.
+     */
+    public List<ArenaModel.ItemValue> itemValues(Scenario sc) {
+        List<Arena.Input> base = prepare(sc);
+        List<ArenaModel.ItemValue> rows = new ArrayList<>();
+        List<java.util.concurrent.Callable<ArenaModel.Result>> runs = new ArrayList<>();
+        for (int k = 0; k < sc.fighters.size(); k++) {
+            Slot slot = sc.fighters.get(k);
+            if (slot.dummy != null || slot.buildId == null) {
+                continue;
+            }
+            for (Map.Entry<String, Long> item : base.get(k).f.items.entrySet()) {
+                Scenario without = JSON.convertValue(sc, Scenario.class);
+                Slot s = without.fighters.get(k);
+                s.excludeItems = new LinkedHashSet<>(slot.excludeItems == null ? Set.of() : slot.excludeItems);
+                s.excludeItems.add(item.getValue());
+                List<Arena.Input> inputs = prepare(without);   // builds (and the database) on this thread
+                ArenaModel.ItemValue v = new ArenaModel.ItemValue();
+                v.fighter = k;
+                v.item = item.getKey();
+                v.itemId = item.getValue();
+                rows.add(v);
+                runs.add(() -> new Arena(catalog, map).withSafeZone(without.safeZone).withoutFrames()
+                        .run(inputs, without.actions == null ? List.of() : without.actions, duration(without)));
+            }
+        }
+        List<ArenaModel.Result> results = parallel(runs);
+        for (int i = 0; i < rows.size(); i++) {
+            fill(rows.get(i), results.get(i));
+        }
+        return rows;
+    }
+
+    /** The numbers of a fight without the item, for the champion it was taken from. */
+    static void fill(ArenaModel.ItemValue v, ArenaModel.Result alt) {
+        ArenaModel.FighterStats me = alt.fighters.get(v.fighter);
+        v.winner = alt.winner;
+        v.duration = alt.duration;
+        v.dealt = me.dealt;
+        v.alive = me.deathTime != null ? me.deathTime : alt.duration;
+        for (ArenaModel.FighterStats f : alt.fighters) {
+            if (f.team == me.team) {
+                v.teamHealth += Math.max(0, f.health);
+            } else {
+                v.enemyHealth += Math.max(0, f.health);
+            }
+        }
+    }
+
+    /** Runs fights on all cores; results in the order given (each fight is deterministic on its own). */
+    static <T> List<T> parallel(List<java.util.concurrent.Callable<T>> runs) {
+        if (runs.isEmpty()) {
+            return List.of();
+        }
+        int threads = Math.max(1, Math.min(runs.size(), Runtime.getRuntime().availableProcessors()));
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        try {
+            List<T> out = new ArrayList<>();
+            for (java.util.concurrent.Future<T> f : pool.invokeAll(runs)) {
+                out.add(f.get());
+            }
+            return out;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        } catch (java.util.concurrent.ExecutionException e) {
+            throw e.getCause() instanceof RuntimeException ? (RuntimeException) e.getCause() : new IllegalStateException(e.getCause());
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
     static double duration(Scenario sc) {
         return Math.max(5, Math.min(MAX_DURATION, sc.duration <= 0 ? 60 : sc.duration));
     }

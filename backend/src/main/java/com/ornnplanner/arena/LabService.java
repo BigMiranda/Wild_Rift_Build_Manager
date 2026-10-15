@@ -179,6 +179,33 @@ public class LabService {
         return out;
     }
 
+    /**
+     * The value of each item of the champion: the combo again against the ragdoll (the behavior shown) without the
+     * item, no frames, the runs in parallel.
+     */
+    public List<ArenaModel.ItemValue> itemValues(Request req) {
+        Arena.Input me = champion(req);
+        Arena.Input d = dummy(req);
+        Combo c = combo(req);
+        ComboBench.Config cfg = benchConfig(req);
+        String show = req.show != null && cfg.behaviors.contains(req.show) ? req.show : cfg.behaviors.get(0);
+        List<ArenaModel.ItemValue> rows = new ArrayList<>();
+        List<java.util.concurrent.Callable<ArenaModel.Result>> runs = new ArrayList<>();
+        for (Map.Entry<String, Long> item : me.f.items.entrySet()) {
+            Arena.Input without = arena.labInput(req.buildId, req.minute, java.util.Set.of(item.getValue()));
+            ArenaModel.ItemValue v = new ArenaModel.ItemValue();
+            v.item = item.getKey();
+            v.itemId = item.getValue();
+            rows.add(v);
+            runs.add(() -> bench.run(without, d, c, show, cfg, false));
+        }
+        List<ArenaModel.Result> results = ArenaService.parallel(runs);
+        for (int i = 0; i < rows.size(); i++) {
+            ArenaService.fill(rows.get(i), results.get(i));
+        }
+        return rows;
+    }
+
     /** The combo with each calibratable wait moved to its best value (coordinate by coordinate). */
     public RunResult calibrate(Request req) {
         Arena.Input me = champion(req);

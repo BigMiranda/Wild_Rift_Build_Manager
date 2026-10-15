@@ -24,6 +24,8 @@ public class Fighter {
     /** Base attack speed at the level (attacks / s), before the bonus %. */
     public double baseAttackSpeed;
     public List<String> spells = new ArrayList<>();
+    /** Runes of its page, keystone first (for the report; their fight effects are in {@link #effects}). */
+    public List<String> runes = new ArrayList<>();
     /** Where the effective stats come from (item / rune / champion effect name -> amount). */
     public Map<String, Double> shieldSources = new LinkedHashMap<>();
     /** Shields that absorb only magic / only physical damage. */

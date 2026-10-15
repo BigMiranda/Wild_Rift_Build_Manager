@@ -46,6 +46,12 @@ public class ArenaController {
         return lab.run(req);
     }
 
+    /** The combo against the ragdoll without each item of the champion. */
+    @PostMapping("/lab/item-values")
+    public List<ArenaModel.ItemValue> labItemValues(@RequestBody com.ornnplanner.arena.LabService.Request req) {
+        return lab.itemValues(req);
+    }
+
     /** The combo with its waits calibrated. */
     @PostMapping("/lab/calibrate")
     public com.ornnplanner.arena.LabService.RunResult labCalibrate(@RequestBody com.ornnplanner.arena.LabService.Request req) {
@@ -272,6 +278,12 @@ public class ArenaController {
     @PostMapping("/run")
     public ArenaModel.Result run(@RequestBody ArenaModel.Scenario scenario) {
         return arena.run(scenario);
+    }
+
+    /** The same fight without each item of each champion (one fight per item, on demand). */
+    @PostMapping("/item-values")
+    public List<ArenaModel.ItemValue> itemValues(@RequestBody ArenaModel.Scenario scenario) {
+        return arena.itemValues(scenario);
     }
 
     @GetMapping("/scenarios")

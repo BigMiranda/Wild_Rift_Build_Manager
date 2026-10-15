@@ -782,6 +782,14 @@ public class Arena {
         r.minute = in.f.minute;
         r.maxHealth = u.maxHp;
         r.actives.putAll(in.activeCooldowns);
+        in.f.items.forEach((name, id) -> {
+            Map<String, Object> it = new LinkedHashMap<>();
+            it.put("name", name);
+            it.put("id", id);
+            r.items.add(it);
+        });
+        r.runes.addAll(in.f.runes);
+        r.spells.addAll(in.f.spells);
         if (in.kit == null) {
             r.notes.add("sem ficha de habilidades: habilidades com alvo a 550 de alcance e o dano lido do texto do jogo");
         }
@@ -3943,6 +3951,7 @@ public class Arena {
         a.r.damageBySource.merge(source, dmg, Double::sum);
         if (dmg > 0) {
             a.r.damageByType.merge(type, dmg, Double::sum);
+            a.r.damageBySourceType.computeIfAbsent(source, k -> new LinkedHashMap<>()).merge(type, dmg, Double::sum);
         }
         led(key(a, source)).damage += dmg;
         if (res >= 0 && extraShred > 0 && t.shredSource[res] != null && now < t.shredUntil[res]) {
@@ -6072,7 +6081,7 @@ public class Arena {
         }
         Object t = p.get("tipo");
         if (t == null || "ativo".equals(t) || "golpe".equals(t) || "aura".equals(t) || "ao_contato".equals(t)
-                || "a_cada_ataque".equals(t) || "lamina".equals(t) || "queimadura".equals(t)) {
+                || "a_cada_ataque".equals(t) || "lamina".equals(t) || "queimadura".equals(t) || "espinhos".equals(t)) {
             return String.valueOf(p.getOrDefault("dano_tipo", "fisico"));
         }
         return String.valueOf(t);

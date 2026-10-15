@@ -186,6 +186,25 @@ class ArenaRulesTest {
         assertTrue(lifesteal.healLost <= lifesteal.healed + EPS, lifesteal.healed + " healed, " + lifesteal.healLost + " cut");
     }
 
+    /** Thornmail's reflection is magic damage (MR mitigates it), not a type of its own. */
+    @Test
+    void thornsAreMagicDamage() {
+        Arena.Input b = post(100000, 0, 0);
+        b.f.base.put(Stats.ARMOR, 0.0);
+        b.f.total.put(Stats.ARMOR, 100.0);   // 100 bonus armor: 20 + 6 = 26 a hit
+        for (Map<String, Object> e : CATALOG.effects("Armadura de Espinhos")) {
+            b.f.effects.add(new ItemEffect("Armadura de Espinhos", e));
+        }
+        Arena.Input a = attacker(100);
+        a.f.total.put(Stats.MAGIC_RESIST, 100.0);
+        Result r = run(List.of(a, b), List.of(), 5);
+        Map<String, Double> byType = r.fighters.get(1).damageBySourceType.get("Armadura de Espinhos");
+        assertNotNull(byType, r.fighters.get(1).damageBySourceType.toString());
+        assertEquals(java.util.Set.of("magico"), byType.keySet());
+        // halved by the attacker's 100 MR: 13 a hit
+        assertEquals(0, byType.get("magico") % 13, 1e-6, byType.toString());
+    }
+
     @Test
     void grievousWoundsOnlyCountsTheHealThatWouldHaveLanded() {
         Arena.Input a = champion("Darius", 0, 1000, 0, 100000, 100, 0);   // barely hurt: most lifesteal goes over full health

@@ -1,10 +1,11 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
-import { n0, n1, statAbbr, statValue } from '../format.js';
+import { n0, n1 } from '../format.js';
 import MinuteInput from '../components/MinuteInput.jsx';
 import { ChampionAvatar } from '../components/ChampionPicker.jsx';
 import ArenaLab from '../components/ArenaLab.jsx';
+import FightReport from '../components/FightReport.jsx';
 
 /**
  * Orchestrated matchup: a scenario (champions from saved builds at a minute, where they start, and a timeline of
@@ -90,6 +91,7 @@ export default function Arena() {
   const ready = sc.fighters.length > 1 && sc.fighters.every((f) => f.buildId != null)
     && sc.fighters.some((f) => f.team === 0) && sc.fighters.some((f) => f.team === 1);
   const seq = useRef(0);
+  const ranWith = useRef(null);   // the scenario of the result shown (item values run it again)
   useEffect(() => {
     if (!ready) {
       setResult(null);
@@ -101,6 +103,7 @@ export default function Arena() {
       try {
         const r = await api.post('/api/arena/run', sc);
         if (n === seq.current) {
+          ranWith.current = sc;
           setResult(r);
           setError(null);
         }
@@ -315,7 +318,8 @@ export default function Arena() {
             setMessage(t('arena.chain.used', { n: Object.keys(latest ?? {}).length }));
           }} />
       )}
-      {result && <ArenaReport result={result} names={names} />}
+      {result && <FightReport result={result} names={names}
+        onItemValues={() => api.post('/api/arena/item-values', ranWith.current)} />}
     </div>
   );
 }
@@ -905,7 +909,7 @@ function TrainChart({ points }) {
 
 function Outcome({ result }) {
   const text = result.winner < 0 ? t('report.draw', { s: n1(result.duration) })
-    : t('report.win', { team: t(`combat.team${result.winner}`), s: n1(result.duration) });
+    : t('report.win', { team: t(`report.team${result.winner}`), s: n1(result.duration) });
   return <strong>{text}</strong>;
 }
 
@@ -1348,162 +1352,3 @@ function ActionEditor({ action, fighters, names, stats, onChange, onRemove, onCl
   );
 }
 
-/** Every conditional effect of the builds: when the arena counts it, how often it fired and what it gave. */
-function TriggerTable({ result, names }) {
-  const rows = result.triggers || [];
-  if (!rows.length) return null;
-  const fr = result.fighters;
-  const byKey = {};
-  for (const l of result.ledger) byKey[`${l.fighter}|${l.source}`] = l;
-  const idle = (r) => r.mode === 'nunca' || (r.mode === 'estatico' && !r.buildOn);
-  return (
-    <details className="report-details" open>
-      <summary>{t('arena.trig.title', { n: rows.length })}</summary>
-      <p className="muted small">{t('arena.trig.help')}</p>
-      <div className="table-wrap">
-        <table className="data arena-triggers">
-          <thead>
-            <tr>
-              <th className="l">{t('arena.trig.effect')}</th><th className="l">{t('arena.trig.how')}</th>
-              <th title={t('arena.trig.timesTitle')}>{t('arena.trig.times')}</th><th>{t('arena.trig.first')}</th>
-              <th title={t('arena.trig.onTitle')}>{t('arena.trig.on')}</th><th>{t('arena.trig.gave')}</th>
-              <th className="l">{t('arena.trig.stats')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, k) => {
-              const l = r.mode === 'modelado' ? byKey[`${r.fighter}|${r.source}`] : null;
-              const gave = [
-                r.shield > 0.5 && t('arena.trig.shield', { v: n0(r.shield) }),
-                r.healed > 0.5 && t('arena.trig.heal', { v: n0(r.healed) }),
-                l && l.damage > 0.5 && t('arena.trig.damage', { v: n0(l.damage) }),
-                l && l.healed > 0.5 && t('arena.trig.heal', { v: n0(l.healed) }),
-              ].filter(Boolean).join(' · ');
-              const stats = Object.entries(r.delta || {}).map(([s, v]) => `${v > 0 ? '+' : ''}${statValue(s, v)} ${statAbbr(s)}`).join(', ');
-              return (
-                <tr key={k} className={idle(r) ? 'muted' : ''}>
-                  <td className="l">
-                    <span className="swatch" style={{ background: TEAM[fr[r.fighter]?.team ?? 0] }} />{r.fighter + 1} · {r.source}
-                    {r.effect !== r.source && <small className="muted"> · {r.effect}</small>}
-                    <small className="muted"> ({t(`arena.trig.kind.${r.kind}`)})</small>
-                  </td>
-                  <td className="l small">{r.how}</td>
-                  <td className={r.activations === 0 && r.mode !== 'estatico' && r.mode !== 'modelado' && r.mode !== 'nunca' ? 'warn' : ''}>
-                    {r.mode === 'estatico' || r.mode === 'modelado' || r.mode === 'nunca' ? '—' : r.activations}
-                  </td>
-                  <td>{r.first != null ? `${n1(r.first)}s` : '—'}</td>
-                  <td>{r.activeSeconds > 0.05 ? `${n1(r.activeSeconds)}s` : '—'}</td>
-                  <td>{gave || '—'}</td>
-                  <td className="l small">{stats || '—'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </details>
-  );
-}
-
-function ArenaReport({ result, names }) {
-  const fr = result.fighters;
-  const items = result.ledger.filter((l) => l.damage + l.extraShred + l.extraAmp + l.prevented + l.shieldCut + l.healCut
-    + l.shieldAbsorbed + l.healed > 0.5);
-  return (
-    <section className="panel">
-      <h3>{t('report.fighters')}</h3>
-      <div className="table-wrap">
-        <table className="data">
-          <thead>
-            <tr>
-              <th className="l">{t('report.champion')}</th><th>{t('report.lvMin')}</th><th>Vida</th><th>{t('report.dealt')}</th>
-              <th>{t('report.taken')}</th><th>{t('report.mitigated')}</th><th>{t('report.shieldAbs')}</th><th>{t('report.healed')}</th>
-              <th>{t('report.healLost')}</th><th>{t('report.alive')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {fr.map((f, i) => (
-              <tr key={i}>
-                <td className="l"><span className="swatch" style={{ background: TEAM[f.team] }} />{i + 1} · {names[i]} <small className="muted">{f.build}</small></td>
-                <td>{f.level} · {n1(f.minute)}</td>
-                <td>{n0(f.health)} / {n0(f.maxHealth)}</td>
-                <td>{n0(f.dealt)}</td><td>{n0(f.taken)}</td><td>{n0(f.mitigated)}</td><td>{n0(f.shieldAbsorbed)}</td>
-                <td>{n0(f.healed)}</td><td>{n0(f.healLost)}</td>
-                <td>{f.deathTime != null ? `✝ ${n1(f.deathTime)}s` : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {fr.some((f) => f.eventSummary) && (
-        <details className="report-details" open>
-          <summary>{t('arena.events.title')}</summary>
-          <p className="muted small">{t('arena.events.help')}</p>
-          <ul className="report-events">
-            {fr.map((f, i) => f.eventSummary && (
-              <li key={i}><span className="swatch" style={{ background: TEAM[f.team] }} />{i + 1} · {names[i]}: {f.eventSummary}</li>
-            ))}
-          </ul>
-        </details>
-      )}
-      <details className="report-details" open>
-        <summary>{t('arena.ledger')}</summary>
-        <div className="table-wrap">
-          <table className="data">
-            <thead>
-              <tr><th className="l">{t('arena.source')}</th><th>{t('report.col.damage')}</th><th>{t('report.col.extra')}</th>
-                <th>{t('report.col.prevented')}</th><th>{t('report.col.cancel')}</th><th>{t('report.col.own')}</th><th>{t('report.col.lost')}</th></tr>
-            </thead>
-            <tbody>
-              {items.map((l, k) => (
-                <tr key={k}>
-                  <td className="l"><span className="swatch" style={{ background: TEAM[fr[l.fighter]?.team ?? 0] }} />{l.fighter + 1} · {l.source}</td>
-                  <td>{l.damage > 0.5 ? n0(l.damage) : '—'}</td>
-                  <td>{l.extraShred + l.extraAmp > 0.5 ? `+${n0(l.extraShred + l.extraAmp)}` : '—'}</td>
-                  <td>{l.prevented > 0.5 ? n0(l.prevented) : '—'}</td>
-                  <td>{l.shieldCut + l.healCut > 0.5 ? n0(l.shieldCut + l.healCut) : '—'}</td>
-                  <td>{l.shieldAbsorbed + l.healed > 0.5 ? n0(l.shieldAbsorbed + l.healed) : '—'}</td>
-                  <td className={l.shieldLost + l.healLost > 0.5 ? 'warn' : ''}>{l.shieldLost + l.healLost > 0.5 ? n0(l.shieldLost + l.healLost) : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
-      <TriggerTable result={result} names={names} />
-      {result.combos?.length > 0 && (
-        <details className="report-details" open>
-          <summary>{t('arena.combos.title', { n: result.combos.length })}</summary>
-          <ul className="report-events">
-            {result.combos.map((c, k) => (
-              <li key={k}>
-                <span className="swatch" style={{ background: TEAM[fr[c.fighter]?.team ?? 0] }} />
-                {c.fighter + 1} · {names[c.fighter]}: <strong>{c.combo}</strong> {n1(c.start)}s → {c.end != null ? `${n1(c.end)}s` : '…'}{' '}
-                <span className={c.outcome === 'done' ? '' : 'warn'}>
-                  {c.outcome === 'done' ? t('arena.combos.done') : t('arena.combos.aborted', { why: c.reason })}
-                </span>
-                <ol className="small muted">{c.steps.map((s, j) => <li key={j}>{n1(s.t)}s: {s.text.replace(/^\d+\. /, '')}</li>)}</ol>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-      {result.decisions?.length > 0 && (
-        <details className="report-details">
-          <summary>{t('arena.decisions', { n: result.decisions.length })}</summary>
-          <ul className="report-events">{result.decisions.map((e, k) => <li key={k}>{n1(e.t)}s: {e.text}</li>)}</ul>
-        </details>
-      )}
-      <details className="report-details">
-        <summary>{t('report.events')} ({result.events.length})</summary>
-        <ul className="report-events">{result.events.map((e, k) => <li key={k}>{n1(e.t)}s: {e.text}</li>)}</ul>
-      </details>
-      {result.skipped.length > 0 && (
-        <details className="report-details" open>
-          <summary className="warn">{t('arena.skipped', { n: result.skipped.length })}</summary>
-          <ul className="report-events">{result.skipped.map((e, k) => <li key={k}>{e.text}</li>)}</ul>
-        </details>
-      )}
-    </section>
-  );
-}

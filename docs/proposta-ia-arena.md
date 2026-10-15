@@ -938,3 +938,47 @@ Testes no início da rodada: 167 (8 pulados por padrão).
     reconjuração que quebra o Frágil da 1ª passagem.
   - `ItemEffectsTest` não usava a luta rápida (testa os efeitos no `TimelineEngine`) e ficou como estava.
 - Testes: 172 antes e depois. O golden não mudou.
+
+### Parte 3 — Relatório da Arena com imagens (`FightReport`) ✅
+Componente único `components/FightReport.jsx`, usado pela luta do cenário (`Arena.jsx`) e pela luta mostrada no
+laboratório (`ArenaLab.jsx`). O antigo `ArenaReport` e o `TriggerTable` saíram. As seções:
+1. **Resultado:** vencedor e duração; a vida restante de cada lado; e o gráfico de vida + escudos ao longo da luta,
+   montado dos quadros. Tem uma linha por campeão, em tons da cor do lado, e as mortes marcadas com ✝.
+2. **Campeões:** a tabela de antes. Em cada linha, duas fileiras de ícones: os itens na ordem dos slots; e a pedra
+   fundamental (22 px), as outras runas (16 px) e os feitiços. Mais nível e minuto. O detalhe recolhido traz os status
+   do início (`StatIcon`), as habilidades com nível e recarga, e as notas.
+3. **Dano por fonte:** barras horizontais por campeão, ordenadas e com o ícone da fonte. A barra divide-se nas cores
+   do tipo de dano (físico, mágico, verdadeiro), com legenda.
+4. **Itens e efeitos:** o livro-caixa agrupado por campeão, com ícone. Os itens aparecem na ordem dos slots mesmo sem
+   lançamento no livro, porque podem valer pela luta sem eles; depois vêm as demais fontes.
+   - O botão **"Calcular o valor de cada item"** roda a mesma luta sem cada item, sem quadros e em paralelo. Mostra o
+     vencedor sem o item, Δ dano causado, Δ tempo vivo e Δ vida do lado.
+   - Na Arena: `POST /api/arena/item-values` (o cenário da luta mostrada).
+   - No laboratório: `POST /api/arena/lab/item-values` (o combo contra o boneco no comportamento mostrado).
+   - A luta sem o item vem de `Slot.excludeItems` / `labInput(..., without)`: status, efeitos e gatilhos saem juntos.
+5. **Gatilhos e runas:** uma linha por fonte (runa ou item), juntando as partes, com ícone e a contagem por fonte da
+   Parte 1 (`procTimes` / `runa_ativou`). Também entram as runas e itens que só têm efeito de combate, como Primeiro
+   Ataque e o golpe do Coração de Aço.
+6. **Decisões da IA, eventos, combos e ordens não cumpridas:** recolhidos.
+
+- **Dados novos em `FighterStats`** (todos fora da impressão digital do golden, por serem descritivos):
+  - `items` ({nome, id}, na ordem dos slots), `runes` (pedra fundamental primeiro) e `spells`;
+  - `damageBySourceType` (fonte → tipo → dano).
+  - `Fighter.runes` vem da página de runas da build.
+- **Ícones:** os de itens, runas e feitiços já existiam (`seed/icones`, `seed/runas`, `seed/feiticos`). O catálogo de
+  runas é carregado pelo relatório quando a Arena abre sem passar pelo planejador. Não há ícones de habilidades no
+  projeto: a habilidade aparece como um selo com a tecla (1, 2, 3, R), o ataque como ⚔ e as outras fontes (Frágil,
+  Regeneração) como um selo redondo com a inicial. O nome vai sempre no `title`.
+- **Tela estreita:** cada tabela rola dentro de si (`.table-wrap`), as barras passam a uma coluna abaixo de 640 px e
+  os ícones têm 16 a 22 px. Testado a 375 px: o relatório cabe. O cabeçalho do app já transbordava antes e não mudou.
+- **Bug achado e corrigido:** o dano refletido da Armadura de Espinhos e do Colete Espinhoso saía com o tipo
+  `espinhos`. Como esse tipo não é físico nem mágico, nenhuma resistência reduzia o dano, que funcionava como dano
+  verdadeiro. Agora é mágico, como manda o `combate_7_3.yml`. Teste: `ArenaRulesTest.thornsAreMagicDamage`. O golden
+  não mudou, porque nenhuma luta dele tem esses itens.
+- **Verificado na tela** com o cenário salvo "Ornn de Coração de Aço vs Rumble":
+  - o gráfico mostra a queda da vida do Rumble até a morte aos 18,9 s;
+  - as barras do Ornn têm o Frágil mágico, os ataques físicos e os espinhos agora mágicos;
+  - o valor dos itens traz, por exemplo, "sem o Coração de Aço vence o Lado vermelho" e "sem a Duplaguarda vence o
+    Lado vermelho";
+  - na tabela de gatilhos, o Suserano tem 1 ativação.
+- Testes: 173 (mais 1). O golden não mudou.

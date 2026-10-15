@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
+import FightReport from './FightReport.jsx';
 import { t } from '../i18n.js';
 import { n0, n1 } from '../format.js';
 import MinuteInput from './MinuteInput.jsx';
@@ -301,6 +302,10 @@ export default function ArenaLab({ builds, scenario, names }) {
           {metrics && <MetricsCard m={metrics} />}
           <BehaviorTable report={run.report} />
         </section>
+      )}
+      {run && fight && (
+        <FightReport result={fight} names={fightNames}
+          onItemValues={() => api.post('/api/arena/lab/item-values', request({ combo: run.combo }))} />
       )}
 
       <section className="panel">
