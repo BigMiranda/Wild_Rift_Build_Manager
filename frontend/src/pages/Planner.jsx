@@ -24,6 +24,7 @@ import RuneEditor from '../components/RuneEditor.jsx';
 import SpellEditor from '../components/SpellEditor.jsx';
 import PrepExport from '../components/PrepExport.jsx';
 import SkillExport from '../components/SkillExport.jsx';
+import PlannerLab from '../components/PlannerLab.jsx';
 import ItemSetupExport, { configurableItems, explicitItemSetup } from '../components/ItemSetupExport.jsx';
 
 const emptyBuild = (folderId) => ({
@@ -570,12 +571,18 @@ export default function Planner({ meta, items }) {
             <StatSheet point={point} itemsById={itemsById} />
             <div className="moment-tabbed">
               <div className="chips moment-tabs" role="tablist" aria-label={t('moment.tabs')}>
-                {['relevance', 'passives', 'effective'].map((k) => (
+                {['relevance', 'passives', 'effective', 'lab'].map((k) => (
                   <button key={k} role="tab" aria-selected={momentTab === k} className={momentTab === k ? 'active' : ''} onClick={() => setMomentTab(k)}>
                     {t(`moment.tab.${k}`)}
                   </button>
                 ))}
               </div>
+              {momentTab === 'lab' && (
+                <section className="panel">
+                  <h3>{t('plab.title', { time: mmss(point.minute) })}</h3>
+                  <PlannerLab buildId={draft.id} minute={Math.round(point.minute * 100) / 100} builds={builds} />
+                </section>
+              )}
               {momentTab === 'relevance' && <RelevanceReport point={point} prices={result.statPrices} itemsById={itemsById} />}
               {momentTab === 'effective' && (
                 <section className="panel">

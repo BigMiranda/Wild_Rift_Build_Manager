@@ -653,6 +653,13 @@ public class Arena {
         }
         for (U u : units) {
             drill(u);
+            for (String st : List.of(Stats.MAX_HEALTH, Stats.ARMOR, Stats.MAGIC_RESIST, Stats.ATTACK_DAMAGE, Stats.ABILITY_POWER,
+                    "% Armor Penetration", "Armor Penetration", "% Magic Penetration", "Magic Penetration")) {
+                u.r.startStats.put(st, Stats.MAX_HEALTH.equals(st) ? u.maxHp : u.stat(st));
+            }
+            u.r.startShields.put("any", sum(u.shield));
+            u.r.startShields.put("magico", sum(u.shieldMagic));
+            u.r.startShields.put("fisico", sum(u.shieldPhysical));
         }
         List<Action> sorted = new ArrayList<>(actions);
         sorted.sort(Comparator.comparingDouble(a -> a.time));
@@ -5525,6 +5532,16 @@ public class Arena {
             }
         }
         return false;
+    }
+
+    // ------------------------------------------------------------------ the damage rules, for the lab
+
+    /**
+     * The share of a hit that gets through a resistance: the very function {@link #deal} uses (after the % reduction,
+     * the % and the flat penetration).
+     */
+    public static double through(double resist, double shred, double pctPen, double flatPen) {
+        return com.ornnplanner.combat.CombatSimulator.mitigation(resist, shred, pctPen, flatPen);
     }
 
     // ------------------------------------------------------------------ structured events

@@ -165,7 +165,7 @@ final class ArenaScenarios {
      * was recorded): left out of the fingerprint, so describing a fight better never looks like a changed fight.
      */
     static final java.util.Set<String> DESCRIPTIVE = java.util.Set.of("events", "eventSummary", "damageByType", "controlSpans",
-            "cooldownsLeft", "escapedAt");
+            "cooldownsLeft", "escapedAt", "startStats", "startShields");
 
     /** SHA-256 of the whole result as JSON (but {@link #DESCRIPTIVE}): any change in any number, event or frame changes it. */
     static String fingerprint(Result r) {

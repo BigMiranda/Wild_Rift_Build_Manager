@@ -782,3 +782,49 @@ Campos novos, documentados no cabeçalho do `kits_7_3.yml`:
   tem marca nem reconjuração); um exercício começa do estado (Frágil no alvo quebrado pelo 1º ataque, alvo no ar
   desde 0, R em recarga); proibir / obrigar; o preset evita o W com Frágil no alvo; o nível e as diretrizes salvos
   na versão.
+
+### Parte I — Laboratório no planejador de builds ✅
+Aba **"Laboratório"** nos detalhes do momento do planejador (`PlannerLab.jsx`), para a build aberta (a versão salva)
+no minuto escolhido na linha do tempo. API em `/api/lab` (`PlannerLabService`).
+1. **Combo no boneco** (`POST /api/lab/combo`): o melhor combo da biblioteca para essa build e minuto. Se não existe,
+   uma busca pequena (feixe 24, 8 passos, 800 combos) gera os combos na hora e os salva na biblioteca, que serve de
+   cache. Mostra dano, controle, marcas e duração por comportamento do boneco escolhido, e deixa trocar de combo.
+2. **Valor de cada item** (`/api/lab/items`): o mesmo combo sem cada item. O item sai da resolução da build
+   (`CombatService.Combatant.excludeItems`), o mesmo contrafactual do combate rápido: status, efeitos e gatilhos
+   saem juntos. Mostra Δ dano, Δ controle, Δ duração e Δ nota, com opção de recalibrar o combo sem o item.
+   **Tanques:** com "Dano recebido de" outra build, o melhor combo dela contra esta parada, com e sem cada item
+   (Δ dano recebido; positivo = o item poupa isso).
+3. **Item × boneco** (`/api/lab/scenarios`): Δ dano do combo sem cada item em cada boneco (os presets e os salvos;
+   os salvos podem vestir uma build e aplicar efeitos: corte de cura, de escudo, redução de armadura / RM).
+4. **"Visto por"** (`/api/lab/seen-by`, `SeenBy`): como outra build, num minuto, enxerga esta, com opção de um boneco
+   aliado do atacante vestindo uma build (os efeitos de quem acerta dela no máximo, ex.: Cutelo Negro).
+   - Mostra vida, armadura e RM efetivas (redução %, penetração % e fixa, letalidade, a redução no máximo), o que passa
+     de físico e de mágico, a redução contra ataques, escudos depois do corte, a cura que chega depois de Feridas e
+     a vida efetiva contra físico, só ataques, mágico e misto (na proporção DdA / PdH do atacante, a mesma regra do
+     `lowest_effective_hp` dos planos).
+   - **Sem fórmula paralela:** os status de início vêm de uma corrida de 0 s da própria Arena
+     (`FighterStats.startStats` / `startShields`), e o que passa vem de `Arena.through`, a mesma
+     `CombatSimulator.mitigation` de cada golpe.
+   - O gráfico mostra a vida efetiva minuto a minuto (as duas builds no mesmo minuto, até o fim da partida), e há a
+     opção "ao contrário".
+   - 🎯 `SeenByTest`: um atacante com 20% de penetração e 10 de letalidade contra 120 de armadura (efetiva 86) só ataca
+     até matar. A vida efetiva física calculada (5580) é igual ao dano bruto dos 31 ataques de 180 que mataram.
+5. **API para a busca automática de builds** (a busca não foi implementada):
+   - `PlannerLabService.score(campeão, boneco, combo, config)`, com cache pela chave itens + runas + nível + passos do
+     combo + boneco + modo;
+   - `POST /api/lab/compare-builds`: builds lado a lado, cada uma com o seu melhor combo no minuto.
+
+#### Como será a busca automática de builds (desenho e custo)
+- **Espaço:** ordens de compra pela linha do tempo de ouro do `TimelineEngine` (o ouro/min e o XP/min da build dão,
+  em cada minuto, quais itens cabem). Uma build candidata é uma ordem de até 6 itens dentre os que fazem sentido
+  para o campeão (filtro pelo planejador: categoria, grupos exclusivos).
+- **Algoritmo:** busca em feixe sobre a ordem, como a dos combos. Cada prefixo é medido nos minutos-chave (ex.: 10,
+  14, 18, fim) pela nota do banco com o melhor combo do campeão naquele minuto; a nota da build é a média ponderada
+  dos minutos. O combo de cada minuto vem da biblioteca, recalibrado só no fim, para os finalistas.
+- **Custo, pelos números do benchmark:** uma avaliação no banco = 4 comportamentos × ~7 s simulados ≈ 28 s
+  simulados. A ~14 mil s simulados/s por thread (roteiro com combo), são ~2 ms por avaliação; com 20 threads, ~120 mil
+  s/s, ou ~4 mil avaliações/s. Uma build em 4 minutos = 4 avaliações. Com feixe 32 e ~40 itens candidatos por
+  passo: 6 passos × 32 × 40 × 4 ≈ 31 mil avaliações ≈ **8 s** com cache, mais o `TimelineEngine` e a montagem de
+  cada lutador. A montagem (`arenaBuild`, ~50–100 ms por build e minuto, medida no laboratório) passa a dominar:
+  6 × 32 × 40 × 4 × 75 ms ≈ 38 min em 1 thread. Por isso a montagem precisa de cache por (itens, minuto) e de
+  paralelismo; com isso, a estimativa fica em alguns minutos por campeão e minuto.

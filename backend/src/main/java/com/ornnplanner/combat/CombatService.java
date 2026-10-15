@@ -42,6 +42,8 @@ public class CombatService {
         /** A build that is not saved (the lab's ragdoll wearing a build's items); used instead of {@link #buildId}. */
         @com.fasterxml.jackson.annotation.JsonIgnore
         public Build build;
+        /** Items left out (the lab's "the build without this item", like the counterfactual of the quick matchup). */
+        public java.util.Set<Long> excludeItems;
         /** Game minute (null = the build's end of match, else its last purchase). */
         public Double minute;
         public List<String> order;
@@ -506,7 +508,7 @@ public class CombatService {
         r.level = p.level;
         r.items = new ArrayList<>();
         for (ItemContribution ic : p.contributions) {
-            if (!ic.rune) {
+            if (!ic.rune && (c.excludeItems == null || !c.excludeItems.contains(ic.itemId))) {
                 r.items.add(ic.itemId);
             }
         }

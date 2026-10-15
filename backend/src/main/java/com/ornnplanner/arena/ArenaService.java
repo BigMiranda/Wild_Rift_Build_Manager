@@ -146,6 +146,7 @@ public class ArenaService {
             c.buildId = slot.buildId;
             c.minute = slot.minute;
             c.activations = slot.activations;
+            c.excludeItems = slot.excludeItems;
             // The champion's name decides its sheet; the sheet's form effects are switched by the arena itself.
             Map<String, Object> kit = (Map<String, Object>) kits.get(combat.championName(c));
             Set<String> forms = new LinkedHashSet<>();
@@ -257,11 +258,17 @@ public class ArenaService {
 
     /** A champion of a saved build at a minute, alone (the lab): as a scenario's slot of the blue side. */
     public Arena.Input labInput(long buildId, Double minute) {
+        return labInput(buildId, minute, null);
+    }
+
+    /** The same without some of its items (null = all of them). */
+    public Arena.Input labInput(long buildId, Double minute, java.util.Set<Long> without) {
         Scenario sc = new Scenario();
         Slot me = new Slot();
         me.team = 0;
         me.buildId = buildId;
         me.minute = minute;
+        me.excludeItems = without;
         Slot other = new Slot();
         other.team = 1;
         other.dummy = new ArenaModel.Dummy();

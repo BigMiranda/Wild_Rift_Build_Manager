@@ -44,6 +44,8 @@ public final class ArenaModel {
         public boolean followTeam = true;
         /** A ragdoll instead of a build ({@link #buildId} is then ignored). */
         public Dummy dummy;
+        /** Items of the build left out (the lab's value of each item); null = none. */
+        public java.util.Set<Long> excludeItems;
     }
 
     /**
@@ -412,6 +414,12 @@ public final class ArenaModel {
         /** Spans [from, to] (s) it spent immobilized (stun, knock-up, displacement). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public List<double[]> controlSpans = new ArrayList<>();
+        /** Its stats as the fight starts (health, resistances, damage, penetration), by the fight's own rules. */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, Double> startStats = new LinkedHashMap<>();
+        /** Its shields as the fight starts (any, magic, physical). */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, Double> startShields = new LinkedHashMap<>();
         /** Seconds left of each ability's cooldown at the end (0 = ready). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public Map<String, Double> cooldownsLeft = new LinkedHashMap<>();
