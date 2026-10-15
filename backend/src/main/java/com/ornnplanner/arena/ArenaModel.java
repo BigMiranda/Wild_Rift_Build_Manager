@@ -420,6 +420,9 @@ public final class ArenaModel {
         /** Its shields as the fight starts (any, magic, physical). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public Map<String, Double> startShields = new LinkedHashMap<>();
+        /** Second of each activation of its runes and items, by source (all parts of one activation count once). */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, List<Double>> procTimes = new LinkedHashMap<>();
         /** Seconds left of each ability's cooldown at the end (0 = ready). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public Map<String, Double> cooldownsLeft = new LinkedHashMap<>();

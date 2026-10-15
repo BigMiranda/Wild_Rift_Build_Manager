@@ -849,3 +849,44 @@ as previsões só são calculadas quando lidas.
 2. Atordoamentos durante a cabeçada da R: a suposição em uso é que a cabeçada anula puxões, empurrões e arremessos
    enquanto dura e que um atordoamento cai no fim dela com o tempo restante (`continua_depois`). É assim no jogo, ou
    o atordoamento interrompe (`interrompe`)?
+
+## Rodada 4 — Simplificar: sai o Confronto, relatório da Arena com imagens, parada por vitória real, planejador enxuto
+
+Testes no início da rodada: 167 (8 pulados por padrão).
+
+### Parte 1 — Uma recarga por fonte (Suserano do Gelo contado 2 vezes) ✅
+- **Causa confirmada:** o Suserano tem duas partes. Uma é o efeito modelado `glacial()` (campo de gelo, explosão e
+  lentidão, com recarga em `strikeReady["runa:Suserano do Gelo"]`). A outra é o gatilho `ao_imobilizar` das defesas
+  (`combate_7_3.yml`), com recarga própria em `T.readyAt`. As duas disparam na mesma imobilização, e cada uma contava
+  `runa_ativou` uma vez: 2 ativações num combo de 8 s. Com o código antigo, o teste novo mede 2.
+  As outras hipóteses não se confirmaram:
+  - as 4 linhas de status da runa já viravam um único `T`, porque o `CombatService.discover` cria um por runa;
+  - o `ComboBench` roda cada comportamento numa `Arena` nova e não soma execuções.
+- **Correção** (`Arena.activate` e `Arena.proc`):
+  - uma recarga por fonte, guardada em `strikeReady` com a chave da fonte (`runa:<nome>` ou o nome do item). Ela é
+    compartilhada pelo efeito modelado (golpes de item, `glacial`), pelos gatilhos e pelas linhas de status;
+  - as partes que disparam no mesmo instante são uma ativação, contada uma vez (`runa_ativou` / `item_ativou`);
+  - cada ativação guarda o segundo em `FighterStats.procTimes`, por fonte, para o relatório.
+  - O campo `T.readyAt` saiu.
+- **Decisões:**
+  - As partes **sem recarga própria**, como acúmulos por ataque, não são barradas pela recarga da fonte; só a
+    contagem por instante vale para elas. Assim, um item com golpe de recarga e um bônus por ataque continua dando
+    o bônus a cada ataque.
+  - O ativo de um item continua com a recarga do ativo (`u.ready`).
+- **Fontes com mais de uma parte (dados de 7.3):**
+  - **com recarga, agora compartilhada:**
+    - Suserano do Gelo: campo modelado (20 s) + defesas `ao_imobilizar` (20 s);
+    - Manto da Aurora: golpe ao acertar habilidade (3 s) + Emissário da Aurora `ao_ser_imobilizado`/imobilizar
+      (3 s), o mesmo dano escrito duas vezes;
+    - Eclipse: golpe (6 s) + Lua Sempre Crescente (`golpe_do_item`, junto do golpe). Antes contava 2 por golpe.
+  - **sem recarga em comum (só a contagem por instante):** Cutelo Negro, Quebrapassos, Mobilização Blindada,
+    Presságio de Randuin, Guinsoo, Terminus, Força da Trindade, Tocha de Chamas Negras, Ritmo Fatal.
+  - **parte modelada sem gatilho que dispare:** Aurora e Crepúsculo, Desespero Eterno, Céu Dividido, Hemodrenário,
+    Redenção, Mandato Imperial, Criafendas, Aperto dos Mortos-Vivos, Aery.
+  - **uma parte só:** Coragem do Colosso (gatilho `ao_imobilizar`, 18 s); o teste cobre a regra também nela.
+- **Golden:** não mudou. Nenhuma das ~35 lutas tem essas runas ou itens.
+- **Testes (`SourceCooldownTest`, 5):**
+  - o combo completo do Ornn (8 s, 3+ imobilizações) dá 1 ativação do Suserano e 1 da Coragem do Colosso;
+  - `repetir 45 s` com W + ataque (uma imobilização a cada W) dá de 2 a 3 ativações, espaçadas por ≥ 20 s
+    (Suserano) e por ≥ 18 s (Colosso), com a mesma contagem no gatilho e no contador;
+  - o dano do campo de gelo é o de uma explosão por ativação.

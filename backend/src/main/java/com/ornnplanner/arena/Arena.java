@@ -216,7 +216,11 @@ public class Arena {
         boolean bladeArmed;
         double bladeReady;
         int attacks;
+        /** Cooldowns of item strikes and of sources (see {@link Arena#activate}). */
         Map<String, Double> strikeReady = new LinkedHashMap<>();
+        /** Instant at which a source's cooldown started, and at which it was last counted (its parts go off together). */
+        Map<String, Double> sourceFiredAt = new LinkedHashMap<>();
+        Map<String, Double> sourceCountedAt = new LinkedHashMap<>();
         Map<String, Double> auraNext = new LinkedHashMap<>();
         // resources
         double resource;
@@ -2216,7 +2220,7 @@ public class Arena {
                                 + num(e.p.get("armadura_bonus"), 0) * s.bonus(Stats.ARMOR)
                                 + num(e.p.get("vida_max_alvo"), 0) * t.maxHp + num(e.p.get("critico_dano"), 0) * crit;
                         deal(s, t, dmg, type(e.p), e.item, ITEM, 0);
-                        count(s, "item_ativou:" + e.item);
+                        proc(s, "item", e.item);
                         double heal = num(e.p.get("cura_vida_max_alvo"), 0) * t.maxHp
                                 + num(e.p.get("cura_vida_bonus"), 0) * s.bonus(Stats.MAX_HEALTH)
                                 + num(e.p.get("cura_pdh"), 0) * s.stat(Stats.ABILITY_POWER);
@@ -2239,7 +2243,7 @@ public class Arena {
     }
 
     private void strike(U s, U t, ItemEffect e) {
-        if (now < s.strikeReady.getOrDefault(e.item, 0.0)) {
+        if (!activate(s, "item", e.item, num(e.p.get("recarga"), 10), 0, true)) {
             return;
         }
         double dmg = level(e.p, "dano", s.f.level) + num(e.p.get("vida_max"), 0) * s.maxHp
@@ -2247,8 +2251,6 @@ public class Arena {
                 + num(e.p.get("dda_bonus"), 0) * s.bonus(Stats.ATTACK_DAMAGE)
                 + num(e.p.get("vida_bonus"), 0) * s.bonus(Stats.MAX_HEALTH) + num(e.p.get("mana"), 0) * s.stat(Stats.MAX_MANA);
         deal(s, t, dmg, type(e.p), e.item, ITEM, 0);
-        count(s, "item_ativou:" + e.item);
-        s.strikeReady.put(e.item, now + num(e.p.get("recarga"), 10));
         fireAll(s, "golpe_do_item", sp -> e.item.equals(sp.get("item")));
     }
 
@@ -3336,7 +3338,6 @@ public class Arena {
         // cleanse (Cimitarra Mercurial).
         for (T x : u.trigs) {
             if ("ativo".equals(x.d.mode) && x.d.source.equals(name)) {
-                x.readyAt = 0;
                 fire(u, x);
                 used = true;
             }
@@ -3357,7 +3358,7 @@ public class Arena {
         }
         u.ready.put(name, now + cd);
         event(u, "usou " + name);
-        count(u, "item_ativou:" + name);
+        proc(u, "item", name);
         return "done";
     }
 
@@ -4182,7 +4183,6 @@ public class Arena {
         final CombatService.Triggered d;
         final Map<String, Object> s;
         final String when;
-        double readyAt;
         /** Its stats count until this time (MAX_VALUE: the rest of the fight). */
         double until = -1;
         /** Share of its stats on (stacks, or how much of the scale). */
@@ -4347,21 +4347,19 @@ public class Arena {
 
     /** Fires a trigger: its stats on (for its duration), its shields / heals / stasis given now. */
     private boolean fire(U u, T t) {
-        if (u.dead || now < t.readyAt - 1e-9) {
+        if (u.dead) {
             return false;
         }
         Map<String, Object> s = t.s;
-        if (s.get("recarga") != null) {
-            t.readyAt = now + level(s, "recarga", u.f.level);
+        // an item's active goes by the active's own cooldown, and counts in useItem
+        boolean active = "ativo".equals(t.when);
+        double cd = active || s.get("recarga") == null ? 0 : level(s, "recarga", u.f.level);
+        if (!activate(u, t.d.kind, t.d.source, cd, 1e-9, !active)) {
+            return false;
         }
         t.rep.activations++;
         if (t.rep.first == null) {
             t.rep.first = Math.round(now * 100) / 100.0;
-        }
-        if ("runa".equals(t.d.kind)) {
-            count(u, "runa_ativou:" + t.d.source);
-        } else if (("item".equals(t.d.kind) || "loja".equals(t.d.kind)) && !"ativo".equals(t.when)) {
-            count(u, "item_ativou:" + t.d.source);   // actives count in useItem
         }
         String src = key(u, t.d.source);
         if (t.hasStats()) {
@@ -4740,10 +4738,9 @@ public class Arena {
     /** Lethal damage: Guardian Angel puts the champion in stasis and brings it back. */
     private boolean revive(U t) {
         for (T x : t.trigs) {
-            if (!"ao_morrer".equals(x.when) || now < x.readyAt - 1e-9) {
+            if (!"ao_morrer".equals(x.when) || !fire(t, x)) {
                 continue;
             }
-            fire(t, x);
             double back = Math.max(1, x.delta("Heal"));
             double stasis = num(x.s.get("estase"), 4);
             t.hp = 1e-6;
@@ -4783,6 +4780,46 @@ public class Arena {
         return level(p, "dano", s.f.level) + num(p.get("dda_bonus"), 0) * s.bonus(Stats.ATTACK_DAMAGE)
                 + num(p.get("pdh"), 0) * s.stat(Stats.ABILITY_POWER) + num(p.get("vida_bonus"), 0) * s.bonus(Stats.MAX_HEALTH)
                 + num(p.get("vida_max"), 0) * s.maxHp;
+    }
+
+    /** Cooldown key of a source: a rune's "runa:<name>" (as its modeled effects), an item's name (as its strikes). */
+    private static String sourceKey(String kind, String source) {
+        return "runa".equals(kind) ? "runa:" + source : "campeao".equals(kind) ? "campeao:" + source : source;
+    }
+
+    /**
+     * One activation of a source (rune or item) by one of its parts (modeled effect, trigger, stat lines): every part
+     * with a cooldown shares the source's one cooldown, and the parts that go off at the same instant are one
+     * activation, counted once. Parts without a cooldown of their own (stacks per attack) are never held back.
+     */
+    private boolean activate(U u, String kind, String source, double cooldown, double tolerance, boolean counts) {
+        String k = sourceKey(kind, source);
+        if (cooldown > 0) {
+            Double at = u.sourceFiredAt.get(k);
+            if (at == null || at != now) {
+                if (now < u.strikeReady.getOrDefault(k, 0.0) - tolerance) {
+                    return false;
+                }
+                u.sourceFiredAt.put(k, now);
+                u.strikeReady.put(k, now + cooldown);
+            }
+        }
+        if (counts && !"campeao".equals(kind)) {
+            proc(u, kind, source);
+        }
+        return true;
+    }
+
+    /** A rune or item went off: counted once per instant (its parts together), with the second of each activation. */
+    private void proc(U u, String kind, String source) {
+        String k = sourceKey(kind, source);
+        Double counted = u.sourceCountedAt.get(k);
+        if (counted != null && counted == now) {
+            return;
+        }
+        u.sourceCountedAt.put(k, now);
+        count(u, ("runa".equals(kind) ? "runa_ativou:" : "item_ativou:") + source);
+        u.r.procTimes.computeIfAbsent(source, x -> new ArrayList<>()).add(Math.round(now * 100) / 100.0);
     }
 
     private boolean runeReady(U s, String name) {
@@ -4852,7 +4889,7 @@ public class Arena {
                     if (hits.size() >= num(e.p.get("acertos"), 3) && runeReady(a, e.item)) {
                         hits.clear();
                         runeCooldown(a, e);
-                        count(a, "runa_ativou:" + e.item);
+                        proc(a, "runa", e.item);
                         deal(a, t, runeDamage(a, e.p), fxType(a, e.p), e.item, ITEM, 0);
                     }
                     break;
@@ -4861,7 +4898,7 @@ public class Arena {
                 case "tirano":
                     if (hpBefore / Math.max(1, t.maxHp) < num(e.p.get("vida_alvo"), 0.5) && runeReady(a, e.item)) {
                         runeCooldown(a, e);
-                        count(a, "runa_ativou:" + e.item);
+                        proc(a, "runa", e.item);
                         deal(a, t, runeDamage(a, e.p), fxType(a, e.p), e.item, ITEM, 0);
                     }
                     break;
@@ -4869,7 +4906,7 @@ public class Arena {
                     boolean slowed = t.slows.stream().anyMatch(x -> now < x[1]) || now < t.stunUntil || now < t.airUntil;
                     if (slowed && runeReady(a, e.item)) {
                         runeCooldown(a, e);
-                        count(a, "runa_ativou:" + e.item);
+                        proc(a, "runa", e.item);
                         deal(a, t, runeDamage(a, e.p), "verdadeiro", e.item, ITEM, 0);
                     }
                     break;
@@ -4877,7 +4914,7 @@ public class Arena {
                 case "impacto":
                     if (now - a.dashedAt <= num(e.p.get("janela"), 4) && runeReady(a, e.item)) {
                         runeCooldown(a, e);
-                        count(a, "runa_ativou:" + e.item);
+                        proc(a, "runa", e.item);
                         a.dashedAt = -100;
                         deal(a, t, runeDamage(a, e.p), "verdadeiro", e.item, ITEM, 0);
                     }
@@ -4886,7 +4923,7 @@ public class Arena {
                     Integer marks = a.seqMarks.get(t);
                     if (marks != null && marks > 0) {
                         a.seqMarks.put(t, marks - 1);
-                        count(a, "runa_ativou:" + e.item);
+                        proc(a, "runa", e.item);
                         deal(a, t, runeDamage(a, e.p), fxType(a, e.p), e.item, ITEM, 0);
                     } else if (kind == ABILITY && runeReady(a, e.item)) {
                         runeCooldown(a, e);
@@ -4897,14 +4934,14 @@ public class Arena {
                 case "aery":
                     if (now >= a.aeryBack) {
                         a.aeryBack = now + num(e.p.get("retorno"), 2);
-                        count(a, "runa_ativou:" + e.item);
+                        proc(a, "runa", e.item);
                         deal(a, t, runeDamage(a, e.p), fxType(a, e.p), e.item, ITEM, 0);
                     }
                     break;
                 case "primeiro_ataque":
                     if (a.firstStrikeUntil < 0 && now - a.combatSince <= num(e.p.get("janela"), 0.25) + 1e-9) {
                         a.firstStrikeUntil = now + num(e.p.get("duracao"), 3);
-                        count(a, "runa_ativou:" + e.item);
+                        proc(a, "runa", e.item);
                         event(a, "Primeiro Ataque ativo");
                     }
                     break;
@@ -4927,7 +4964,7 @@ public class Arena {
                     if (s.attackChain >= num(e.p.get("ataques"), 3) && runeReady(s, e.item)) {
                         s.attackChain = 0;
                         runeCooldown(s, e);
-                        count(s, "runa_ativou:" + e.item);
+                        proc(s, "runa", e.item);
                         deal(s, t, runeDamage(s, e.p), fxType(s, e.p), e.item, ITEM, 0);
                         s.buffs.put("fortalecimento", new double[] {Double.MAX_VALUE, Double.MAX_VALUE});
                         event(s, "Fortalecimento: +" + Math.round(num(e.p.get("amplifica"), 0.08) * 100) + "% de dano");
@@ -4943,7 +4980,7 @@ public class Arena {
                     double ready = s.strikeReady.getOrDefault("runa:" + e.item, s.combatSince + num(e.p.get("a_cada"), 3));
                     if (s.combatSince >= 0 && now >= ready - 1e-9) {
                         s.strikeReady.put("runa:" + e.item, now + num(e.p.get("a_cada"), 3));
-                        count(s, "runa_ativou:" + e.item);
+                        proc(s, "runa", e.item);
                         deal(s, t, num(e.p.get("vida_max"), 0.033) * s.maxHp, String.valueOf(e.p.getOrDefault("dano_tipo", "magico")),
                                 e.item, ITEM, 0);
                         double h = num(e.p.get("cura_vida_max"), 0.013) * s.maxHp;
@@ -4954,7 +4991,7 @@ public class Arena {
                 case "ataque_fortalecido":
                     if (runeReady(s, e.item)) {
                         s.strikeReady.put("runa:" + e.item, now + num(e.p.get("a_cada"), 8));
-                        count(s, "runa_ativou:" + e.item);
+                        proc(s, "runa", e.item);
                         deal(s, t, runeDamage(s, e.p), fxType(s, e.p), e.item, ITEM, 0);
                     }
                     break;
@@ -4962,7 +4999,7 @@ public class Arena {
                     String k = "lumescudo:" + t.idx;
                     if (now >= s.strikeReady.getOrDefault(k, 0.0) - 1e-9) {
                         s.strikeReady.put(k, now + num(e.p.get("recarga"), 6));
-                        count(s, "runa_ativou:" + e.item);
+                        proc(s, "runa", e.item);
                         double ad = s.stat(Stats.ATTACK_DAMAGE);
                         double c = Math.min(1, s.stat("% Critical Rate") / 100);
                         double extra = ad * num(e.p.get("mult"), 1.6) - ad * (1 + c);   // the hit was an average crit
@@ -4997,7 +5034,7 @@ public class Arena {
                 case "cometa":
                     if (runeReady(s, e.item)) {
                         runeCooldown(s, e);
-                        count(s, "runa_ativou:" + e.item);
+                        proc(s, "runa", e.item);
                         double dmg = runeDamage(s, e.p) + num(e.p.get("por_acerto"), 2) * s.cometHits;
                         at(now + num(e.p.get("atraso"), 1), () -> {
                             if (!t.dead && !s.dead) {
@@ -5010,7 +5047,7 @@ public class Arena {
                 case "chamuscar":
                     if (runeReady(s, e.item)) {
                         runeCooldown(s, e);
-                        count(s, "runa_ativou:" + e.item);
+                        proc(s, "runa", e.item);
                         double dmg = runeDamage(s, e.p);
                         at(now + num(e.p.get("atraso"), 1), () -> deal(s, t, dmg, "magico", e.item, DOT, 0));
                     }
@@ -5019,7 +5056,7 @@ public class Arena {
                     if (s.f.level >= num(e.p.get("nivel_min"), 9) && s.lastCast != null && !"R".equals(s.lastCast)
                             && runeReady(s, e.item)) {
                         runeCooldown(s, e);
-                        count(s, "runa_ativou:" + e.item);
+                        proc(s, "runa", e.item);
                         double r = s.ready.getOrDefault(s.lastCast, 0.0);
                         if (r > now) {
                             s.ready.put(s.lastCast, r - (r - now) * num(e.p.get("pct"), 0.08));
@@ -5035,11 +5072,9 @@ public class Arena {
 
     /** Glacial Augment: the ice field after an immobilize (damage around the target and a slow). */
     private void glacial(U by, U t, ItemEffect e) {
-        if (!runeReady(by, e.item)) {
+        if (!activate(by, "runa", e.item, level(e.p, "recarga", by.f.level), 1e-9, true)) {
             return;
         }
-        runeCooldown(by, e);
-        count(by, "runa_ativou:" + e.item);
         double slow = num(e.p.get("lentidao"), 0.15) + num(e.p.get("lentidao_por_vida_bonus"), 0) * by.bonus(Stats.MAX_HEALTH);
         double x = t.x;
         double y = t.y;
