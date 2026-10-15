@@ -189,25 +189,22 @@ class ArenaChainTest {
         assertEquals(1, repo.list(null).size());
     }
 
-    // ------------------------------------------------------------------ total victory
+    // ------------------------------------------------------------------ victory in the scenario's own fight
 
-    /** A Darius far stronger than Vayne: he can win every fight. */
+    /** A Darius far stronger than Vayne: he can win the scenario's fight. */
     private static ArenaChain.Spec lopsided(double accept) {
         ArenaChain.Spec s = spec(accept);
         s.variants = List.of(List.of(ArenaScenarios.champion("Darius", 0, 3000, 0, 6000, 600, 150),
                 ArenaScenarios.champion("Vayne", 1, 3900, 0, 1000, 30, 30)));
         s.generations = 6;
-        s.stopAtVictory = true;
+        s.stopAtScenarioWin = true;
         return s;
     }
 
-    @Test
-    void stageStopsAtTotalVictoryWithThoseWeights(@TempDir Path dir) {
-        PolicyRepository repo = repo(dir, "t.db");
-        ArenaTraining t = new ArenaTraining(ArenaScenarios.CATALOG, ArenaScenarios.MAP, repo);
+    /** A stage of Darius in the lopsided scenario, stopping when he wins the scenario's fight. */
+    private static ArenaTraining.StageSpec lopsidedStage() {
         ArenaTraining.StageSpec s = new ArenaTraining.StageSpec();
-        ArenaChain.Spec c = lopsided(0);
-        s.variants = c.variants;
+        s.variants = lopsided(0).variants;
         s.duration = 30;
         s.generations = 6;
         s.population = 4;
@@ -215,10 +212,17 @@ class ArenaChainTest {
         s.pool = 4;
         s.selection = 4;
         s.validation = 4;
-        s.stopAtVictory = true;
-        s.plateau = new Plateau(100, 1, 1);   // ignored under total victory
+        s.stopAtScenarioWin = true;
+        s.plateau = new Plateau(100, 1, 1);   // ignored when stopping at a win
+        return s;
+    }
+
+    @Test
+    void stageStopsWhenItWinsTheScenarioWithThoseWeights(@TempDir Path dir) {
+        PolicyRepository repo = repo(dir, "t.db");
+        ArenaTraining t = new ArenaTraining(ArenaScenarios.CATALOG, ArenaScenarios.MAP, repo);
         List<ArenaTraining.Point> points = new ArrayList<>();
-        ArenaTraining.StageResult r = t.trainStage(s, new ArenaTraining.Listener() {
+        ArenaTraining.StageResult r = t.trainStage(lopsidedStage(), new ArenaTraining.Listener() {
             @Override
             public void point(ArenaTraining.Point p) {
                 points.add(p);
@@ -226,19 +230,88 @@ class ArenaChainTest {
         });
         assertTrue(r.victory);
         assertFalse(r.plateau);
-        ArenaTraining.Point last = points.get(points.size() - 1);
-        assertEquals(100, last.winPct, 1e-9);
-        assertEquals(last.winPct, last.metric, 1e-9);
-        assertEquals(100, last.confirmPct, 1e-9, "confirmed on the second selection batch");
+        assertEquals(Boolean.TRUE, points.get(points.size() - 1).scenarioWin);
         for (ArenaTraining.Point p : points.subList(0, points.size() - 1)) {
-            assertTrue(p.winPct < 100 || p.confirmPct < 100, "stopped at the first confirmed total victory");
+            assertEquals(Boolean.FALSE, p.scenarioWin, "stopped at the first generation that wins the scenario");
         }
         assertEquals(points.size(), r.generations);
         assertNotNull(r.policy);
+        assertEquals(Boolean.TRUE, r.policy.winsScenario);
+        assertEquals(Boolean.TRUE, repo.find(r.policy.id).orElseThrow().winsScenario, "saved with the version");
+    }
+
+    /**
+     * 🎯 After a stage stopped by a victory, the scenario run as the screen runs it (fresh inputs, the slot's brain on
+     * the saved version, read back from the database) is a win of his side, and the same fight every time.
+     */
+    @Test
+    void theScenarioWithTheWinningVersionInTheSlotIsAWin(@TempDir Path dir) {
+        PolicyRepository repo = repo(dir, "t.db");
+        ArenaTraining t = new ArenaTraining(ArenaScenarios.CATALOG, ArenaScenarios.MAP, repo);
+        ArenaTraining.StageSpec st = lopsidedStage();
+        ArenaTraining.StageResult r = t.trainStage(st, new ArenaTraining.Listener() { });
+        assertTrue(r.victory);
+        PolicyRepository.Record saved = repo.find(r.policy.id).orElseThrow();
+        List<String> fingerprints = new ArrayList<>();
+        for (int run = 0; run < 2; run++) {
+            List<com.ornnplanner.arena.Arena.Input> in = new ArrayList<>();
+            for (com.ornnplanner.arena.Arena.Input x : lopsided(0).variants.get(0)) {
+                in.add(x.copy());
+            }
+            in.get(0).policy = saved.policy(in.get(0).priority);   // what ArenaService.policy("ai:<id>") gives the slot
+            com.ornnplanner.arena.ArenaModel.Result res = new com.ornnplanner.arena.Arena(ArenaScenarios.CATALOG, ArenaScenarios.MAP)
+                    .run(in, List.of(), 30);
+            assertEquals(0, res.winner, "the screen's fight is a win of Darius' side");
+            fingerprints.add(ArenaScenarios.fingerprint(res));
+        }
+        assertEquals(fingerprints.get(0), fingerprints.get(1));
+    }
+
+    /** The check is the scenario's own fight: the same as playing it with the policy, never a moved start. */
+    @Test
+    void theScenarioCheckIsTheScreensFight(@TempDir Path dir) {
+        PolicyRepository repo = repo(dir, "t.db");
+        ArenaTraining t = new ArenaTraining(ArenaScenarios.CATALOG, ArenaScenarios.MAP, repo);
+        ArenaTraining.StageSpec st = lopsidedStage();
+        com.ornnplanner.arena.ai.Policy tactical = new com.ornnplanner.arena.ai.TacticalPolicy(st.variants.get(0).get(0).priority);
+        com.ornnplanner.arena.ArenaModel.Result viaStage = t.playScreen(st, tactical);
+        List<com.ornnplanner.arena.Arena.Input> in = new ArrayList<>();
+        for (com.ornnplanner.arena.Arena.Input x : st.variants.get(0)) {
+            in.add(x.copy());
+        }
+        in.get(0).policy = tactical;
+        com.ornnplanner.arena.ArenaModel.Result direct = new com.ornnplanner.arena.Arena(ArenaScenarios.CATALOG, ArenaScenarios.MAP)
+                .withoutFrames().run(in, List.of(), 30);
+        assertEquals(ArenaScenarios.fingerprint(direct), ArenaScenarios.fingerprint(viaStage));
+        assertEquals(3000, in.get(0).x, 1e-9, "the starts are the scenario's");
+    }
+
+    /** "Ao fim das gerações": no plateau, no victory stop; all the generations run and the best is picked. */
+    @Test
+    void theGenerationsRuleRunsThemAll(@TempDir Path dir) {
+        PolicyRepository repo = repo(dir, "t.db");
+        ArenaTraining t = new ArenaTraining(ArenaScenarios.CATALOG, ArenaScenarios.MAP, repo);
+        ArenaTraining.StageSpec st = lopsidedStage();
+        st.stopAtScenarioWin = false;
+        st.plateau = Plateau.off();
+        st.generations = 4;
+        List<ArenaTraining.Point> points = new ArrayList<>();
+        ArenaTraining.StageResult r = t.trainStage(st, new ArenaTraining.Listener() {
+            @Override
+            public void point(ArenaTraining.Point p) {
+                points.add(p);
+            }
+        });
+        assertFalse(r.victory);
+        assertFalse(r.plateau);
+        assertEquals(4, r.generations);
+        assertEquals(4, points.size());
+        points.forEach(p -> assertNull(p.scenarioWin, "measured only when stopping at a win"));
+        assertNotNull(r.policy.winsScenario, "the saved version says whether it wins the scenario anyway");
     }
 
     @Test
-    void chainKeepsAVictoriousVersionAndMovesOn(@TempDir Path dir) {
+    void chainKeepsAWinningVersionAndMovesOn(@TempDir Path dir) {
         PolicyRepository repo = repo(dir, "t.db");
         ArenaChain.Job j = job();
         chain(repo).run(j, lopsided(0));
@@ -246,8 +319,9 @@ class ArenaChainTest {
         ArenaChain.Stage darius2 = j.stages.get(2);
         assertTrue(darius1.victory, darius1.message);
         assertTrue(darius1.generation < 6, "round 1 stopped early: " + darius1.generation);
-        // round 2: he already wins everything with that version, so it is kept, not trained again
+        // round 2: he already wins the scenario with that version, so it is kept, not trained again
         assertEquals("kept", darius2.status, darius2.message);
+        assertTrue(darius2.message.contains("já vence o cenário"), darius2.message);
         assertEquals(darius1.policy.id, darius2.policy.id);
         assertEquals(0, darius2.generation);
         assertEquals(darius1.policy.id, j.latest.get(0));
@@ -256,6 +330,22 @@ class ArenaChainTest {
         // Vayne cannot win: she trains every generation each round
         assertEquals(6, j.stages.get(1).generation);
         assertEquals(6, j.stages.get(3).generation);
+    }
+
+    /** A version that wins the scenario but misses the 55% rule still becomes the chain's (it is the screen's goal). */
+    @Test
+    void aWinningVersionNotAcceptedIsStillTheChains(@TempDir Path dir) {
+        PolicyRepository repo = repo(dir, "t.db");
+        ArenaChain.Spec s = lopsided(2);   // nothing can pass a 200% acceptance
+        s.slots = List.of(0);
+        s.maxRounds = 1;
+        ArenaChain.Job j = job();
+        chain(repo).run(j, s);
+        ArenaChain.Stage darius = j.stages.get(0);
+        assertTrue(darius.victory, darius.message);
+        assertEquals("won", darius.status, darius.message);
+        assertFalse(darius.policy.accepted);
+        assertEquals(darius.policy.id, j.latest.get(0));
     }
 
     @Test
@@ -268,38 +358,7 @@ class ArenaChainTest {
         chain(repo).run(j, s);
         assertEquals("converged", j.status);
         assertEquals(2, j.round);
-        assertTrue(j.message.contains("todos já vencem"), j.message);
-    }
-
-    @Test
-    void aLuckyTotalVictoryIsNotConfirmedOnAnotherBatch(@TempDir Path dir) {
-        PolicyRepository repo = repo(dir, "t.db");
-        ArenaTraining t = new ArenaTraining(ArenaScenarios.CATALOG, ArenaScenarios.MAP, repo);
-        ArenaTraining.StageSpec s = new ArenaTraining.StageSpec();
-        // a close duel: winning all 4 selection fights does not mean winning the 4 of the other batch
-        s.variants = spec(0).variants;
-        s.duration = 30;
-        s.generations = 4;
-        s.population = 4;
-        s.episodesPerGeneration = 2;
-        s.pool = 4;
-        s.selection = 4;
-        s.validation = 4;
-        s.stopAtVictory = true;
-        List<ArenaTraining.Point> points = new ArrayList<>();
-        ArenaTraining.StageResult r = t.trainStage(s, new ArenaTraining.Listener() {
-            @Override
-            public void point(ArenaTraining.Point p) {
-                points.add(p);
-            }
-        });
-        for (ArenaTraining.Point p : points) {
-            if (p.winPct < 100) {
-                assertNull(p.confirmPct, "measured only on a total victory");
-            } else if (p != points.get(points.size() - 1) || !r.victory) {
-                assertTrue(p.confirmPct < 100, "a victory not confirmed does not stop the stage");
-            }
-        }
+        assertTrue(j.message.contains("todos já vencem o cenário"), j.message);
     }
 
     // ------------------------------------------------------------------ hall of fame

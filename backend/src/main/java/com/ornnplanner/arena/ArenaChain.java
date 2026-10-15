@@ -20,9 +20,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * latest accepted version of the others (allies and enemies), so each one's progress pushes the next.
  *
  * <p>A stage starts from its champion's previous accepted version (warm start) and must beat it, and the script, to be
- * accepted. With total victory as the stop rule, a stage ends as soon as its champion wins every selection fight
- * (those weights are saved) and the chain moves on; a champion whose current version already wins them all at the start
- * of its stage is not trained again, so the victorious version is kept. A champion in two slots is trained once per round (its first slot); its version plays in both. The chain
+ * accepted. With a victory as the stop rule, a stage ends as soon as its champion's side wins the scenario's own fight
+ * (with the chain's current versions in the other slots; those weights are saved, become its current version even if
+ * the 55% rule does not accept them, and the chain moves on); a champion whose current version already wins it at the
+ * start of its stage is not trained again: it is kept. A champion in two slots is trained once per round (its first slot); its version plays in both. The chain
  * ends after its last round, when a whole round accepts nothing (converged), when asked to stop after the current
  * stage, or when cancelled (the stage under way is thrown away). Same request, same database: same versions.
  */
@@ -42,8 +43,13 @@ public final class ArenaChain {
         public int episodesPerGeneration = 8;
         public long seed = 1;
         public int maxRounds = 3;
-        /** Stop rule of each stage: victory (when it wins every selection fight) | plateau. */
-        public String stopWhen = "victory";
+        /**
+         * Stop rule of each stage: generations (all of them, the best by selection) | plateau | victory (when its side
+         * wins the scenario's own fight).
+         */
+        public String stopWhen = "generations";
+        /** victory: the champion must also end the fight alive. */
+        public boolean aliveToo;
         /** Help level: sozinha | descobertos | dicas. */
         public String level = ArenaTraining.LEVEL_ALONE;
         /** Plateau: least gain in points over the window, after a minimum of generations (0 = off). */
@@ -58,7 +64,7 @@ public final class ArenaChain {
         public int slot;
         public int round;
         public String objective;
-        /** waiting | training | accepted | rejected | kept (already wins everything) | skipped | cancelled */
+        /** waiting | training | accepted | rejected | won (wins the scenario, not accepted) | kept | skipped | cancelled */
         public volatile String status = "waiting";
         public volatile int generation;
         public int generations;
@@ -74,7 +80,7 @@ public final class ArenaChain {
         public volatile Double vsOldOpponents;
         /** Stopped by the plateau rule before its last generation. */
         public volatile boolean plateau;
-        /** Stopped at total victory: its champion won every selection fight. */
+        /** Stopped because its side won the scenario's own fight (or kept: its version already did). */
         public volatile boolean victory;
         /** Skipped because the same champion is trained in this earlier slot. */
         public Integer sameAs;
@@ -123,7 +129,8 @@ public final class ArenaChain {
         public long seed = 1;
         public int maxRounds = 3;
         public Plateau plateau = Plateau.off();
-        public boolean stopAtVictory;
+        public boolean stopAtScenarioWin;
+        public boolean aliveToo;
         public double accept = ArenaTraining.ACCEPT;
         public int pool = ArenaTraining.POOL;
         public int selection = ArenaTraining.SELECTION;
@@ -201,12 +208,17 @@ public final class ArenaChain {
                 job.message = "rodada " + round + ": " + s.champion;
                 ArenaTraining.StageResult r = stage(job, spec, s, round, i, chain, before);
                 if (r.kept) {
+                    for (int slot = 0; slot < base.size(); slot++) {
+                        if (base.get(slot).f.champion.equalsIgnoreCase(s.champion)) {
+                            job.latest.put(slot, s.policy.id);
+                        }
+                    }
                     if (job.stopAfterCurrent) {
                         skipRest(stages, i + 1);
                         finish(job, "stopped", "parado pelo usuário depois de " + s.champion + " (rodada " + round + ")");
                         return;
                     }
-                    continue;   // its victorious version stays the chain's
+                    continue;   // its winning version stays the chain's
                 }
                 allKept = false;
                 if (r.cancelled) {
@@ -217,7 +229,8 @@ public final class ArenaChain {
                     return;
                 }
                 String key = s.champion.toLowerCase();
-                if (r.policy.accepted) {
+                // the chain plays on with an accepted version, or with one that wins the scenario's fight
+                if (r.policy.accepted || r.victory) {
                     accepted = true;
                     before.put(key, chain.get(key));
                     chain.put(key, r.policy);
@@ -234,7 +247,7 @@ public final class ArenaChain {
                 }
             }
             if (!accepted) {
-                finish(job, "converged", allKept ? "convergiu: na rodada " + round + " todos já vencem todas as lutas"
+                finish(job, "converged", allKept ? "convergiu: na rodada " + round + " todos já vencem o cenário"
                         : "convergiu: a rodada " + round + " não aceitou nenhuma versão");
                 return;
             }
@@ -270,7 +283,8 @@ public final class ArenaChain {
         st.combos = spec.combos.getOrDefault(key, List.of());
         st.guidelines = spec.guidelines.getOrDefault(key, List.of());
         st.rewards = spec.rewards.get(key);
-        st.stopAtVictory = spec.stopAtVictory;
+        st.stopAtScenarioWin = spec.stopAtScenarioWin;
+        st.aliveToo = spec.aliveToo;
         st.accept = spec.accept;
         st.pool = spec.pool;
         st.selection = spec.selection;
@@ -320,15 +334,15 @@ public final class ArenaChain {
             s.status = "kept";
             s.victory = true;
             s.policy = from.withoutWeights();
-            s.message = "já vence todas as lutas: mantida a v" + from.version;
+            s.message = "já vence o cenário: mantida a v" + from.version;
             return r;
         }
         s.plateau = r.plateau;
         s.victory = r.victory;
         s.vsOldOpponents = r.vsOldOpponents;
         s.policy = r.policy.withoutWeights();
-        s.status = r.policy.accepted ? "accepted" : "rejected";
-        s.message = (r.victory ? "vitória total na geração " + r.generations + "; "
+        s.status = r.policy.accepted ? "accepted" : r.victory ? "won" : "rejected";
+        s.message = (r.victory ? "venceu o cenário na geração " + r.generations + "; "
                 : r.plateau ? "platô na geração " + r.generations + "; " : "")
                 + (r.policy.accepted ? "versão aceita" : "não aceita");
         return r;

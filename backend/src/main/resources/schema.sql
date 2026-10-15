@@ -16,6 +16,7 @@
 -- Version 16: combo library of the arena (arena_combo): found by the search or typed by the user.
 -- Version 17: ragdolls of the lab saved by the user (arena_dummy).
 -- Version 18: help levels of arena policies (arena_policy.level, guidelines) and the user's guidelines (arena_guideline).
+-- Version 19: arena_policy.wins_scenario (the version wins its training scenario's own fight).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -193,7 +194,8 @@ CREATE TABLE IF NOT EXISTS arena_policy (
     team_plan          TEXT,          -- JSON: the side's plan used in its training fights
     parent_id          INTEGER,       -- version its training started from (NULL = zero weights)
     level              TEXT,          -- help level of its training (sozinha | descobertos | dicas)
-    guidelines         TEXT           -- the guidelines it was trained with (JSON)
+    guidelines         TEXT,          -- the guidelines it was trained with (JSON)
+    wins_scenario      INTEGER        -- 1 = its side wins the training scenario's fight with it (NULL = not measured)
 );
 CREATE INDEX IF NOT EXISTS idx_arena_policy_champion ON arena_policy (champion);
 

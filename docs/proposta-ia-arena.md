@@ -982,3 +982,64 @@ laboratório (`ArenaLab.jsx`). O antigo `ArenaReport` e o `TriggerTable` saíram
     Lado vermelho";
   - na tabela de gatilhos, o Suserano tem 1 ativação.
 - Testes: 173 (mais 1). O golden não mudou.
+
+### Parte 4 — Treino: critério de parada ✅
+- **"Parar a etapa"** tem três opções (painel individual e cadeia; `stopWhen` = `generations` | `plateau` |
+  `victory`):
+  - **Ao fim das gerações** (`generations`, padrão): o platô fica desligado; roda todas e fica com a melhor pela
+    seleção;
+  - **Platô:** como antes;
+  - **Vitória:** o lado do campeão treinado vence a luta do cenário **como a tela mostra**
+    (`ArenaTraining.screenEpisode`):
+    - as entradas preparadas, sem deslocar os inícios, no minuto da tela, com as ordens do cenário e o plano do time;
+    - os cérebros dos outros slots: na cadeia, as versões atuais da cadeia onde houver, e o cérebro do slot nos
+      demais;
+    - os combos do nível do campeão treinado.
+    - É verificada em toda geração, com uma luta determinística sem quadros (`Point.scenarioWin`). A opção
+      **"e terminar vivo"** (`aliveToo`, desligada) exige ainda que ele não morra.
+  - O texto da tela explica a opção escolhida em uma frase.
+- **Ao vencer:** esses pesos são o resultado. São validados e salvos como sempre, e a versão leva
+  `arena_policy.wins_scenario` (esquema v19). A tela mostra os dois fatos separados: "🏆 vence o cenário" e "aceita (≥
+  55% da validação)" ou "não aceita". Toda versão salva traz `winsScenario` medido, mesmo sem parar por vitória.
+  - Lista de versões: 🏆 ao lado do ✓.
+  - Individual: ao terminar por vitória, o slot passa a usar a versão (`brain = ai:<id>`) e a tela roda a luta de novo.
+  - Cadeia: no fim, o mesmo vale para cada campeão cuja última etapa venceu ou manteve uma versão que vence
+    (`Job.latest`, que agora inclui as mantidas).
+- **Cadeia:**
+  - "manter" (`kept`) passa a significar que a versão atual já vence o cenário da tela, com as versões atuais dos
+    outros: "mantida vN (já vence o cenário)".
+  - **Decisão:** uma versão que vence o cenário vira a versão da cadeia mesmo sem os 55% (status `won`, "vN vence o
+    cenário (não aceita)"), porque é a luta que a cadeia procura; ela conta como progresso da rodada.
+  - "convergiu" passa a ser uma rodada sem versão nova aceita ou vencedora.
+- **Removido:** a "vitória total" e tudo o que dependia dela:
+  - o lote de confirmação (`confirmed`, `Point.confirmPct`);
+  - a métrica de parada por lutas vencidas (a do platô agora é sempre "melhor que o Roteiro");
+  - o aceite forçado de uma vitória total;
+  - os textos da tela.
+- **Causa confirmada** de "vitória total" seguida de derrota na tela. As 16 lutas de seleção (e as 16 de
+  confirmação) de `ArenaTraining.episodes` diferem da tela:
+  - deslocam todos os inícios ao acaso (±1.500 em x, separação −200 a +300 entre os lados, ±300 em y);
+  - alternam as variantes de minuto da build (−3 / 0 / +3);
+  - trocam os cérebros dos inimigos por Roteiro e Tático (na cadeia, pelas versões da cadeia), em vez dos cérebros
+    dos slots da tela.
+  - Vencer todas elas não dizia nada sobre a luta da tela.
+  - **Verificado também:**
+    - a tela **não** trocava o slot ao terminar: só com "Usar como cérebro" ou "Usar estas IAs";
+    - as ordens da linha do tempo e o plano do time **eram** os mesmos (`spec.actions` e o `TeamPlan` das entradas
+      preparadas).
+  - Na tela, um treino do Ornn (6 gerações, população 8, "na vitória") no cenário "Ornn de Coração de Aço vs Rumble"
+    mostrou o problema ao vivo: a v75 foi **aceita**, com 100% de vitórias na validação, e **não vence o cenário**.
+    O slot continuou com a v40 dele. A versão de teste foi apagada depois.
+- **Esquema v19** (`arena_policy.wins_scenario`, anulável). Migrado no banco real (backup antes): 113 IAs e 18
+  builds intactas.
+- **Testes** (`ArenaChainTest`: 4 testes da vitória total saíram e 7 entraram):
+  - a etapa para na primeira geração que vence o cenário, com esses pesos e `winsScenario` salvo;
+  - 🎯 depois de uma etapa que parou por "Vitória", o cenário rodado como a tela (entradas novas, o slot com a versão
+    lida do banco) dá vitória do lado dele, duas vezes com a mesma impressão digital;
+  - a checagem é a luta da tela: `playScreen` tem a mesma impressão digital que a luta direta, sem inícios
+    deslocados;
+  - "ao fim das gerações" roda todas;
+  - a cadeia mantém a versão vencedora e segue;
+  - uma vencedora não aceita vira a versão da cadeia;
+  - a rodada em que todos já vencem converge.
+- Testes: 176. O golden não mudou.

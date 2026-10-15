@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 18;
+    static final int VERSION = 19;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -109,6 +109,10 @@ public class SchemaManager {
             // v18: the help level a policy was trained at and the guidelines it saw
             jdbc.execute("ALTER TABLE arena_policy ADD COLUMN level TEXT");
             jdbc.execute("ALTER TABLE arena_policy ADD COLUMN guidelines TEXT");
+        }
+        if (version < 19 && tableExists("arena_policy") && !columnExists("arena_policy", "wins_scenario")) {
+            // v19: whether a version wins its training scenario's own fight (a fact next to its acceptance)
+            jdbc.execute("ALTER TABLE arena_policy ADD COLUMN wins_scenario INTEGER");
         }
         // v16 / v17 / v18: arena_combo, arena_dummy and arena_guideline are new tables, created by schema.sql
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);

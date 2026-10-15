@@ -85,6 +85,7 @@ public class PolicyRepository {
             r.migratedFrom = migratedFrom;
             r.level = level;
             r.guidelines = guidelines;
+            r.winsScenario = winsScenario;
             return r;
         }
 
@@ -94,6 +95,8 @@ public class PolicyRepository {
         public String level;
         /** The guidelines it was trained with (level dicas), a snapshot. */
         public List<com.ornnplanner.arena.ArenaModel.Guideline> guidelines;
+        /** Its side wins the training scenario's own fight with it in the slot (null = not measured, before v19). */
+        public Boolean winsScenario;
 
         /**
          * Weights of the current observation and action layout, or of an older one they migrate from when read
@@ -176,7 +179,7 @@ public class PolicyRepository {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String COLUMNS = "id, champion, objective, version, fitness, better_vs_script, winrate, winrate_script, "
             + "better_vs_tactical, better_vs_previous, accepted, generations, population, seed, scenario, obs_schema, actions, created_at, "
-            + "chain_id, chain_round, team_plan, parent_id, level, guidelines";
+            + "chain_id, chain_round, team_plan, parent_id, level, guidelines, wins_scenario";
 
     private final JdbcTemplate jdbc;
     /** Weights never change once saved: read once. */
@@ -251,7 +254,8 @@ public class PolicyRepository {
             PreparedStatement ps = c.prepareStatement("INSERT INTO arena_policy (champion, objective, version, fitness, "
                     + "better_vs_script, winrate, winrate_script, better_vs_tactical, better_vs_previous, accepted, generations, "
                     + "population, seed, scenario, weights_json, obs_schema, actions, created_at, chain_id, chain_round, team_plan, "
-                    + "parent_id, level, guidelines) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS);
+                    + "parent_id, level, guidelines, wins_scenario) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    Statement.RETURN_GENERATED_KEYS);
             int i = 1;
             ps.setString(i++, r.champion);
             ps.setString(i++, r.objective);
@@ -276,7 +280,8 @@ public class PolicyRepository {
             ps.setString(i++, plan);
             ps.setObject(i++, r.parentId);
             ps.setString(i++, r.level);
-            ps.setString(i, guidelines);
+            ps.setString(i++, guidelines);
+            ps.setObject(i, r.winsScenario == null ? null : r.winsScenario ? 1 : 0);
             return ps;
         }, key);
         r.id = key.getKey() == null ? null : key.getKey().longValue();
@@ -315,6 +320,8 @@ public class PolicyRepository {
             r.migratedFrom = r.obsSchema;   // its weights are migrated when read
         }
         r.level = rs.getString("level");
+        int wins = rs.getInt("wins_scenario");
+        r.winsScenario = rs.wasNull() ? null : wins != 0;
         String gl = rs.getString("guidelines");
         if (gl != null) {
             try {

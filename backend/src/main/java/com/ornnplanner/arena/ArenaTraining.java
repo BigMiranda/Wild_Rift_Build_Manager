@@ -30,10 +30,11 @@ import java.util.stream.IntStream;
  * chain's current versions on the enemies (and always on the allies), and selection and validation use only them.
  *
  * <p>The trainer ({@link Trainer}) learns on a pool of these episodes. Each generation its weights are measured on a
- * separate selection set against the scripted autopilot in the same fights; that measure picks the best generation
- * and drives the stop rule: a plateau ({@link Plateau}), or total victory (the side wins every selection fight; those
- * weights are the result, and in a chain a champion that already wins them all at the start is not trained again, so
- * its victorious version is kept). A validation set never used before gives the saved numbers: how
+ * separate selection set against the scripted autopilot in the same fights; that measure picks the best generation.
+ * The stage runs all its generations, or stops at a plateau ({@link Plateau}), or at a victory in the scenario's own
+ * fight: the fight as the screen shows it (same starts, minutes, orders, team plans and the other slots' brains; in a
+ * chain, the chain's versions), checked every generation; those weights are the result, and a start that already wins
+ * it is kept without training. A validation set never used before gives the saved numbers: how
  * often it does better than the scripted and the tactical autopilots and than the previous accepted version. A version
  * is accepted when it does better than the script and the previous one in at least {@link #ACCEPT} of them.
  */
@@ -105,10 +106,12 @@ public final class ArenaTraining {
         public double drills = DRILLS;
         public Plateau plateau = Plateau.off();
         /**
-         * Stop at total victory instead of a plateau: the first generation whose side wins every selection fight ends
-         * the stage with those weights; a start (warm) that already does is kept without training.
+         * Stop when the champion's side wins the scenario's own fight ({@link #screenEpisode}): the first generation
+         * that does ends the stage with those weights; a start (warm) that already does is kept without training.
          */
-        public boolean stopAtVictory;
+        public boolean stopAtScenarioWin;
+        /** With {@link #stopAtScenarioWin}: the champion must also end the fight alive. */
+        public boolean aliveToo;
         /** Share of validation fights to beat the script and the previous version in (to be accepted). */
         public double accept = ACCEPT;
         public int pool = POOL;
@@ -137,8 +140,8 @@ public final class ArenaTraining {
         public Double winPct;
         /** The value the plateau rule reads. */
         public Double metric;
-        /** Wins on the second selection batch (%), measured only when this generation won every selection fight. */
-        public Double confirmPct;
+        /** Whether this generation's weights win the scenario's own fight (measured when stopping at a win). */
+        public Boolean scenarioWin;
     }
 
     /** Hears a stage: its messages and generations; may cancel it. */
@@ -163,9 +166,9 @@ public final class ArenaTraining {
         public boolean cancelled;
         /** Stopped by the plateau rule before its last generation. */
         public boolean plateau;
-        /** Stopped at total victory (the saved weights win every selection fight). */
+        /** Stopped because its side won the scenario's own fight (those are the saved weights). */
         public boolean victory;
-        /** The start already won every selection fight: nothing trained or saved, the start version is kept. */
+        /** The start already won the scenario's own fight: nothing trained or saved, the start version is kept. */
         public boolean kept;
         public int generations;
         /** Validation against the opponents' previous chain versions: better than the script in this share. */
@@ -237,9 +240,7 @@ public final class ArenaTraining {
         List<Gym.Episode> pool = drills(spec, episodes(spec, team, training, spec.pool, rnd), new Random(spec.seed * 31 + 3));
         List<Gym.Episode> selection = episodes(spec, team, fixed, spec.selection, rnd);
         List<Gym.Episode> validation = episodes(spec, team, fixed, spec.validation, new Random(spec.seed * 7919 + 17));
-        // a total victory on the selection fights is confirmed on a second batch of them (another seed) before it counts
-        List<Gym.Episode> confirmation = spec.stopAtVictory
-                ? episodes(spec, team, fixed, spec.selection, new Random(spec.seed * 104729 + 31)) : List.of();
+        Gym.Episode screen = screenEpisode(spec);
 
         Trainer.Config cfg = new Trainer.Config();
         cfg.population = Math.max(4, Math.min(128, spec.population));
@@ -256,10 +257,9 @@ public final class ArenaTraining {
         double scriptMean = mean(scriptFit);
         Policy startPolicy = mine(start, priority, spec);
         Point first = measure(selection, scriptFit, scriptMean, startPolicy, objective, spec);
-        if (spec.stopAtVictory && spec.start != null && first.winPct >= 100 - 1e-9
-                && confirmed(first, confirmation, startPolicy)) {
-            out.kept = true;   // the version it starts from already wins them all: keep it as it is
-            listener.message("já vence todas as lutas de seleção: versão mantida");
+        if (spec.stopAtScenarioWin && spec.start != null && wins(screen, startPolicy, spec)) {
+            out.kept = true;   // the version it starts from already wins the scenario: keep it as it is
+            listener.message("já vence o cenário: versão mantida");
             return out;
         }
         // the best generation: most selection fights better than the script, ties by selection fitness (a share that
@@ -283,7 +283,10 @@ public final class ArenaTraining {
                 p.generation = g.index;
                 p.mean = g.mean;
                 p.best = g.best;
-                if (spec.stopAtVictory && p.winPct >= 100 - 1e-9 && confirmed(p, confirmation, now)) {
+                if (spec.stopAtScenarioWin) {
+                    p.scenarioWin = wins(screen, now, spec);
+                }
+                if (Boolean.TRUE.equals(p.scenarioWin)) {
                     victory[0] = true;   // these very weights are the result
                     best[0] = g.center;
                 } else if (p.selection > bestSelection[0] + 1e-9
@@ -297,7 +300,7 @@ public final class ArenaTraining {
                 }
                 metric.add(p.metric);
                 done[0] = g.index;
-                plateau[0] = !spec.stopAtVictory && g.index < cfg.generations && spec.plateau.reached(metric);
+                plateau[0] = !spec.stopAtScenarioWin && g.index < cfg.generations && spec.plateau.reached(metric);
                 listener.point(p);
             }
 
@@ -319,7 +322,7 @@ public final class ArenaTraining {
             return out;
         }
 
-        listener.message(out.victory ? "vitória total na geração " + done[0] + "; validando"
+        listener.message(out.victory ? "venceu o cenário na geração " + done[0] + "; validando"
                 : out.plateau ? "platô na geração " + done[0] + "; validando" : "validando");
         Policy ai = mine(best[0], priority, spec);
         Gym.Report vsScript = gym.compare(validation, ai, reference, objective);
@@ -341,9 +344,9 @@ public final class ArenaTraining {
         r.betterVsPrevious = vsPrevious;
         r.winrate = vsScript.winRate;
         r.winrateScript = vsScript.referenceWinRate;
-        // a total victory that holds on validation (every fight won) is kept even when it is not faster than before
-        r.accepted = vsScript.better >= spec.accept && (vsPrevious == null || vsPrevious >= spec.accept)
-                || out.victory && vsScript.winRate >= 1 - 1e-9;
+        r.accepted = vsScript.better >= spec.accept && (vsPrevious == null || vsPrevious >= spec.accept);
+        // a fact of its own, next to the acceptance: the saved weights win the scenario's fight as the screen shows it
+        r.winsScenario = out.victory || wins(screen, ai, spec);
         r.generations = done[0];
         r.population = cfg.population;
         r.seed = spec.seed;
@@ -424,8 +427,42 @@ public final class ArenaTraining {
     }
 
     /**
+     * The scenario's own fight, as the screen runs it: the prepared inputs without the starts moved, the scenario's
+     * orders, the other slots' own brains (in a chain, the chain's current versions where there are some) and the
+     * trained champion's combos of its level. One fight, deterministic.
+     */
+    static Gym.Episode screenEpisode(StageSpec spec) {
+        List<Arena.Input> base = spec.variants.get(0);
+        List<Arena.Input> in = new ArrayList<>();
+        Policy[] policies = new Policy[base.size()];
+        for (int k = 0; k < base.size(); k++) {
+            Arena.Input c = base.get(k).copy();
+            if (k == spec.me) {
+                c.combos = spec.combos;
+            } else if (!spec.chain.isEmpty()) {
+                policies[k] = current(spec.chain, c);
+            }
+            in.add(c);
+        }
+        Gym.Episode ep = new Gym.Episode(in, spec.actions, spec.duration, spec.me, policies, "cenário");
+        ep.safeZone = spec.safeZone;
+        return ep;
+    }
+
+    /** Whether the trained champion's side wins the scenario's fight with this policy (and it ends alive, if asked). */
+    boolean wins(Gym.Episode screen, Policy policy, StageSpec spec) {
+        ArenaModel.Result r = gym.play(screen, policy);
+        return r.winner == screen.team() && (!spec.aliveToo || r.fighters.get(screen.me).deathTime == null);
+    }
+
+    /** The scenario's fight with this policy for the trained champion (what the screen shows with it in the slot). */
+    public ArenaModel.Result playScreen(StageSpec spec, Policy policy) {
+        return gym.play(screenEpisode(spec), policy);
+    }
+
+    /**
      * The weights on the selection fights: share better than the script there, fitness over the script's, wins. The
-     * stop metric is the wins under total victory, else the share better than the script.
+     * plateau metric is the share better than the script.
      */
     private Point measure(List<Gym.Episode> selection, double[] scriptFit, double scriptMean, Policy policy, String objective,
                           StageSpec spec) {
@@ -444,23 +481,8 @@ public final class ArenaTraining {
         p.betterPct = 100 * p.selection;
         p.winPct = fit.length == 0 ? 0 : 100 * wins / fit.length;
         p.fitnessPct = 100 * (mean(fit) - scriptMean) / Math.max(1, Math.abs(scriptMean));
-        p.metric = spec.stopAtVictory ? p.winPct : "fitness".equals(METRIC) ? p.fitnessPct : p.betterPct;
+        p.metric = "fitness".equals(METRIC) ? p.fitnessPct : p.betterPct;
         return p;
-    }
-
-    /**
-     * A total victory on the selection fights holds on the confirmation batch too (wins in %, kept on the point): one
-     * lucky generation on the same 16 fights does not end a stage.
-     */
-    private boolean confirmed(Point p, List<Gym.Episode> confirmation, Policy policy) {
-        ArenaModel.Result[] results = results(confirmation, policy);
-        double wins = 0;
-        for (int i = 0; i < results.length; i++) {
-            Gym.Episode e = confirmation.get(i);
-            wins += results[i].winner == e.team() ? 1 : results[i].winner < 0 ? 0.5 : 0;
-        }
-        p.confirmPct = results.length == 0 ? 100 : 100 * wins / results.length;
-        return p.confirmPct >= 100 - 1e-9;
     }
 
     /**

@@ -44,8 +44,13 @@ public class ArenaTrainingService {
         public int population = 32;
         public int episodesPerGeneration = 8;
         public long seed = 1;
-        /** Stop rule: victory (when it wins every selection fight) | plateau. */
-        public String stopWhen = "victory";
+        /**
+         * Stop rule: generations (all of them, the best by selection) | plateau | victory (when its side wins the
+         * scenario's own fight, as the screen shows it).
+         */
+        public String stopWhen = "generations";
+        /** victory: the champion must also end the fight alive. */
+        public boolean aliveToo;
         /** Plateau: least gain in points over the window, after a minimum of generations (0 = off). */
         public double plateauPct = 2;
         public int plateauWindow = 6;
@@ -88,8 +93,10 @@ public class ArenaTrainingService {
         public volatile String message;
         /** Stopped by the plateau rule before its last generation. */
         public volatile boolean plateau;
-        /** Stopped at total victory. */
+        /** Stopped because its side won the scenario's own fight (the saved version is the winning one). */
         public volatile boolean victory;
+        /** The slot trained (the screen puts the winning version there). */
+        public int fighter;
         /** The saved version (without weights) when done. */
         public volatile PolicyRepository.Record policy;
         public long startedAt;
@@ -142,6 +149,7 @@ public class ArenaTrainingService {
         Job job = new Job();
         job.id = String.valueOf(ids.incrementAndGet());
         job.champion = inputs.get(req.fighter).f.champion;
+        job.fighter = req.fighter;
         job.objective = req.objective;
         job.scenario = sc.name;
         job.generations = generations(req.generations);
@@ -210,8 +218,9 @@ public class ArenaTrainingService {
         st.safeZone = sc.safeZone;
         level(st, req.level, job.champion);
         st.drills = Math.max(0, Math.min(1, req.drills));
-        st.stopAtVictory = victory(req.stopWhen);
-        st.plateau = plateau(req.plateauPct, req.plateauWindow, req.minGenerations);
+        st.stopAtScenarioWin = victory(req.stopWhen);
+        st.aliveToo = req.aliveToo;
+        st.plateau = plateau(req.stopWhen, req.plateauPct, req.plateauWindow, req.minGenerations);
         ArenaTraining.StageResult r = training.trainStage(st, new ArenaTraining.Listener() {
             @Override
             public void message(String text) {
@@ -244,7 +253,7 @@ public class ArenaTrainingService {
         job.victory = r.victory;
         job.policy = r.policy.withoutWeights();
         job.status = "done";
-        job.message = (r.victory ? "vitória total na geração " + r.generations + "; "
+        job.message = (r.victory ? "venceu o cenário na geração " + r.generations + "; "
                 : r.plateau ? "platô na geração " + r.generations + "; " : "")
                 + (r.policy.accepted ? "versão aceita" : "versão salva, mas não aceita (não superou o roteiro e a anterior em 55%)");
         job.finishedAt = System.currentTimeMillis();
@@ -298,8 +307,9 @@ public class ArenaTrainingService {
         spec.episodesPerGeneration = Math.max(1, Math.min(ArenaTraining.POOL, req.episodesPerGeneration));
         spec.seed = req.seed;
         spec.maxRounds = Math.max(1, Math.min(20, req.maxRounds));
-        spec.stopAtVictory = victory(req.stopWhen);
-        spec.plateau = plateau(req.plateauPct, req.plateauWindow, req.minGenerations);
+        spec.stopAtScenarioWin = victory(req.stopWhen);
+        spec.aliveToo = req.aliveToo;
+        spec.plateau = plateau(req.stopWhen, req.plateauPct, req.plateauWindow, req.minGenerations);
         ArenaChain.Job job = new ArenaChain.Job();
         job.id = "c" + ids.incrementAndGet();
         job.scenario = sc.name;
@@ -389,8 +399,9 @@ public class ArenaTrainingService {
                     st.previous = policies.best(job.champion, req.objective).orElse(null);
                     st.teamPlan = plan(sc, inputs.get(req.fighter).f.team);
                     st.safeZone = sc.safeZone;
-                    st.stopAtVictory = victory(req.stopWhen);
-                    st.plateau = plateau(req.plateauPct, req.plateauWindow, req.minGenerations);
+                    st.stopAtScenarioWin = victory(req.stopWhen);
+                    st.aliveToo = req.aliveToo;
+                    st.plateau = plateau(req.stopWhen, req.plateauPct, req.plateauWindow, req.minGenerations);
                     st.drills = Math.max(0, Math.min(1, req.drills));
                     level(st, level, job.champion);
                     ArenaTraining.StageResult r = training.trainStage(st, new ArenaTraining.Listener() {
@@ -477,11 +488,19 @@ public class ArenaTrainingService {
         return Math.max(1, Math.min(200, n));
     }
 
+    static final List<String> STOP_RULES = List.of("generations", "plateau", "victory");
+
+    /** Whether the stop rule is a victory in the scenario's own fight (generations | plateau | victory). */
     private static boolean victory(String stopWhen) {
-        if (stopWhen != null && !"victory".equals(stopWhen) && !"plateau".equals(stopWhen)) {
+        if (stopWhen != null && !STOP_RULES.contains(stopWhen)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Critério de parada desconhecido: " + stopWhen + ".");
         }
-        return !"plateau".equals(stopWhen);
+        return "victory".equals(stopWhen);
+    }
+
+    /** The plateau rule, only when the stop rule is the plateau (otherwise off: all the generations run). */
+    private static Plateau plateau(String stopWhen, double pct, int window, int min) {
+        return "plateau".equals(stopWhen) ? plateau(pct, window, min) : Plateau.off();
     }
 
     private static Plateau plateau(double pct, int window, int min) {
