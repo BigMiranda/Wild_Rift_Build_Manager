@@ -828,3 +828,24 @@ no minuto escolhido na linha do tempo. API em `/api/lab` (`PlannerLabService`).
   cada lutador. A montagem (`arenaBuild`, ~50–100 ms por build e minuto, medida no laboratório) passa a dominar:
   6 × 32 × 40 × 4 × 75 ms ≈ 38 min em 1 thread. Por isso a montagem precisa de cache por (itens, minuto) e de
   paralelismo; com isso, a estimativa fica em alguns minutos por campeão e minuto.
+
+### Relatório final da Rodada 3
+**Benchmark** (s simulados por s; 10 núcleos / 20 threads):
+
+| | antes (0ab31d1) | depois (471903d) |
+|---|---|---|
+| roteiro, 1 thread | 15,0 mil | 13,1 mil |
+| roteiro, 20 threads | 137 mil | 114 mil |
+| Tático, 1 thread | 4,5 mil | 3,0 mil |
+| Tático, 20 threads | 38 mil | 27 mil |
+
+O custo veio dos eventos estruturados (−12% no roteiro) e das previsões (−32% no Tático, que decide a cada passo);
+as previsões só são calculadas quando lidas.
+
+**Perguntas abertas para o usuário:**
+1. O ataque do Ornn num alvo Frágil: é um empurrão curto (o padrão, `empurra: 150`, ~0,15 s) ou um arremesso que
+   "mantém o alvo no ar mais um pouco"? Se for arremesso, quanto tempo? Para testar: `fragil.ataques: {efeito:
+   arremessa, duracao: <s>}`.
+2. Atordoamentos durante a cabeçada da R: a suposição em uso é que a cabeçada anula puxões, empurrões e arremessos
+   enquanto dura e que um atordoamento cai no fim dela com o tempo restante (`continua_depois`). É assim no jogo, ou
+   o atordoamento interrompe (`interrompe`)?
