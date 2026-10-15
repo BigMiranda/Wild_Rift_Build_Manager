@@ -96,6 +96,116 @@ public final class ArenaModel {
         public TeamPlan[] teams;
     }
 
+    // ------------------------------------------------------------------ combos
+
+    /** A fact of the observation compared with a value: {@code alvo.controle_restante > 0.3} (see ai.Facts). */
+    public static class Condition {
+        public String fact;
+        /** &lt; | &lt;= | &gt; | &gt;= | == | != */
+        public String op = ">";
+        public double value;
+
+        public Condition() {
+        }
+
+        public Condition(String fact, String op, double value) {
+            this.fact = fact;
+            this.op = op;
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return fact + " " + op + " " + value;
+        }
+    }
+
+    /**
+     * One step of a combo: an action, and optionally a wait before it until an event of the fight (relative to the
+     * event, never to the clock). A move step moves until its event instead.
+     */
+    public static class ComboStep {
+        /** habilidade:S | reconjurar:S | ativo:&lt;name&gt; | atacar | mover:alvo | mover:longe | esperar */
+        public String action;
+        /**
+         * Wait until (before the action): alvo_pousa (the target's knock-up ends in at most delta), alvo_no_chao (on the
+         * ground for delta), marca_aplicada, reconjuracao_acertaria (of the step's slot, or {@link #slot}),
+         * controle_restante (at most delta), ataque_pronto, tempo (delta seconds). Null = no wait.
+         */
+        public String until;
+        /** The Δ of the wait (s). */
+        public double delta;
+        /** Calibratable Δ: the search may move it within these bounds. */
+        public Double deltaMin;
+        public Double deltaMax;
+        /** The longest wait (s); then the step goes on anyway. */
+        public double max = 2;
+        /** The slot a recast wait looks at (null = the step's own). */
+        public String slot;
+
+        public ComboStep() {
+        }
+
+        public ComboStep(String action) {
+            this.action = action;
+        }
+
+        public ComboStep(String action, String until, double delta) {
+            this.action = action;
+            this.until = until;
+            this.delta = delta;
+        }
+
+        public boolean calibratable() {
+            return deltaMin != null && deltaMax != null && deltaMax > deltaMin;
+        }
+
+        @Override
+        public String toString() {
+            return (until == null ? "" : "até " + until + (delta != 0 ? (delta > 0 ? " +" : " ") + delta : "") + " → ") + action;
+        }
+    }
+
+    /** A combo of a champion: steps, when it may start, when it stops, and how it scored on the bench. */
+    public static class Combo {
+        public Long id;
+        public String champion;
+        public String name;
+        /** descoberto (found by the search) | manual (typed by the user) */
+        public String origin = "manual";
+        public boolean active = true;
+        /** Score on the bench (higher is better); orders the combos the AI may use. */
+        public Double score;
+        /** Build and minute it was found for (search), or null. */
+        public String build;
+        public Long buildId;
+        public Double minute;
+        public List<ComboStep> steps = new ArrayList<>();
+        /** All must hold to start (facts of the observation). */
+        public List<Condition> start = new ArrayList<>();
+        /** Any of them stops it. */
+        public List<Condition> abort = new ArrayList<>();
+        /** The longest it may run (s). */
+        public double maxTime = 6;
+        /** Bench numbers of the last measure (damage, control, marks...). */
+        public Map<String, Object> metrics = new LinkedHashMap<>();
+        public String note;
+        public String createdAt;
+        public String updatedAt;
+    }
+
+    /** A combo run in a fight: when, how it ended, and its steps. */
+    public static class ComboReport {
+        public int fighter;
+        public String combo;
+        public double start;
+        public Double end;
+        /** done | aborted */
+        public String outcome;
+        public String reason;
+        public List<Event> steps = new ArrayList<>();
+    }
+
     // ------------------------------------------------------------------ results
 
     /** A champion in a frame. */
@@ -239,5 +349,8 @@ public final class ArenaModel {
         /** What a learned policy chose, each time its choice changed, with its three best scores. */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public List<Event> decisions = new ArrayList<>();
+        /** Combos run, with their steps and how each ended. */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public List<ComboReport> combos = new ArrayList<>();
     }
 }

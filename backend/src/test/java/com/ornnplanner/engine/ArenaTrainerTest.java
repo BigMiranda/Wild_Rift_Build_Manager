@@ -89,29 +89,53 @@ class ArenaTrainerTest {
         assertEquals(r.referenceWinRate, r.winRate, 0.2);
     }
 
-    /** Phase 3 goal: after an offline training, better than the scripted autopilot in at least 60% of new starts. */
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named = "arena.report", matches = "true")
+    @Test
+    void seeds() {
+        List<Gym.Episode> pool = episodes(11, 24);
+        List<Gym.Episode> validation = episodes(99, 24);
+        for (long seed = 1; seed <= 8; seed++) {
+            Trainer.Config cfg = new Trainer.Config();
+            cfg.population = 32;
+            cfg.generations = 30;
+            cfg.episodesPerGeneration = 12;
+            cfg.seed = seed;
+            Network net = train(cfg, pool, new ArrayList<>());
+            Gym.Report vs = GYM.compare(validation, new NeuralPolicy(net, PRIORITY), new ScriptedPolicy(PRIORITY), "win_fast");
+            System.out.printf("SEED %d better %.2f wins %.2f%n", seed, vs.better, vs.winRate);
+        }
+    }
+
+    /**
+     * Phase 3 goal: after an offline training, better than the scripted autopilot in at least 60% of new starts, on
+     * average over three training seeds (one seed alone swings from 54% to 85%: a single run is noise).
+     */
     @Test
     void trainedDariusBeatsTheScriptOnValidation() {
         List<Gym.Episode> pool = episodes(11, 24);
         List<Gym.Episode> validation = episodes(99, 24);   // other starts, never trained on
-        Trainer.Config cfg = new Trainer.Config();
-        cfg.population = 32;
-        cfg.generations = 30;
-        cfg.episodesPerGeneration = 12;
-        cfg.seed = 5;
-        List<Trainer.Generation> log = new ArrayList<>();
-        long t0 = System.nanoTime();
-        Network net = train(cfg, pool, log);
-        double seconds = (System.nanoTime() - t0) / 1e9;
-        NeuralPolicy ai = new NeuralPolicy(net, PRIORITY);
-        Gym.Report vsScript = GYM.compare(validation, ai, new ScriptedPolicy(PRIORITY), "win_fast");
-        Gym.Report vsTactical = GYM.compare(validation, ai, new TacticalPolicy(PRIORITY), "win_fast");
-        System.out.printf("training: %d generations in %.1fs; mean fitness %.0f -> %.0f%n", log.size(), seconds,
-                log.get(0).mean, log.get(log.size() - 1).mean);
-        System.out.printf("validation vs script: better in %.0f%%, wins %.0f%% (script %.0f%%)%n", vsScript.better * 100,
-                vsScript.winRate * 100, vsScript.referenceWinRate * 100);
-        System.out.printf("validation vs tactical: better in %.0f%%, wins %.0f%% (tactical %.0f%%)%n", vsTactical.better * 100,
-                vsTactical.winRate * 100, vsTactical.referenceWinRate * 100);
-        assertTrue(vsScript.better >= 0.6, "better than the script in " + vsScript.better);
+        double sum = 0;
+        for (long seed = 1; seed <= 3; seed++) {
+            Trainer.Config cfg = new Trainer.Config();
+            cfg.population = 32;
+            cfg.generations = 30;
+            cfg.episodesPerGeneration = 12;
+            cfg.seed = seed;
+            List<Trainer.Generation> log = new ArrayList<>();
+            long t0 = System.nanoTime();
+            Network net = train(cfg, pool, log);
+            double seconds = (System.nanoTime() - t0) / 1e9;
+            NeuralPolicy ai = new NeuralPolicy(net, PRIORITY);
+            Gym.Report vsScript = GYM.compare(validation, ai, new ScriptedPolicy(PRIORITY), "win_fast");
+            Gym.Report vsTactical = GYM.compare(validation, ai, new TacticalPolicy(PRIORITY), "win_fast");
+            System.out.printf("seed %d: %d generations in %.1fs; mean fitness %.0f -> %.0f%n", seed, log.size(), seconds,
+                    log.get(0).mean, log.get(log.size() - 1).mean);
+            System.out.printf("  validation vs script: better in %.0f%%, wins %.0f%% (script %.0f%%)%n", vsScript.better * 100,
+                    vsScript.winRate * 100, vsScript.referenceWinRate * 100);
+            System.out.printf("  validation vs tactical: better in %.0f%%, wins %.0f%% (tactical %.0f%%)%n", vsTactical.better * 100,
+                    vsTactical.winRate * 100, vsTactical.referenceWinRate * 100);
+            sum += vsScript.better;
+        }
+        assertTrue(sum / 3 >= 0.6, "better than the script in " + sum / 3 + " on average");
     }
 }

@@ -93,6 +93,77 @@ public class ArenaController {
         }
     }
 
+    // ------------------------------------------------------------------ combo library
+
+    /** A champion's combos (all when none is given), best score first. */
+    @GetMapping("/combos")
+    public List<ArenaModel.Combo> combos(@RequestParam(required = false) String champion) {
+        return arena.combos().list(champion);
+    }
+
+    @PostMapping("/combos")
+    public ArenaModel.Combo createCombo(@RequestBody ArenaModel.Combo combo) {
+        combo.id = null;
+        return arena.combos().save(checked(combo));
+    }
+
+    @PutMapping("/combos/{id}")
+    public ArenaModel.Combo updateCombo(@PathVariable long id, @RequestBody ArenaModel.Combo combo) {
+        arena.combos().find(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Combo " + id + " não existe."));
+        combo.id = id;
+        return arena.combos().save(checked(combo));
+    }
+
+    @PutMapping("/combos/{id}/active")
+    public void comboActive(@PathVariable long id, @RequestBody Map<String, Boolean> body) {
+        if (!arena.combos().setActive(id, Boolean.TRUE.equals(body.get("active")))) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Combo " + id + " não existe.");
+        }
+    }
+
+    @DeleteMapping("/combos/{id}")
+    public void deleteCombo(@PathVariable long id) {
+        if (!arena.combos().delete(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Combo " + id + " não existe.");
+        }
+    }
+
+    /** The facts conditions can use (combos, guidelines). */
+    @GetMapping("/facts")
+    public List<String> facts() {
+        return com.ornnplanner.arena.ai.Facts.names();
+    }
+
+    private static ArenaModel.Combo checked(ArenaModel.Combo c) {
+        if (c.champion == null || c.champion.isBlank() || c.name == null || c.name.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Campeão e nome do combo são obrigatórios.");
+        }
+        if (c.steps == null || c.steps.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "O combo precisa de ao menos um passo.");
+        }
+        for (ArenaModel.Condition k : concat(c.start, c.abort)) {
+            if (!com.ornnplanner.arena.ai.Facts.known(k.fact)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fato desconhecido: " + k.fact + ".");
+            }
+        }
+        if (!"manual".equals(c.origin) && !"descoberto".equals(c.origin)) {
+            c.origin = "manual";
+        }
+        c.maxTime = Math.max(0.5, Math.min(20, c.maxTime));
+        return c;
+    }
+
+    private static List<ArenaModel.Condition> concat(List<ArenaModel.Condition> a, List<ArenaModel.Condition> b) {
+        List<ArenaModel.Condition> out = new java.util.ArrayList<>();
+        if (a != null) {
+            out.addAll(a);
+        }
+        if (b != null) {
+            out.addAll(b);
+        }
+        return out;
+    }
+
     @GetMapping("/kits")
     public Map<String, Object> kits() {
         return arena.kits();

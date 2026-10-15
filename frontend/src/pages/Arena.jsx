@@ -1289,6 +1289,23 @@ function ArenaReport({ result, names }) {
         </div>
       </details>
       <TriggerTable result={result} names={names} />
+      {result.combos?.length > 0 && (
+        <details className="combat-details" open>
+          <summary>{t('arena.combos.title', { n: result.combos.length })}</summary>
+          <ul className="combat-events">
+            {result.combos.map((c, k) => (
+              <li key={k}>
+                <span className="swatch" style={{ background: TEAM[fr[c.fighter]?.team ?? 0] }} />
+                {c.fighter + 1} · {names[c.fighter]}: <strong>{c.combo}</strong> {n1(c.start)}s → {c.end != null ? `${n1(c.end)}s` : '…'}{' '}
+                <span className={c.outcome === 'done' ? '' : 'warn'}>
+                  {c.outcome === 'done' ? t('arena.combos.done') : t('arena.combos.aborted', { why: c.reason })}
+                </span>
+                <ol className="small muted">{c.steps.map((s, j) => <li key={j}>{n1(s.t)}s: {s.text.replace(/^\d+\. /, '')}</li>)}</ol>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {result.decisions?.length > 0 && (
         <details className="combat-details">
           <summary>{t('arena.decisions', { n: result.decisions.length })}</summary>

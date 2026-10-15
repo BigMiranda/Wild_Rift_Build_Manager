@@ -132,6 +132,8 @@ public final class Observation {
         public double attackRange;
         /** The deciding champion is in its attack reach. */
         public boolean reachesMe;
+        /** Seconds left of its knock-up (not in the vector: the facts of combos and guidelines read it). */
+        public double airLeft;
     }
 
     /**

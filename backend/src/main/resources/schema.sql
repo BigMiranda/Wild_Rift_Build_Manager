@@ -13,6 +13,7 @@
 -- Version 13: orchestrated matchup scenarios (arena_scenario).
 -- Version 14: learned arena policies (arena_policy).
 -- Version 15: chain training of arena policies (arena_policy.chain_id, chain_round, team_plan, parent_id).
+-- Version 16: combo library of the arena (arena_combo): found by the search or typed by the user.
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -191,3 +192,20 @@ CREATE TABLE IF NOT EXISTS arena_policy (
     parent_id          INTEGER        -- version its training started from (NULL = zero weights)
 );
 CREATE INDEX IF NOT EXISTS idx_arena_policy_champion ON arena_policy (champion);
+
+CREATE TABLE IF NOT EXISTS arena_combo (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    champion    TEXT NOT NULL,
+    name        TEXT NOT NULL,
+    origin      TEXT NOT NULL DEFAULT 'manual',   -- descoberto | manual
+    active      INTEGER NOT NULL DEFAULT 1,
+    score       REAL,
+    build       TEXT,                             -- build and minute it was found for (search)
+    build_id    INTEGER,
+    minute      REAL,
+    data        TEXT NOT NULL,                    -- steps, conditions, max time, metrics, as JSON
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS arena_combo_champion ON arena_combo (champion);

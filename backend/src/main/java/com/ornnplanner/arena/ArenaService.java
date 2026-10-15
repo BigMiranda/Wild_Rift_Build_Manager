@@ -59,6 +59,7 @@ public class ArenaService {
     private final RuneCatalog runes;
     private final JdbcTemplate jdbc;
     private final PolicyRepository policies;
+    private final ComboRepository combos;
     private final Map<String, Object> kits = new LinkedHashMap<>();
     private final Map<String, Object> map = new LinkedHashMap<>();
     private static final ObjectMapper JSON = new ObjectMapper()
@@ -66,13 +67,15 @@ public class ArenaService {
 
     @SuppressWarnings("unchecked")
     public ArenaService(CombatService combat, CombatCatalog catalog, BuildRepository builds, RuneCatalog runes,
-                        JdbcTemplate jdbc, PolicyRepository policies, @Value("${planner.seed.kits:classpath:seed/kits_7_3.yml}") Resource kitsFile) {
+                        JdbcTemplate jdbc, PolicyRepository policies, ComboRepository combos,
+                        @Value("${planner.seed.kits:classpath:seed/kits_7_3.yml}") Resource kitsFile) {
         this.combat = combat;
         this.catalog = catalog;
         this.builds = builds;
         this.runes = runes;
         this.jdbc = jdbc;
         this.policies = policies;
+        this.combos = combos;
         try (InputStream in = kitsFile.getInputStream()) {
             Map<String, Object> root = new Yaml().load(in);
             kits.putAll((Map<String, Object>) root.get("campeoes"));
@@ -148,6 +151,7 @@ public class ArenaService {
             if (slot.priority != null && !slot.priority.isEmpty()) {
                 in.priority = new ArrayList<>(slot.priority);
             }
+            in.combos = combos.forPolicy(in.f.champion, null);   // the library's active combos, best first
             in.policy = policy(slot.brain, in);
             in.baseAttackSpeed = f.baseAttackSpeed > 0 ? f.baseAttackSpeed : 0.7;
             double[] start = start(slot.team, perTeam[slot.team]++, ofTeam[slot.team]);
@@ -213,6 +217,10 @@ public class ArenaService {
             return r.policy(in.priority);   // migrated when read, on the tactical rules it was trained over
         }
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cérebro desconhecido: " + brain + ".");
+    }
+
+    public ComboRepository combos() {
+        return combos;
     }
 
     /** Default start: next to the side's Nexus, side by side. */

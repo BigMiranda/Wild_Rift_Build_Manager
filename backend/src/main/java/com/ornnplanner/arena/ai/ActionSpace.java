@@ -17,11 +17,13 @@ import java.util.List;
  *   27        retreat: walk away from the enemies' center
  *   28 .. 30  kite enemy k: attack when the attack is up, else keep just inside attack reach, stepping back
  *   31        dodge: side step out of the path of the enemy skillshot coming at the champion
+ *   32 .. 35  combo c: run the champion's c-th active combo (by score) on the current target
  * </pre>
  *
  * Casts, recasts and actives are instant decisions: when one leaves the champion free, it decides again in the same
  * step with all of them masked (one per step, as the autopilot always did). Moves (attack, retreat, kite, dodge) end
- * the step, and yield to a move or hold of the timeline.
+ * the step, and yield to a move or hold of the timeline. A combo runs over several steps (the arena keeps its state);
+ * while it runs only dodging, Flash away, idle (go on) and the running combo itself are valid.
  */
 public final class ActionSpace {
 
@@ -29,6 +31,8 @@ public final class ActionSpace {
     public static final int ENEMIES = 3;
     /** Item actives and summoner spells a policy can use (the first ones of the build). */
     public static final int ACTIVES = 6;
+    /** Combos of the champion's library a policy can run (its active ones, best score first). */
+    public static final int COMBOS = 4;
     public static final List<String> SLOTS = List.of("1", "2", "3", "R");
     private static final int SLOT_COUNT = 4;
 
@@ -41,7 +45,8 @@ public final class ActionSpace {
     public static final int RETREAT = FLASH_AWAY + 1;
     public static final int KITE = RETREAT + 1;
     public static final int DODGE = KITE + ENEMIES;
-    public static final int SIZE = DODGE + 1;
+    public static final int COMBO = DODGE + 1;
+    public static final int SIZE = COMBO + COMBOS;
 
     /** Score of an action a migrated network did not have (a combo): never above a real action's. */
     public static final double NEW_ACTION_BIAS = -5;
@@ -101,6 +106,14 @@ public final class ActionSpace {
         return action >= KITE && action < DODGE;
     }
 
+    public static int combo(int c) {
+        return COMBO + c;
+    }
+
+    public static boolean isCombo(int action) {
+        return action >= COMBO && action < SIZE;
+    }
+
     /** Done at once, without ending the step: casts, recasts, actives, Flash. */
     public static boolean isInstant(int action) {
         return isCast(action) || isRecast(action) || isActive(action) || action == FLASH_AWAY;
@@ -145,6 +158,9 @@ public final class ActionSpace {
         }
         if (isKite(action)) {
             return "kite no inimigo " + (enemyOf(action) + 1);
+        }
+        if (isCombo(action)) {
+            return "combo " + (action - COMBO + 1);
         }
         switch (action) {
             case FLASH_AWAY:

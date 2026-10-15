@@ -535,3 +535,49 @@ Campos novos, documentados no cabeçalho do `kits_7_3.yml`:
   reduz; marcas consumidas e aplicadas por habilidade; janela de encadeamento; volta do elemental ≥ 0,6),
   `ArenaPolicyMigrationTest` (🎯 e o mapa de entradas e saídas). O `tacticalBeatsTheScriptOverAllDuels` de antes
   passou (168 V / 98 D contra 138 / 132), e o Darius treinado ficou melhor que o roteiro em 77% da validação.
+
+### Parte D — Combos como dados e como ações ✅
+- **Modelo** (`ArenaModel.Combo`, `ComboStep`, `Condition`; tabela `arena_combo`, esquema v16, `ComboRepository`):
+  - por campeão, com origem `descoberto` | `manual`, ativo, nota, build e minuto em que foi achado, `tempo_max`,
+    condições de início (todas) e de aborto (qualquer uma), e métricas do banco de testes;
+  - passos `habilidade:S` | `reconjurar:S` | `ativo:<nome>` | `atacar` | `mover:alvo` | `mover:longe` | `esperar`;
+  - cada passo pode esperar, antes da ação, um evento: `alvo_pousa` (o arremesso acaba em até Δ), `alvo_no_chao`
+    (no chão há Δ), `marca_aplicada`, `reconjuracao_acertaria` (do slot do passo, ≥ 0,6), `controle_restante` (≤ Δ),
+    `ataque_pronto` e `tempo` (Δ s). Cada espera tem `max` (padrão 2 s; depois o passo segue);
+  - o Δ é calibrável quando há `deltaMin` / `deltaMax`;
+  - num `mover`, o evento é o fim do movimento.
+- **Condições** como dados: `ai.Facts` dá nome aos fatos da observação (os da Parte C e mais `alvo.no_ar_restante`,
+  `alvo.distancia`, `pronto:S`, `acerto:S`, `encadeia:S`, `consome_marca:S`, `proprio.vida_perdida_2s`...). É o
+  mesmo vocabulário que as diretrizes da Parte H vão usar. `GET /api/arena/facts` lista os nomes, e a API recusa um
+  fato desconhecido.
+- **Executor** (`Arena.runCombo`):
+  - o estado (`ComboRun`) fica no `U`, nunca na política;
+  - aborta quando: o tempo esgota, o alvo morre ou some, o campeão entra em controle (atordoado, no ar,
+    deslocado), uma ordem da linha do tempo é cumprida, um passo fica impossível (não aprendida, ou a recarga só
+    volta depois do `tempo_max`) ou um `abortar_se` vale;
+  - no aborto, a política volta a decidir no passo seguinte;
+  - fora do alcance de uma habilidade, anda até ela;
+  - vários passos seguidos acontecem no mesmo passo de simulação enquanto o campeão está livre;
+  - `Result.combos` registra cada execução com os passos (tempo e texto) e o fim (concluído, ou abortado com o
+    motivo). Na tela: "Combos executados";
+  - eventos `combo_iniciado`, `combo_concluido` e `combo_abortado:<nome>`;
+  - as conjurações do combo entram em `policyOrders`, de modo que "→ linha do tempo" as exporta.
+- **Na IA:** `ActionSpace.COMBOS = 4`, as ações 32..35 (`SIZE = 36`), com os combos ativos do campeão em ordem de
+  nota (`ComboRepository.forPolicy`; `ArenaService.prepare` os põe no `Input`).
+  - Uma ação de combo é válida quando as condições de início valem e o 1º passo é possível agora (habilidade
+    pronta e no alcance, janela aberta, ativo pronto, alvo ao alcance de ataque, ou um 1º passo que espera um
+    evento).
+  - Enquanto um combo roda, só valem parado/o próprio combo (continuar), `desviar` e `Flash para fugir`: a política
+    só o interrompe com eles.
+  - `Arena.Input.script` roda um combo desde o início, sem política (o boneco da Parte E).
+- **Migração:** as saídas novas recebem viés −5 (`ActionSpace.migration(32)` é o mapa: as 32 ações ficam nos mesmos
+  índices). 🎯 A IA v2 migrada continua idêntica (golden das 4 lutas com cérebro `ai:`) e o golden de 35 cenários
+  também.
+- **Testes:**
+  - `ArenaComboTest`: passos em ordem com esperas; abortos por tempo, passo impossível, alvo morto e `abortar_se`; a
+    política roda o combo como uma ação, sem poder lançar habilidades enquanto ele roda; condições de início; a
+    biblioteca (ordem por nota, ativos, origem).
+  - `trainedDariusBeatsTheScriptOnValidation`: passou a exigir a média de 3 sementes ≥ 60%. Com 4 saídas a mais, o
+    ruído do treino muda de dimensão e uma semente só variou de 54% a 85% (8 sementes, média 62%).
+  - O cenário "desequilibrado" do teste da cadeia ficou mais desequilibrado, para continuar sendo uma vitória total
+    estável.

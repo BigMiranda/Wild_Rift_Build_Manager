@@ -1,6 +1,8 @@
 package com.ornnplanner.arena;
 
 import com.ornnplanner.arena.ArenaModel.Action;
+import com.ornnplanner.arena.ArenaModel.Combo;
+import com.ornnplanner.arena.ArenaModel.ComboStep;
 import com.ornnplanner.arena.ArenaModel.Event;
 import com.ornnplanner.arena.ArenaModel.FighterStats;
 import com.ornnplanner.arena.ArenaModel.Frame;
@@ -10,6 +12,7 @@ import com.ornnplanner.arena.ArenaModel.TeamPlan;
 import com.ornnplanner.arena.ArenaModel.UnitFrame;
 import com.ornnplanner.arena.ai.ActionMask;
 import com.ornnplanner.arena.ai.ActionSpace;
+import com.ornnplanner.arena.ai.Facts;
 import com.ornnplanner.arena.ai.Observation;
 import com.ornnplanner.arena.ai.Policy;
 import com.ornnplanner.arena.ai.ScriptedPolicy;
@@ -92,6 +95,10 @@ public class Arena {
         public Map<String, Double> activeCooldowns = new LinkedHashMap<>();
         /** Conditional effects of the build (items, shop lines, runes, champion) and when they count. */
         public List<CombatService.Triggered> triggers = new ArrayList<>();
+        /** The champion's combos a policy may run (ActionSpace.COMBO + c, best score first; at most COMBOS). */
+        public List<Combo> combos = new ArrayList<>();
+        /** A combo run as soon as the fight starts, without a policy (the bench); null = none. */
+        public Combo script;
 
         /**
          * A shallow copy (same fighter, sheet and build effects, which a run only reads): to change the start or the
@@ -114,6 +121,8 @@ public class Arena {
             c.baseAttackSpeed = baseAttackSpeed;
             c.activeCooldowns = activeCooldowns;
             c.triggers = triggers;
+            c.combos = combos;
+            c.script = script;
             return c;
         }
     }
@@ -271,6 +280,9 @@ public class Arena {
         double cleanseUntil = -1;
         /** Its dashes and leaps (slot -> kind), read once from the sheet. */
         Map<String, String> mobility;
+        /** The combo it runs now (its state lives here, never in the policy), and whether the scripted one started. */
+        ComboRun combo;
+        boolean scriptStarted;
 
         U(int idx, Input in) {
             this.idx = idx;
@@ -406,6 +418,26 @@ public class Arena {
         int rank(String slot) {
             int i = "R".equals(slot) ? 3 : "1".equals(slot) ? 0 : "2".equals(slot) ? 1 : "3".equals(slot) ? 2 : -1;
             return i < 0 ? 0 : f.ranks[i];
+        }
+    }
+
+    /** A combo being run: which, on whom, its step and since when. */
+    private static final class ComboRun {
+        final Combo spec;
+        final int action;
+        final U target;
+        final double start;
+        int step;
+        double stepStart;
+        boolean waited;
+        final ArenaModel.ComboReport report = new ArenaModel.ComboReport();
+
+        ComboRun(Combo spec, int action, U target, double start) {
+            this.spec = spec;
+            this.action = action;
+            this.target = target;
+            this.start = start;
+            this.stepStart = start;
         }
     }
 
@@ -641,6 +673,9 @@ public class Arena {
         result.duration = Math.min(now, duration);
         for (U u : units) {
             closeCasts(u);
+            if (u.combo != null) {
+                endCombo(u, "aborted", u.combo.target.dead ? "alvo morreu" : "fim da luta");
+            }
         }
         for (U u : units) {
             u.r.eventSummary = ArenaEvents.summary(u.r.events);
@@ -724,6 +759,9 @@ public class Arena {
     // ------------------------------------------------------------------ a champion's step
 
     private void step(U u) {
+        if (u.combo != null && !u.canAct()) {
+            endCombo(u, "aborted", "em controle");   // stunned, knocked up, displaced: the combo is broken
+        }
         if (u.forced != null) {
             moveForced(u);
             return;
@@ -766,6 +804,34 @@ public class Arena {
             }
             break;   // waits for a cooldown: meanwhile it keeps fighting
         }
+        if (acted && u.combo != null) {
+            endCombo(u, "aborted", "ordem da linha do tempo");
+        }
+        if (u.in.script != null && !u.scriptStarted && u.combo == null && !acted) {
+            U t = target(u);
+            if (t != null) {
+                u.scriptStarted = true;
+                u.combo = newRun(u, u.in.script, -1, t);
+            }
+        }
+        if (u.combo != null) {
+            Turn turn = new Turn(u, false);
+            if (u.combo.action >= 0) {
+                // the policy may only break off to dodge or Flash away
+                int a = decide(turn, true);
+                if (a == ActionSpace.DODGE || a == ActionSpace.FLASH_AWAY) {
+                    endCombo(u, "aborted", "interrompido: " + ActionSpace.describe(a));
+                    if (a == ActionSpace.DODGE) {
+                        dodge(u, turn.threat());
+                    } else if ("done".equals(instant(turn, a)) && recordFrames) {
+                        result.policyOrders.add(asOrder(turn, a));
+                    }
+                    return;
+                }
+            }
+            runCombo(u, turn);
+            return;
+        }
         // Free: the policy decides. A cast that fails is masked and it decides again; a cast that leaves the champion
         // free closes the casts for this step and it decides again (chase, attack or stay).
         Turn turn = new Turn(u, acted);
@@ -789,6 +855,11 @@ public class Arena {
                     turn.block(a);
                 }
                 continue;
+            }
+            if (ActionSpace.isCombo(a) && turn.valid(a)) {
+                u.combo = newRun(u, u.in.combos.get(a - ActionSpace.COMBO), a, turn.target);
+                runCombo(u, turn);
+                return;
             }
             if (u.hold) {
                 return;
@@ -1102,6 +1173,21 @@ public class Arena {
             if (only >= 0) {
                 return action == only;
             }
+            if (u.combo != null) {
+                // a combo runs: go on with it (idle or the combo), or break off to dodge / Flash away
+                if (action == ActionSpace.IDLE || action == u.combo.action) {
+                    return true;
+                }
+                if (action == ActionSpace.DODGE) {
+                    return threat() != null;
+                }
+                return action == ActionSpace.FLASH_AWAY && target != null && activeUsable(u, "Flash", null);
+            }
+            if (ActionSpace.isCombo(action)) {
+                int c = action - ActionSpace.COMBO;
+                return !acted && !castsOver && u.in.autoAbilities && target != null && c < u.in.combos.size()
+                        && comboCanStart(this, u.in.combos.get(c));
+            }
             if (ActionSpace.isCast(action)) {
                 U t = enemy(ActionSpace.enemyOf(action));
                 if (acted || castsOver || !u.in.autoAbilities || t == null) {
@@ -1323,6 +1409,7 @@ public class Arena {
             o.cleanseReady = spellReady(x, "Purificar");
             o.attackRange = x.attackRange();
             o.reachesMe = o.distance <= x.attackRange() + u.radius() + x.radius();
+            o.airLeft = Math.max(0, x.airUntil - now);
         }
     }
 
@@ -4912,6 +4999,258 @@ public class Arena {
         if (per5 > 0 && u.hp < u.maxHp && now >= u.stasisUntil) {
             heal(u, per5 / 10, Map.of(key(u, "Regeneração de Vida"), per5 / 10));
         }
+    }
+
+    // ------------------------------------------------------------------ combos
+
+    /** A combo may start: its start conditions hold and its first step can be done now (or after its wait). */
+    private boolean comboCanStart(Turn turn, Combo c) {
+        if (c.steps == null || c.steps.isEmpty() || !Facts.all(turn.obs, c.start)) {
+            return false;
+        }
+        ComboStep first = c.steps.get(0);
+        if (first.until != null) {
+            return true;   // it starts by waiting for an event
+        }
+        U u = turn.u;
+        U t = turn.target;
+        String[] a = action(first);
+        switch (a[0]) {
+            case "habilidade": {
+                Map<String, Object> ab = ability(u, a[1]);
+                return ab != null && isReady(u, a[1]) && inUseRange(u, t, ab);
+            }
+            case "reconjurar": {
+                double[] w = u.recast.get(a[1]);
+                return w != null && now >= w[0] - 1e-9 && now <= w[1];
+            }
+            case "ativo":
+                return activeUsable(u, a[1], null);
+            case "atacar":
+                return dist(u.x, u.y, t.x, t.y) <= u.attackRange() + u.radius() + t.radius();
+            default:
+                return true;
+        }
+    }
+
+    private static String[] action(ComboStep s) {
+        String a = s.action == null ? "esperar" : s.action;
+        int i = a.indexOf(':');
+        return i < 0 ? new String[] {a, null} : new String[] {a.substring(0, i), a.substring(i + 1)};
+    }
+
+    private ComboRun newRun(U u, Combo c, int action, U target) {
+        ComboRun run = new ComboRun(c, action, target, now);
+        run.report.fighter = u.idx;
+        run.report.combo = c.name;
+        run.report.start = round3(now);
+        count(u, "combo_iniciado:" + c.name);
+        return run;
+    }
+
+    private void endCombo(U u, String outcome, String reason) {
+        ComboRun run = u.combo;
+        if (run == null) {
+            return;
+        }
+        u.combo = null;
+        run.report.end = round3(now);
+        run.report.outcome = outcome;
+        run.report.reason = reason;
+        if (recordFrames) {
+            result.combos.add(run.report);
+        }
+        count(u, "done".equals(outcome) ? "combo_concluido:" + run.spec.name : "combo_abortado:" + run.spec.name);
+        if (!"done".equals(outcome)) {
+            event(u, "abortou o combo " + run.spec.name + " no passo " + (run.step + 1) + ": " + reason);
+        }
+    }
+
+    private static double round3(double v) {
+        return Math.round(v * 1000) / 1000.0;
+    }
+
+    /**
+     * One step of the running combo: it stops when its time is up, the target is gone, an abort condition holds or a
+     * step cannot be done; else it waits for the step's event (at most its max), then does the step's action, and
+     * goes on to the next one in the same step while the champion stays free.
+     */
+    private void runCombo(U u, Turn turn) {
+        ComboRun run = u.combo;
+        U t = run.target;
+        Combo c = run.spec;
+        for (int guard = 0; guard < 20 && u.combo == run; guard++) {
+            if (now - run.start > c.maxTime + 1e-9) {
+                endCombo(u, "aborted", "tempo esgotado");
+                return;
+            }
+            if (t.dead || !t.targetable() || !t.visible()) {
+                endCombo(u, "aborted", t.dead ? "alvo morreu" : "alvo sumiu");
+                return;
+            }
+            ArenaModel.Condition stop = Facts.any(turn.obs, c.abort);
+            if (stop != null) {
+                endCombo(u, "aborted", "abortar_se " + stop);
+                return;
+            }
+            if (run.step >= c.steps.size()) {
+                endCombo(u, "done", null);
+                return;
+            }
+            ComboStep st = c.steps.get(run.step);
+            String[] a = action(st);
+            boolean move = "mover".equals(a[0]);
+            if (st.until != null && !run.waited && !move) {
+                if (!waitHolds(u, t, st, run) && now - run.stepStart < st.max - 1e-9) {
+                    u.busyState = "combo";
+                    return;   // waits for the event, in place
+                }
+                run.waited = true;
+            }
+            String outcome = comboAction(u, t, st, a, run, turn);
+            if ("drop".equals(outcome)) {
+                endCombo(u, "aborted", "passo impossível: " + st.action);
+                return;
+            }
+            if (!"done".equals(outcome)) {
+                return;
+            }
+            run.report.steps.add(new Event(round3(now), u.idx, (run.step + 1) + ". " + st));
+            run.step++;
+            run.stepStart = now;
+            run.waited = false;
+            if (run.step >= c.steps.size()) {
+                endCombo(u, "done", null);
+                return;
+            }
+            if (now < u.busyUntil || u.dash != null) {
+                return;
+            }
+        }
+    }
+
+    /** The event a step waits for has come. */
+    private boolean waitHolds(U u, U t, ComboStep st, ComboRun run) {
+        switch (st.until) {
+            case "alvo_pousa":
+                return t.airUntil - now <= st.delta + 1e-9;
+            case "alvo_no_chao":
+                return now >= t.airUntil && now - t.airUntil >= st.delta - 1e-9;
+            case "marca_aplicada":
+                return markLeft(u, t) > 0;
+            case "reconjuracao_acertaria": {
+                String slot = st.slot != null ? st.slot : action(st)[1];
+                Map<String, Object> ab = slot == null ? null : ability(u, slot);
+                double[] w = slot == null ? null : u.recast.get(slot);
+                return ab != null && w != null && now >= w[0] - 1e-9 && recastPrediction(u, t, slot, ab)[0] >= 0.6;
+            }
+            case "controle_restante":
+                return controlLeft(t) <= st.delta + 1e-9;
+            case "ataque_pronto":
+                return now >= u.nextAttack - 1e-9;
+            case "tempo":
+                return now - run.stepStart >= st.delta - 1e-9;
+            default:
+                return true;   // an unknown event does not hold the combo
+        }
+    }
+
+    /** The action of a combo step: done, wait (try again next step) or drop (it cannot be done in the combo's time). */
+    private String comboAction(U u, U t, ComboStep st, String[] a, ComboRun run, Turn turn) {
+        double end = run.start + run.spec.maxTime;
+        switch (a[0]) {
+            case "habilidade": {
+                Map<String, Object> ab = ability(u, a[1]);
+                if (ab == null || u.rank(a[1]) <= 0) {
+                    return "drop";
+                }
+                if (!isReady(u, a[1])) {
+                    return u.ready.getOrDefault(a[1], 0.0) > end ? "drop" : "wait";
+                }
+                if (!inUseRange(u, t, ab)) {
+                    moveTo(u, t.x, t.y, u.moveSpeed() * DT);   // into range first
+                    u.busyState = "move";
+                    return "wait";
+                }
+                String out = castAbility(u, a[1], t, t.x, t.y, null);
+                if ("done".equals(out)) {
+                    comboOrder(u, "ability", a[1], t, null);
+                }
+                return out;
+            }
+            case "reconjurar": {
+                double[] w = u.recast.get(a[1]);
+                boolean coming = w != null || "elemental".equals(ability(u, a[1]) == null ? null : ability(u, a[1]).get("forma"))
+                        && u.elemental != null;
+                if (!coming) {
+                    return "drop";
+                }
+                String out = recast(u, a[1], t, t.x, t.y);
+                if ("done".equals(out)) {
+                    comboOrder(u, "recast", a[1], null, null);
+                }
+                return out;
+            }
+            case "ativo": {
+                String name = a[1];
+                boolean spell = u.f.spells.contains(name);
+                if (!spell && !u.f.items.containsKey(name)) {
+                    return "drop";
+                }
+                if (now < u.ready.getOrDefault(name, 0.0) - 1e-9) {
+                    return u.ready.getOrDefault(name, 0.0) > end ? "drop" : "wait";
+                }
+                String out = spell ? useSpellNimbus(u, name, t, null, null) : useItem(u, name, t);
+                if ("done".equals(out)) {
+                    comboOrder(u, spell ? "spell" : "item", null, t, name);
+                }
+                return out;
+            }
+            case "atacar": {
+                double reach = u.attackRange() + u.radius() + t.radius();
+                if (dist(u.x, u.y, t.x, t.y) > reach || !t.visible()) {
+                    moveTo(u, t.x, t.y, u.moveSpeed() * DT);
+                    u.busyState = "move";
+                    return "wait";
+                }
+                if (now < u.nextAttack - 1e-9) {
+                    u.facing = Math.atan2(t.y - u.y, t.x - u.x);
+                    return "wait";
+                }
+                attack(u, t);
+                return "done";
+            }
+            case "mover": {
+                if (st.until != null && waitHolds(u, t, st, run) || now - run.stepStart >= st.max - 1e-9) {
+                    return "done";
+                }
+                if ("longe".equals(a[1])) {
+                    double d = Math.max(1e-6, dist(u.x, u.y, t.x, t.y));
+                    moveTo(u, u.x + (u.x - t.x) / d * 100, u.y + (u.y - t.y) / d * 100, u.moveSpeed() * DT);
+                } else {
+                    moveTo(u, t.x, t.y, u.moveSpeed() * DT);
+                }
+                u.busyState = "move";
+                return "wait";
+            }
+            default:   // esperar: the wait was the step
+                return "done";
+        }
+    }
+
+    /** A cast of a combo as an order of the timeline ("turn into a timeline"). */
+    private void comboOrder(U u, String type, String slot, U t, String name) {
+        if (!recordFrames) {
+            return;
+        }
+        Action o = new Action();
+        o.fighter = u.idx;
+        o.time = Math.round(now * 100) / 100.0;
+        o.type = type;
+        o.slot = slot;
+        o.name = name;
+        o.target = t != null && !"recast".equals(type) ? t.idx : null;
+        result.policyOrders.add(o);
     }
 
     // ------------------------------------------------------------------ displacement immunity and mobility

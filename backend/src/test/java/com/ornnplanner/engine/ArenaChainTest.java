@@ -194,8 +194,8 @@ class ArenaChainTest {
     /** A Darius far stronger than Vayne: he can win every fight. */
     private static ArenaChain.Spec lopsided(double accept) {
         ArenaChain.Spec s = spec(accept);
-        s.variants = List.of(List.of(ArenaScenarios.champion("Darius", 0, 3000, 0, 4500, 400, 120),
-                ArenaScenarios.champion("Vayne", 1, 3900, 0, 1200, 40, 40)));
+        s.variants = List.of(List.of(ArenaScenarios.champion("Darius", 0, 3000, 0, 6000, 600, 150),
+                ArenaScenarios.champion("Vayne", 1, 3900, 0, 1000, 30, 30)));
         s.generations = 6;
         s.stopAtVictory = true;
         return s;
