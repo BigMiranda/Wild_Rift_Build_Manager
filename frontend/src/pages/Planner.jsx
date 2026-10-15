@@ -24,7 +24,7 @@ import RuneEditor from '../components/RuneEditor.jsx';
 import SpellEditor from '../components/SpellEditor.jsx';
 import PrepExport from '../components/PrepExport.jsx';
 import SkillExport from '../components/SkillExport.jsx';
-import PlannerLab from '../components/PlannerLab.jsx';
+import BuildTestPanels from '../components/BuildTestPanels.jsx';
 import ItemSetupExport, { configurableItems, explicitItemSetup } from '../components/ItemSetupExport.jsx';
 
 const emptyBuild = (folderId) => ({
@@ -579,8 +579,8 @@ export default function Planner({ meta, items }) {
               </div>
               {momentTab === 'lab' && (
                 <section className="panel">
-                  <h3>{t('plab.title', { time: mmss(point.minute) })}</h3>
-                  <PlannerLab buildId={draft.id} minute={Math.round(point.minute * 100) / 100} builds={builds} />
+                  <h3>{t('ptest.panelTitle', { time: mmss(point.minute) })}</h3>
+                  <BuildTestPanels buildId={draft.id} minute={Math.round(point.minute * 100) / 100} builds={builds} items={items} />
                 </section>
               )}
               {momentTab === 'relevance' && <RelevanceReport point={point} prices={result.statPrices} itemsById={itemsById} />}

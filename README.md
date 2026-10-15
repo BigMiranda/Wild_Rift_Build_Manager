@@ -324,6 +324,20 @@ A aba "Confronto" (luta rápida sem posições) saiu na Rodada 4: a Arena e o pl
   Físico/Mágico/Verdadeiro (fórmula)" do texto do jogo, com a tabela por rank (427 de 463 habilidades com dano no
   texto são lidas).
 
+## Testar a build no planejador
+
+Nos detalhes de um momento da linha do tempo, a aba **Testar** tem dois painéis para a build aberta (a versão salva):
+
+- **Testar esta build num cenário ou combo:** um cenário salvo da Arena que tenha o campeão (a build entra no slot
+  dele, no minuto escolhido) ou um combo da biblioteca contra o boneco. Mostra o vencedor (ou o dano do combo), o dano
+  causado e recebido e os 3 itens que mais pesaram: a mesma luta sem cada item. "Abrir na Arena" leva ao cenário (uma
+  cópia com esta build) ou ao laboratório, com o relatório completo.
+- **Visão de outra build:** os status desta build como qualquer outra build salva os enxerga no início de uma luta:
+  armadura e RM efetivas (redução %, penetração % e fixa) com o motivo de cada queda, o dano que passa por tipo, a
+  vida efetiva contra físico, mágico e a mistura da outra build, escudos depois do corte e cura depois das Feridas.
+  Os efeitos de um aliado dela (Cutelo Negro, Feridas, corte de escudo) entram no máximo de acúmulos. "Inverter" mostra
+  o contrário. Um minigráfico traz a vida efetiva física e mágica ao longo da partida.
+
 ## Arena
 
 Aba **Arena**: a luta é um **cenário** salvo — campeões (build salva num minuto de jogo, lado, posição

@@ -37,6 +37,8 @@ public class Fighter {
     public Map<String, Double> allyShieldSources = new LinkedHashMap<>();
     public Map<String, Double> allyHealSources = new LinkedHashMap<>();
     public Map<String, Double> vampSources = new LinkedHashMap<>();
+    /** Where its penetration comes from (stat -> item / rune -> amount), to explain how it sees a defender. */
+    public Map<String, Map<String, Double>> statSources = new LinkedHashMap<>();
 
     public double stat(String s) {
         return total.getOrDefault(s, 0.0);

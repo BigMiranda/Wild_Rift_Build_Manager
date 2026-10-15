@@ -63,4 +63,20 @@ class SeenByTest {
         assertEquals(0.5, with.healingKept, 1e-9);
         assertEquals(plain.effectiveHpMagic, with.effectiveHpMagic, 1e-6, "the magic side does not change");
     }
+
+    /** Each value says from where to where and why: the shred of the ally's item and the attacker's penetration items. */
+    @Test
+    void theReasonsNameTheItems() {
+        Arena.Input a = attacker();
+        a.f.statSources.put("% Armor Penetration", new java.util.LinkedHashMap<>(Map.of("Lembranças do Lorde Dominik", 20.0)));
+        a.f.statSources.put("Armor Penetration", new java.util.LinkedHashMap<>(Map.of("Lâmina Fantasma de Youmuu", 10.0)));
+        List<ItemEffect> ally = List.of(new ItemEffect("Cutelo Negro", Map.of("tipo", "reduz_resistencia", "resistencia", "armadura",
+                "por_acerto", 0.06, "max", 0.30, "gatilho", "fisico", "duracao", 6)),
+                new ItemEffect("Lembrete Mortal", Map.of("tipo", "feridas", "pct", 0.5, "gatilho", "fisico")));
+        SeenBy s = SeenBy.of(ArenaScenarios.CATALOG, ArenaScenarios.MAP, defender(), a, ally);
+        assertEquals(List.of("Cutelo Negro (aliado) −30%", "Lembranças do Lorde Dominik 20% de penetração",
+                "Lâmina Fantasma de Youmuu 10 de penetração"), s.armorReasons);
+        assertTrue(s.magicReasons.isEmpty());
+        assertEquals("Lembrete Mortal (aliado)", s.healCutBy);
+    }
 }

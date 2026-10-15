@@ -1,15 +1,17 @@
 package com.ornnplanner.api;
 
 import com.ornnplanner.arena.PlannerLabService;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
 
-/** The lab of the build planner: the open build at a minute against the ragdoll, and seen by another build. */
+/** The planner's panels: this build tested in a scenario or combo, and seen by another build. */
 @RestController
 @RequestMapping("/api/lab")
 public class PlannerLabController {
@@ -20,22 +22,22 @@ public class PlannerLabController {
         this.lab = lab;
     }
 
-    /** The best combo of the library for the build and minute (made now by a small search when there is none). */
-    @PostMapping("/combo")
-    public PlannerLabService.ComboResult combo(@RequestBody PlannerLabService.Request req) {
-        return lab.combo(req);
+    /** The saved scenarios with this build's champion, and the champion's library combos. */
+    @GetMapping("/test-options")
+    public Map<String, Object> testOptions(@RequestParam long buildId) {
+        return lab.testOptions(buildId);
     }
 
-    /** The combo with and without each item (and the damage received from another build's combo, for tanks). */
-    @PostMapping("/items")
-    public PlannerLabService.ItemsResult items(@RequestBody PlannerLabService.Request req) {
-        return lab.items(req);
+    /** This build in a saved scenario (in its champion's slot) or a library combo on the ragdoll, compact. */
+    @PostMapping("/test")
+    public PlannerLabService.TestResult test(@RequestBody PlannerLabService.TestRequest req) {
+        return lab.test(req);
     }
 
-    /** Item × ragdoll scenario. */
-    @PostMapping("/scenarios")
-    public Map<String, Object> scenarios(@RequestBody PlannerLabService.Request req) {
-        return lab.scenarios(req);
+    /** Items whose on-hit effects an ally can bring (resistance reduction, shield cut, wounds). */
+    @GetMapping("/ally-items")
+    public List<String> allyItems() {
+        return lab.allyItems();
     }
 
     /** How another build sees this one (or the other way), now and minute by minute. */

@@ -431,6 +431,10 @@ public class FighterBuilder {
             // of the pool.
             boolean healInFight = fx.stream().anyMatch(e -> e.keySet().stream().anyMatch(k -> k.startsWith("cura")));
             c.flat.forEach((stat, v) -> source(f, c.itemName, stat, v, healInFight));
+            c.flat.forEach((stat, v) -> penetration(f, c.itemName, stat, v));
+            for (PassivePart part : c.passiveParts) {
+                penetration(f, c.itemName, part.stat, part.amount);
+            }
             for (PassivePart part : c.passiveParts) {
                 source(f, c.itemName, part.stat, part.amount, healInFight);
             }
@@ -454,6 +458,15 @@ public class FighterBuilder {
         f.spells = b.spells == null ? new ArrayList<>() : new ArrayList<>(b.spells);
         f.runes = b.runePage == null ? new ArrayList<>() : b.runePage.chosen();
         return f;
+    }
+
+    private static final Set<String> PENETRATION = Set.of("% Armor Penetration", "Armor Penetration", "% Magic Penetration",
+            "Magic Penetration");
+
+    private static void penetration(Fighter f, String name, String stat, double v) {
+        if (PENETRATION.contains(stat) && Math.abs(v) > 1e-9) {
+            f.statSources.computeIfAbsent(stat, k -> new LinkedHashMap<>()).merge(name, v, Double::sum);
+        }
     }
 
     private static void source(Fighter f, String name, String stat, double v, boolean healInFight) {

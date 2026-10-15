@@ -44,6 +44,13 @@ export default function App() {
     reload();
   }, [reload]);
 
+  // Other pages may open a tab (the planner's "Abrir na Arena").
+  useEffect(() => {
+    const open = (e) => TABS.includes(e.detail) && setTab(e.detail);
+    window.addEventListener('ornn-open-tab', open);
+    return () => window.removeEventListener('ornn-open-tab', open);
+  }, []);
+
   // The matchup tab is gone (round 4): drop the setup it kept in the browser.
   useEffect(() => {
     try {

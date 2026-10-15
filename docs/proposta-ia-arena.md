@@ -1043,3 +1043,58 @@ laboratório (`ArenaLab.jsx`). O antigo `ArenaReport` e o `TriggerTable` saíram
   - uma vencedora não aceita vira a versão da cadeia;
   - a rodada em que todos já vencem converge.
 - Testes: 176. O golden não mudou.
+
+### Parte 5 — Planejador: dois painéis simples no lugar do laboratório ✅
+- **Saiu do planejador:**
+  - o `PlannerLab.jsx` (combo no boneco, valor dos itens no combo, tabela item × boneco, bonecos múltiplos, recalibrar);
+  - os endpoints `/api/lab/combo`, `/items` e `/scenarios`, com `ItemRow` / `ItemsResult`;
+  - 72 chaves `plab.*`.
+  - A busca e o boneco continuam na aba Laboratório da Arena.
+  - Ficaram:
+    - `PlannerLabService.combo` (interno), `score` e `/api/lab/compare-builds`, a API da futura busca de builds;
+    - as chaves `plab.s.*`, usadas pela visão de outra build.
+- **A aba do momento passa a se chamar "Testar"** (`BuildTestPanels.jsx`), com dois painéis. Cada um tem uma frase de
+  ajuda e um link "como funciona" com a explicação pedida.
+  1. **Testar esta build num cenário ou combo:**
+     - **Seletor único** com dois grupos: os cenários salvos que têm o campeão (`GET /api/lab/test-options`; um item por
+       slot quando ele aparece em mais de um) e os combos da biblioteca. Ao lado, o minuto (padrão: o da linha do
+       tempo) e, para combo, o boneco (presets e salvos).
+     - **Execução** (`POST /api/lab/test`): no cenário, a build entra no slot e a luta roda sem quadros; no combo,
+       uma vez contra o boneco parado.
+     - **Resultado compacto:** vencedor do ponto de vista dele (ou o dano do combo), dano causado e recebido, e os
+       3 itens que mais pesaram com ícone.
+       - No cenário, a ordem é: muda o vencedor primeiro, depois |Δ vida do lado| + |Δ dano causado|. O valor de
+         cada item vem do contrafactual da Parte 3 (`ArenaService.itemValues(sc, slot)`), só nesse slot.
+       - No combo, a ordem é |Δ dano| (`LabService.itemValues`).
+     - **"Abrir na Arena"** grava o estado que a Arena já lê do navegador e troca de aba (evento `ornn-open-tab` no
+       `App`). O cenário abre como cópia ("(teste)", sem id, para não sobrescrever o salvo); o combo abre no
+       laboratório, com build, minuto, combo e boneco.
+  2. **Visão de outra build** (`/api/lab/seen-by`):
+     - qualquer build salva, de qualquer campeão, e o minuto dela;
+     - **"Efeitos de um aliado dela"**: uma lista de itens reais com efeitos de quem acerta (`GET /api/lab/ally-items`:
+       redução de resistência, corte de escudo, Feridas), no máximo de acúmulos. Antes era um boneco vestindo uma
+       build.
+     - Cada valor mostra "de → para", com o motivo: `SeenBy.armorReasons` / `magicReasons` (o item da redução e as
+       fontes de penetração, de `Fighter.statSources`, preenchido pelo `FighterBuilder`), `shieldCutBy` e `healCutBy`.
+       Exemplo, Ornn "Big Carry v1" visto pelo "Darius de CdC" com Cutelo Negro do aliado: "Armadura 366 → 74
+       (Cutelo Negro (aliado) −30%, Apreender 36% de penetração, Lembranças do Lorde Dominik 35% de penetração)".
+     - O dano que passa por tipo (físico, mágico, verdadeiro 100%) e a redução contra ataques.
+     - A vida efetiva física, mágica e mista (na proporção dos status da outra build), com escudos depois do corte e
+       cura depois das Feridas, quando houver.
+     - **Inverter**, e um minigráfico da vida efetiva física e mágica minuto a minuto, com as duas builds no mesmo
+       minuto.
+- **Decisão:** os status são os do **início da luta**, como na Rodada 3 (uma corrida de 0 s da Arena). Os efeitos
+  condicionais ainda estão desligados. Por isso a armadura da Big Carry aparece como 366, e não os 784 da ficha:
+  366 + Duplaguarda (+92) + Suserano (+311). O painel avisa isso numa nota.
+- **Verificado na tela** (Ornn "Big Carry v1", 23:17):
+  - "Darius ganha de Ornn": o lado dele perde em 40,9 s, causado 3.463, recebido 10.110; os itens que mais pesaram
+    foram Espinhos (+1.954 de dano), Duplaguarda (+1.689) e Coração de Aço (+1.679);
+  - "Abrir na Arena" abriu "Darius ganha de Ornn (teste)" com a Big Carry no slot, com o mesmo resultado. O rascunho
+    da Arena foi restaurado depois;
+  - o combo "Full combo Ornn" no boneco deu 5.635 de dano em 3,1 s, com Coração de Aço (+596), Égide (+470) e
+    Desespero Eterno (+293).
+- **Testes:**
+  - 🎯 `SeenByTest.physicalEffectiveHealthMatchesAFightOfAttacks` (Rodada 3) continua passando: a vida efetiva física
+    bate com o dano medido na Arena;
+  - novo `theReasonsNameTheItems`: Cutelo do aliado, penetração % e fixa por item, Feridas do aliado.
+- Testes: 177. O golden não mudou.

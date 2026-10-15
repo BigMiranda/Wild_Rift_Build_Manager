@@ -46,9 +46,19 @@ public final class SeenBy {
     public double effectiveHpAttacks;
     public double effectiveHpMagic;
     public double effectiveHpMixed;
+    /** Why the resistances drop, in words ("Cutelo Negro −30%", "Lembranças do Lorde Dominik 35% de penetração"). */
+    public List<String> armorReasons = new ArrayList<>();
+    public List<String> magicReasons = new ArrayList<>();
+    /** The items behind the shield cut and the Grievous Wounds (null = none). */
+    public String shieldCutBy;
+    public String healCutBy;
     public Double minute;
 
     private SeenBy() {
+    }
+
+    private static String pct(double v) {
+        return Math.round(v * 100) + "%";
     }
 
     /** The defender seen by the attacker, with an ally's item effects (null = none) applied at their most. */
@@ -78,33 +88,58 @@ public final class SeenBy {
         s.armor = ds.startStats.getOrDefault(Stats.ARMOR, 0.0);
         s.magicResist = ds.startStats.getOrDefault(Stats.MAGIC_RESIST, 0.0);
         List<ItemEffect> hitting = new ArrayList<>(attacker.f.effects);
+        int own = hitting.size();
         if (allyEffects != null) {
             hitting.addAll(allyEffects);
         }
         double cut = 0;
         double gw = 0;
-        for (ItemEffect e : hitting) {
+        String armorBy = null;
+        String magicBy = null;
+        for (int i = 0; i < hitting.size(); i++) {
+            ItemEffect e = hitting.get(i);
+            String who = e.item + (i >= own ? " (aliado)" : "");
             switch (e.kind()) {
                 case "reduz_resistencia":
+                    double max = Arena.num(e.p.get("max"), 0.3);
                     if ("armadura".equals(e.p.get("resistencia"))) {
-                        s.armorShred = Math.max(s.armorShred, Arena.num(e.p.get("max"), 0.3));
-                    } else {
-                        s.magicShred = Math.max(s.magicShred, Arena.num(e.p.get("max"), 0.3));
+                        if (max > s.armorShred) {
+                            s.armorShred = max;
+                            armorBy = who;
+                        }
+                    } else if (max > s.magicShred) {
+                        s.magicShred = max;
+                        magicBy = who;
                     }
                     break;
                 case "corta_escudo":
-                    cut = Math.max(cut, Math.min(Arena.num(e.p.get("max"), 0.6), Arena.num(e.p.get("base"), 0)
+                    double c = Math.min(Arena.num(e.p.get("max"), 0.6), Arena.num(e.p.get("base"), 0)
                             + Arena.num(e.p.get("dda_bonus"), 0) * Math.max(0, as.startStats.getOrDefault(Stats.ATTACK_DAMAGE, 0.0)
                             - attacker.f.base.getOrDefault(Stats.ATTACK_DAMAGE, 0.0))
-                            + Arena.num(e.p.get("pdh"), 0) * as.startStats.getOrDefault(Stats.ABILITY_POWER, 0.0)));
+                            + Arena.num(e.p.get("pdh"), 0) * as.startStats.getOrDefault(Stats.ABILITY_POWER, 0.0));
+                    if (c > cut) {
+                        cut = c;
+                        s.shieldCutBy = who;
+                    }
                     break;
                 case "feridas":
-                    gw = Math.max(gw, Arena.num(e.p.get("pct"), 0.4));
+                    if (Arena.num(e.p.get("pct"), 0.4) > gw) {
+                        gw = Arena.num(e.p.get("pct"), 0.4);
+                        s.healCutBy = who;
+                    }
                     break;
                 default:
                     break;
             }
         }
+        if (armorBy != null) {
+            s.armorReasons.add(armorBy + " −" + pct(s.armorShred));
+        }
+        if (magicBy != null) {
+            s.magicReasons.add(magicBy + " −" + pct(s.magicShred));
+        }
+        reasons(s.armorReasons, attacker.f.statSources, "% Armor Penetration", "Armor Penetration");
+        reasons(s.magicReasons, attacker.f.statSources, "% Magic Penetration", "Magic Penetration");
         for (ItemEffect e : defender.f.effects) {
             if ("reduz_dano".equals(e.kind()) && "ataque".equals(String.valueOf(e.p.get("contra")))) {
                 s.attackReduction = Math.min(0.9, s.attackReduction + Arena.num(e.p.get("pct"), 0));
@@ -135,6 +170,12 @@ public final class SeenBy {
         double mix = s.physicalShare * s.physicalThrough + (1 - s.physicalShare) * s.magicThrough;
         s.effectiveHpMixed = (s.health + s.shields * k) / Math.max(1e-9, mix);
         return s;
+    }
+
+    /** The attacker's penetration by source, in words: "% de penetração" and flat "de penetração". */
+    private static void reasons(List<String> out, Map<String, Map<String, Double>> sources, String pctStat, String flatStat) {
+        sources.getOrDefault(pctStat, Map.of()).forEach((src, v) -> out.add(src + " " + Math.round(v) + "% de penetração"));
+        sources.getOrDefault(flatStat, Map.of()).forEach((src, v) -> out.add(src + " " + Math.round(v) + " de penetração"));
     }
 
     /** The resistance that lets the given share through (100 / (100 + r)), negative ones too. */

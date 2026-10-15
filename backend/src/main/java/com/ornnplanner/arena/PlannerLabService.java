@@ -2,6 +2,8 @@ package com.ornnplanner.arena;
 
 import com.ornnplanner.arena.ArenaModel.Combo;
 import com.ornnplanner.arena.ArenaModel.Dummy;
+import com.ornnplanner.arena.ArenaModel.Scenario;
+import com.ornnplanner.arena.ArenaModel.Slot;
 import com.ornnplanner.arena.fight.CombatCatalog;
 import com.ornnplanner.arena.fight.ItemEffect;
 import com.ornnplanner.repo.BuildRepository;
@@ -10,17 +12,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The lab of the build planner: the open build at a minute against the ragdoll (its best combo, what each item is worth
- * in it, item × ragdoll scenario), how another build sees it ("visto por"), and the scored bench a future automatic
- * build search will call ({@link #score}, cached; {@link #compareBuilds}).
+ * The two panels of the build planner, for the open build at a minute: "test this build in a scenario or combo" (a
+ * saved arena scenario with this build in a slot of its champion, or a library combo on the ragdoll; the result and the
+ * items that weighed most) and "seen by another build" (this build's stats as another build, with an ally's on-hit
+ * effects, meets them). Also the scored bench a future automatic build search will call ({@link #score}, cached;
+ * {@link #compareBuilds}).
  */
 @Service
 public class PlannerLabService {
@@ -33,20 +39,58 @@ public class PlannerLabService {
         public Long comboId;
         public Combo combo;
         public ComboBench.Config bench;
-        /** Value of the items: also calibrate the combo again without each item. */
-        public boolean recalibrate;
-        /** Scenarios: the ragdolls of the table (empty = the presets). */
-        public List<Dummy> dummies = new ArrayList<>();
-        /** "Visto por" and damage received: the other build, at its minute (null = the same minute). */
+        /** "Visto por": the other build, at its minute (null = the same minute). */
         public Long otherBuildId;
         public Double otherMinute;
-        /** An ally ragdoll of the attacker: the item effects of the build it wears, at their most (null = none). */
-        public Long allyWearBuildId;
-        public Double allyWearMinute;
+        /** "Efeitos de um aliado dela": real items whose on-hit effects count at their most stacks. */
+        public List<String> allyItems = new ArrayList<>();
         /** "Visto por" the other way: how this build sees the other. */
         public boolean reverse;
         /** Compare builds: the builds, each with its own best combo. */
         public List<Long> buildIds = new ArrayList<>();
+    }
+
+    /** "Testar esta build": a saved scenario (this build in a slot) or a library combo on the ragdoll. */
+    public static class TestRequest {
+        public Long buildId;
+        public Double minute;
+        public Long scenarioId;
+        /** The slot of the scenario that takes this build (null = the first of its champion). */
+        public Integer slot;
+        public Long comboId;
+        /** The ragdoll of the combo (null = the default one: 10000 health, 100 / 100). */
+        public Dummy dummy;
+    }
+
+    /** One of the items that weighed most: the same fight without it. */
+    public static class ItemWeight {
+        public String item;
+        public Long itemId;
+        /** Winner without it (scenario), damage dealt, seconds alive and health of the side: with minus without. */
+        public Integer winnerWithout;
+        public double dealt;
+        public double alive;
+        public double side;
+    }
+
+    public static class TestResult {
+        /** scenario | combo */
+        public String kind;
+        public String champion;
+        /** Scenario: the winner (0, 1, -1) and the build's side; the slot used. */
+        public Integer winner;
+        public Integer team;
+        public Integer slot;
+        public double duration;
+        public double dealt;
+        public double taken;
+        public Double alive;
+        /** The three items that weighed most (by the change of winner, then of side health and damage). */
+        public List<ItemWeight> items = new ArrayList<>();
+        /** What "Abrir na Arena" opens: the scenario with this build in the slot, or the combo. */
+        public Scenario scenario;
+        public Combo combo;
+        public Dummy dummy;
     }
 
     public static class ComboResult {
@@ -59,27 +103,8 @@ public class PlannerLabService {
         public boolean generated;
     }
 
-    /** One item: the combo with and without it. */
-    public static class ItemRow {
-        public long itemId;
-        public String item;
-        public double damage;
-        public double control;
-        public double duration;
-        public double score;
-        /** The same, with the combo calibrated again without the item (when asked). */
-        public Double damageRecalibrated;
-        public Double scoreRecalibrated;
-        /** Damage received from the other build's combo without the item (tanks). */
-        public Double received;
-    }
-
-    public static class ItemsResult {
-        public ComboBench.Metrics with;
-        public double score;
-        public Double received;
-        public List<ItemRow> items = new ArrayList<>();
-    }
+    /** Kinds of on-hit item effects that change how a defender is seen (resistance reduction, shield cut, wounds). */
+    static final Set<String> ON_HIT = Set.of("reduz_resistencia", "corta_escudo", "feridas");
 
     private final ArenaService arena;
     private final LabService lab;
@@ -105,7 +130,7 @@ public class PlannerLabService {
 
     private Arena.Input input(Long buildId, Double minute) {
         if (buildId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Salve a build para usar o laboratório.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Salve a build para usar este painel.");
         }
         return arena.labInput(buildId, minute);
     }
@@ -114,7 +139,211 @@ public class PlannerLabService {
         return req.bench == null ? new ComboBench.Config() : req.bench;
     }
 
-    // ------------------------------------------------------------------ 1. the combo on the ragdoll
+    // ------------------------------------------------------------------ 1. test this build in a scenario or combo
+
+    /** The saved scenarios with this build's champion (and its slots there), and the champion's library combos. */
+    public Map<String, Object> testOptions(long buildId) {
+        BuildRepository.Build mine = builds.findBuild(buildId).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Build " + buildId + " não existe."));
+        Map<Long, String> units = new LinkedHashMap<>();
+        List<Map<String, Object>> scenarios = new ArrayList<>();
+        for (Map<String, Object> row : arena.list()) {
+            long id = ((Number) row.get("id")).longValue();
+            Scenario sc;
+            try {
+                sc = arena.find(id);
+            } catch (RuntimeException e) {
+                continue;   // a scenario that no longer reads is left out
+            }
+            List<Map<String, Object>> slots = new ArrayList<>();
+            for (int k = 0; k < (sc.fighters == null ? 0 : sc.fighters.size()); k++) {
+                Slot slot = sc.fighters.get(k);
+                if (slot.buildId == null || slot.dummy != null) {
+                    continue;
+                }
+                String unit = units.computeIfAbsent(slot.buildId, b -> builds.findBuild(b).map(x -> x.unitCode).orElse(""));
+                if (unit.equals(mine.unitCode)) {
+                    Map<String, Object> s = new LinkedHashMap<>();
+                    s.put("index", k);
+                    s.put("team", slot.team);
+                    s.put("buildId", slot.buildId);
+                    slots.add(s);
+                }
+            }
+            if (!slots.isEmpty()) {
+                Map<String, Object> s = new LinkedHashMap<>();
+                s.put("id", id);
+                s.put("name", sc.name);
+                s.put("slots", slots);
+                scenarios.add(s);
+            }
+        }
+        String champion = arena.labInput(buildId, null).f.champion;
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("champion", champion);
+        out.put("scenarios", scenarios);
+        out.put("combos", combos.list(champion));
+        return out;
+    }
+
+    /**
+     * The scenario's fight with this build in the champion's slot (at the minute), or the combo on the ragdoll; and the
+     * three items that weighed most: the same fight without each item.
+     */
+    public TestResult test(TestRequest req) {
+        if (req.buildId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Salve a build para usar este painel.");
+        }
+        return req.scenarioId != null ? testScenario(req) : testCombo(req);
+    }
+
+    private TestResult testScenario(TestRequest req) {
+        Scenario sc = arena.find(req.scenarioId);
+        BuildRepository.Build mine = builds.findBuild(req.buildId).orElseThrow();
+        Integer slot = req.slot;
+        if (slot == null) {
+            for (int k = 0; k < sc.fighters.size() && slot == null; k++) {
+                Long b = sc.fighters.get(k).buildId;
+                if (b != null && builds.findBuild(b).map(x -> mine.unitCode.equals(x.unitCode)).orElse(false)) {
+                    slot = k;
+                }
+            }
+        }
+        if (slot == null || slot < 0 || slot >= sc.fighters.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "O cenário não tem esse campeão.");
+        }
+        Slot s = sc.fighters.get(slot);
+        s.buildId = req.buildId;
+        s.minute = req.minute;
+        s.excludeItems = null;
+        ArenaModel.Result r = arena.runQuiet(sc);
+        ArenaModel.FighterStats me = r.fighters.get(slot);
+        TestResult out = new TestResult();
+        out.kind = "scenario";
+        out.champion = me.champion;
+        out.winner = r.winner;
+        out.team = me.team;
+        out.slot = slot;
+        out.duration = r.duration;
+        out.dealt = me.dealt;
+        out.taken = me.taken;
+        out.alive = me.deathTime != null ? me.deathTime : r.duration;
+        double side = 0;
+        for (ArenaModel.FighterStats f : r.fighters) {
+            side += f.team == me.team ? Math.max(0, f.health) : 0;
+        }
+        for (ArenaModel.ItemValue v : arena.itemValues(sc, slot)) {
+            ItemWeight w = new ItemWeight();
+            w.item = v.item;
+            w.itemId = v.itemId;
+            w.winnerWithout = v.winner;
+            w.dealt = me.dealt - v.dealt;
+            w.alive = out.alive - v.alive;
+            w.side = side - v.teamHealth;
+            out.items.add(w);
+        }
+        int winner = r.winner;
+        out.items.sort(Comparator.comparingDouble((ItemWeight w) -> -((w.winnerWithout != null && w.winnerWithout != winner ? 1e9 : 0)
+                + Math.abs(w.side) + Math.abs(w.dealt))));
+        out.items = new ArrayList<>(out.items.subList(0, Math.min(3, out.items.size())));
+        out.scenario = sc;
+        return out;
+    }
+
+    private TestResult testCombo(TestRequest req) {
+        if (req.comboId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha um cenário ou um combo.");
+        }
+        Combo c = combos.find(req.comboId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Combo " + req.comboId + " não existe."));
+        LabService.Request lr = new LabService.Request();
+        lr.buildId = req.buildId;
+        lr.minute = req.minute;
+        lr.dummy = req.dummy == null ? new Dummy() : req.dummy;
+        lr.comboId = req.comboId;
+        lr.show = "parado";
+        Arena.Input me = input(req.buildId, req.minute);
+        ComboBench.Config cfg = new ComboBench.Config();
+        ArenaModel.Result r = bench().run(me, arena.dummyInput(lr.dummy), c, "parado", cfg, false);
+        ArenaModel.FighterStats f = r.fighters.get(0);
+        TestResult out = new TestResult();
+        out.kind = "combo";
+        out.champion = f.champion;
+        out.duration = r.duration;
+        out.dealt = f.dealt;
+        out.taken = f.taken;
+        for (ArenaModel.ItemValue v : lab.itemValues(lr)) {
+            ItemWeight w = new ItemWeight();
+            w.item = v.item;
+            w.itemId = v.itemId;
+            w.dealt = f.dealt - v.dealt;
+            out.items.add(w);
+        }
+        out.items.sort(Comparator.comparingDouble((ItemWeight w) -> -Math.abs(w.dealt)));
+        out.items = new ArrayList<>(out.items.subList(0, Math.min(3, out.items.size())));
+        out.combo = c;
+        out.dummy = lr.dummy;
+        return out;
+    }
+
+    // ------------------------------------------------------------------ 2. seen by another build
+
+    /** Items with on-hit effects that change how a defender is seen (an ally's: Black Cleaver, wounds, shield cut). */
+    public List<String> allyItems() {
+        List<String> out = new ArrayList<>();
+        catalog.items().forEach((name, fx) -> {
+            if (fx.stream().anyMatch(e -> ON_HIT.contains(String.valueOf(e.get("tipo"))))) {
+                out.add(name);
+            }
+        });
+        return out;
+    }
+
+    /** How the other build (at its minute) sees this one, or the other way; and along the minutes of the timeline. */
+    public Map<String, Object> seenBy(Request req) {
+        if (req.otherBuildId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha a outra build.");
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        List<ItemEffect> ally = allyEffects(req.allyItems);
+        Long def = req.reverse ? req.otherBuildId : req.buildId;
+        Long att = req.reverse ? req.buildId : req.otherBuildId;
+        Double defMin = req.reverse ? (req.otherMinute != null ? req.otherMinute : req.minute) : req.minute;
+        Double attMin = req.reverse ? req.minute : (req.otherMinute != null ? req.otherMinute : req.minute);
+        SeenBy now = SeenBy.of(catalog, map, input(def, defMin), input(att, attMin), ally);
+        now.minute = defMin;
+        out.put("now", now);
+        // minute by minute, both builds at the same minute, until the end of the defender's match
+        BuildRepository.Build b = builds.findBuild(def).orElseThrow();
+        double end = b.matchEnd != null ? b.matchEnd : 20;
+        List<SeenBy> series = new ArrayList<>();
+        for (int m = 1; m <= Math.min(30, (int) Math.ceil(end)); m++) {
+            try {
+                SeenBy s = SeenBy.of(catalog, map, input(def, (double) m), input(att, (double) m), ally);
+                s.minute = (double) m;
+                series.add(s);
+            } catch (RuntimeException e) {
+                // a minute a build cannot be computed at (no gold yet): left out
+            }
+        }
+        out.put("series", series);
+        return out;
+    }
+
+    /** The on-hit effects of an ally's items (as in the combat file), at their most. */
+    private List<ItemEffect> allyEffects(List<String> items) {
+        List<ItemEffect> out = new ArrayList<>();
+        for (String name : items == null ? List.<String>of() : items) {
+            for (Map<String, Object> e : catalog.effects(name)) {
+                if (ON_HIT.contains(String.valueOf(e.get("tipo")))) {
+                    out.add(new ItemEffect(name, e));
+                }
+            }
+        }
+        return out;
+    }
+
+    // ------------------------------------------------------------------ the best combo (for the build search)
 
     /**
      * The best combo of the library for the build and minute (found by the search, or the champion's best active
@@ -168,164 +397,8 @@ public class PlannerLabService {
         return out;
     }
 
-    private Combo chosen(Request req, Arena.Input me) {
-        if (req.combo != null) {
-            return req.combo;
-        }
-        ComboResult r = combo(req);
-        if (r.combo == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nenhum combo para " + me.f.champion + ".");
-        }
-        return r.combo;
-    }
-
-    // ------------------------------------------------------------------ 2. what each item is worth in the combo
-
-    public ItemsResult items(Request req) {
-        Arena.Input me = input(req.buildId, req.minute);
-        Arena.Input d = arena.dummyInput(req.dummy == null ? new Dummy() : req.dummy);
-        ComboBench.Config cfg = config(req);
-        Combo c = chosen(req, me);
-        ItemsResult out = new ItemsResult();
-        ComboBench.Report base = score(me, d, c, cfg);
-        out.score = base.score;
-        out.with = first(base);
-        // damage received from the other build's combo (tanks): that champion attacks this one, standing
-        Arena.Input other = req.otherBuildId == null ? null : input(req.otherBuildId, req.otherMinute != null ? req.otherMinute : req.minute);
-        Combo otherCombo = null;
-        if (other != null) {
-            Request oreq = new Request();
-            oreq.buildId = req.otherBuildId;
-            oreq.minute = req.otherMinute != null ? req.otherMinute : req.minute;
-            oreq.dummy = req.dummy;
-            otherCombo = combo(oreq).combo;
-            if (otherCombo != null) {
-                out.received = received(other, me, otherCombo, cfg);
-            }
-        }
-        for (Map.Entry<String, Long> item : new LinkedHashMap<>(me.f.items).entrySet()) {
-            Arena.Input without = arena.labInput(req.buildId, req.minute, java.util.Set.of(item.getValue()));
-            ComboBench.Report r = score(without, d, c, cfg);
-            ComboBench.Metrics m = first(r);
-            ItemRow row = new ItemRow();
-            row.itemId = item.getValue();
-            row.item = item.getKey();
-            row.damage = out.with.damage - m.damage;
-            row.control = out.with.control - m.control;
-            row.duration = out.with.duration - m.duration;
-            row.score = base.score - r.score;
-            if (req.recalibrate) {
-                Combo again = new ComboSearch(bench()).calibrate(without, d, c, cfg, 4);
-                ComboBench.Report rr = score(without, d, again, cfg);
-                row.damageRecalibrated = out.with.damage - first(rr).damage;
-                row.scoreRecalibrated = base.score - rr.score;
-            }
-            if (other != null && otherCombo != null) {
-                row.received = received(other, without, otherCombo, cfg) - out.received;
-            }
-            out.items.add(row);
-        }
-        return out;
-    }
-
-    /** Damage the attacker's combo deals to the defender standing still (the defender as a ragdoll that does nothing). */
-    private double received(Arena.Input attacker, Arena.Input defender, Combo combo, ComboBench.Config cfg) {
-        Arena.Input target = defender.copy();
-        target.f = defender.f;
-        Dummy still = new Dummy();
-        still.spells = new ArrayList<>();
-        target.dummy = still;
-        ComboBench.Config one = new ComboBench.Config();
-        one.behaviors = List.of("parado");
-        one.distance = cfg.distance;
-        one.mode = cfg.mode;
-        one.seconds = cfg.seconds;
-        int team = target.f.team;
-        try {
-            target.f.team = 1;
-            return bench().run(attacker, target, combo, "parado", one, false).fighters.get(0).dealt;
-        } finally {
-            target.f.team = team;
-        }
-    }
-
     private static ComboBench.Metrics first(ComboBench.Report r) {
         return r.byBehavior.values().iterator().next();
-    }
-
-    // ------------------------------------------------------------------ 3. item × ragdoll scenario
-
-    /** For each ragdoll of the list (the presets when empty): the combo's score with and without each item. */
-    public Map<String, Object> scenarios(Request req) {
-        Arena.Input me = input(req.buildId, req.minute);
-        Combo c = chosen(req, me);
-        ComboBench.Config cfg = config(req);
-        List<Dummy> dummies = req.dummies == null || req.dummies.isEmpty() ? Dummy.presets() : req.dummies;
-        List<Map<String, Object>> cols = new ArrayList<>();
-        Map<String, Map<String, Double>> rows = new LinkedHashMap<>();
-        for (Dummy dm : dummies) {
-            Arena.Input d = arena.dummyInput(dm);
-            ComboBench.Report base = score(me, d, c, cfg);
-            Map<String, Object> col = new LinkedHashMap<>();
-            col.put("name", dm.name);
-            col.put("score", base.score);
-            col.put("damage", first(base).damage);
-            cols.add(col);
-            for (Map.Entry<String, Long> item : me.f.items.entrySet()) {
-                Arena.Input without = arena.labInput(req.buildId, req.minute, java.util.Set.of(item.getValue()));
-                ComboBench.Report r = score(without, d, c, cfg);
-                rows.computeIfAbsent(item.getKey(), k -> new LinkedHashMap<>()).put(dm.name, first(base).damage - first(r).damage);
-            }
-        }
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("combo", c);
-        out.put("scenarios", cols);
-        out.put("items", rows);
-        return out;
-    }
-
-    // ------------------------------------------------------------------ 4. "visto por"
-
-    /** How the other build (at its minute) sees this one, or the other way; and along the minutes of the timeline. */
-    public Map<String, Object> seenBy(Request req) {
-        if (req.otherBuildId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha a build que olha.");
-        }
-        Map<String, Object> out = new LinkedHashMap<>();
-        List<ItemEffect> ally = allyEffects(req);
-        Long def = req.reverse ? req.otherBuildId : req.buildId;
-        Long att = req.reverse ? req.buildId : req.otherBuildId;
-        Double defMin = req.reverse ? (req.otherMinute != null ? req.otherMinute : req.minute) : req.minute;
-        Double attMin = req.reverse ? req.minute : (req.otherMinute != null ? req.otherMinute : req.minute);
-        SeenBy now = SeenBy.of(catalog, map, input(def, defMin), input(att, attMin), ally);
-        now.minute = defMin;
-        out.put("now", now);
-        // minute by minute, both builds at the same minute, until the end of the defender's match
-        BuildRepository.Build b = builds.findBuild(def).orElseThrow();
-        double end = b.matchEnd != null ? b.matchEnd : 20;
-        List<SeenBy> series = new ArrayList<>();
-        for (int m = 1; m <= Math.min(30, (int) Math.ceil(end)); m++) {
-            try {
-                SeenBy s = SeenBy.of(catalog, map, input(def, (double) m), input(att, (double) m), ally);
-                s.minute = (double) m;
-                series.add(s);
-            } catch (RuntimeException e) {
-                // a minute a build cannot be computed at (no gold yet): left out
-            }
-        }
-        out.put("series", series);
-        return out;
-    }
-
-    /** The on-hit effects of the build an ally ragdoll wears (Black Cleaver, Grievous Wounds...), or none. */
-    private List<ItemEffect> allyEffects(Request req) {
-        if (req.allyWearBuildId == null) {
-            return List.of();
-        }
-        Dummy d = new Dummy();
-        d.wearBuildId = req.allyWearBuildId;
-        d.wearMinute = req.allyWearMinute;
-        return arena.dummyInput(d).f.effects;
     }
 
     // ------------------------------------------------------------------ 5. for the automatic build search

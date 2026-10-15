@@ -98,17 +98,29 @@ public class ArenaService {
         return new Arena(catalog, map).withSafeZone(sc.safeZone).run(inputs, sc.actions == null ? List.of() : sc.actions, duration(sc));
     }
 
+    /** The same fight without frames (numbers only). */
+    public ArenaModel.Result runQuiet(Scenario sc) {
+        List<Arena.Input> inputs = prepare(sc);
+        return new Arena(catalog, map).withSafeZone(sc.safeZone).withoutFrames()
+                .run(inputs, sc.actions == null ? List.of() : sc.actions, duration(sc));
+    }
+
     /**
      * The value of each item of each champion in the scenario: the same fight without the item (no frames, the runs in
      * parallel). One fight per item, so it is asked for, not run with every fight.
      */
     public List<ArenaModel.ItemValue> itemValues(Scenario sc) {
+        return itemValues(sc, null);
+    }
+
+    /** The same, only for the items of one slot (null = every slot). */
+    public List<ArenaModel.ItemValue> itemValues(Scenario sc, Integer onlySlot) {
         List<Arena.Input> base = prepare(sc);
         List<ArenaModel.ItemValue> rows = new ArrayList<>();
         List<java.util.concurrent.Callable<ArenaModel.Result>> runs = new ArrayList<>();
         for (int k = 0; k < sc.fighters.size(); k++) {
             Slot slot = sc.fighters.get(k);
-            if (slot.dummy != null || slot.buildId == null) {
+            if (slot.dummy != null || slot.buildId == null || onlySlot != null && onlySlot != k) {
                 continue;
             }
             for (Map.Entry<String, Long> item : base.get(k).f.items.entrySet()) {
