@@ -729,3 +729,56 @@ Campos novos, documentados no cabeçalho do `kits_7_3.yml`:
   quando recuar e quando usar o Flash. A cabeçada só se afasta do Darius se o elemental já tiver passado o Ornn na
   direção da fuga, e a ação "reconjurar" não escolhe a direção. Isso fica registrado como limite da formulação das
   ações, não como regra a acrescentar.
+
+### Parte H — Treino mais eficiente e níveis de ajuda ✅
+- **Base residual da `NeuralPolicy`:** o Tático com previsões (desde a Parte C, `Weights.base`) e os combos da
+  biblioteca como ações (Parte D).
+- **Recompensa de eventos só no treino** (`ArenaTraining.REWARDS`, por prefixo da chave): marca consumida +150,
+  sobrescrita −100, expirada −50, controle encadeado +80, sobreposto −60, reconjuração que acerta +100, combo
+  concluído +50; mais a recompensa opcional de cada diretriz (evento `diretriz:<id>`). Os pesos são configuráveis
+  por campeão (`arena_guideline.rewards`; sem eles, os padrões). Só a fitness do pool de treino soma esses pontos;
+  seleção, validação, aceite e números salvos usam o objetivo puro.
+- **Exercícios** (`Arena.Input`: `startHealth`, `startCooldowns`, `startResource`, `startAirborne`, `markedBy`), gerados
+  pela ficha de cada campeão, sem lista por nome (`ArenaTraining.drillsOf`):
+  - "alvo marcado com o ataque pronto", se a ficha tem marca (Frágil, dardos, marcas, Hemorragia);
+  - "alvo no ar com 0,8 s restantes", se alguma habilidade imobiliza;
+  - "reconjuração aberta": a 1ª parte é lançada no início, por uma ordem do episódio;
+  - "vida baixa perseguido" (30%);
+  - "ultimate em recarga" (40 s).
+  Os primeiros 30% do pool (configurável, campo "exercícios %") viram exercícios, alternando entre eles. O Rumble,
+  sem marca nem reconjuração, fica com os três restantes.
+- **Níveis**, guardados na versão (`arena_policy.level` e `guidelines`, esquema v18, testado numa cópia do banco):
+  - `sozinha`: previsões, eventos e exercícios, sem combos;
+  - `descobertos`: mais os combos de origem `descoberto` da biblioteca;
+  - `dicas`: mais as diretrizes e os combos manuais.
+  Uma IA salva roda com os combos do seu nível (`ArenaService.levelCombos`) e, no nível `dicas`, com as diretrizes
+  do snapshot (`GuidedPolicy`). A lista de versões mostra o nível e avisa "⚠ outras diretrizes" quando o snapshot
+  difere das diretrizes atuais do campeão. A cadeia aceita o nível também.
+- **"Comparar níveis"** (`POST /api/arena/train/levels`, em segundo plano): o mesmo treino (semente e orçamento) nos três
+  níveis, com uma tabela por luta de validação: objetivo, vitórias, marcas consumidas, sobrescritas, controle
+  encadeado e combos usados. Ornn × Darius (`ArenaLevelsTest.compareLevels`, `-Darena.report=true`; 30 gerações,
+  população 24; os combos descobertos vêm de uma busca no boneco, e o nível dicas tem o combo manual e o preset):
+
+  | nível | objetivo | vitórias | marcas consumidas | sobrescritas | encadeado | combos | melhor que o roteiro |
+  |---|---|---|---|---|---|---|---|
+  | sozinha | 92555 | 94% | 3,81 | 0 | 1,13 | 0 | 88% |
+  | com combos descobertos | 98811 | 100% | 4,00 | 0 | 1,63 | 0 | 100% |
+  | com dicas do usuário | 98858 | 100% | 4,00 | 0 | 1,75 | 0 | 100% |
+
+  **Ressalva:** nenhuma versão usou combos nas lutas de validação. As ações de combo quase nunca ficam válidas: o 1º
+  passo pede as habilidades prontas e no alcance, e a base tática as gasta assim que o alvo chega perto. A diferença
+  entre os níveis veio das diretrizes (`dicas`) e da trajetória do treino, porque nas lutas de treino os combos ora
+  estão válidos, ora não. Fazer a IA escolher combos pede ou combos que começam por uma espera (que valem antes de a
+  base gastar as habilidades), ou o Tático deixar de lançar as habilidades que um combo ativo usa. Fica como próximo
+  passo.
+- **Diretrizes (opcional):** `ArenaModel.Guideline` (`quando` [fato op valor]+ → `preferir | evitar | obrigar | proibir`
+  ação, força e recompensa opcional), com os fatos da Parte C (`Facts`).
+  - Ordem: `proibir` (mascarado) → `obrigar` (escolhido se válido) → placar (± força).
+  - Tabela `arena_guideline` por campeão; API `GET/PUT /api/arena/guidelines/{campeão}`.
+  - Editor na tela (painel de treino): condições em texto, como "alvo.marca_restante > 0.5 e aplica_marca:2 == 1".
+  - Um único preset, genérico (`/api/arena/guidelines-preset`): "não sobrescrever marca", uma diretriz por slot que
+    evita a habilidade que aplica marca e não consome, com a marca no alvo há mais de 0,5 s.
+- Testes (`ArenaLevelsTest`): pontos dos eventos (e das diretrizes); exercícios pela ficha (Ornn tem os 5, Rumble não
+  tem marca nem reconjuração); um exercício começa do estado (Frágil no alvo quebrado pelo 1º ataque, alvo no ar
+  desde 0, R em recarga); proibir / obrigar; o preset evita o W com Frágil no alvo; o nível e as diretrizes salvos
+  na versão.

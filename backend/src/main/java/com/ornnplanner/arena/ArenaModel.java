@@ -275,6 +275,27 @@ public final class ArenaModel {
         public String updatedAt;
     }
 
+    /**
+     * A guideline of the user for a champion: when every condition holds (facts of the observation), prefer / avoid
+     * (points on the action's score, {@link #strength}), force (obrigar: chosen when valid) or forbid (proibir: masked)
+     * an action. Forbid comes first, then force, then the scores.
+     */
+    public static class Guideline {
+        public String id;
+        public List<Condition> when = new ArrayList<>();
+        /** preferir | evitar | obrigar | proibir */
+        public String effect = "preferir";
+        /**
+         * habilidade:S | reconjurar:S | atacar | kite | recuar | desviar | flash_fuga | parado | combo:N (1..) |
+         * ativo:&lt;name&gt; (all on the current target).
+         */
+        public String action;
+        public double strength = 1;
+        /** Training only: points each time it is followed (null = none). */
+        public Double reward;
+        public String note;
+    }
+
     /** A combo run in a fight: when, how it ended, and its steps. */
     public static class ComboReport {
         public int fighter;

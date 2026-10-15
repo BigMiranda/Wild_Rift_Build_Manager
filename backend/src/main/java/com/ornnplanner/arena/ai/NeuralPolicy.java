@@ -52,7 +52,17 @@ public final class NeuralPolicy implements Policy {
 
     @Override
     public Decision decide(Observation obs, ActionMask mask) {
+        return decide(obs, mask, null);
+    }
+
+    /** The decision with some points added to some actions' scores (guidelines' prefer / avoid), or none (null). */
+    public Decision decide(Observation obs, ActionMask mask, double[] extra) {
         double[] scores = net.forward(obs.vector());
+        if (extra != null) {
+            for (int i = 0; i < scores.length; i++) {
+                scores[i] += extra[i];
+            }
+        }
         int suggested = base.decide(obs, mask).action;
         scores[suggested] += bonus;
         // best first; the mask is only asked until a valid one is found

@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 17;
+    static final int VERSION = 18;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -105,7 +105,12 @@ public class SchemaManager {
             jdbc.execute("ALTER TABLE arena_policy ADD COLUMN team_plan TEXT");
             jdbc.execute("ALTER TABLE arena_policy ADD COLUMN parent_id INTEGER");
         }
-        // v16 / v17: arena_combo and arena_dummy are new tables, created by schema.sql
+        if (version < 18 && tableExists("arena_policy") && !columnExists("arena_policy", "level")) {
+            // v18: the help level a policy was trained at and the guidelines it saw
+            jdbc.execute("ALTER TABLE arena_policy ADD COLUMN level TEXT");
+            jdbc.execute("ALTER TABLE arena_policy ADD COLUMN guidelines TEXT");
+        }
+        // v16 / v17 / v18: arena_combo, arena_dummy and arena_guideline are new tables, created by schema.sql
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {
             jdbc.execute("PRAGMA user_version = " + VERSION);

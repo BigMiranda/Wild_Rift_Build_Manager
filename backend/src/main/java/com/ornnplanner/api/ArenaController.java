@@ -108,6 +108,51 @@ public class ArenaController {
         return training.startChain(request);
     }
 
+    /** The same training at each help level, and a table of their numbers on validation. */
+    @PostMapping("/train/levels")
+    public ArenaTrainingService.LevelsJob trainLevels(@RequestBody ArenaTrainingService.TrainRequest request) {
+        return training.startLevels(request);
+    }
+
+    @GetMapping("/train/levels/{id}")
+    public ArenaTrainingService.LevelsJob levels(@PathVariable String id) {
+        return training.levels(id);
+    }
+
+    @DeleteMapping("/train/levels/{id}")
+    public ArenaTrainingService.LevelsJob cancelLevels(@PathVariable String id) {
+        return training.cancelLevels(id);
+    }
+
+    /** A champion's guidelines and event reward weights (empty when none). */
+    @GetMapping("/guidelines/{champion}")
+    public com.ornnplanner.arena.GuidelineRepository.Set guidelines(@PathVariable String champion) {
+        return training.guidelines().find(champion);
+    }
+
+    @PutMapping("/guidelines/{champion}")
+    public com.ornnplanner.arena.GuidelineRepository.Set saveGuidelines(@PathVariable String champion,
+                                                                       @RequestBody com.ornnplanner.arena.GuidelineRepository.Set set) {
+        set.champion = champion;
+        for (ArenaModel.Guideline g : set.guidelines) {
+            if (!List.of("preferir", "evitar", "obrigar", "proibir").contains(g.effect)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Efeito desconhecido: " + g.effect + ".");
+            }
+            for (ArenaModel.Condition c : g.when) {
+                if (!com.ornnplanner.arena.ai.Facts.known(c.fact)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fato desconhecido: " + c.fact + ".");
+                }
+            }
+        }
+        return training.guidelines().save(set);
+    }
+
+    /** The generic preset: do not overwrite a mark (one guideline per ability). */
+    @GetMapping("/guidelines-preset")
+    public List<ArenaModel.Guideline> guidelinePreset() {
+        return com.ornnplanner.arena.ai.GuidedPolicy.dontOverwriteMarks();
+    }
+
     @GetMapping("/train/chain/{id}")
     public ArenaChain.Job chain(@PathVariable String id) {
         return training.chain(id);

@@ -83,11 +83,17 @@ public class PolicyRepository {
             r.teamPlan = teamPlan;
             r.parentId = parentId;
             r.migratedFrom = migratedFrom;
+            r.level = level;
+            r.guidelines = guidelines;
             return r;
         }
 
         /** The observation schema its weights were migrated from when read (null = saved with the current one). */
         public Integer migratedFrom;
+        /** Help level it was trained at (sozinha | descobertos | dicas; null = before levels, as sozinha). */
+        public String level;
+        /** The guidelines it was trained with (level dicas), a snapshot. */
+        public List<com.ornnplanner.arena.ArenaModel.Guideline> guidelines;
 
         /**
          * Weights of the current observation and action layout, or of an older one they migrate from when read
@@ -170,7 +176,7 @@ public class PolicyRepository {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String COLUMNS = "id, champion, objective, version, fitness, better_vs_script, winrate, winrate_script, "
             + "better_vs_tactical, better_vs_previous, accepted, generations, population, seed, scenario, obs_schema, actions, created_at, "
-            + "chain_id, chain_round, team_plan, parent_id";
+            + "chain_id, chain_round, team_plan, parent_id, level, guidelines";
 
     private final JdbcTemplate jdbc;
     /** Weights never change once saved: read once. */
@@ -232,6 +238,12 @@ public class PolicyRepository {
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(e);
         }
+        String guidelines;
+        try {
+            guidelines = r.guidelines == null ? null : JSON.writeValueAsString(r.guidelines);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
         r.createdAt = Instant.now().toString();
         r.version = nextVersion(r.champion);
         KeyHolder key = new GeneratedKeyHolder();
@@ -239,7 +251,7 @@ public class PolicyRepository {
             PreparedStatement ps = c.prepareStatement("INSERT INTO arena_policy (champion, objective, version, fitness, "
                     + "better_vs_script, winrate, winrate_script, better_vs_tactical, better_vs_previous, accepted, generations, "
                     + "population, seed, scenario, weights_json, obs_schema, actions, created_at, chain_id, chain_round, team_plan, "
-                    + "parent_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS);
+                    + "parent_id, level, guidelines) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS);
             int i = 1;
             ps.setString(i++, r.champion);
             ps.setString(i++, r.objective);
@@ -262,7 +274,9 @@ public class PolicyRepository {
             ps.setString(i++, r.chainId);
             ps.setObject(i++, r.chainRound);
             ps.setString(i++, plan);
-            ps.setObject(i, r.parentId);
+            ps.setObject(i++, r.parentId);
+            ps.setString(i++, r.level);
+            ps.setString(i, guidelines);
             return ps;
         }, key);
         r.id = key.getKey() == null ? null : key.getKey().longValue();
@@ -299,6 +313,15 @@ public class PolicyRepository {
         r.parentId = lng(rs, "parent_id");
         if (r.obsSchema != Observation.SCHEMA_VERSION && r.compatible()) {
             r.migratedFrom = r.obsSchema;   // its weights are migrated when read
+        }
+        r.level = rs.getString("level");
+        String gl = rs.getString("guidelines");
+        if (gl != null) {
+            try {
+                r.guidelines = JSON.readValue(gl, new com.fasterxml.jackson.core.type.TypeReference<List<com.ornnplanner.arena.ArenaModel.Guideline>>() { });
+            } catch (JsonProcessingException e) {
+                r.guidelines = null;
+            }
         }
         String plan = rs.getString("team_plan");
         if (plan != null) {

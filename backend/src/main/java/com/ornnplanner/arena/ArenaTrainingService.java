@@ -50,6 +50,25 @@ public class ArenaTrainingService {
         public double plateauPct = 2;
         public int plateauWindow = 6;
         public int minGenerations = 8;
+        /** Help level: sozinha | descobertos | dicas. */
+        public String level = ArenaTraining.LEVEL_ALONE;
+        /** Share of the training pool that starts from a drill. */
+        public double drills = ArenaTraining.DRILLS;
+    }
+
+    /** "Comparar níveis": the same training (seed, budget) at each level, and the numbers of each on validation. */
+    public static class LevelsJob {
+        public final String kind = "levels";
+        public String id;
+        public volatile String status = "queued";
+        public String champion;
+        public volatile String message;
+        public volatile String current;
+        public final List<Map<String, Object>> rows = new java.util.concurrent.CopyOnWriteArrayList<>();
+        public long startedAt;
+        public volatile Long finishedAt;
+        @JsonIgnore
+        volatile boolean cancel;
     }
 
     public static class Job {
@@ -81,6 +100,8 @@ public class ArenaTrainingService {
 
     private final ArenaService arena;
     private final PolicyRepository policies;
+    private final GuidelineRepository guidelines;
+    private final Map<String, LevelsJob> levelJobs = new ConcurrentHashMap<>();
     private final ArenaTraining training;
     private final ArenaChain chains;
     private final Map<String, Job> jobs = new ConcurrentHashMap<>();
@@ -92,9 +113,10 @@ public class ArenaTrainingService {
         return t;
     });
 
-    public ArenaTrainingService(ArenaService arena, PolicyRepository policies, CombatCatalog catalog) {
+    public ArenaTrainingService(ArenaService arena, PolicyRepository policies, CombatCatalog catalog, GuidelineRepository guidelines) {
         this.arena = arena;
         this.policies = policies;
+        this.guidelines = guidelines;
         @SuppressWarnings("unchecked")
         Map<String, Object> map = (Map<String, Object>) arena.kits().get("mapa");
         this.training = new ArenaTraining(catalog, map, policies);
@@ -186,6 +208,8 @@ public class ArenaTrainingService {
         st.previous = policies.best(job.champion, req.objective).orElse(null);
         st.teamPlan = plan(sc, base.get(req.fighter).f.team);
         st.safeZone = sc.safeZone;
+        level(st, req.level, job.champion);
+        st.drills = Math.max(0, Math.min(1, req.drills));
         st.stopAtVictory = victory(req.stopWhen);
         st.plateau = plateau(req.plateauPct, req.plateauWindow, req.minGenerations);
         ArenaTraining.StageResult r = training.trainStage(st, new ArenaTraining.Listener() {
@@ -250,6 +274,19 @@ public class ArenaTrainingService {
         spec.scenario = sc.name;
         spec.teams = sc.teams;
         spec.safeZone = sc.safeZone;
+        spec.level = level(req.level);
+        Map<String, List<ArenaModel.Combo>> cs = new java.util.HashMap<>();
+        Map<String, List<ArenaModel.Guideline>> gs = new java.util.HashMap<>();
+        Map<String, Map<String, Double>> rs = new java.util.HashMap<>();
+        for (Arena.Input in : base) {
+            String key = in.f.champion.toLowerCase();
+            cs.put(key, arena.levelCombos(spec.level, in.f.champion));
+            gs.put(key, ArenaTraining.LEVEL_HINTS.equals(spec.level) ? guidelines.find(in.f.champion).guidelines : List.of());
+            rs.put(key, guidelines.rewards(in.f.champion));
+        }
+        spec.combos = cs;
+        spec.guidelines = gs;
+        spec.rewards = rs;
         spec.slots = slots;
         spec.objective = objective(req.objective);
         spec.objectives = new java.util.HashMap<>();
@@ -312,6 +349,110 @@ public class ArenaTrainingService {
             j.finishedAt = System.currentTimeMillis();
         }
         return j;
+    }
+
+    // ------------------------------------------------------------------ comparing the help levels
+
+    public LevelsJob startLevels(TrainRequest req) {
+        Scenario sc = req.scenario;
+        if (sc == null || sc.fighters == null || req.fighter < 0 || req.fighter >= sc.fighters.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha o campeão a treinar.");
+        }
+        req.objective = objective(req.objective);
+        List<Arena.Input> inputs = arena.prepare(sc);
+        LevelsJob job = new LevelsJob();
+        job.id = "n" + ids.incrementAndGet();
+        job.champion = inputs.get(req.fighter).f.champion;
+        job.startedAt = System.currentTimeMillis();
+        job.message = "na fila";
+        levelJobs.put(job.id, job);
+        runner.submit(() -> {
+            try {
+                job.status = "running";
+                for (String level : ArenaTraining.LEVELS) {
+                    if (job.cancel) {
+                        break;
+                    }
+                    job.current = level;
+                    job.message = "treinando no nível " + level;
+                    ArenaTraining.StageSpec st = new ArenaTraining.StageSpec();
+                    st.variants = variants(sc, inputs);
+                    st.actions = sc.actions == null ? List.of() : sc.actions;
+                    st.duration = ArenaService.duration(sc);
+                    st.me = req.fighter;
+                    st.objective = req.objective;
+                    st.scenario = sc.name;
+                    st.generations = generations(req.generations);
+                    st.population = Math.max(4, Math.min(128, req.population));
+                    st.episodesPerGeneration = Math.max(1, Math.min(ArenaTraining.POOL, req.episodesPerGeneration));
+                    st.seed = req.seed;
+                    st.previous = policies.best(job.champion, req.objective).orElse(null);
+                    st.teamPlan = plan(sc, inputs.get(req.fighter).f.team);
+                    st.safeZone = sc.safeZone;
+                    st.stopAtVictory = victory(req.stopWhen);
+                    st.plateau = plateau(req.plateauPct, req.plateauWindow, req.minGenerations);
+                    st.drills = Math.max(0, Math.min(1, req.drills));
+                    level(st, level, job.champion);
+                    ArenaTraining.StageResult r = training.trainStage(st, new ArenaTraining.Listener() {
+                        @Override
+                        public boolean cancelled() {
+                            return job.cancel;
+                        }
+                    });
+                    if (r.cancelled) {
+                        break;
+                    }
+                    Map<String, Object> row = new java.util.LinkedHashMap<>();
+                    row.put("level", level);
+                    row.put("policy", r.policy.withoutWeights());
+                    row.put("generations", r.generations);
+                    row.putAll(r.stats);
+                    job.rows.add(row);
+                }
+                job.status = job.cancel ? "cancelled" : "done";
+                job.message = job.cancel ? "cancelado" : "comparação pronta";
+            } catch (Throwable e) {
+                log.warn("Arena levels {} failed", job.id, e);
+                job.status = "failed";
+                job.message = "falhou: " + e.getMessage();
+            }
+            job.finishedAt = System.currentTimeMillis();
+        });
+        return job;
+    }
+
+    public LevelsJob levels(String id) {
+        LevelsJob j = levelJobs.get(id);
+        if (j == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Comparação " + id + " não encontrada.");
+        }
+        return j;
+    }
+
+    public LevelsJob cancelLevels(String id) {
+        LevelsJob j = levels(id);
+        j.cancel = true;
+        return j;
+    }
+
+    public GuidelineRepository guidelines() {
+        return guidelines;
+    }
+
+    /** A stage's level: its combos (from the library), guidelines (hints only) and reward weights for the champion. */
+    private void level(ArenaTraining.StageSpec st, String level, String champion) {
+        st.level = level(level);
+        st.combos = arena.levelCombos(st.level, champion);
+        st.guidelines = ArenaTraining.LEVEL_HINTS.equals(st.level) ? guidelines.find(champion).guidelines : List.of();
+        st.rewards = guidelines.rewards(champion);
+    }
+
+    private static String level(String level) {
+        String l = level == null ? ArenaTraining.LEVEL_ALONE : level;
+        if (!ArenaTraining.LEVELS.contains(l)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nível desconhecido: " + l + ".");
+        }
+        return l;
     }
 
     // ------------------------------------------------------------------ shared

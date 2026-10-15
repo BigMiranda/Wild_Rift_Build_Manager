@@ -32,10 +32,17 @@ public interface Policy {
         public final int action;
         /** Score of each action (null for a scripted choice). */
         public final double[] scores;
+        /** The guideline it followed (the arena counts it as the event diretriz:<tag>), or null. */
+        public final String tag;
 
         public Decision(int action, double[] scores) {
+            this(action, scores, null);
+        }
+
+        public Decision(int action, double[] scores, String tag) {
             this.action = action;
             this.scores = scores;
+            this.tag = tag;
         }
 
         public static Decision of(int action) {

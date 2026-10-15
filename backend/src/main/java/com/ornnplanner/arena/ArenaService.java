@@ -231,13 +231,28 @@ public class ArenaService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A IA v" + r.version + " é de " + r.champion
                         + ", não de " + in.f.champion + ".");
             }
-            return r.policy(in.priority);   // migrated when read, on the tactical rules it was trained over
+            // migrated when read, on the tactical rules it was trained over; its level decides its combos and guidelines
+            in.combos = levelCombos(r.level, in.f.champion);
+            NeuralPolicy n = r.policy(in.priority);
+            return ArenaTraining.LEVEL_HINTS.equals(r.level) && r.guidelines != null && !r.guidelines.isEmpty()
+                    ? new com.ornnplanner.arena.ai.GuidedPolicy(n, r.guidelines) : n;
         }
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cérebro desconhecido: " + brain + ".");
     }
 
     public ComboRepository combos() {
         return combos;
+    }
+
+    /** The combos a champion's AI of a help level may run: none alone, the found ones, or found and manual (hints). */
+    public List<ArenaModel.Combo> levelCombos(String level, String champion) {
+        if (ArenaTraining.LEVEL_FOUND.equals(level)) {
+            return combos.forPolicy(champion, List.of("descoberto"));
+        }
+        if (ArenaTraining.LEVEL_HINTS.equals(level)) {
+            return combos.forPolicy(champion, null);
+        }
+        return List.of();
     }
 
     /** A champion of a saved build at a minute, alone (the lab): as a scenario's slot of the blue side. */

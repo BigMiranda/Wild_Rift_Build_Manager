@@ -15,6 +15,7 @@
 -- Version 15: chain training of arena policies (arena_policy.chain_id, chain_round, team_plan, parent_id).
 -- Version 16: combo library of the arena (arena_combo): found by the search or typed by the user.
 -- Version 17: ragdolls of the lab saved by the user (arena_dummy).
+-- Version 18: help levels of arena policies (arena_policy.level, guidelines) and the user's guidelines (arena_guideline).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -190,7 +191,9 @@ CREATE TABLE IF NOT EXISTS arena_policy (
     chain_id           TEXT,          -- chain training that made it (NULL = trained alone)
     chain_round        INTEGER,
     team_plan          TEXT,          -- JSON: the side's plan used in its training fights
-    parent_id          INTEGER        -- version its training started from (NULL = zero weights)
+    parent_id          INTEGER,       -- version its training started from (NULL = zero weights)
+    level              TEXT,          -- help level of its training (sozinha | descobertos | dicas)
+    guidelines         TEXT           -- the guidelines it was trained with (JSON)
 );
 CREATE INDEX IF NOT EXISTS idx_arena_policy_champion ON arena_policy (champion);
 
@@ -215,5 +218,11 @@ CREATE TABLE IF NOT EXISTS arena_dummy (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT NOT NULL,
     data        TEXT NOT NULL,                    -- stats, behavior, build worn, effects, as JSON
+    updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS arena_guideline (
+    champion    TEXT PRIMARY KEY COLLATE NOCASE,
+    data        TEXT NOT NULL,                    -- guidelines and event reward weights, as JSON
     updated_at  TEXT NOT NULL
 );

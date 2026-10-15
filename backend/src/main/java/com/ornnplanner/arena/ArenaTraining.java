@@ -40,6 +40,18 @@ import java.util.stream.IntStream;
 public final class ArenaTraining {
 
     public static final double ACCEPT = 0.55;
+    public static final String LEVEL_ALONE = "sozinha";
+    public static final String LEVEL_FOUND = "descobertos";
+    public static final String LEVEL_HINTS = "dicas";
+    public static final List<String> LEVELS = List.of(LEVEL_ALONE, LEVEL_FOUND, LEVEL_HINTS);
+    public static final double DRILLS = 0.3;
+    /**
+     * Training-only points per structured event (by its key's prefix): the fitness of the training fights is the
+     * objective plus these; selection, validation, acceptance and the saved numbers use the objective alone.
+     */
+    public static final Map<String, Double> REWARDS = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(Map.of(
+            "marca_consumida", 150.0, "marca_sobrescrita", -100.0, "marca_expirou", -50.0, "cc_encadeado", 80.0,
+            "cc_sobreposto", -60.0, "reconjuracao_acertou", 100.0, "combo_concluido", 50.0)));
     public static final int POOL = 24;
     public static final int SELECTION = 16;
     public static final int VALIDATION = 16;
@@ -78,6 +90,19 @@ public final class ArenaTraining {
         public ArenaModel.TeamPlan teamPlan;
         /** The scenario's safe zone (null = none). */
         public ArenaModel.SafeZone safeZone;
+        /**
+         * Help level: sozinha (predictions, event rewards, drills), descobertos (and the found combos of the library),
+         * dicas (and the user's guidelines and manual combos).
+         */
+        public String level = LEVEL_ALONE;
+        /** The trained champion's combos for its level (best first; empty = none). */
+        public List<ArenaModel.Combo> combos = List.of();
+        /** The user's guidelines (level dicas). */
+        public List<ArenaModel.Guideline> guidelines = List.of();
+        /** Points of each structured event in the training fitness only (null = the defaults, {@link #REWARDS}). */
+        public Map<String, Double> rewards;
+        /** Share of the training pool that starts from a drill. */
+        public double drills = DRILLS;
         public Plateau plateau = Plateau.off();
         /**
          * Stop at total victory instead of a plateau: the first generation whose side wins every selection fight ends
@@ -146,6 +171,8 @@ public final class ArenaTraining {
         /** Validation against the opponents' previous chain versions: better than the script in this share. */
         public Double vsOldOpponents;
         public List<String> opponents = new ArrayList<>();
+        /** Per validation fight: objective, wins, marks consumed / overwritten, chained control, combos (levels' table). */
+        public Map<String, Double> stats = new LinkedHashMap<>();
     }
 
     private final Gym gym;
@@ -207,7 +234,7 @@ public final class ArenaTraining {
         listener.opponents(out.opponents);
 
         List<Opponent> fixed = spec.chained() ? List.of(chain) : List.of(script, tactical);
-        List<Gym.Episode> pool = episodes(spec, team, training, spec.pool, rnd);
+        List<Gym.Episode> pool = drills(spec, episodes(spec, team, training, spec.pool, rnd), new Random(spec.seed * 31 + 3));
         List<Gym.Episode> selection = episodes(spec, team, fixed, spec.selection, rnd);
         List<Gym.Episode> validation = episodes(spec, team, fixed, spec.validation, new Random(spec.seed * 7919 + 17));
         // a total victory on the selection fights is confirmed on a second batch of them (another seed) before it counts
@@ -227,7 +254,7 @@ public final class ArenaTraining {
         // the script's fitness on the selection fights, once: every generation is measured against it
         double[] scriptFit = fitness(selection, reference, objective);
         double scriptMean = mean(scriptFit);
-        NeuralPolicy startPolicy = new NeuralPolicy(start, priority);
+        Policy startPolicy = mine(start, priority, spec);
         Point first = measure(selection, scriptFit, scriptMean, startPolicy, objective, spec);
         if (spec.stopAtVictory && spec.start != null && first.winPct >= 100 - 1e-9
                 && confirmed(first, confirmation, startPolicy)) {
@@ -246,11 +273,12 @@ public final class ArenaTraining {
         listener.message("treinando");
         new Trainer(cfg).train(start, pool.size(), (net, e) -> {
             Gym.Episode ep = pool.get(e);
-            return ArenaScore.fitness(gym.play(ep, new NeuralPolicy(net, priority)), objective, ep.me, team);
+            ArenaModel.Result res = gym.play(ep, mine(net, priority, spec));
+            return ArenaScore.fitness(res, objective, ep.me, team) + reward(res.fighters.get(ep.me).events, spec);
         }, new Trainer.Listener() {
             @Override
             public void generation(Trainer.Generation g) {
-                NeuralPolicy now = new NeuralPolicy(g.center, priority);
+                Policy now = mine(g.center, priority, spec);
                 Point p = measure(selection, scriptFit, scriptMean, now, objective, spec);
                 p.generation = g.index;
                 p.mean = g.mean;
@@ -293,7 +321,7 @@ public final class ArenaTraining {
 
         listener.message(out.victory ? "vitória total na geração " + done[0] + "; validando"
                 : out.plateau ? "platô na geração " + done[0] + "; validando" : "validando");
-        NeuralPolicy ai = new NeuralPolicy(best[0], priority);
+        Policy ai = mine(best[0], priority, spec);
         Gym.Report vsScript = gym.compare(validation, ai, reference, objective);
         Gym.Report vsTactical = gym.compare(validation, ai, new TacticalPolicy(priority), objective);
         Double vsPrevious = spec.previous == null ? null : gym.compare(validation, ai,
@@ -327,8 +355,72 @@ public final class ArenaTraining {
         r.teamPlan = spec.teamPlan;
         r.parentId = spec.parentId;
         r.weights = PolicyRepository.Weights.trained(best[0], NeuralPolicy.BASE_BONUS);
+        r.level = spec.level;
+        r.guidelines = LEVEL_HINTS.equals(spec.level) ? spec.guidelines : null;
+        out.stats = stats(validation, ai, objective);
         out.policy = policies.insert(r);
         return out;
+    }
+
+    /** The trained champion's policy for its level: neural, with the guidelines on top at the dicas level. */
+    static Policy mine(Network net, List<String> priority, StageSpec spec) {
+        NeuralPolicy n = new NeuralPolicy(net, priority);
+        return LEVEL_HINTS.equals(spec.level) && !spec.guidelines.isEmpty() ? new com.ornnplanner.arena.ai.GuidedPolicy(n, spec.guidelines) : n;
+    }
+
+    /** The training-only points of a fight's events: each key's prefix by its weight, and the guidelines' rewards. */
+    static double reward(Map<String, Double> events, StageSpec spec) {
+        Map<String, Double> w = spec.rewards != null ? spec.rewards : REWARDS;
+        double sum = 0;
+        for (Map.Entry<String, Double> e : events.entrySet()) {
+            String k = e.getKey();
+            int i = k.indexOf(':');
+            String prefix = i < 0 ? k : k.substring(0, i);
+            Double pts = w.get(prefix);
+            if (pts != null) {
+                sum += pts * e.getValue();
+            }
+            if ("diretriz".equals(prefix)) {
+                for (ArenaModel.Guideline g : spec.guidelines) {
+                    if (g.reward != null && k.substring(i + 1).equals(g.id)) {
+                        sum += g.reward * e.getValue();
+                    }
+                }
+            }
+        }
+        return sum;
+    }
+
+    /** The numbers of the levels' comparison, per validation fight. */
+    private Map<String, Double> stats(List<Gym.Episode> episodes, Policy policy, String objective) {
+        ArenaModel.Result[] res = results(episodes, policy);
+        Map<String, Double> m = new LinkedHashMap<>();
+        double n = Math.max(1, res.length);
+        double obj = 0;
+        double wins = 0;
+        double consumed = 0;
+        double overwritten = 0;
+        double chained = 0;
+        double combos = 0;
+        for (int i = 0; i < res.length; i++) {
+            Gym.Episode e = episodes.get(i);
+            obj += ArenaScore.score(res[i], objective, e.me, e.team());
+            wins += res[i].winner == e.team() ? 1 : res[i].winner < 0 ? 0.5 : 0;
+            for (Map.Entry<String, Double> x : res[i].fighters.get(e.me).events.entrySet()) {
+                String k = x.getKey();
+                consumed += k.startsWith("marca_consumida:") ? x.getValue() : 0;
+                overwritten += k.startsWith("marca_sobrescrita:") ? x.getValue() : 0;
+                chained += "cc_encadeado".equals(k) ? x.getValue() : 0;
+                combos += k.startsWith("combo_iniciado:") ? x.getValue() : 0;
+            }
+        }
+        m.put("objetivo", obj / n);
+        m.put("vitorias", wins / n);
+        m.put("marcas_consumidas", consumed / n);
+        m.put("marcas_sobrescritas", overwritten / n);
+        m.put("controle_encadeado", chained / n);
+        m.put("combos_usados", combos / n);
+        return m;
     }
 
     /**
@@ -478,6 +570,9 @@ public final class ArenaTraining {
                 double side = c.f.team == team ? -1 : 1;
                 c.x = Math.max(300, Math.min(9700, c.x + shift + side * gap / 2));
                 c.y = Math.max(-450, Math.min(450, c.y + rnd.nextInt(601) - 300));
+                if (k == spec.me) {
+                    c.combos = spec.combos;   // the trained champion's combos are its level's
+                }
                 in.add(c);
                 if (c.f.team != team) {
                     Policy p = opp.policyFor(c);
@@ -489,6 +584,121 @@ public final class ArenaTraining {
             Gym.Episode ep = new Gym.Episode(in, spec.actions, spec.duration, spec.me, policies, opp.label());
             ep.safeZone = spec.safeZone;
             out.add(ep);
+        }
+        return out;
+    }
+
+    /** A drill: a start state for the trained champion and its target, with its name. */
+    static final class Drill {
+        final String name;
+        final java.util.function.BiConsumer<Arena.Input, Arena.Input> apply;
+        /** An order of the trained champion at the start (a recast's first part), or null. */
+        final String castAtStart;
+
+        Drill(String name, java.util.function.BiConsumer<Arena.Input, Arena.Input> apply, String castAtStart) {
+            this.name = name;
+            this.apply = apply;
+            this.castAtStart = castAtStart;
+        }
+    }
+
+    /**
+     * The drills of a champion, from its sheet (never a list by name): a marked target with the attack up (when it
+     * keeps marks), a target in the air (when it immobilizes), a recast open (the first part cast at the start), low
+     * on health and chased, and the ultimate on cooldown.
+     */
+    static List<Drill> drillsOf(Arena.Input me) {
+        List<Drill> out = new ArrayList<>();
+        java.util.function.BiConsumer<Arena.Input, Arena.Input> close = (a, t) -> {
+            t.x = a.x + (a.f.team == 0 ? 1 : -1) * (num(a.kit, "alcance", 175) + 120);
+            t.y = a.y;
+        };
+        if (Arena.marks(me.kit)) {
+            out.add(new Drill("alvo marcado com o ataque pronto", close, null));   // the mark is put when placed
+        }
+        Map<String, Object> abs = me.kit == null ? null : Arena.map(me.kit.get("habilidades"));
+        boolean immobilizes = false;
+        String recast = null;
+        if (abs != null) {
+            for (String slot : ActionSpace.SLOTS) {
+                Map<String, Object> ab = Arena.map(abs.get(slot));
+                if (ab == null) {
+                    continue;
+                }
+                String text = String.valueOf(ab);
+                immobilizes |= text.contains("atordoa") || text.contains("arremessa") || text.contains("puxa");
+                if (ab.get("reconjurar") != null && recast == null) {
+                    recast = slot;
+                }
+            }
+        }
+        if (immobilizes) {
+            out.add(new Drill("alvo no ar com 0,8 s restantes", (a, t) -> {
+                close.accept(a, t);
+                t.startAirborne = 0.8;
+            }, null));
+        }
+        if (recast != null) {
+            out.add(new Drill("reconjuração aberta", close, recast));
+        }
+        out.add(new Drill("vida baixa perseguido", (a, t) -> {
+            close.accept(a, t);
+            a.startHealth = 0.3;
+        }, null));
+        out.add(new Drill("ultimate em recarga", (a, t) -> {
+            a.startCooldowns = new LinkedHashMap<>(Map.of("R", 40.0));
+        }, null));
+        return out;
+    }
+
+    private static double num(Map<String, Object> kit, String key, double def) {
+        return kit == null ? def : Arena.num(kit.get(key), def);
+    }
+
+    /** A share of the pool's episodes turned into drills (the first ones, in turn), the rest left as they are. */
+    private static List<Gym.Episode> drills(StageSpec spec, List<Gym.Episode> pool, Random rnd) {
+        List<Drill> drills = drillsOf(spec.variants.get(0).get(spec.me));
+        int n = (int) Math.round(pool.size() * Math.max(0, Math.min(1, spec.drills)));
+        if (drills.isEmpty() || n == 0) {
+            return pool;
+        }
+        List<Gym.Episode> out = new ArrayList<>(pool);
+        for (int i = 0; i < n; i++) {
+            Gym.Episode e = pool.get(i);
+            Drill d = drills.get(i % drills.size());
+            List<Arena.Input> in = new ArrayList<>();
+            for (Arena.Input x : e.inputs) {
+                Arena.Input c = x.copy();
+                c.startCooldowns = new LinkedHashMap<>(x.startCooldowns);
+                in.add(c);
+            }
+            Arena.Input me = in.get(e.me);
+            int target = -1;
+            for (int k = 0; k < in.size(); k++) {
+                if (in.get(k).f.team != me.f.team && (target < 0 || Math.abs(in.get(k).x - me.x) < Math.abs(in.get(target).x - me.x))) {
+                    target = k;
+                }
+            }
+            if (target < 0) {
+                continue;
+            }
+            d.apply.accept(me, in.get(target));
+            if (d.name.startsWith("alvo marcado")) {
+                in.get(target).markedBy = e.me;
+            }
+            List<ArenaModel.Action> actions = new ArrayList<>(e.actions);
+            if (d.castAtStart != null) {
+                ArenaModel.Action a = new ArenaModel.Action();
+                a.fighter = e.me;
+                a.time = 0;
+                a.type = "ability";
+                a.slot = d.castAtStart;
+                a.target = target;
+                actions.add(a);
+            }
+            Gym.Episode ep = new Gym.Episode(in, actions, e.duration, e.me, e.policies, e.opponent + " · " + d.name);
+            ep.safeZone = e.safeZone;
+            out.set(i, ep);
         }
         return out;
     }

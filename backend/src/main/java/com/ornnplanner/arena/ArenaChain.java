@@ -44,6 +44,8 @@ public final class ArenaChain {
         public int maxRounds = 3;
         /** Stop rule of each stage: victory (when it wins every selection fight) | plateau. */
         public String stopWhen = "victory";
+        /** Help level: sozinha | descobertos | dicas. */
+        public String level = ArenaTraining.LEVEL_ALONE;
         /** Plateau: least gain in points over the window, after a minimum of generations (0 = off). */
         public double plateauPct = 2;
         public int plateauWindow = 6;
@@ -107,6 +109,11 @@ public final class ArenaChain {
         public String scenario;
         public ArenaModel.TeamPlan[] teams;
         public ArenaModel.SafeZone safeZone;
+        /** Help level of every stage, and per champion (lower case): its combos, guidelines and reward weights. */
+        public String level = ArenaTraining.LEVEL_ALONE;
+        public Map<String, List<ArenaModel.Combo>> combos = Map.of();
+        public Map<String, List<ArenaModel.Guideline>> guidelines = Map.of();
+        public Map<String, Map<String, Double>> rewards = Map.of();
         public List<Integer> slots;
         public String objective = "win_fast";
         public Map<Integer, String> objectives = Map.of();
@@ -259,6 +266,10 @@ public final class ArenaChain {
         st.teamPlan = spec.teams != null && team < spec.teams.length ? spec.teams[team] : null;
         st.plateau = spec.plateau;
         st.safeZone = spec.safeZone;
+        st.level = spec.level;
+        st.combos = spec.combos.getOrDefault(key, List.of());
+        st.guidelines = spec.guidelines.getOrDefault(key, List.of());
+        st.rewards = spec.rewards.get(key);
         st.stopAtVictory = spec.stopAtVictory;
         st.accept = spec.accept;
         st.pool = spec.pool;

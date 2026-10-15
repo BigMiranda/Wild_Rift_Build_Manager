@@ -103,6 +103,12 @@ public class Arena {
         public ArenaModel.Dummy dummy;
         /** Share of its health it starts with (null = full): drills of training, the lab. */
         public Double startHealth;
+        /** Drills: seconds left of cooldowns at the start (slot or active), its resource, a knock-up on it. */
+        public Map<String, Double> startCooldowns = new LinkedHashMap<>();
+        public Double startResource;
+        public Double startAirborne;
+        /** Drills: the fighter (index) whose own mark is on this one at the start (Brittle, bolts, marks, bleed). */
+        public Integer markedBy;
 
         /**
          * A shallow copy (same fighter, sheet and build effects, which a run only reads): to change the start or the
@@ -129,6 +135,10 @@ public class Arena {
             c.script = script;
             c.dummy = dummy;
             c.startHealth = startHealth;
+            c.startCooldowns = startCooldowns;
+            c.startResource = startResource;
+            c.startAirborne = startAirborne;
+            c.markedBy = markedBy;
             return c;
         }
     }
@@ -641,6 +651,9 @@ public class Arena {
         for (U u : units) {
             startTriggers(u);
         }
+        for (U u : units) {
+            drill(u);
+        }
         List<Action> sorted = new ArrayList<>(actions);
         sorted.sort(Comparator.comparingDouble(a -> a.time));
         for (Action a : sorted) {
@@ -956,6 +969,9 @@ public class Arena {
             return u.lastAction;
         }
         Policy.Decision d = u.policy.decide(turn.obs, turn);
+        if (d.tag != null) {
+            count(u, "diretriz:" + d.tag);
+        }
         if (interval > 0) {
             u.lastAction = d.action;
             u.nextDecision = now + interval;
@@ -5060,6 +5076,47 @@ public class Arena {
             }
         }
         return best;
+    }
+
+    /** The start state of a drill: cooldowns, resource, a knock-up, an enemy's mark on it. */
+    private void drill(U u) {
+        Input in = u.in;
+        in.startCooldowns.forEach((k, v) -> u.ready.put(k, Math.max(0, v)));
+        if (in.startResource != null) {
+            u.resource = in.startResource;
+        }
+        if (in.startAirborne != null && in.startAirborne > 0) {
+            u.airUntil = in.startAirborne;
+        }
+        if (in.markedBy != null && in.markedBy >= 0 && in.markedBy < units.size()) {
+            U by = units.get(in.markedBy);
+            if (map(by.kit("fragil")) != null) {
+                u.brittleUntil = 3;
+                u.brittleBy = by;
+                u.brittleCounted = 3;
+            }
+            Map<String, Object> bolts = map(by.kit("marcas"));
+            if (bolts != null) {
+                by.bolts.put(u, new double[] {num(bolts.get("max"), 3) - 1, 3});
+                by.boltCounted.put(u, 3.0);
+            }
+            if (map(by.kit("marcas_ksante")) != null) {
+                by.ksMarks.put(u, 3.0);
+                by.ksCounted.put(u, 3.0);
+            }
+            Map<String, Object> stacks = map(by.kit("acumulos"));
+            if (stacks != null) {
+                by.stacks.put(u, new double[] {num(stacks.get("max"), 5) - 1, 4});
+                by.stackCounted.put(u, 4.0);
+                by.nextStackTick = 1;
+            }
+        }
+    }
+
+    /** Whether a champion's sheet keeps a mark on its targets (what a "marked target" drill needs). */
+    public static boolean marks(Map<String, Object> kit) {
+        return kit != null && (kit.get("fragil") != null || kit.get("marcas") != null || kit.get("marcas_ksante") != null
+                || kit.get("acumulos") != null);
     }
 
     // ------------------------------------------------------------------ the ragdoll (lab)

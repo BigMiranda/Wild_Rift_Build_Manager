@@ -353,6 +353,10 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
   const [job, setJob] = useState(null);
   const [chain, setChain] = useState(null);
   const [error, setError] = useState(null);
+  const [level, setLevel] = useState('sozinha');
+  const [drills, setDrills] = useState(0.3);
+  const [levels, setLevels] = useState(null);
+  const [rules, setRules] = useState(null);   // the trained champion's guidelines, as saved
   const running = job != null && RUNNING.includes(job.status);
   const chainRunning = chain != null && RUNNING.includes(chain.status);
   const busy = running || chainRunning;
@@ -399,8 +403,36 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
 
   const common = {
     scenario: sc, objective, generations, population, episodesPerGeneration: 8, seed,
-    stopWhen, plateauPct: plateau.pct, plateauWindow: plateau.window, minGenerations: plateau.min,
+    stopWhen, plateauPct: plateau.pct, plateauWindow: plateau.window, minGenerations: plateau.min, level, drills,
   };
+  const champion = names[fighter];
+  useEffect(() => {
+    if (!champion) return;
+    api.get(`/api/arena/guidelines/${encodeURIComponent(champion)}`).then(setRules).catch(() => setRules(null));
+  }, [champion]);
+  const levelsRunning = levels != null && RUNNING.includes(levels.status);
+  useEffect(() => {
+    if (!levelsRunning) return undefined;
+    const timer = setInterval(async () => {
+      try {
+        const j = await api.get(`/api/arena/train/levels/${levels.id}`);
+        setLevels(j);
+        if (!RUNNING.includes(j.status)) onTrained();
+      } catch (e) {
+        setError(e.message);
+      }
+    }, 1500);
+    return () => clearInterval(timer);
+  }, [levelsRunning, levels?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const compareLevels = async () => {
+    setError(null);
+    try {
+      setLevels(await api.post('/api/arena/train/levels', { ...common, fighter }));
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const sameRules = (p) => JSON.stringify(p.guidelines ?? []) === JSON.stringify(rules?.guidelines ?? []);
   const start = async () => {
     setError(null);
     try {
@@ -493,6 +525,15 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
             {OBJECTIVES.map((o) => <option key={o} value={o}>{t(`arena.obj.${o}`)}</option>)}
           </select>
         </label>
+        <label className="inline" title={t('arena.train.levelTitle')}>{t('arena.train.level')}
+          <select value={level} onChange={(e) => setLevel(e.target.value)} disabled={busy}>
+            {['sozinha', 'descobertos', 'dicas'].map((l) => <option key={l} value={l}>{t(`arena.level.${l}`)}</option>)}
+          </select>
+        </label>
+        <label className="inline" title={t('arena.train.drillsTitle')}>{t('arena.train.drills')}
+          <input type="number" min={0} max={100} step={5} value={Math.round(drills * 100)} disabled={busy} style={{ width: 60 }}
+            onChange={(e) => setDrills(Math.max(0, Math.min(100, num(e.target.value, 30))) / 100)} />
+        </label>
         {mode === 'chain' && (
           <label className="check">
             <input type="checkbox" checked={perChampion} disabled={busy} onChange={(e) => setPerChampion(e.target.checked)} />
@@ -535,7 +576,10 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
         )}
         {mode === 'single' && (running
           ? <button className="danger" onClick={cancel}>{t('arena.train.cancel')}</button>
-          : <button className="primary" onClick={start} disabled={busy}>{t('arena.train.run')}</button>)}
+          : <button className="primary" onClick={start} disabled={busy || levelsRunning}>{t('arena.train.run')}</button>)}
+        {mode === 'single' && (levelsRunning
+          ? <button className="danger" onClick={() => call(async () => setLevels(await api.del(`/api/arena/train/levels/${levels.id}`)))}>{t('arena.train.cancel')}</button>
+          : <button onClick={compareLevels} disabled={busy} title={t('arena.levels.title')}>{t('arena.levels.run')}</button>)}
         {mode === 'chain' && !chainRunning && <button className="primary" onClick={startChain} disabled={busy}>{t('arena.train.chainRun')}</button>}
       </div>
       <p className="muted"><small>
@@ -565,6 +609,9 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
           )}
         </div>
       )}
+      {levels && <LevelsTable job={levels} />}
+      {mode === 'single' && rules && <GuidelinesEditor rules={rules} champion={champion}
+        onSaved={setRules} onError={setError} />}
       {mode === 'chain' && chain && (
         <ChainProgress chain={chain} names={names} running={chainRunning} onStop={stopChain} onCancel={cancelChain}
           onUse={() => onUseMany(chain.latest)} />
@@ -581,7 +628,10 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
               <tbody>
                 {mine.map((p) => (
                   <tr key={p.id}>
-                    <td className="l">v{p.version}{p.accepted ? ' ✓' : ''} <small className="muted">{p.scenario}{p.chainRound != null ? ` · ${t('arena.chain.roundShort', { r: p.chainRound })}` : ''}</small></td>
+                    <td className="l">v{p.version}{p.accepted ? ' ✓' : ''} <small className="muted">{p.scenario}{p.chainRound != null ? ` · ${t('arena.chain.roundShort', { r: p.chainRound })}` : ''}
+                      {` · ${t(`arena.level.${p.level ?? 'sozinha'}`)}`}</small>
+                      {p.level === 'dicas' && !sameRules(p) && <small className="warn" title={t('arena.levels.otherRulesTitle')}> ⚠ {t('arena.levels.otherRules')}</small>}
+                    </td>
                     <td>{t(`arena.obj.${p.objective}`)}</td>
                     <td>{pct(p.betterVsScript)}</td><td>{pct(p.betterVsTactical)}</td><td>{pct(p.betterVsPrevious)}</td>
                     <td>{pct(p.winrate)} <small className="muted">({pct(p.winrateScript)})</small></td>
@@ -597,6 +647,83 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
         </details>
       )}
     </section>
+  );
+}
+
+/** "Comparar níveis": the same training at each help level, and its numbers per validation fight. */
+function LevelsTable({ job }) {
+  return (
+    <div className="arena-train-job">
+      <small className="muted">{job.message}{job.current && RUNNING.includes(job.status) ? ` (${t(`arena.level.${job.current}`)})` : ''}</small>
+      {job.rows.length > 0 && (
+        <div className="table-wrap">
+          <table className="data">
+            <thead><tr><th className="l">{t('arena.train.level')}</th><th>{t('arena.levels.objective')}</th><th>{t('arena.train.wins')}</th>
+              <th>{t('arena.levels.consumed')}</th><th>{t('arena.levels.overwritten')}</th><th>{t('arena.levels.chained')}</th>
+              <th>{t('arena.levels.combos')}</th><th>{t('arena.train.vsScript')}</th></tr></thead>
+            <tbody>
+              {job.rows.map((r) => (
+                <tr key={r.level}>
+                  <td className="l">{t(`arena.level.${r.level}`)} <small className="muted">v{r.policy?.version}</small></td>
+                  <td>{n0(r.objetivo)}</td><td>{pct(r.vitorias)}</td><td>{n1(r.marcas_consumidas)}</td><td>{n1(r.marcas_sobrescritas)}</td>
+                  <td>{n1(r.controle_encadeado)}</td><td>{n1(r.combos_usados)}</td><td>{pct(r.policy?.betterVsScript)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const EFFECTS = ['preferir', 'evitar', 'obrigar', 'proibir'];
+const condText = (cs) => (cs ?? []).map((c) => `${c.fact} ${c.op} ${c.value}`).join(' e ');
+const parseConds = (text) => text.split(/\s+e\s+|;/).map((x) => x.trim()).filter(Boolean).map((x) => {
+  const m = x.match(/^(\S+)\s*(<=|>=|==|!=|<|>)\s*(-?[\d.,]+)$/);
+  return m ? { fact: m[1], op: m[2], value: Number(m[3].replace(',', '.')) } : { fact: x, op: '>', value: 0 };
+});
+
+/** A champion's guidelines (used at the help level "com dicas do usuário"), with the one generic preset. */
+function GuidelinesEditor({ rules, champion, onSaved, onError }) {
+  const [list, setList] = useState(rules.guidelines ?? []);
+  useEffect(() => setList(rules.guidelines ?? []), [rules]);
+  const set = (i, p) => setList(list.map((g, k) => (k === i ? { ...g, ...p } : g)));
+  const save = async () => {
+    try {
+      onSaved(await api.put(`/api/arena/guidelines/${encodeURIComponent(champion)}`, { ...rules, guidelines: list }));
+    } catch (e) {
+      onError(e.message);
+    }
+  };
+  const preset = async () => setList([...list, ...(await api.get('/api/arena/guidelines-preset'))]);
+  return (
+    <details className="combat-details">
+      <summary>{t('arena.rules.title', { champion, n: list.length })}</summary>
+      <p className="muted small">{t('arena.rules.help')}</p>
+      {list.map((g, i) => (
+        <div key={i} className="row arena-rule">
+          <span className="muted">{t('arena.rules.when')}</span>
+          <input style={{ flex: 2, minWidth: 220 }} defaultValue={condText(g.when)} key={`${i}-${condText(g.when)}`}
+            onBlur={(e) => set(i, { when: parseConds(e.target.value) })} aria-label={t('arena.rules.when')} />
+          <span className="muted">→</span>
+          <select value={g.effect} onChange={(e) => set(i, { effect: e.target.value })}>
+            {EFFECTS.map((x) => <option key={x} value={x}>{t(`arena.rules.effect.${x}`)}</option>)}
+          </select>
+          <input value={g.action ?? ''} onChange={(e) => set(i, { action: e.target.value })} style={{ width: 130 }} aria-label={t('arena.rules.action')} />
+          <label className="inline">{t('arena.rules.strength')}<input type="number" step={0.5} value={g.strength} style={{ width: 55 }}
+            onChange={(e) => set(i, { strength: Number(e.target.value) || 0 })} /></label>
+          <label className="inline">{t('arena.rules.reward')}<input type="number" step={10} value={g.reward ?? ''} style={{ width: 60 }}
+            onChange={(e) => set(i, { reward: e.target.value === '' ? null : Number(e.target.value) })} /></label>
+          <button className="link danger" onClick={() => setList(list.filter((_, k) => k !== i))}>✕</button>
+        </div>
+      ))}
+      <div className="row">
+        <button className="link" onClick={() => setList([...list, { id: `regra${list.length + 1}`, when: [], effect: 'preferir', action: 'atacar', strength: 1, reward: null }])}>{t('arena.rules.add')}</button>
+        <button className="link" onClick={preset}>{t('arena.rules.preset')}</button>
+        <button onClick={save}>{t('arena.rules.save')}</button>
+      </div>
+    </details>
   );
 }
 
