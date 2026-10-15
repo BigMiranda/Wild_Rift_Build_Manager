@@ -95,7 +95,7 @@ public class ArenaService {
 
     public ArenaModel.Result run(Scenario sc) {
         List<Arena.Input> inputs = prepare(sc);
-        return new Arena(catalog, map).run(inputs, sc.actions == null ? List.of() : sc.actions, duration(sc));
+        return new Arena(catalog, map).withSafeZone(sc.safeZone).run(inputs, sc.actions == null ? List.of() : sc.actions, duration(sc));
     }
 
     static double duration(Scenario sc) {

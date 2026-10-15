@@ -3,7 +3,7 @@ package com.ornnplanner.arena;
 /** How good a fight went for one champion and its side: the objectives of training. */
 public final class ArenaScore {
 
-    public static final java.util.List<String> OBJECTIVES = java.util.List.of("win_fast", "damage", "survive", "team");
+    public static final java.util.List<String> OBJECTIVES = java.util.List.of("win_fast", "damage", "survive", "team", "escapar");
 
     private ArenaScore() {
     }
@@ -29,6 +29,12 @@ public final class ArenaScore {
                 return (f.deathTime != null ? f.deathTime : r.duration + 1000) + f.health / 100;
             case "team":
                 return teamHp - enemyHp;
+            case "escapar":
+                // reach the safe zone alive (sooner is better), else survive to the end, with the health left
+                if (f.escapedAt != null) {
+                    return 50000 - f.escapedAt * 100 + f.health;
+                }
+                return f.deathTime == null ? 20000 + f.health : f.deathTime * 100;
             default: // win_fast: winning first (sooner is better), else the damage dealt and the enemy health left
                 return r.winner == team ? 100000 - r.duration * 100 : teamDealt - enemyHp;
         }

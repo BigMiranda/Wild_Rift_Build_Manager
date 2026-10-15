@@ -284,6 +284,8 @@ public class Arena {
         double nextHpSample;
         /** Cleanse: stuns and slows are void until then. */
         double cleanseUntil = -1;
+        /** It reached its side's safe zone alive: out of the fight. */
+        boolean escaped;
         /** Its dashes and leaps (slot -> kind), read once from the sheet. */
         Map<String, String> mobility;
         /** The combo it runs now (its state lives here, never in the policy), and whether the scripted one started. */
@@ -312,7 +314,7 @@ public class Arena {
         }
 
         boolean targetable() {
-            return !dead && now >= stasisUntil;
+            return !dead && !escaped && now >= stasisUntil;
         }
 
         boolean visible() {
@@ -591,6 +593,9 @@ public class Arena {
 
     /** Records the frames for the screen (training turns it off: only the totals matter). */
     private boolean recordFrames = true;
+    /** A side's safe zone (null = none), and its tower's next shot (every 0.5s). */
+    private ArenaModel.SafeZone safeZone;
+    private double nextTowerTick = 0.5;
 
     public Arena(CombatCatalog catalog, Map<String, Object> map) {
         this.catalog = catalog;
@@ -599,6 +604,12 @@ public class Arena {
 
     public Arena withoutFrames() {
         recordFrames = false;
+        return this;
+    }
+
+    /** With a side's safe zone (null = none): see {@link ArenaModel.SafeZone}. */
+    public Arena withSafeZone(ArenaModel.SafeZone zone) {
+        this.safeZone = zone;
         return this;
     }
 
@@ -667,6 +678,7 @@ public class Arena {
             moveElementals();
             tickFields();
             tickPeriodic();
+            tickSafeZone();
             trackEvents();
             if (now >= nextFrame - 1e-9) {
                 frame();
@@ -677,6 +689,10 @@ public class Arena {
             if (a == 0 || b == 0) {
                 result.winner = a == 0 && b == 0 ? -1 : a == 0 ? 1 : 0;
                 frame();
+                break;
+            }
+            if (safeZone != null && (fighting(0) == 0 || fighting(1) == 0)) {
+                frame();   // a side has nobody left in the fight: those alive escaped (no winner)
                 break;
             }
         }
@@ -699,6 +715,11 @@ public class Arena {
             }
             u.r.health = Math.max(0, u.hp);
             result.fighters.add(u.r);
+        }
+        if (safeZone != null) {
+            double cx = safeZone.team == 0 ? safeZone.depth / 2 : length - safeZone.depth / 2;
+            result.terrain.add(rect("zona-segura", "Zona segura" + (safeZone.damagePerSecond > 0 ? " (torre)" : ""),
+                    safeZone.team, cx, 0, safeZone.depth, halfWidth * 2, 0));
         }
         result.terrain.add(rect("wall-top", "Parede", -1, length / 2, halfWidth + 50, length, 100, 0));
         result.terrain.add(rect("wall-bottom", "Parede", -1, length / 2, -halfWidth - 50, length, 100, 0));
@@ -774,6 +795,9 @@ public class Arena {
     // ------------------------------------------------------------------ a champion's step
 
     private void step(U u) {
+        if (u.escaped) {
+            return;
+        }
         if (u.combo != null && !u.canAct()) {
             endCombo(u, "aborted", "em controle");   // stunned, knocked up, displaced: the combo is broken
         }
@@ -2977,7 +3001,12 @@ public class Arena {
             dash.speed = 1600;
             dash.hitRadius = 0;
             immunity(dash, rec);
+            U near = nearestEnemy(u);
+            double before = near == null ? 0 : dist(u.x, u.y, near.x, near.y);
             dash.onEnd = () -> {
+                if (near != null && dist(u.x, u.y, near.x, near.y) > before + 50) {
+                    count(u, "reconjuracao_fuga:" + slot);   // the headbutt took it away from its nearest enemy
+                }
                 if (dist(u.x, u.y, e.x, e.y) <= e.width / 2 + u.radius() + 150 && elementals.contains(e)) {
                     e.redirected = true;
                     e.dx = Math.cos(a);
@@ -5023,6 +5052,16 @@ public class Arena {
         }
     }
 
+    private U nearestEnemy(U u) {
+        U best = null;
+        for (U e : enemies(u)) {
+            if (best == null || dist(u.x, u.y, e.x, e.y) < dist(u.x, u.y, best.x, best.y)) {
+                best = e;
+            }
+        }
+        return best;
+    }
+
     // ------------------------------------------------------------------ the ragdoll (lab)
 
     /**
@@ -5769,6 +5808,72 @@ public class Arena {
             }
         }
         return out;
+    }
+
+    /** Champions of a side still in the fight (alive and not escaped). */
+    private int fighting(int team) {
+        int n = 0;
+        for (U x : units) {
+            if (x.team() == team && !x.dead && !x.escaped) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /** In the side's safe zone (its stretch of the lane from its end). */
+    private boolean inZone(U u, int team) {
+        return team == 0 ? u.x <= safeZone.depth : u.x >= length - safeZone.depth;
+    }
+
+    /**
+     * The safe zone: a champion of its side who gets there alive escapes (leaves the fight, as far as the others are
+     * concerned); enemies inside take its damage per second (true damage, every 0.5s).
+     */
+    private void tickSafeZone() {
+        if (safeZone == null) {
+            return;
+        }
+        boolean towerTick = now >= nextTowerTick - 1e-9;
+        if (towerTick) {
+            nextTowerTick += 0.5;
+        }
+        for (U u : units) {
+            if (u.dead || u.escaped) {
+                continue;
+            }
+            if (u.team() == safeZone.team && inZone(u, safeZone.team)) {
+                u.escaped = true;
+                u.r.escapedAt = round3(now);
+                u.dash = null;
+                u.forced = null;
+                if (u.combo != null) {
+                    endCombo(u, "aborted", "escapou");
+                }
+                count(u, "escapou");
+                event(u, "chegou à zona segura");
+            } else if (u.team() != safeZone.team && safeZone.damagePerSecond > 0 && inZone(u, safeZone.team)
+                    && towerTick) {
+                U tower = null;
+                for (U x : units) {
+                    if (x.team() == safeZone.team) {
+                        tower = x;
+                        break;
+                    }
+                }
+                if (tower != null) {
+                    double before = u.hp;
+                    u.hp -= safeZone.damagePerSecond * 0.5;
+                    u.r.taken += before - Math.max(0, u.hp);
+                    u.r.damageBySource.merge("Torre (sofrido)", before - Math.max(0, u.hp), Double::sum);
+                    if (u.hp <= 0) {
+                        u.dead = true;
+                        u.r.deathTime = now;
+                        event(u, "foi abatido pela torre");
+                    }
+                }
+            }
+        }
     }
 
     private int alive(int team) {

@@ -245,6 +245,22 @@ export default function Arena() {
             <input type="number" min={5} max={180} value={sc.duration} onChange={(e) => set({ duration: Number(e.target.value) || 40 })} />
           </label>
         </div>
+        <div className="row arena-zone" title={t('arena.zone.title')}>
+          <label className="check"><input type="checkbox" checked={sc.safeZone != null}
+            onChange={(e) => set({ safeZone: e.target.checked ? { team: 0, depth: 1200, damagePerSecond: 0 } : null })} />{t('arena.zone')}</label>
+          {sc.safeZone && (
+            <>
+              <select value={sc.safeZone.team} onChange={(e) => set({ safeZone: { ...sc.safeZone, team: Number(e.target.value) } })} aria-label={t('arena.zone.side')}>
+                <option value={0}>{t('combat.team0')}</option>
+                <option value={1}>{t('combat.team1')}</option>
+              </select>
+              <label className="inline">{t('arena.zone.depth')}<input type="number" min={200} max={5000} step={100} value={sc.safeZone.depth} style={{ width: 80 }}
+                onChange={(e) => set({ safeZone: { ...sc.safeZone, depth: Number(e.target.value) || 1200 } })} /></label>
+              <label className="inline">{t('arena.zone.dps')}<input type="number" min={0} max={2000} step={50} value={sc.safeZone.damagePerSecond} style={{ width: 80 }}
+                onChange={(e) => set({ safeZone: { ...sc.safeZone, damagePerSecond: Number(e.target.value) || 0 } })} /></label>
+            </>
+          )}
+        </div>
         <div className="arena-sides">
           {[0, 1].map((team) => (
             <div key={team} className={`arena-side team-${team}`}>
@@ -310,7 +326,7 @@ const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`);
 const policyLabel = (p) => t('arena.brain.ai', { v: p.version, obj: t(`arena.obj.${p.objective}`), pct: pct(p.betterVsScript) })
   + (p.accepted ? '' : ` ${t('arena.train.notAccepted')}`) + (p.migratedFrom ? ` ${t('arena.brain.migrated', { v: p.migratedFrom })}` : '');
 
-const OBJECTIVES = ['win_fast', 'damage', 'survive', 'team'];
+const OBJECTIVES = ['win_fast', 'damage', 'survive', 'team', 'escapar'];
 const RUNNING = ['queued', 'running', 'stopping'];
 const CHAIN_COLORS = ['#4fa8ff', '#f06a5f', '#5fbf6a', '#f0c75e', '#b48cf0', '#4fd1c5', '#f08cc0', '#9aa5b1'];
 
@@ -961,6 +977,10 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick }) {
           <rect x={0} y={-result.mapWidth / 2} width={result.mapLength} height={result.mapWidth} className="arena-lane" />
           {[0, 1].map((team) => (
             <circle key={team} cx={team === 0 ? 500 : result.mapLength - 500} cy={0} r={180} fill={TEAM_SOFT[team]} stroke={TEAM[team]} strokeWidth={8} />
+          ))}
+          {(result.terrain ?? []).filter((s) => s.id === 'zona-segura').map((s) => (
+            <rect key={s.id} x={s.x - s.length / 2} y={-s.width / 2} width={s.length} height={s.width} fill={TEAM_SOFT[s.team] ?? 'none'}
+              stroke={TEAM[s.team]} strokeDasharray="40 30" strokeWidth={10}><title>{s.label}</title></rect>
           ))}
           {frame.shapes.map((s) => <ShapeView key={s.id} s={s} />)}
           {frame.units.map((u, i) => <UnitView key={i} u={u} i={i} name={names[i]} team={result.fighters[i]?.team ?? 0} span={span} />)}

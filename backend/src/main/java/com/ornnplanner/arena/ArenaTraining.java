@@ -76,6 +76,8 @@ public final class ArenaTraining {
         public String chainId;
         public Integer chainRound;
         public ArenaModel.TeamPlan teamPlan;
+        /** The scenario's safe zone (null = none). */
+        public ArenaModel.SafeZone safeZone;
         public Plateau plateau = Plateau.off();
         /**
          * Stop at total victory instead of a plateau: the first generation whose side wins every selection fight ends
@@ -484,7 +486,9 @@ public final class ArenaTraining {
                     policies[k] = current(spec.chain, c);
                 }
             }
-            out.add(new Gym.Episode(in, spec.actions, spec.duration, spec.me, policies, opp.label()));
+            Gym.Episode ep = new Gym.Episode(in, spec.actions, spec.duration, spec.me, policies, opp.label());
+            ep.safeZone = spec.safeZone;
+            out.add(ep);
         }
         return out;
     }

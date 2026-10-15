@@ -699,3 +699,33 @@ Campos novos, documentados no cabeçalho do `kits_7_3.yml`:
     também é o melhor no combo dado (5511 contra 5454 a 5474), e o Impacto, de novo, leva a busca a outra ordem
     (6322).
 - **Tela:** o botão "Comparar runas" no laboratório (o combo com cada runa principal e uma busca nova com cada uma).
+
+### Parte G — Fugir: zona segura e o uso defensivo da R do Ornn ✅
+- **Zona segura opcional** (`Scenario.safeZone` = `ArenaModel.SafeZone`: o lado, a profundidade a partir da ponta da
+  rota desse lado e o dano por segundo nos inimigos dentro; 0 = só "chegou = escapou"):
+  - um campeão do lado que chega vivo escapa (`FighterStats.escapedAt`, evento `escapou`) e sai da luta (não é mais
+    alvo, não age);
+  - a torre causa o dano a cada 0,5 s;
+  - a luta acaba quando um lado não tem mais ninguém lutando (sem vencedor se os que restam escaparam);
+  - o mapa desenha a zona, e a tela do cenário tem o bloco "Zona segura" (lado, profundidade, dano/s).
+  Sem zona, nada muda (golden intacto; `escapedAt` está entre os campos descritivos da impressão digital).
+- **Objetivo `escapar`** (`ArenaScore`): escapou → 50000 − 100 × tempo + vida restante; vivo no fim → 20000 + vida;
+  morto → 100 × tempo de vida. Está na lista de objetivos do treino e da tela. A zona chega aos episódios de treino
+  (`StageSpec.safeZone`, `Gym.Episode.safeZone`, cadeia).
+- **Eventos novos para medir a fuga:** `reconjuracao_fuga:<slot>` (a cabeçada levou o Ornn para longe do inimigo
+  mais próximo, mais de 50) e o `deslocamento_anulado:puxao` da Parte B.
+- 🎯 **Ornn × Darius** (`ArenaEscapeTest.ornnFleesDarius`, `-Darena.report=true`): Ornn com 25% de vida e Flash; Darius
+  250 atrás, com Fantasma e o Tático; torre azul 3100 adiante com 300 de dano/s. A IA foi treinada só com previsões e
+  eventos ("Sozinha"; 40 gerações, população 24, objetivo `escapar`) e medida contra o Tático do Ornn nas mesmas 32
+  largadas:
+
+  | Ornn | fugas | mortes | R usada | cabeçadas para fugir | puxões anulados |
+  |---|---|---|---|---|---|
+  | Tático | 19/32 | 13 | 32 | 0 | 0 |
+  | **IA (sozinha)** | **32/32** | 0 | 32 | 0 | 0 |
+
+  A IA aprendeu a fugir sempre, mas não pelo caminho que o prompt esperava: as duas lançam a R no Darius (a ida
+  desacelera o perseguidor) e nenhuma usou a cabeçada para ganhar distância nem anulou um puxão. O ganho veio de
+  quando recuar e quando usar o Flash. A cabeçada só se afasta do Darius se o elemental já tiver passado o Ornn na
+  direção da fuga, e a ação "reconjurar" não escolhe a direção. Isso fica registrado como limite da formulação das
+  ações, não como regra a acrescentar.

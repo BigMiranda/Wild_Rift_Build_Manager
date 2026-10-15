@@ -185,6 +185,7 @@ public class ArenaTrainingService {
         st.seed = req.seed;
         st.previous = policies.best(job.champion, req.objective).orElse(null);
         st.teamPlan = plan(sc, base.get(req.fighter).f.team);
+        st.safeZone = sc.safeZone;
         st.stopAtVictory = victory(req.stopWhen);
         st.plateau = plateau(req.plateauPct, req.plateauWindow, req.minGenerations);
         ArenaTraining.StageResult r = training.trainStage(st, new ArenaTraining.Listener() {
@@ -248,6 +249,7 @@ public class ArenaTrainingService {
         spec.duration = ArenaService.duration(sc);
         spec.scenario = sc.name;
         spec.teams = sc.teams;
+        spec.safeZone = sc.safeZone;
         spec.slots = slots;
         spec.objective = objective(req.objective);
         spec.objectives = new java.util.HashMap<>();

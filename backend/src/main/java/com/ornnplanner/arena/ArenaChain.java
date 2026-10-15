@@ -106,6 +106,7 @@ public final class ArenaChain {
         public double duration = 60;
         public String scenario;
         public ArenaModel.TeamPlan[] teams;
+        public ArenaModel.SafeZone safeZone;
         public List<Integer> slots;
         public String objective = "win_fast";
         public Map<Integer, String> objectives = Map.of();
@@ -257,6 +258,7 @@ public final class ArenaChain {
         int team = spec.variants.get(0).get(s.slot).f.team;
         st.teamPlan = spec.teams != null && team < spec.teams.length ? spec.teams[team] : null;
         st.plateau = spec.plateau;
+        st.safeZone = spec.safeZone;
         st.stopAtVictory = spec.stopAtVictory;
         st.accept = spec.accept;
         st.pool = spec.pool;

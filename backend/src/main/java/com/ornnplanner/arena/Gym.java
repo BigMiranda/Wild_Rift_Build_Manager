@@ -24,6 +24,8 @@ public final class Gym {
         public final Policy[] policies;
         /** Short label of the opponents' brains, for reports (script, tactical, ai v3...). */
         public final String opponent;
+        /** The scenario's safe zone (null = none). */
+        public ArenaModel.SafeZone safeZone;
 
         public Episode(List<Arena.Input> inputs, List<ArenaModel.Action> actions, double duration, int me,
                        Policy[] policies, String opponent) {
@@ -97,6 +99,6 @@ public final class Gym {
             }
             in.add(c);
         }
-        return new Arena(catalog, map).withoutFrames().run(in, e.actions, e.duration);
+        return new Arena(catalog, map).withoutFrames().withSafeZone(e.safeZone).run(in, e.actions, e.duration);
     }
 }

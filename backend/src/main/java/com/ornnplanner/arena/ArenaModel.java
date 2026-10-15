@@ -160,6 +160,20 @@ public final class ArenaModel {
          * own target (its fixed one, else the nearest).
          */
         public TeamPlan[] teams;
+        /** A side's safe zone at its end of the lane (tower or fountain), or null: nowhere to run. */
+        public SafeZone safeZone;
+    }
+
+    /**
+     * Where one side is safe: the stretch of the lane from its end (its Nexus) as deep as {@link #depth}. A champion of
+     * that side who gets there alive has escaped (it leaves the fight); enemies inside take {@link #damagePerSecond}
+     * (a tower), or nothing when it is 0 (only "arrived = escaped").
+     */
+    public static class SafeZone {
+        /** The side it protects (0 = blue, at x = 0; 1 = red, at the far end). */
+        public int team;
+        public double depth = 1200;
+        public double damagePerSecond = 0;
     }
 
     // ------------------------------------------------------------------ combos
@@ -357,6 +371,8 @@ public final class ArenaModel {
         public double healed;
         public double healLost;
         public Double deathTime;
+        /** When it reached its side's safe zone alive (null = never). */
+        public Double escapedAt;
         public Map<String, Double> damageBySource = new LinkedHashMap<>();
         /** Item actives and summoner spells it can use (name -> cooldown, s). */
         public Map<String, Double> actives = new LinkedHashMap<>();
