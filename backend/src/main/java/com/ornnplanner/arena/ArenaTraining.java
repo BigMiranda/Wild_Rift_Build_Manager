@@ -11,7 +11,7 @@ import com.ornnplanner.arena.ai.PolicyRepository;
 import com.ornnplanner.arena.ai.ScriptedPolicy;
 import com.ornnplanner.arena.ai.TacticalPolicy;
 import com.ornnplanner.arena.ai.Trainer;
-import com.ornnplanner.combat.CombatCatalog;
+import com.ornnplanner.arena.fight.CombatCatalog;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

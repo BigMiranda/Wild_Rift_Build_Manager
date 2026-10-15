@@ -346,7 +346,7 @@ function DummyEditor({ dummy, onChange, builds, dummies, onSave }) {
     </label>
   );
   return (
-    <details className="combat-details" open>
+    <details className="report-details" open>
       <summary>{t('lab.dummy', { name: dummy.name })}</summary>
       <div className="row">
         <select value="" onChange={(e) => pick(e.target.value)} aria-label={t('lab.dummy.pick')}>
@@ -491,7 +491,7 @@ function MetricsCard({ m }) {
       <dl>{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       <div className="table-wrap">
         <table className="data">
-          <thead><tr><th className="l">{t('arena.source')}</th><th>{t('combat.col.damage')}</th></tr></thead>
+          <thead><tr><th className="l">{t('arena.source')}</th><th>{t('report.col.damage')}</th></tr></thead>
           <tbody>
             {Object.entries(m.bySource).sort((a, b) => b[1] - a[1]).map(([k, v]) => <tr key={k}><td className="l">{k}</td><td>{n0(v)}</td></tr>)}
             {Object.entries(m.byType).map(([k, v]) => <tr key={k} className="muted"><td className="l">{t('lab.m.type', { type: k })}</td><td>{n0(v)}</td></tr>)}

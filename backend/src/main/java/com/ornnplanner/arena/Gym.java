@@ -1,7 +1,7 @@
 package com.ornnplanner.arena;
 
 import com.ornnplanner.arena.ai.Policy;
-import com.ornnplanner.combat.CombatCatalog;
+import com.ornnplanner.arena.fight.CombatCatalog;
 
 import java.util.ArrayList;
 import java.util.List;

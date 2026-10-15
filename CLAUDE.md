@@ -51,8 +51,10 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
 - `engine/` — pure calculation, no Spring: `TimelineEngine` (gold/XP over time → when each purchase happens, level,
   effective stats; its Javadoc documents the rules), `GoldPricing` (gold value per stat point, methodology from
   changchiyou/wildrift-gold-efficiency), `Model`, `Stats`.
-- `combat/` — 1v1-style `CombatSimulator` (no positions); `AbilityParser` reads damage formulas out of the game's
-  ability text; `CombatCatalog` loads `combate_7_3.yml` (item combat effects, rune effects, `gatilhos` triggers).
+- `arena/fight/` — what a fight is built from: `FighterBuilder` (a saved build at a minute → `Fighter` with its item
+  and rune effects and its conditional effects as `Triggered`; `excludeItems` gives the per-item counterfactual),
+  `Fighter`, `ItemEffect`, `Ledger`, `Delay`, `DamageRules.mitigation`, `AbilityParser` (damage formulas read from the
+  game's ability text) and `CombatCatalog` (`combate_7_3.yml`: item combat effects, rune effects, `gatilhos`).
 - `arena/` — 2D orchestrated fight (Howling Abyss as a straight lane): `Arena` is the deterministic simulator (0.02s
   steps); `ArenaService` runs scenarios; `ArenaModel` holds scenario/result types. Champion kits come from
   `kits_7_3.yml`; champions without a kit fall back to text-parsed damage on a targeted ability.
@@ -64,7 +66,7 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
 - `seed/` — `SchemaManager` (migrations), `CatalogImporter` (YAML → SQLite), catalogs for champions, runes, item
   effects, shop rules, `ReferenceSeeder`.
 - `repo/` — JdbcTemplate data access. `service/PlannerService` assembles reference data and runs the engine.
-- `api/` — REST controllers under `/api/...` (planner, admin, champions, runes, combat, arena, planner lab, item icons).
+- `api/` — REST controllers under `/api/...` (planner, admin, champions, runes, arena, planner lab, item icons).
 
 **Data lives in YAML seeds, not code** (`backend/src/main/resources/seed/`, patch-suffixed `_7_3`): `loja_7_3.yml`
 (171 shop items; header documents each field), `precos_status.yml`, `efeitos_itens_7_3.yml`, `campeoes_7_3.yml`,
@@ -81,7 +83,7 @@ Catalog re-import (Admin screen) upserts by name and preserves hand-edited items
 validation depend on it.
 
 Frontend: React 18 + Vite 5 + Recharts, plain JS (no TypeScript), **no router** — `App.jsx` switches pages
-(`pages/Planner`, `Combat`, `Arena`, `Admin`, `About`). `api.js` wraps all backend calls. Client-side game math
+(`pages/Planner`, `Arena`, `Admin`, `About`). `api.js` wraps all backend calls. Client-side game math
 mirrors the backend in `abilityMath.js`, `effective.js`, `passives.js`, `runes.js`, `shopModel.js`, `skills.js` —
 keep these in sync with the Java side when a rule changes.
 

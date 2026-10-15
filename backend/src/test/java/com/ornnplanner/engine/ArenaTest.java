@@ -4,10 +4,10 @@ import com.ornnplanner.arena.Arena;
 import com.ornnplanner.arena.ArenaModel;
 import com.ornnplanner.arena.ArenaModel.Action;
 import com.ornnplanner.arena.ArenaModel.Result;
-import com.ornnplanner.combat.CombatCatalog;
-import com.ornnplanner.combat.CombatService;
-import com.ornnplanner.combat.CombatSimulator.ItemEffect;
-import com.ornnplanner.combat.CombatSimulator.Fighter;
+import com.ornnplanner.arena.fight.CombatCatalog;
+import com.ornnplanner.arena.fight.FighterBuilder;
+import com.ornnplanner.arena.fight.ItemEffect;
+import com.ornnplanner.arena.fight.Fighter;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -176,8 +176,8 @@ class ArenaTest {
         assertTrue(r.fighters.get(0).damageBySource.get("Hemorragia") > 0);
     }
 
-    private static CombatService.Triggered trigger(String key, String mode, Map<String, Object> spec, Map<String, Double> delta) {
-        CombatService.Triggered t = new CombatService.Triggered();
+    private static FighterBuilder.Triggered trigger(String key, String mode, Map<String, Object> spec, Map<String, Double> delta) {
+        FighterBuilder.Triggered t = new FighterBuilder.Triggered();
         t.key = key;
         t.source = key.contains("|") ? key.substring(0, key.indexOf('|')) : key;
         t.effect = key.contains("|") ? key.substring(key.indexOf('|') + 1) : key;

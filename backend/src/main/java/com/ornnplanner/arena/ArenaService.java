@@ -8,10 +8,10 @@ import com.ornnplanner.arena.ArenaModel.Slot;
 import com.ornnplanner.arena.ai.NeuralPolicy;
 import com.ornnplanner.arena.ai.PolicyRepository;
 import com.ornnplanner.arena.ai.TacticalPolicy;
-import com.ornnplanner.combat.CombatCatalog;
-import com.ornnplanner.combat.CombatService;
-import com.ornnplanner.combat.CombatSimulator.Fighter;
-import com.ornnplanner.combat.CombatSimulator.ItemEffect;
+import com.ornnplanner.arena.fight.CombatCatalog;
+import com.ornnplanner.arena.fight.FighterBuilder;
+import com.ornnplanner.arena.fight.Fighter;
+import com.ornnplanner.arena.fight.ItemEffect;
 import com.ornnplanner.repo.BuildRepository;
 import com.ornnplanner.seed.RuneCatalog;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,7 +53,7 @@ public class ArenaService {
             "Medalhão dos Solari de Ferro", 60.0, "Bênção de Mikael", 120.0, "Cimitarra Mercurial", 90.0,
             "Bandana de Mercúrio", 90.0);
 
-    private final CombatService combat;
+    private final FighterBuilder combat;
     private final CombatCatalog catalog;
     private final BuildRepository builds;
     private final RuneCatalog runes;
@@ -66,7 +66,7 @@ public class ArenaService {
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @SuppressWarnings("unchecked")
-    public ArenaService(CombatService combat, CombatCatalog catalog, BuildRepository builds, RuneCatalog runes,
+    public ArenaService(FighterBuilder combat, CombatCatalog catalog, BuildRepository builds, RuneCatalog runes,
                         JdbcTemplate jdbc, PolicyRepository policies, ComboRepository combos,
                         @Value("${planner.seed.kits:classpath:seed/kits_7_3.yml}") Resource kitsFile) {
         this.combat = combat;
@@ -142,7 +142,7 @@ public class ArenaService {
             }
             BuildRepository.Build build = builds.findBuild(slot.buildId).orElseThrow(
                     () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Build " + slot.buildId + " não existe."));
-            CombatService.Combatant c = new CombatService.Combatant();
+            FighterBuilder.Combatant c = new FighterBuilder.Combatant();
             c.buildId = slot.buildId;
             c.minute = slot.minute;
             c.activations = slot.activations;
@@ -153,7 +153,7 @@ public class ArenaService {
             if (kit != null && kit.get("efeitos_de_forma") instanceof Map) {
                 forms.addAll(((Map<String, Object>) kit.get("efeitos_de_forma")).keySet());
             }
-            CombatService.ArenaBuild ab = combat.arenaBuild(c, forms);
+            FighterBuilder.ArenaBuild ab = combat.arenaBuild(c, forms);
             Fighter f = ab.fighter;
             f.team = slot.team;
             Arena.Input in = new Arena.Input();
@@ -295,10 +295,10 @@ public class ArenaService {
         b.ragdollStats.put(com.ornnplanner.engine.Stats.ARMOR, ragdoll(d.armor));
         b.ragdollStats.put(com.ornnplanner.engine.Stats.MAGIC_RESIST, ragdoll(d.magicResist));
         b.ragdollStats.put(com.ornnplanner.engine.Stats.MOVE_SPEED, ragdoll(d.moveSpeed));
-        CombatService.Combatant c = new CombatService.Combatant();
+        FighterBuilder.Combatant c = new FighterBuilder.Combatant();
         c.build = b;
         c.minute = d.wearMinute;
-        CombatService.ArenaBuild ab = combat.arenaBuild(c, java.util.Set.of());
+        FighterBuilder.ArenaBuild ab = combat.arenaBuild(c, java.util.Set.of());
         Fighter f = ab.fighter;
         f.name = d.name == null ? "Boneco de pano" : d.name;
         f.champion = "Boneco de pano";

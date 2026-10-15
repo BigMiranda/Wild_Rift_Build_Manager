@@ -1,4 +1,4 @@
-package com.ornnplanner.combat;
+package com.ornnplanner.arena.fight;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -18,7 +18,6 @@ public class CombatCatalog {
     private final Map<String, List<Map<String, Object>>> items = new LinkedHashMap<>();
     private final Map<String, Map<String, Object>> spells = new LinkedHashMap<>();
     private final Map<String, Map<String, Object>> activations = new LinkedHashMap<>();
-    private final Map<String, Map<String, Object>> champions = new LinkedHashMap<>();
     private final Map<String, List<Map<String, Object>>> runes = new LinkedHashMap<>();
     private final Map<String, Map<String, Object>> triggers = new LinkedHashMap<>();
 
@@ -29,7 +28,6 @@ public class CombatCatalog {
             items.putAll((Map<String, List<Map<String, Object>>>) root.get("itens"));
             spells.putAll((Map<String, Map<String, Object>>) root.get("feiticos"));
             activations.putAll((Map<String, Map<String, Object>>) root.getOrDefault("ativacao", Map.of()));
-            champions.putAll((Map<String, Map<String, Object>>) root.getOrDefault("campeoes", Map.of()));
             runes.putAll((Map<String, List<Map<String, Object>>>) root.getOrDefault("runas", Map.of()));
             triggers.putAll((Map<String, Map<String, Object>>) root.getOrDefault("gatilhos", Map.of()));
         } catch (IOException e) {
@@ -45,18 +43,8 @@ public class CombatCatalog {
         return spells.get(name);
     }
 
-    /** When a status of the build (item, rune or champion effect) starts to count in a fight; null = from the start. */
-    public Map<String, Object> activation(String source) {
-        return activations.get(source);
-    }
-
     public Map<String, Map<String, Object>> activations() {
         return activations;
-    }
-
-    /** Fight mechanics of a champion (by name), or an empty map. */
-    public Map<String, Object> champion(String name) {
-        return champions.getOrDefault(name, Map.of());
     }
 
     /** Fight effects of a rune (the arena's procs: Electrocute, Grasp, Brutal...). */

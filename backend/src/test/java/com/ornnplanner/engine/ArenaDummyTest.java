@@ -8,7 +8,7 @@ import com.ornnplanner.arena.ArenaModel.Result;
 import com.ornnplanner.arena.ComboBench;
 import com.ornnplanner.arena.ai.ActionSpace;
 import com.ornnplanner.arena.ai.Policy;
-import com.ornnplanner.combat.CombatSimulator.ItemEffect;
+import com.ornnplanner.arena.fight.ItemEffect;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

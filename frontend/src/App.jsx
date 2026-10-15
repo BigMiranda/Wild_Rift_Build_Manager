@@ -4,10 +4,9 @@ import { loadSettings, saveSettings, setLanguage, t } from './i18n.js';
 import Planner from './pages/Planner.jsx';
 import Admin from './pages/Admin.jsx';
 import About from './pages/About.jsx';
-import Combat from './pages/Combat.jsx';
 import Arena from './pages/Arena.jsx';
 
-const TABS = ['planner', 'combat', 'arena', 'admin', 'about'];
+const TABS = ['planner', 'arena', 'admin', 'about'];
 
 export default function App() {
   const [tab, setTab] = useState('planner');
@@ -45,6 +44,15 @@ export default function App() {
     reload();
   }, [reload]);
 
+  // The matchup tab is gone (round 4): drop the setup it kept in the browser.
+  useEffect(() => {
+    try {
+      Object.keys(localStorage).filter((k) => k.startsWith('ornn-planner-combat')).forEach((k) => localStorage.removeItem(k));
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+
   return (
     <>
       <header className="app-header">
@@ -79,7 +87,6 @@ export default function App() {
         </div>
       )}
       {meta && tab === 'planner' && <Planner meta={meta} items={items} settings={settings} />}
-      {meta && tab === 'combat' && <Combat />}
       {meta && tab === 'arena' && <Arena />}
       {meta && tab === 'admin' && <Admin meta={meta} items={items} onChanged={reload} />}
       {tab === 'about' && <About />}

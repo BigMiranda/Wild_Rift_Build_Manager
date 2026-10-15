@@ -6,7 +6,7 @@ import com.ornnplanner.arena.ArenaModel.Scenario;
 import com.ornnplanner.arena.ArenaModel.Slot;
 import com.ornnplanner.arena.ai.Plateau;
 import com.ornnplanner.arena.ai.PolicyRepository;
-import com.ornnplanner.combat.CombatCatalog;
+import com.ornnplanner.arena.fight.CombatCatalog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;

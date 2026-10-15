@@ -1,4 +1,4 @@
-package com.ornnplanner.combat;
+package com.ornnplanner.arena.fight;
 
 import com.ornnplanner.engine.Stats;
 

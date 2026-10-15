@@ -16,13 +16,14 @@ import com.ornnplanner.arena.ai.Facts;
 import com.ornnplanner.arena.ai.Observation;
 import com.ornnplanner.arena.ai.Policy;
 import com.ornnplanner.arena.ai.ScriptedPolicy;
-import com.ornnplanner.combat.AbilityParser;
-import com.ornnplanner.combat.CombatCatalog;
-import com.ornnplanner.combat.CombatService;
-import com.ornnplanner.combat.CombatSimulator.Delay;
-import com.ornnplanner.combat.CombatSimulator.Fighter;
-import com.ornnplanner.combat.CombatSimulator.ItemEffect;
-import com.ornnplanner.combat.CombatSimulator.Ledger;
+import com.ornnplanner.arena.fight.AbilityParser;
+import com.ornnplanner.arena.fight.CombatCatalog;
+import com.ornnplanner.arena.fight.DamageRules;
+import com.ornnplanner.arena.fight.FighterBuilder;
+import com.ornnplanner.arena.fight.Delay;
+import com.ornnplanner.arena.fight.Fighter;
+import com.ornnplanner.arena.fight.ItemEffect;
+import com.ornnplanner.arena.fight.Ledger;
 import com.ornnplanner.engine.Stats;
 
 import java.util.ArrayList;
@@ -94,7 +95,7 @@ public class Arena {
         /** Item actives and spells with their cooldown (s). */
         public Map<String, Double> activeCooldowns = new LinkedHashMap<>();
         /** Conditional effects of the build (items, shop lines, runes, champion) and when they count. */
-        public List<CombatService.Triggered> triggers = new ArrayList<>();
+        public List<FighterBuilder.Triggered> triggers = new ArrayList<>();
         /** The champion's combos a policy may run (ActionSpace.COMBO + c, best score first; at most COMBOS). */
         public List<Combo> combos = new ArrayList<>();
         /** A combo run as soon as the fight starts, without a policy (the bench); null = none. */
@@ -2031,7 +2032,7 @@ public class Arena {
                 double shred = now < e.shredUntil[res] ? e.shred[res] : 0;
                 double pen = a.stat(res == 0 ? "% Armor Penetration" : "% Magic Penetration") / 100;
                 double flat = a.stat(res == 0 ? "Armor Penetration" : "Magic Penetration");
-                mult[res] = com.ornnplanner.combat.CombatSimulator.mitigation(resist, shred, pen, flat);
+                mult[res] = DamageRules.mitigation(resist, shred, pen, flat);
             }
             double w = Math.max(1, ad + ap);
             sum += w * (physical * mult[0] + (1 - physical) * mult[1]);
@@ -3898,8 +3899,8 @@ public class Arena {
             double shred = now < t.shredUntil[res] ? t.shred[res] : 0;
             double pen = a.stat(res == 0 ? "% Armor Penetration" : "% Magic Penetration") / 100;
             double flat = a.stat(res == 0 ? "Armor Penetration" : "Magic Penetration");
-            mult = com.ornnplanner.combat.CombatSimulator.mitigation(resist, shred, pen, flat);
-            multNoShred = com.ornnplanner.combat.CombatSimulator.mitigation(resist, 0, pen, flat);
+            mult = DamageRules.mitigation(resist, shred, pen, flat);
+            multNoShred = DamageRules.mitigation(resist, 0, pen, flat);
         }
         double dmg = amped * mult;
         double extraShred = amped * (mult - multNoShred);
@@ -4180,7 +4181,7 @@ public class Arena {
 
     /** A conditional effect of the build in the fight: when it fires, what it gives, what it did. */
     private final class T {
-        final CombatService.Triggered d;
+        final FighterBuilder.Triggered d;
         final Map<String, Object> s;
         final String when;
         /** Its stats count until this time (MAX_VALUE: the rest of the fight). */
@@ -4194,7 +4195,7 @@ public class Arena {
         final List<double[]> window = new ArrayList<>();
         final ArenaModel.TriggerReport rep = new ArenaModel.TriggerReport();
 
-        T(CombatService.Triggered d) {
+        T(FighterBuilder.Triggered d) {
             this.d = d;
             this.s = d.spec == null ? Map.of() : d.spec;
             this.when = d.fixedAt != null ? "fixo" : d.mode;
@@ -4219,7 +4220,7 @@ public class Arena {
     }
 
     private void startTriggers(U u) {
-        for (CombatService.Triggered d : u.in.triggers) {
+        for (FighterBuilder.Triggered d : u.in.triggers) {
             T t = new T(d);
             u.trigs.add(t);
             ArenaModel.TriggerReport r = t.rep;
@@ -4240,7 +4241,7 @@ public class Arena {
     }
 
     /** What a trigger means, for the report. */
-    private static String howText(CombatService.Triggered d) {
+    private static String howText(FighterBuilder.Triggered d) {
         Map<String, Object> s = d.spec == null ? Map.of() : d.spec;
         String note = s.get("nota") == null ? "" : " (" + s.get("nota") + ")";
         if (d.fixedAt != null) {
@@ -5576,7 +5577,7 @@ public class Arena {
      * the % and the flat penetration).
      */
     public static double through(double resist, double shred, double pctPen, double flatPen) {
-        return com.ornnplanner.combat.CombatSimulator.mitigation(resist, shred, pctPen, flatPen);
+        return DamageRules.mitigation(resist, shred, pctPen, flatPen);
     }
 
     // ------------------------------------------------------------------ structured events

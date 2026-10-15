@@ -7,9 +7,9 @@ import com.ornnplanner.arena.ArenaModel.Condition;
 import com.ornnplanner.arena.ArenaModel.Result;
 import com.ornnplanner.arena.ArenaModel.TriggerReport;
 import com.ornnplanner.arena.ComboBench;
-import com.ornnplanner.combat.CombatCatalog;
-import com.ornnplanner.combat.CombatService;
-import com.ornnplanner.combat.CombatSimulator.ItemEffect;
+import com.ornnplanner.arena.fight.CombatCatalog;
+import com.ornnplanner.arena.fight.FighterBuilder;
+import com.ornnplanner.arena.fight.ItemEffect;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -35,7 +35,7 @@ class SourceCooldownTest {
         for (Map<String, Object> e : CATALOG.runeEffects(rune)) {
             in.f.effects.add(new ItemEffect(rune, e));
         }
-        CombatService.Triggered t = new CombatService.Triggered();
+        FighterBuilder.Triggered t = new FighterBuilder.Triggered();
         t.key = rune;
         t.source = rune;
         t.effect = rune;

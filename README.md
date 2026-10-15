@@ -132,8 +132,8 @@ e curas em 30%; Coração de Aço cresce com "golpes carregados por minuto" (21 
 Aperto dos Mortos-Vivos. Cada efeito é ligado ou desligado **na build**, para todas as compras do item (painel
 "Efeitos modelados dos itens", abaixo da sequência de compras), com sua opção e taxa. A ficha do momento mostra a
 **Vida efetiva numa luta** (Vida + escudos + curas) e a aceleração total da ultimate e das básicas. Dano, redução de
-resistências, Feridas Dolorosas, corte de escudo e redução de dano sofrido dependem do inimigo e ficam para o
-simulador de confronto.
+resistências, Feridas Dolorosas, corte de escudo e redução de dano sofrido dependem do inimigo e ficam para as
+lutas da Arena.
 
 ### Importação
 
@@ -296,40 +296,14 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
 - Interface em português ou inglês, com siglas de status em qualquer dos dois (DdA/AD, PdH/AP, RM/MR…), escolhidas
   no cabeçalho. Nomes e textos dos itens continuam em português, como na loja.
 
-## Simulador de confronto
+## Regras de dano e efeitos de combate
 
-Aba **Confronto**: 1 x 1, luta 5 x 5 ou lados personalizados (até 5 por lado; 6 só com clones, como o do Wukong).
-Cada campeão é uma **build salva num minuto de jogo** — itens, nível e status daquele momento, com runas, efeitos do
-campeão e status efetivos —, com sua **ordem de ações** (habilidades 1, 2, 3, R e "Ativo", o ativo de dano de um
-item) e seu **alvo** (primeiro vivo, menor % de Vida ou um inimigo).
+Valem para todas as lutas da Arena (cenários, laboratório e treino) e para os painéis do planejador que rodam lutas.
+A aba "Confronto" (luta rápida sem posições) saiu na Rodada 4: a Arena e o planejador cobrem o mesmo papel.
 
-- **Luta** em passos de 0,05s até um lado cair ou o tempo limite: cada campeão usa a primeira ação pronta da ordem
-  (no máximo uma a cada 0,25s) e ataca no ritmo da velocidade de ataque (base do nível medida no Treino × (1 +
-  bônus)). O dano de cada habilidade é o primeiro "N de Dano Físico/Mágico/Verdadeiro (fórmula)" do texto do jogo,
-  com a tabela por rank e o plano de pontos da build (427 de 463 habilidades com dano no texto são lidas); a recarga
-  segue o rank e a aceleração (AH + Aceleração da Ultimate / Básica). Habilidades acertam só o alvo.
 - **Dano**: bruto × (1 + amplificações) × 100 / (100 + resistência), com resistência = resist × (1 − redução %) ×
   (1 − penetração %) − penetração fixa; depois a redução de dano do alvo, seus escudos e a Vida. Crítico pelo valor
   esperado. Roubo de vida nos ataques e vampirismo universal em todo dano.
-- **Escudos** da build estão de pé no começo e as **curas** voltam ao longo de 5s enquanto o campeão está ferido;
-  escudos e curas em aliados vão para os aliados. **Estase** aciona uma vez abaixo de 30% de Vida (ou num golpe
-  letal). Incendiar e Exaustão no começo, Barreira e Curar abaixo de 35% de Vida.
-- **Status que demoram a ativar** (`ativacao` em `combate_7_3.yml`): ficam de fora até a condição valer — Duplaguarda
-  de Amaranto só depois de 5s em combate, Hemorragia do Darius (Poder de Noxus) com 5 acertos e no mínimo 3s, Força da
-  Natureza com 4 habilidades sofridas, Ritmo Fatal e Conquistador com 6 acertos. No simulador eles contam como ligados
-  na build (mesmo com o condicional desligado), e depois da primeira simulação cada campeão mostra esses status com um
-  campo para **fixar o segundo em que ativam**.
-- **Mecânicas de campeões**: o **Frágil do Ornn** (Fôlego do Fole e Chamado do Deus da Forja deixam o alvo Frágil por
-  3s; a próxima habilidade que imobiliza, dele ou de um aliado, quebra o Frágil com 7–22% da Vida máxima do alvo como
-  Dano Mágico, pelo nível do Ornn) e a **Hemorragia do Darius** (acúmulos de sangramento no alvo, todos de uma vez com
-  o Poder de Noxus, e +20% de dano da ultimate por acúmulo). Habilidades que imobilizam são reconhecidas pelo texto
-  (atordoar, arremessar ao ar, enraizar, puxar, suprimir, encantar, provocar, amedrontar).
-- **Abertura com a ultimate do Ornn**: o elemental leva ~3s até o alvo (1º golpe: dano + Frágil) e a reconjuração
-  (cabeçada) o devolve logo depois, aos 3,5s, arremessando ao ar: quebra o Frágil do 1º golpe e aplica outro, que a
-  próxima habilidade que imobiliza (a Investida Calcinante, por exemplo) quebra de novo. Como primeira ação da luta,
-  ninguém entra em contato antes de o elemental chegar: sem ataques, sem as outras habilidades, sem efeitos ao contato
-  (o sangramento do Darius) nem em combate; os tempos em combate (5s da Duplaguarda, 3s do Darius) contam a partir
-  do contato. Configurável por habilidade em `campeoes.<campeão>.habilidades` (`golpes`, `abre_luta`).
 - **Tipos de escudo**: escudos só contra Dano Mágico (Rookern Lamúrico, Mandíbula de Malmortius, Esmagadores
   Acorrentados, passiva do Kassadin) e só contra Dano Físico (Mobilização Blindada) absorvem apenas aquele dano; no
   valor em ouro valem metade da Vida (status Escudo Mágico / Escudo Físico), e a ficha mostra a Vida efetiva contra
@@ -340,19 +314,19 @@ item) e seu **alvo** (primeiro vivo, menor % de Vida ou um inimigo).
   amplificação (Máscara Abissal, Mandato Imperial, Lembranças do Lorde Dominik, Liandry, Criafendas...), redução de
   dano (Botas Galvanizadas, Mobilização Blindada, Presságio de Randuin), redução de velocidade de ataque (Coração
   Congelado), dano ao contato, Lâmina Arcana, queimaduras, auras, golpes periódicos e ativos de dano.
+- **Uma recarga por fonte**: uma runa ou item com várias partes (efeito modelado, gatilho, linhas de status) dispara
+  tudo junto, numa recarga só, e conta uma ativação (o Suserano do Gelo, por exemplo: campo de gelo e defesas).
 - **Relatório por item**: o dano dos efeitos do item; o dano extra que ele deu ao time (redução de resistência e
   amplificação); o dano que evitou; os escudos e curas do inimigo que **anulou**; o escudo e a cura que ele deu e o
-  quanto deles o inimigo **anulou**; e, com "lutar de novo sem cada item", a mesma luta sem ele (resultado, Δ dano
-  causado, Δ tempo vivo, Δ Vida + escudos do time) — o que o item valeu naquela luta. Penetração fixa contra
-  resistência fixa aparece nessa comparação.
+  quanto deles o inimigo **anulou**; e, com "Calcular o valor de cada item", a mesma luta sem ele (vencedor, Δ dano
+  causado, Δ tempo vivo, Δ Vida + escudos do time) — o que o item valeu naquela luta.
+- **Leitura dos textos**: o dano de habilidades de campeões sem ficha na Arena é o primeiro "N de Dano
+  Físico/Mágico/Verdadeiro (fórmula)" do texto do jogo, com a tabela por rank (427 de 463 habilidades com dano no
+  texto são lidas).
 
-Limites desta versão: sem posições, alcance, controle de grupo ou custo de mana; habilidades em área acertam só o
-alvo; dano por % da Vida **perdida** ou atual do alvo (execuções) não é lido (o de % da Vida máxima, como o Fôlego
-do Fole, é); o dano de uma habilidade é o primeiro do texto (o Dizimar do Darius conta o cabo, não a lâmina).
+## Arena
 
-## Confronto orquestrado (Arena)
-
-Aba **Arena**: o confronto vira um **cenário** salvo — campeões (build salva num minuto de jogo, lado, posição
+Aba **Arena**: a luta é um **cenário** salvo — campeões (build salva num minuto de jogo, lado, posição
 inicial, alvo) e uma **linha do tempo de ordens** (habilidade, reconjurar, ativo de item, feitiço, mover, focar, parar)
 — que o backend executa num mapa 2D: o Howling Abyss como uma rota reta entre paredes, os campeões nascendo junto ao
 Nexus (ou onde você os colocar).
@@ -414,7 +388,7 @@ não colidem entre si; parte da geometria vem do LoL de PC (conferir no Treino).
   são os 15 primeiros níveis da curva do LoL de PC (280 XP para o nível 2, +100 por nível). Editável no Admin.
 - O minuto de compra considera só ouro acumulado (não modela a volta à base nem ouro gasto em outras coisas).
 - Escudos e curas entram no valor em ouro como vida extra temporária de uma luta (status efetivos); dano e efeitos
-  que dependem do inimigo entram no simulador de confronto, não no valor em ouro.
+  que dependem do inimigo entram nas lutas da Arena, não no valor em ouro.
 - O preço do Mana mantém a razão da metodologia original (Lágrima carregada: 400 de ouro por 900 de Mana), porque a
   Lágrima da loja mostra só os 200 de Mana iniciais.
 

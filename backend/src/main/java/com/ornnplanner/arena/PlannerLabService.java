@@ -2,8 +2,8 @@ package com.ornnplanner.arena;
 
 import com.ornnplanner.arena.ArenaModel.Combo;
 import com.ornnplanner.arena.ArenaModel.Dummy;
-import com.ornnplanner.combat.CombatCatalog;
-import com.ornnplanner.combat.CombatSimulator.ItemEffect;
+import com.ornnplanner.arena.fight.CombatCatalog;
+import com.ornnplanner.arena.fight.ItemEffect;
 import com.ornnplanner.repo.BuildRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

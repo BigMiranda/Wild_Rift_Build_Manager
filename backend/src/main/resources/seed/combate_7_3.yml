@@ -1,4 +1,4 @@
-# Efeitos de combate dos itens para o simulador de confronto (patch 7.3): o que depende do inimigo e não cabe nos
+# Efeitos de combate dos itens nas lutas da Arena (patch 7.3): o que depende do inimigo e não cabe nos
 # status (dano dos itens, redução de resistência, Feridas Dolorosas, corte de escudo, amplificação e redução de dano).
 # Status planos (penetração, crítico, roubo de vida...) e status efetivos (escudos, curas, estase) vêm do cálculo da
 # build; aqui ficam só os efeitos que acontecem na luta. Valores de Campeões corpo a corpo quando o texto diferencia.
@@ -29,7 +29,7 @@
 #   critico        Acertos Críticos causam `mult` (200% sem o item)
 #   reduz_vel_ataque  inimigos na luta atacam `pct` mais devagar (Coração Congelado; Carapaça do Vigia: ao ser atingido,
 #                  contado como sempre ativo)
-#   ativo          ativo de dano usado na ordem da build ("Ativo"): `dano` (+ `dano_nv15`), `dda`, `dda_base`, `dda_bonus`,
+#   ativo          ativo de dano (ordem da linha do tempo ou do cérebro): `dano` (+ `dano_nv15`), `dda`, `dda_base`, `dda_bonus`,
 #                  `pdh`, `vida_max_alvo`; `cura_dda`; `recarga`
 patch: "7.3"
 itens:
@@ -125,7 +125,7 @@ itens:
   # Céu Dividido: o 1º ataque num Campeão é crítico (160%) e cura (6s de recarga por alvo); cura em gatilhos (modelado)
   Céu Dividido: [{tipo: lumescudo, mult: 1.6, recarga: 6, cura_dda_base: 1.25, cura_vida_perdida: 0.06}]
 
-  # ------------------------------------------------------------- Ativos de dano (ação "Ativo" na ordem)
+  # ------------------------------------------------------------- Ativos de dano
   Hemodrenário: [{tipo: ativo, recarga: 12, dda_base: 1.75, cura_dda: 0.20, dano_tipo: fisico}]
   Quebrapassos: [{tipo: ativo, recarga: 25, dda: 1.0, dano_tipo: fisico}]
   Força do Vendaval: [{tipo: ativo, recarga: 60, dano: 120, dano_nv15: 375, dda_bonus: 1.05, dano_tipo: fisico}]
@@ -149,7 +149,8 @@ feiticos:
 #   segundos          a partir deste tempo de luta (Duplaguarda: 1 acúmulo por segundo, 5 acúmulos)
 #   acertos           ataques / habilidades que o campeão acertou em Campeões
 #   acertos_sofridos  habilidades de Campeões que ele sofreu
-# O momento de ativação pode ser fixado por campeão na tela do confronto.
+# Na Arena, quem liga esses efeitos são os gatilhos (abaixo); esta lista só marca o que entra ligado ao medir, no
+# planejador, o que cada forma do campeão muda nos status.
 ativacao:
   Duplaguarda de Amaranto: {passiva: Tolerância, segundos: 5}
   Força da Natureza: {passiva: Absorção, acertos_sofridos: 4}
@@ -157,40 +158,7 @@ ativacao:
   Conquistador: {acertos: 6}
   Hemorragia: {acertos: 5, segundos: 3}   # Darius: 5 acúmulos, no mínimo ~3s
 
-# Mecânicas de campeões na luta.
-#   fragil     habilidades `aplica` deixam o alvo Frágil por 3s; a próxima habilidade que imobiliza (de qualquer aliado)
-#              quebra o Frágil: `vida_max_alvo` (até `vida_max_alvo_nv15`, pelo nível de quem aplicou) como Dano Mágico
-#   acumulos   acúmulos no alvo (Hemorragia do Darius): ataques e as habilidades de `habilidades` aplicam 1 (todos com o
-#              efeito `cheio_com` ativo); cada acúmulo causa `por_s` + `dda_bonus_por_s` x DdA adicional por segundo
-#              (`dano_tipo`) por `duracao` s; `habilidade_por_acumulo`: dano a mais da habilidade por acúmulo no alvo
-#   habilidades.<slot>  habilidade que chega depois de conjurada: `golpes` [{em: segundos após conjurar, imobiliza,
-#              fragil}], cada um com o dano da habilidade; `abre_luta`: como primeira ação da luta, o contato (ataques,
-#              outras habilidades, efeitos ao contato e em combate) só começa no 1º golpe
-campeoes:
-  Ornn:
-    fragil: {aplica: ["2", "R"], vida_max_alvo: 0.07, vida_max_alvo_nv15: 0.22}
-    habilidades:
-      # Chamado do Deus da Forja: o elemental leva ~3s até o alvo (1º golpe: dano + Frágil); a reconjuração (cabeçada)
-      # o devolve logo depois e arremessa ao ar (quebra o Frágil do 1º golpe, dano e Frágil de novo). Como primeira
-      # ação da luta, ninguém entra em contato antes de o elemental chegar.
-      R:
-        abre_luta: true
-        golpes:
-        - {em: 3.0, fragil: true}
-        - {em: 3.5, imobiliza: true, fragil: true}
-  Darius:
-    acumulos:
-      nome: Hemorragia
-      por_s: 3.6
-      dda_bonus_por_s: 0.08
-      dano_tipo: fisico
-      duracao: 5
-      max: 5
-      habilidades: ["1", "R"]
-      cheio_com: Hemorragia
-      habilidade_por_acumulo: {R: 0.20}
-
-# Efeitos das runas na luta (só na Arena). Valores corpo a corpo; `_nv15`: faixa pelo nível do campeão (1–15).
+# Efeitos das runas na luta. Valores corpo a corpo; `_nv15`: faixa pelo nível do campeão (1–15).
 # `adaptativo`: Dano Físico, ou Mágico quando o Poder de Habilidade passa do Dano de Ataque adicional.
 #   eletrocutar        `acertos` ataques / habilidades no mesmo Campeão em `janela` s: dano (recarga pelo nível)
 #   colheita           dano num Campeão com menos de `vida_alvo` de Vida (recarga)

@@ -2,8 +2,8 @@ package com.ornnplanner.arena;
 
 import com.ornnplanner.arena.ArenaModel.FighterStats;
 import com.ornnplanner.arena.ArenaModel.Result;
-import com.ornnplanner.combat.CombatCatalog;
-import com.ornnplanner.combat.CombatSimulator.ItemEffect;
+import com.ornnplanner.arena.fight.CombatCatalog;
+import com.ornnplanner.arena.fight.ItemEffect;
 import com.ornnplanner.engine.Stats;
 
 import java.util.ArrayList;

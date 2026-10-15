@@ -10,8 +10,8 @@ import com.ornnplanner.arena.ai.ActionSpace;
 import com.ornnplanner.arena.ai.Observation;
 import com.ornnplanner.arena.ai.Policy;
 import com.ornnplanner.arena.ai.TacticalPolicy;
-import com.ornnplanner.combat.CombatCatalog;
-import com.ornnplanner.combat.CombatSimulator.Fighter;
+import com.ornnplanner.arena.fight.CombatCatalog;
+import com.ornnplanner.arena.fight.Fighter;
 import com.ornnplanner.engine.Stats;
 
 import java.util.ArrayList;

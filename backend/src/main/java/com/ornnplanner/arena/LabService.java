@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ornnplanner.arena.ArenaModel.Combo;
 import com.ornnplanner.arena.ArenaModel.Dummy;
-import com.ornnplanner.combat.CombatCatalog;
+import com.ornnplanner.arena.fight.CombatCatalog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -221,7 +221,7 @@ public class LabService {
             me.f.effects.removeIf(e -> req.runes.contains(e.item));
             if (rune != null) {
                 for (Map<String, Object> e : catalog.runeEffects(rune)) {
-                    me.f.effects.add(new com.ornnplanner.combat.CombatSimulator.ItemEffect(rune, e));
+                    me.f.effects.add(new com.ornnplanner.arena.fight.ItemEffect(rune, e));
                 }
             }
             RuneRow row = new RuneRow();
@@ -244,8 +244,8 @@ public class LabService {
     }
 
     /** A fighter whose effects can be changed for one comparison (the rest is shared, read only). */
-    private static com.ornnplanner.combat.CombatSimulator.Fighter copyFighter(com.ornnplanner.combat.CombatSimulator.Fighter f) {
-        com.ornnplanner.combat.CombatSimulator.Fighter c = new com.ornnplanner.combat.CombatSimulator.Fighter();
+    private static com.ornnplanner.arena.fight.Fighter copyFighter(com.ornnplanner.arena.fight.Fighter f) {
+        com.ornnplanner.arena.fight.Fighter c = new com.ornnplanner.arena.fight.Fighter();
         try {
             for (java.lang.reflect.Field fd : f.getClass().getFields()) {
                 if (!java.lang.reflect.Modifier.isStatic(fd.getModifiers()) && !java.lang.reflect.Modifier.isFinal(fd.getModifiers())) {

@@ -890,3 +890,51 @@ Testes no início da rodada: 167 (8 pulados por padrão).
   - `repetir 45 s` com W + ataque (uma imobilização a cada W) dá de 2 a 3 ativações, espaçadas por ≥ 20 s
     (Suserano) e por ≥ 18 s (Colosso), com a mesma contagem no gatilho e no contador;
   - o dano do campo de gelo é o de uma explosão por ativação.
+
+### Parte 2 — Sai o Confronto ✅
+- **Removido:**
+  - frontend: `pages/Combat.jsx`, a aba `combat` do `App.jsx` e 138 chaves `combat.*` (pt e en) que só ela usava;
+  - o CSS exclusivo: `combat-setup`, `-teams`, `-team`, `-slot`, `-order`, `order-chip`, `-fighter(-grid)`,
+    `-sources`, `-items` e `delay`;
+  - o `localStorage` que guardava a montagem do Confronto (`ornn-planner-combat`), apagado na abertura do app;
+  - backend: `CombatController` (`POST /api/combat/simulate`) e `CombatSimulator` inteiro (laço, `State`, `Pending`,
+    `Burn`, `Result`, `FighterResult`, 1.340 linhas);
+  - do `CombatService`: `simulate`, `Request`, `Response`, `FighterInfo`, `ItemReport`, `without`, `health`, `info`;
+  - os campos de `Fighter` só da luta rápida (`order`, `target`, `attackSpeed`, `mechanics`) e os de `Combatant`
+    (`order`, `target`);
+  - a montagem de `Delay` no construtor (a Arena usa gatilhos), `CombatCatalog.activation` e `champion` e a seção
+    `campeoes` do `combate_7_3.yml` (Frágil, Hemorragia e abertura do Ornn da luta rápida; a Arena usa `kits_7_3.yml`).
+  - O About não citava o Confronto. O README trocou a seção "Simulador de confronto" por "Regras de dano e efeitos de
+    combate", que vale para a Arena.
+- **Movido para `com.ornnplanner.arena.fight`:**
+  - `Fighter`, `ItemEffect`, `Ledger` e `Delay` viraram arquivos próprios. A Arena ainda respeita `Delay` num lutador
+    montado à mão (os testes); o construtor não cria mais.
+  - `DamageRules.mitigation` (antes `CombatSimulator.mitigation`);
+  - `CombatCatalog` e `AbilityParser`, sem mudanças;
+  - `CombatService` → **`FighterBuilder`**: `Combatant`, `Triggered`, `ArenaBuild`, `arenaBuild`, `championName`,
+    `formDeltas` e o contrafactual por item (`Combatant.excludeItems`, usado pelo laboratório do planejador).
+- **Decisão:** o pacote `combat` deixou de existir. O que restou dele só serve à Arena e aos painéis do planejador que
+  rodam lutas na Arena; não há nada "genuinamente comum" fora dela.
+- **i18n:** as 26 chaves que a Arena usa viraram `report.*` em pt e en: `fighters`, `col.*`, `team0/1`, `win`,
+  `draw`, `dealt`, `taken`, `mitigated`, `healed`, `healLost`, `shieldAbs`, `alive`, `events`, `minute`, `lvMin`…
+  As classes `combat-details` / `combat-events` viraram `report-details` / `report-events`.
+- **Banco:** nenhuma tabela era do Confronto, então não há migração. Cenários, IAs, combos e builds não mudam.
+- **Testes portados** (13 casos antes, 13 depois):
+  - `AbilityParserTest`, os 3 de leitura de texto sem mudança: dano do Garen, ≥ 75% dos textos lidos, Fôlego do
+    Ornn;
+  - `ArenaRulesTest`, 10 casos refeitos na Arena:
+    - armadura reduz o ataque à metade;
+    - o `Delay` só vale depois do tempo;
+    - o escudo mágico não absorve dano físico;
+    - o Frágil do W quebrado pela imobilização da reconjuração da R, e não por ataque;
+    - a reconjuração da R quebra o Frágil da 1ª passagem;
+    - o Poder de Noxus vem no 5º acúmulo (antes dele, 4 e nada);
+    - o Coração Congelado reduz os ataques;
+    - as Feridas da Armadura de Espinhos cortam o roubo de vida, e o corte não passa da cura;
+    - as Feridas só contam a cura que chegaria;
+    - a Presa corta escudo e o Cutelo soma dano pela redução de armadura.
+  - **Descartado:** só a ideia de "contato" da luta rápida (`ornnOpeningWithTheUltimateDelaysTheContact`: ninguém
+    ataca até o elemental chegar). Na Arena há posições, e a distância faz isso sozinha. O caso foi trocado pelo da
+    reconjuração que quebra o Frágil da 1ª passagem.
+  - `ItemEffectsTest` não usava a luta rápida (testa os efeitos no `TimelineEngine`) e ficou como estava.
+- Testes: 172 antes e depois. O golden não mudou.

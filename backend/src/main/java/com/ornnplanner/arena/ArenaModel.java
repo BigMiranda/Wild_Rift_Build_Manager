@@ -467,7 +467,7 @@ public final class ArenaModel {
         /** Orders of the timeline that could not be done (not ready, dead, out of range...), with why. */
         public List<Event> skipped = new ArrayList<>();
         /** What each item, rune, ability and spell did (same ledger as the quick matchup). */
-        public List<com.ornnplanner.combat.CombatSimulator.Ledger> ledger = new ArrayList<>();
+        public List<com.ornnplanner.arena.fight.Ledger> ledger = new ArrayList<>();
         /** Every conditional effect of the builds (items, shop lines, runes, champion) and how it went. */
         public List<TriggerReport> triggers = new ArrayList<>();
         /**

@@ -156,7 +156,7 @@ class OrnnProofTest {
         Arena.Input in = ornn();
         if (rune != null) {
             for (java.util.Map<String, Object> e : ArenaScenarios.CATALOG.runeEffects(rune)) {
-                in.f.effects.add(new com.ornnplanner.combat.CombatSimulator.ItemEffect(rune, e));
+                in.f.effects.add(new com.ornnplanner.arena.fight.ItemEffect(rune, e));
             }
         }
         return in;

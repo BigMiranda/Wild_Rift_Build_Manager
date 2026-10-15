@@ -1,10 +1,5 @@
-package com.ornnplanner.combat;
+package com.ornnplanner.arena.fight;
 
-import com.ornnplanner.combat.CombatSimulator.Fighter;
-import com.ornnplanner.combat.CombatSimulator.FighterResult;
-import com.ornnplanner.combat.CombatSimulator.ItemEffect;
-import com.ornnplanner.combat.CombatSimulator.Ledger;
-import com.ornnplanner.combat.CombatSimulator.Result;
 import com.ornnplanner.engine.Model.ItemContribution;
 import com.ornnplanner.engine.Model.MinutePoint;
 import com.ornnplanner.engine.Model.PassivePart;
@@ -25,82 +20,26 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Matchup simulator: each side is a list of saved builds, each at a game minute (its items, level and stats at that
- * moment), with an order of actions and a target. Runs the fight and, for every item of every champion, the same fight
- * without that item (its stats and effects removed, the rest of the build kept): what changes is what the item was
- * worth in that fight, next to the ledger of what its effects did and what the enemy's items cancelled of it.
+ * Builds the arena's champions from saved builds: each build at a game minute (its items, level and stats at that
+ * moment), with the fight effects of its items and runes, and its conditional effects as triggers the fight turns on.
+ * A build can leave items out ({@link Combatant#excludeItems}): the same champion without an item, which is what that
+ * item was worth in a fight (the counterfactual of the reports and of the planner).
  */
 @Service
-public class CombatService {
+public class FighterBuilder {
 
-    /** Up to 5 per side, 6 when a champion brings clones (Wukong). */
-    public static final int MAX_TEAM = 6;
-    public static final double MAX_DURATION = 120;
-
+    /** A build in a fight: saved or given, at a minute, with items left out and triggers set by hand. */
     public static class Combatant {
         public Long buildId;
         /** A build that is not saved (the lab's ragdoll wearing a build's items); used instead of {@link #buildId}. */
         @com.fasterxml.jackson.annotation.JsonIgnore
         public Build build;
-        /** Items left out (the lab's "the build without this item", like the counterfactual of the quick matchup). */
+        /** Items left out (the build without this item: its stats, effects and triggers go with it). */
         public java.util.Set<Long> excludeItems;
         /** Game minute (null = the build's end of match, else its last purchase). */
         public Double minute;
-        public List<String> order;
-        public String target;
-        /** Seconds of the fight at which a delayed status turns on (source -> s), instead of its own conditions. */
+        /** Seconds of the fight at which a conditional effect turns on (key or source -> s), instead of its trigger. */
         public Map<String, Double> activations;
-    }
-
-    public static class Request {
-        public List<Combatant> teamA = new ArrayList<>();
-        public List<Combatant> teamB = new ArrayList<>();
-        public Double duration;
-        /** Also run the fight without each item (default true). */
-        public Boolean counterfactual;
-    }
-
-    public static class FighterInfo {
-        public int index;
-        public int team;
-        public Long buildId;
-        public String build;
-        public String champion;
-        public int level;
-        public double minute;
-        public List<Map<String, Object>> items = new ArrayList<>();
-        public List<Map<String, Object>> abilities = new ArrayList<>();
-        public double attackSpeed;
-        public Map<String, Double> stats = new LinkedHashMap<>();
-        /** Statuses that only count after some time / hits, with their conditions. */
-        public List<Map<String, Object>> delays = new ArrayList<>();
-    }
-
-    /** What an item did in the fight, and how the fight goes without it. */
-    public static class ItemReport {
-        public int fighter;
-        public String item;
-        public Long itemId;
-        public Ledger ledger;
-        public Integer winnerWithout;
-        public Double durationWithout;
-        public Double dealtWithout;
-        public Double takenWithout;
-        public Double aliveWithout;
-        /** Health left (health + shields) of the fighter's team and of the enemy team without the item. */
-        public Double teamHealthWithout;
-        public Double enemyHealthWithout;
-    }
-
-    public static class Response {
-        public Result result;
-        public List<FighterInfo> fighters = new ArrayList<>();
-        public List<ItemReport> items = new ArrayList<>();
-        /** Ledger of the other sources (abilities, attacks, runes, spells). */
-        public List<Ledger> others = new ArrayList<>();
-        public double teamHealth;
-        public double enemyHealth;
-        public List<String> warnings = new ArrayList<>();
     }
 
     /** A combatant resolved: its build, inventory, level and minute. */
@@ -119,114 +58,14 @@ public class CombatService {
     private final com.ornnplanner.seed.ItemEffectCatalog itemEffects;
     private final com.ornnplanner.seed.RuneCatalog runes;
 
-    public CombatService(BuildRepository builds, PlannerService planner, ChampionCatalog champions, CombatCatalog catalog,
-                         com.ornnplanner.seed.ItemEffectCatalog itemEffects, com.ornnplanner.seed.RuneCatalog runes) {
+    public FighterBuilder(BuildRepository builds, PlannerService planner, ChampionCatalog champions, CombatCatalog catalog,
+                          com.ornnplanner.seed.ItemEffectCatalog itemEffects, com.ornnplanner.seed.RuneCatalog runes) {
         this.builds = builds;
         this.planner = planner;
         this.champions = champions;
         this.catalog = catalog;
         this.itemEffects = itemEffects;
         this.runes = runes;
-    }
-
-    public Response simulate(Request req) {
-        if (req.teamA == null || req.teamB == null || req.teamA.isEmpty() || req.teamB.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cada lado precisa de ao menos 1 campeão.");
-        }
-        if (req.teamA.size() > MAX_TEAM || req.teamB.size() > MAX_TEAM) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No máximo " + MAX_TEAM + " por lado.");
-        }
-        double duration = Math.max(5, Math.min(MAX_DURATION, req.duration == null ? 30 : req.duration));
-        Response out = new Response();
-        List<Resolved> a = new ArrayList<>();
-        List<Resolved> b = new ArrayList<>();
-        for (Combatant c : req.teamA) {
-            a.add(resolve(c));
-        }
-        for (Combatant c : req.teamB) {
-            b.add(resolve(c));
-        }
-        List<Fighter> fa = new ArrayList<>();
-        List<Fighter> fb = new ArrayList<>();
-        for (Resolved r : a) {
-            fa.add(fighter(r, r.items));
-        }
-        for (Resolved r : b) {
-            fb.add(fighter(r, r.items));
-        }
-        out.result = new CombatSimulator(catalog).run(fa, fb, duration);
-        List<Fighter> everyone = new ArrayList<>(fa);
-        everyone.addAll(fb);
-        for (int i = 0; i < everyone.size(); i++) {
-            out.fighters.add(info(everyone.get(i), (i < a.size() ? a.get(i) : b.get(i - a.size())).build));
-        }
-        out.teamHealth = health(out.result, 0);
-        out.enemyHealth = health(out.result, 1);
-
-        Map<String, Ledger> byKey = new LinkedHashMap<>();
-        for (Ledger l : out.result.ledger) {
-            byKey.put(l.fighter + "|" + l.source, l);
-        }
-        boolean counterfactual = req.counterfactual == null || req.counterfactual;
-        List<Resolved> resolved = new ArrayList<>(a);
-        resolved.addAll(b);
-        for (int i = 0; i < everyone.size(); i++) {
-            Fighter f = everyone.get(i);
-            Set<Long> seen = new LinkedHashSet<>();
-            for (Map.Entry<String, Long> item : f.items.entrySet()) {
-                if (!seen.add(item.getValue())) {
-                    continue;
-                }
-                ItemReport rep = new ItemReport();
-                rep.fighter = i;
-                rep.item = item.getKey();
-                rep.itemId = item.getValue();
-                rep.ledger = byKey.remove(i + "|" + item.getKey());
-                if (counterfactual) {
-                    without(rep, i, item.getValue(), resolved, everyone, a.size(), duration);
-                }
-                out.items.add(rep);
-            }
-        }
-        out.others.addAll(byKey.values());
-        return out;
-    }
-
-    /** The fight again with the fighter's item removed (the other fighters as they were). */
-    private void without(ItemReport rep, int fighter, long itemId, List<Resolved> resolved, List<Fighter> everyone,
-                         int sizeA, double duration) {
-        List<Fighter> fa = new ArrayList<>();
-        List<Fighter> fb = new ArrayList<>();
-        for (int k = 0; k < everyone.size(); k++) {
-            Fighter f = everyone.get(k);
-            if (k == fighter) {
-                List<Long> items = new ArrayList<>(resolved.get(k).items);
-                items.remove(Long.valueOf(itemId));
-                f = fighter(resolved.get(k), items);
-            }
-            (k < sizeA ? fa : fb).add(f);
-        }
-        Result alt = new CombatSimulator(catalog).run(fa, fb, duration);
-        FighterResult fr = alt.fighters.get(fighter);
-        int team = fighter < sizeA ? 0 : 1;
-        rep.winnerWithout = alt.winner;
-        rep.durationWithout = alt.duration;
-        rep.dealtWithout = fr.dealt;
-        rep.takenWithout = fr.taken;
-        rep.aliveWithout = fr.alive;
-        rep.teamHealthWithout = health(alt, team);
-        rep.enemyHealthWithout = health(alt, 1 - team);
-    }
-
-    private static double health(Result r, int team) {
-        double[] last = r.series.get(r.series.size() - 1);
-        double sum = 0;
-        for (FighterResult f : r.fighters) {
-            if (f.team == team) {
-                sum += last[f.index + 1];
-            }
-        }
-        return sum;
     }
 
     /** A conditional effect of the planner (item passive, rune, champion effect) and when it counts in the arena. */
@@ -286,7 +125,7 @@ public class CombatService {
         Build base = variant(r.build, all, null, formsOff);
         MinutePoint p0 = planner.snapshot(base, r.items, r.level, r.minute);
         ArenaBuild out = new ArenaBuild();
-        out.fighter = fighter(r, base, r.items, p0, formsOff, true);
+        out.fighter = fighter(r, base, p0);
         for (Triggered t : all) {
             if (!t.fightTriggered()) {
                 continue;
@@ -516,16 +355,9 @@ public class CombatService {
     }
 
     /**
-     * The build with the delayed statuses switched on (purchases, runes, champion effects): the fight decides when they
-     * count.
-     */
-    private Build withDelayedOn(Build original) {
-        return withDelayedOn(original, java.util.Set.of(), java.util.Map.of());
-    }
-
-    /**
-     * Same, with some champion effects forced off (the arena switches them itself: Noxian Might, Overheat, All Out) or
-     * forced to a value.
+     * The build with the delayed statuses switched on (purchases, runes, champion effects; the `ativacao` list of the
+     * combat file), some champion effects forced off (the arena switches them itself: Noxian Might, Overheat, All Out)
+     * or forced to a value.
      */
     private Build withDelayedOn(Build original, java.util.Set<String> off, Map<String, Boolean> forced) {
         Build b = JSON.convertValue(original, Build.class);
@@ -572,22 +404,12 @@ public class CombatService {
     private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper()
             .configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    private Fighter fighter(Resolved r, List<Long> items) {
-        return fighter(r, items, java.util.Set.of());
-    }
-
-    private Fighter fighter(Resolved r, List<Long> items, java.util.Set<String> formsOff) {
-        Build b = withDelayedOn(r.build, formsOff, Map.of());
-        return fighter(r, b, items, planner.snapshot(b, items, r.level, r.minute), formsOff, false);
-    }
-
     /**
-     * A fighter from the build's stats at the minute. The arena's ({@code arena}) also gets its runes' fight effects and
-     * no delayed statuses (its triggers turn them on).
+     * A fighter from the build's stats at the minute, with the fight effects of its items and runes (champion effects
+     * come from the arena's sheet).
      */
     @SuppressWarnings("unchecked")
-    private Fighter fighter(Resolved r, Build b, List<Long> items, MinutePoint p, java.util.Set<String> formsOff,
-                            boolean arena) {
+    private Fighter fighter(Resolved r, Build b, MinutePoint p) {
         Fighter f = new Fighter();
         Map<String, Object> champ = champions.find(b.unitCode).orElse(null);
         f.champion = champ == null ? b.unitCode : String.valueOf(champ.get("nome"));
@@ -598,7 +420,7 @@ public class CombatService {
         f.base.putAll(p.base);
         for (ItemContribution c : p.contributions) {
             List<Map<String, Object>> fx = !c.rune ? catalog.effects(c.itemName)
-                    : arena && !c.champion ? catalog.runeEffects(c.itemName) : List.of();
+                    : !c.champion ? catalog.runeEffects(c.itemName) : List.of();
             if (!c.rune) {
                 f.items.put(c.itemName, c.itemId);
             }
@@ -612,30 +434,7 @@ public class CombatService {
             for (PassivePart part : c.passiveParts) {
                 source(f, c.itemName, part.stat, part.amount, healInFight);
             }
-            Map<String, Object> act = arena || formsOff.contains(c.itemName) ? null : catalog.activation(c.itemName);
-            if (act != null) {
-                CombatSimulator.Delay d = new CombatSimulator.Delay();
-                d.source = c.itemName;
-                Object passive = act.get("passiva");
-                for (PassivePart part : c.passiveParts) {
-                    if (passive == null || passive.equals(part.passive)) {
-                        d.amounts.merge(part.stat, part.amount, Double::sum);
-                    }
-                }
-                d.seconds = act.get("segundos") == null ? null : ((Number) act.get("segundos")).doubleValue();
-                d.hits = act.get("acertos") == null ? null : ((Number) act.get("acertos")).intValue();
-                d.hitsTaken = act.get("acertos_sofridos") == null ? null : ((Number) act.get("acertos_sofridos")).intValue();
-                Double fixed = r.c.activations == null ? null : r.c.activations.get(c.itemName);
-                if (fixed != null) {
-                    d.seconds = Math.max(0, fixed);
-                    d.fixed = true;
-                }
-                if (!d.amounts.isEmpty()) {
-                    f.delays.add(d);
-                }
-            }
         }
-        f.mechanics.putAll(catalog.champion(f.champion));
         if (champ != null) {
             f.abilities = AbilityParser.abilities(champ);
             com.ornnplanner.repo.BuildRepository.ChampionSetup setup = b.championSetup;
@@ -648,16 +447,9 @@ public class CombatService {
                     double a1 = ((Number) l1.get("VdA")).doubleValue();
                     double a15 = ((Number) l15.get("VdA")).doubleValue();
                     double baseAs = a1 + (a15 - a1) * (r.level - 1) / 14.0;
-                    f.attackSpeed = Math.min(3.0, baseAs * (1 + f.total.getOrDefault("% Attack Speed", 0.0) / 100));
                     f.baseAttackSpeed = baseAs;
                 }
             }
-        }
-        if (r.c.order != null && !r.c.order.isEmpty()) {
-            f.order = new ArrayList<>(r.c.order);
-        }
-        if (r.c.target != null) {
-            f.target = r.c.target;
         }
         f.spells = b.spells == null ? new ArrayList<>() : new ArrayList<>(b.spells);
         return f;
@@ -693,64 +485,5 @@ public class CombatService {
             default:
                 break;
         }
-    }
-
-    private FighterInfo info(Fighter f, Build b) {
-        FighterInfo i = new FighterInfo();
-        i.index = f.index;
-        i.team = f.team;
-        i.buildId = b.id;
-        i.build = b.name;
-        i.champion = f.champion;
-        i.level = f.level;
-        i.minute = f.minute;
-        i.attackSpeed = f.attackSpeed;
-        f.items.forEach((name, id) -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("name", name);
-            m.put("id", id);
-            m.put("combat", !catalog.effects(name).isEmpty());
-            i.items.add(m);
-        });
-        for (int k = 0; k < f.abilities.size(); k++) {
-            AbilityParser.Ability a = f.abilities.get(k);
-            Map<String, Object> m = new LinkedHashMap<>();
-            int rank = f.ranks[k];
-            m.put("slot", a.slot);
-            m.put("name", a.name);
-            m.put("rank", rank);
-            if (a.damage != null && rank > 0) {
-                m.put("damage", a.damage.at(rank, f.total, f.base));
-                m.put("targetBased", a.damage.targetBased());
-                m.put("type", a.damage.type);
-                m.put("source", a.damage.source);
-            }
-            double haste = f.total.getOrDefault("Ability Haste", 0.0)
-                    + f.total.getOrDefault(k == 3 ? "Ultimate Haste" : "Basic Ability Haste", 0.0);
-            if (rank > 0) {
-                m.put("cooldown", a.cooldown[Math.max(0, Math.min(a.cooldown.length, rank) - 1)] / (1 + haste / 100));
-            }
-            i.abilities.add(m);
-        }
-        for (CombatSimulator.Delay d : f.delays) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("source", d.source);
-            m.put("seconds", d.seconds);
-            m.put("hits", d.hits);
-            m.put("hitsTaken", d.hitsTaken);
-            m.put("fixed", d.fixed);
-            m.put("amounts", d.amounts);
-            i.delays.add(m);
-        }
-        for (String s : List.of("Max Health", "Armor", "Magic Resistance", "Attack Damage", "Ability Power",
-                "% Critical Rate", "% Attack Speed", "Armor Penetration", "% Armor Penetration", "Magic Penetration",
-                "% Magic Penetration", "% Lifesteal", "% Omnivamp", "Ability Haste", "Shield", "Magic Shield",
-                "Physical Shield", "Heal", "Stasis")) {
-            double v = f.total.getOrDefault(s, 0.0);
-            if (Math.abs(v) > 1e-9) {
-                i.stats.put(s, v);
-            }
-        }
-        return i;
     }
 }

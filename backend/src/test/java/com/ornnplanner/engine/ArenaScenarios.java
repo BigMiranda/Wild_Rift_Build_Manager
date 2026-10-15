@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ornnplanner.arena.Arena;
 import com.ornnplanner.arena.ArenaModel.Action;
 import com.ornnplanner.arena.ArenaModel.Result;
-import com.ornnplanner.combat.CombatCatalog;
-import com.ornnplanner.combat.CombatSimulator.Fighter;
+import com.ornnplanner.arena.fight.CombatCatalog;
+import com.ornnplanner.arena.fight.Fighter;
 import org.springframework.core.io.ClassPathResource;
 import org.yaml.snakeyaml.Yaml;
 
