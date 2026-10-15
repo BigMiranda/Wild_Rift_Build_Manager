@@ -5248,6 +5248,12 @@ public class Arena {
             }
             case "controle_restante":
                 return controlLeft(t) <= st.delta + 1e-9;
+            case "acertaria": {
+                // the step's ability would hit now by the prediction (a wall or pillar on the way, the target held...)
+                String slot = st.slot != null ? st.slot : action(st)[1];
+                Map<String, Object> ab = slot == null ? null : ability(u, slot);
+                return ab != null && castPrediction(u, t, ab)[0] >= 0.6;
+            }
             case "ataque_pronto":
                 return now >= u.nextAttack - 1e-9;
             case "tempo":

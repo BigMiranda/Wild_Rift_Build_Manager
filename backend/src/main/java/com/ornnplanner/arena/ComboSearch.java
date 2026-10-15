@@ -272,6 +272,9 @@ public final class ComboSearch {
             if (a.startsWith("reconjurar:")) {
                 steps.add(waitFor(a, "reconjuracao_acertaria", 0, null, null));
             }
+            if (a.startsWith("habilidade:")) {
+                steps.add(waitFor(a, "acertaria", 0, null, null));   // e.g. until a pillar stands on the way
+            }
             if (air > 0) {
                 for (double d : cfg.deltas) {
                     steps.add(waitFor(a, "alvo_pousa", d, 0.0, 0.6));

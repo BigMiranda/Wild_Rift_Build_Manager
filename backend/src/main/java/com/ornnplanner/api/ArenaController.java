@@ -52,6 +52,12 @@ public class ArenaController {
         return lab.calibrate(req);
     }
 
+    /** The combo with each keystone, and the search again with it (synchronous, small budget). */
+    @PostMapping("/lab/compare-runes")
+    public List<com.ornnplanner.arena.LabService.RuneRow> labRunes(@RequestBody com.ornnplanner.arena.LabService.Request req) {
+        return lab.compareRunes(req);
+    }
+
     /** Starts a combo search in the background (its combos become the champion's library for the build and minute). */
     @PostMapping("/lab/search")
     public com.ornnplanner.arena.LabService.SearchJob labSearch(@RequestBody com.ornnplanner.arena.LabService.Request req) {

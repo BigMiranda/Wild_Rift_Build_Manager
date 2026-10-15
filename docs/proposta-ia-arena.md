@@ -646,3 +646,56 @@ Campos novos, documentados no cabeçalho do `kits_7_3.yml`:
     ("1 → ataque → R → ataque → ataque → ataque"), igual com 1 ou 4 threads.
   - `ArenaDummyTest`: parado, anda e foge; reage purifica um atordoamento longo; os efeitos dos itens põem Feridas
     na Vayne.
+
+### Parte F — A prova com o Ornn ✅
+- **Combo manual** do usuário, só como referência (`OrnnProofTest.manual()`, origem `manual`; nunca entra na busca):
+  `1 → R → (acertaria) 3 → ataque → (marca aplicada) R² → (pousa −0,25) ataque → 2 → (no chão) ataque`.
+  - **Decisão nova:** o evento de espera `acertaria`, a habilidade do passo acertaria pela previsão ≥ 0,6, irmão do
+    `reconjuracao_acertaria`. O E precisa esperar o pilar da Q existir (ele aparece 1,125 s depois do fim do
+    projétil), e nenhum evento da lista cobria isso. A busca também passou a oferecer essa espera antes de uma
+    habilidade.
+  - Início: `alvo.avanco_pronto == 0` e Q, R, E e W prontas.
+- 🎯 **Manual × boneco parado** (Ornn de teste, nível 13, ranks 4/3/2/2, sem itens): concluído, **3 Frágeis
+  consumidos** (a volta da R e dois ataques; o Frágil foi aplicado pela ida, pela volta e pelo W) e **controle
+  contínuo** de 1,98 s (o E no pilar) a 4,62 s (o pouso depois da volta, que encadeou antes do pouso, +30%).
+  O simulador permite o combo como descrito. Teste `theManualComboConsumesThreeBrittlesWithUnbrokenControl`.
+  - Calibrado nos 4 comportamentos, o manual tem nota 4411: parado e reage 4217 de dano, 3 Frágeis; foge igual. Contra
+    o boneco que **anda**, o manual não fecha: o boneco sai da linha do elemental, e a reconjuração fica impossível
+    (150 de dano). Isso derruba a média.
+- 🎯 **Descoberta** (`-Darena.proof=true`; feixe 64, até 9 passos): 3294 combos medidos em 4,9 s (10 threads). O melhor
+  tem **nota 5631 = 128% do manual calibrado**:
+
+  | | passos | Frágeis (parado / anda) | controle (parado) | dano (parado / anda / foge) |
+  |---|---|---|---|---|
+  | manual calibrado | 1 → R → 3 → ataque → R² → ataque → 2 → ataque | 3 / 0 | 2,62 s | 4217 / 150 / 4217 |
+  | achado #1 | R → 1 → R² → 3 → 2 → ataque → ataque → 1 → ataque | 3 / 3 | 2,06 s | 4370 / 4217 / 4057 |
+  | achado #2 | igual ao #1, com os ataques e a 2ª Q trocados de lugar | 3 / 3 | 2,06 s | 4370 / 4217 / 4057 |
+  | achado #3 | o #1 sem o último ataque | 3 / 3 | 2,06 s | 4290 / 4137 / 4057 |
+
+  A busca preferiu lançar a R antes da Q: a Q chega com o elemental já passando e o segura, e a ordem funciona
+  também contra o boneco que anda. O E vem depois da volta, no pilar da Q (`acertaria`). O controle é um pouco menor e
+  o dano maior, sobretudo no pior caso.
+- **Runas no mesmo combo** (`runesOnTheCombo`; busca refeita para cada runa). O Pós-choque não existe no
+  `combate_7_3.yml`, então ficou de fora.
+
+  | runa | manual: nota / ativações / dano da runa | melhor achado: nota / ativações |
+  |---|---|---|
+  | nenhuma | 4134 | 5631 |
+  | Aperto dos Mortos-Vivos | 4171 / 1 / 50 | 5685 / **2** |
+  | Suserano do Gelo | **4985** / 1 / 44 | 5675 / 1 |
+  | Impacto Repentino | 4199 / 1 / 66 | **6031** / 1 |
+
+  - **Aperto:** cabe 1 ativação no manual (a 1ª só 3 s depois de entrar em combate, e o combo dura ~5,3 s) e 2 no
+    melhor achado, que estica o combo com mais ataques.
+  - **Suserano:** é o que mais rende **no manual** (+851 de nota). A lentidão do campo de gelo depois do E segura o
+    boneco que anda na linha do elemental e salva a reconjuração. No achado (que já não dependia disso) rende +44, e
+    a ordem não muda.
+  - **Impacto Repentino:** 1 por combo; a busca muda a ordem para "R → 1 → R² → ataque → 2 → 3 → ...". No modo
+    `repetir` de 30 s, o manual roda uma vez só (a R tem 80 s de recarga), então 1 Impacto. Um combo de "E e
+    ataques" repetido dá **2 Impactos em 30 s** (a recarga de 15 s é o limite).
+  - **Avanços que armam a runa** (`dashedAt`, no fim de cada avanço): o E, a cabeçada da reconjuração da R e o Flash.
+    O avanço do W é andar durante o canal, não um avanço, e não arma.
+  - Com a build real "Big Carry v1" no laboratório ("Comparar runas", `POST /api/arena/lab/compare-runes`), o Suserano
+    também é o melhor no combo dado (5511 contra 5454 a 5474), e o Impacto, de novo, leva a busca a outra ordem
+    (6322).
+- **Tela:** o botão "Comparar runas" no laboratório (o combo com cada runa principal e uma busca nova com cada uma).

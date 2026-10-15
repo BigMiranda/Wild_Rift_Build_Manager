@@ -195,8 +195,9 @@ public final class ArenaModel {
         public String action;
         /**
          * Wait until (before the action): alvo_pousa (the target's knock-up ends in at most delta), alvo_no_chao (on the
-         * ground for delta), marca_aplicada, reconjuracao_acertaria (of the step's slot, or {@link #slot}),
-         * controle_restante (at most delta), ataque_pronto, tempo (delta seconds). Null = no wait.
+         * ground for delta), marca_aplicada, reconjuracao_acertaria / acertaria (the recast / the cast of the step's
+         * slot, or {@link #slot}, would hit by the prediction), controle_restante (at most delta), ataque_pronto, tempo
+         * (delta seconds). Null = no wait.
          */
         public String until;
         /** The Δ of the wait (s). */

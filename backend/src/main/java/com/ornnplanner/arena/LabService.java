@@ -52,6 +52,20 @@ public class LabService {
         public ComboSearch.Config search = new ComboSearch.Config();
         /** Search: save the combos found as the champion's library for this build and minute. */
         public boolean save = true;
+        /** Compare runes: the keystones tried in place of the build's (each with a new search). */
+        public List<String> runes = new ArrayList<>(List.of("Aperto dos Mortos-Vivos", "Suserano do Gelo", "Impacto Repentino"));
+    }
+
+    /** One rune of the comparison: the combo with it, and the best combo searched again with it. */
+    public static class RuneRow {
+        public String rune;
+        public ComboBench.Report combo;
+        public double runeDamage;
+        public double procs;
+        public Combo best;
+        public ComboBench.Report bestReport;
+        public double bestRuneDamage;
+        public double bestProcs;
     }
 
     /** A combo's numbers on each behavior, its score, and one fight to watch. */
@@ -86,6 +100,7 @@ public class LabService {
     private final ComboRepository combos;
     private final JdbcTemplate jdbc;
     private final ComboBench bench;
+    private final CombatCatalog catalog;
     private final Map<String, SearchJob> jobs = new ConcurrentHashMap<>();
     private final AtomicInteger ids = new AtomicInteger();
     private final ExecutorService runner = Executors.newSingleThreadExecutor(r -> {
@@ -99,6 +114,7 @@ public class LabService {
         this.arena = arena;
         this.combos = combos;
         this.jdbc = jdbc;
+        this.catalog = catalog;
         this.bench = new ComboBench(catalog, (Map<String, Object>) arena.kits().get("mapa"));
     }
 
@@ -183,6 +199,64 @@ public class LabService {
         out.report = bench.evaluate(me, d, best, cfg);
         out.fight = bench.run(me, d, best, cfg.behaviors.get(0), cfg, true);
         return out;
+    }
+
+    /**
+     * The combo with each keystone in place of the build's (the rune's fight effects of the combat file; the others of
+     * the list are taken off), and the search run again with it, since the best order may change.
+     */
+    public List<RuneRow> compareRunes(Request req) {
+        Arena.Input base = champion(req);
+        Arena.Input d = dummy(req);
+        Combo c = combo(req);
+        ComboBench.Config cfg = benchConfig(req);
+        ComboSearch.Config sc = req.search == null ? new ComboSearch.Config() : req.search;
+        sc.budget = Math.max(50, Math.min(20000, sc.budget));
+        List<RuneRow> out = new ArrayList<>();
+        List<String> runes = new ArrayList<>(req.runes == null ? List.of() : req.runes);
+        runes.add(0, null);
+        for (String rune : runes) {
+            Arena.Input me = base.copy();
+            me.f = copyFighter(base.f);
+            me.f.effects.removeIf(e -> req.runes.contains(e.item));
+            if (rune != null) {
+                for (Map<String, Object> e : catalog.runeEffects(rune)) {
+                    me.f.effects.add(new com.ornnplanner.combat.CombatSimulator.ItemEffect(rune, e));
+                }
+            }
+            RuneRow row = new RuneRow();
+            row.rune = rune;
+            row.combo = bench.evaluate(me, d, c, cfg);
+            ComboBench.Metrics m = row.combo.byBehavior.values().iterator().next();
+            row.runeDamage = rune == null ? 0 : m.bySource.getOrDefault(rune, 0.0);
+            row.procs = rune == null ? 0 : m.procs.getOrDefault(rune, 0.0);
+            ComboSearch.Result r = new ComboSearch(bench).search(me, d, cfg, sc, new ComboSearch.Listener() { });
+            if (!r.best.isEmpty()) {
+                row.best = r.best.get(0).combo;
+                row.bestReport = r.best.get(0).report;
+                ComboBench.Metrics b = row.bestReport.byBehavior.values().iterator().next();
+                row.bestRuneDamage = rune == null ? 0 : b.bySource.getOrDefault(rune, 0.0);
+                row.bestProcs = rune == null ? 0 : b.procs.getOrDefault(rune, 0.0);
+            }
+            out.add(row);
+        }
+        return out;
+    }
+
+    /** A fighter whose effects can be changed for one comparison (the rest is shared, read only). */
+    private static com.ornnplanner.combat.CombatSimulator.Fighter copyFighter(com.ornnplanner.combat.CombatSimulator.Fighter f) {
+        com.ornnplanner.combat.CombatSimulator.Fighter c = new com.ornnplanner.combat.CombatSimulator.Fighter();
+        try {
+            for (java.lang.reflect.Field fd : f.getClass().getFields()) {
+                if (!java.lang.reflect.Modifier.isStatic(fd.getModifiers()) && !java.lang.reflect.Modifier.isFinal(fd.getModifiers())) {
+                    fd.set(c, fd.get(f));   // shallow: the run only reads them
+                }
+            }
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException(e);
+        }
+        c.effects = new ArrayList<>(f.effects);
+        return c;
     }
 
     // ------------------------------------------------------------------ search

@@ -12,7 +12,7 @@ import { ArenaMap, frameAt, TEAM } from '../pages/Arena.jsx';
  */
 const BEHAVIORS = ['parado', 'anda', 'foge', 'reage'];
 const SLOTS = ['1', '2', '3', 'R'];
-const UNTIL = ['', 'alvo_pousa', 'alvo_no_chao', 'marca_aplicada', 'reconjuracao_acertaria', 'controle_restante', 'ataque_pronto', 'tempo'];
+const UNTIL = ['', 'alvo_pousa', 'alvo_no_chao', 'marca_aplicada', 'acertaria', 'reconjuracao_acertaria', 'controle_restante', 'ataque_pronto', 'tempo'];
 const STORE = 'ornn-planner-lab';
 const champKey = (s) => (s ?? '').normalize('NFD').replace(/[^a-z]/gi, '').toLowerCase();
 
@@ -43,6 +43,7 @@ export default function ArenaLab({ builds, scenario, names }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [job, setJob] = useState(null);
+  const [runes, setRunes] = useState(null);
   const [search, setSearch] = useState({ beam: 64, maxSteps: 8, budget: 4000 });
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -108,6 +109,17 @@ export default function ArenaLab({ builds, scenario, names }) {
   const calibrate = async () => {
     const r = await call('/api/arena/lab/calibrate', request());
     if (r?.combo) setCombo(r.combo);
+  };
+  const compareRunes = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      setRunes(await api.post('/api/arena/lab/compare-runes', request({ search: { ...search, budget: Math.min(search.budget, 3000), threads: 8 } })));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
   };
   const startSearch = async () => {
     setError(null);
@@ -246,6 +258,7 @@ export default function ArenaLab({ builds, scenario, names }) {
         <div className="row">
           <button className="primary" disabled={!buildId || busy} onClick={() => execute()}>{t('lab.run')}</button>
           <button disabled={!buildId || busy} onClick={calibrate} title={t('lab.calibrateTitle')}>{t('lab.calibrate')}</button>
+          <button disabled={!buildId || busy} onClick={compareRunes} title={t('lab.runesTitle')}>{t('lab.runes')}</button>
           <button disabled={!champion} onClick={saveCombo}>{combo.id ? t('lab.saveCombo') : t('lab.addCombo')}</button>
           <span className="muted">|</span>
           <label className="inline">{t('lab.beam')}<input type="number" min={4} max={256} value={search.beam} style={{ width: 60 }}
@@ -264,6 +277,7 @@ export default function ArenaLab({ builds, scenario, names }) {
           </p>
         )}
         {job?.status === 'done' && job.found?.length > 0 && <FoundTable found={job.found} onTry={(c) => { setCombo(c); execute(c); }} />}
+        {runes && <RuneTable rows={runes} onTry={(c) => { setCombo(c); execute(c); }} />}
         {error && <p className="error">{error}</p>}
       </section>
 
@@ -396,7 +410,7 @@ function ComboEditor({ combo, onChange }) {
             <select value={s.until ?? ''} onChange={(e) => setStep(i, { until: e.target.value || null })} aria-label={t('lab.until')}>
               {UNTIL.map((u) => <option key={u} value={u}>{u ? t(`lab.until.${u}`) : t('lab.until.none')}</option>)}
             </select>
-            {s.until && !['marca_aplicada', 'reconjuracao_acertaria', 'ataque_pronto'].includes(s.until) && (
+            {s.until && !['marca_aplicada', 'acertaria', 'reconjuracao_acertaria', 'ataque_pronto'].includes(s.until) && (
               <input type="number" step={0.05} value={s.delta} style={{ width: 70 }} aria-label="Δ"
                 onChange={(e) => setStep(i, { delta: Number(e.target.value) || 0 })} title={t('lab.deltaTitle')} />
             )}
@@ -528,6 +542,27 @@ function FoundTable({ found, onTry }) {
               </tr>
             );
           })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function RuneTable({ rows, onTry }) {
+  return (
+    <div className="table-wrap">
+      <table className="data">
+        <thead><tr><th className="l">{t('lab.rune')}</th><th>{t('lab.runeCombo')}</th><th>{t('lab.runeProcs')}</th>
+          <th>{t('lab.runeBest')}</th><th>{t('lab.runeProcs')}</th><th className="l">{t('lab.runeBestSteps')}</th></tr></thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i}>
+              <td className="l">{r.rune ?? t('lab.noRune')}</td>
+              <td>{n0(r.combo.score)}</td><td>{r.rune ? `${n0(r.procs)} · ${n0(r.runeDamage)}` : '—'}</td>
+              <td>{r.bestReport ? n0(r.bestReport.score) : '—'}</td><td>{r.rune && r.bestReport ? `${n0(r.bestProcs)} · ${n0(r.bestRuneDamage)}` : '—'}</td>
+              <td className="l small">{r.best ? <button className="link" onClick={() => onTry(r.best)}>{r.best.name}</button> : '—'}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
