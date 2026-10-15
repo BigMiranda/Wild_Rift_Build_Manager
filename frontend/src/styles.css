@@ -936,3 +936,17 @@ td.warn, .combat-items td.warn { color: var(--warn, #f0c75e); }
 .arena-train .good { color: #5fbf6a; }
 @media (max-width: 700px) { .arena-chain-table td:nth-child(4) { display: none; } }
 
+
+/* Arena: tabs and lab */
+.arena-tabs { gap: 6px; margin-bottom: 8px; }
+.arena-lab .lab-bench { gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.lab-steps { margin: 6px 0; padding-left: 22px; }
+.lab-steps li { gap: 6px; margin: 3px 0; flex-wrap: wrap; }
+.lab-timeline svg { display: block; cursor: pointer; }
+.lab-tl-label { font-size: 9px; fill: var(--muted, #8a94a3); }
+.lab-metrics { display: grid; grid-template-columns: minmax(220px, 1fr) 2fr; gap: 12px; margin: 8px 0; }
+.lab-metrics dl { margin: 0; display: grid; grid-template-columns: 1fr; gap: 2px; }
+.lab-metrics dl > div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--border, #2a3240); padding: 2px 0; }
+.lab-metrics dt { color: var(--muted, #8a94a3); }
+.lab-metrics dd { margin: 0; font-weight: 600; }
+@media (max-width: 700px) { .lab-metrics { grid-template-columns: 1fr; } }

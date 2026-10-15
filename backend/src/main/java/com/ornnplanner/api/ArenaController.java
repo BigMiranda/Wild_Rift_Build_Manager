@@ -28,11 +28,60 @@ public class ArenaController {
     private final ArenaService arena;
     private final ArenaTrainingService training;
     private final PolicyRepository policies;
+    private final com.ornnplanner.arena.LabService lab;
 
-    public ArenaController(ArenaService arena, ArenaTrainingService training, PolicyRepository policies) {
+    public ArenaController(ArenaService arena, ArenaTrainingService training, PolicyRepository policies,
+                           com.ornnplanner.arena.LabService lab) {
         this.arena = arena;
         this.training = training;
         this.policies = policies;
+        this.lab = lab;
+    }
+
+    // ------------------------------------------------------------------ the lab (ragdoll, bench, combo search)
+
+    /** A combo on the bench against the ragdoll: numbers on each behavior, and one fight to watch. */
+    @PostMapping("/lab/run")
+    public com.ornnplanner.arena.LabService.RunResult labRun(@RequestBody com.ornnplanner.arena.LabService.Request req) {
+        return lab.run(req);
+    }
+
+    /** The combo with its waits calibrated. */
+    @PostMapping("/lab/calibrate")
+    public com.ornnplanner.arena.LabService.RunResult labCalibrate(@RequestBody com.ornnplanner.arena.LabService.Request req) {
+        return lab.calibrate(req);
+    }
+
+    /** Starts a combo search in the background (its combos become the champion's library for the build and minute). */
+    @PostMapping("/lab/search")
+    public com.ornnplanner.arena.LabService.SearchJob labSearch(@RequestBody com.ornnplanner.arena.LabService.Request req) {
+        return lab.startSearch(req);
+    }
+
+    @GetMapping("/lab/search/{id}")
+    public com.ornnplanner.arena.LabService.SearchJob labSearchJob(@PathVariable String id) {
+        return lab.job(id);
+    }
+
+    @DeleteMapping("/lab/search/{id}")
+    public com.ornnplanner.arena.LabService.SearchJob cancelLabSearch(@PathVariable String id) {
+        return lab.cancel(id);
+    }
+
+    /** Presets and the user's saved ragdolls. */
+    @GetMapping("/dummies")
+    public Map<String, Object> dummies() {
+        return Map.of("presets", ArenaModel.Dummy.presets(), "saved", lab.dummies());
+    }
+
+    @PostMapping("/dummies")
+    public ArenaModel.Dummy saveDummy(@RequestBody ArenaModel.Dummy d) {
+        return lab.saveDummy(d);
+    }
+
+    @DeleteMapping("/dummies/{id}")
+    public void deleteDummy(@PathVariable long id) {
+        lab.deleteDummy(id);
     }
 
     /** Starts training a learned policy in the background; poll the job for its progress. */

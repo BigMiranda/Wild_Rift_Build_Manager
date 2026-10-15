@@ -164,7 +164,8 @@ final class ArenaScenarios {
      * Fields of each fighter's totals that only describe the fight (counters and summaries added after the golden file
      * was recorded): left out of the fingerprint, so describing a fight better never looks like a changed fight.
      */
-    static final java.util.Set<String> DESCRIPTIVE = java.util.Set.of("events", "eventSummary");
+    static final java.util.Set<String> DESCRIPTIVE = java.util.Set.of("events", "eventSummary", "damageByType", "controlSpans",
+            "cooldownsLeft");
 
     /** SHA-256 of the whole result as JSON (but {@link #DESCRIPTIVE}): any change in any number, event or frame changes it. */
     static String fingerprint(Result r) {

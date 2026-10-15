@@ -581,3 +581,68 @@ Campos novos, documentados no cabeçalho do `kits_7_3.yml`:
     ruído do treino muda de dimensão e uma semente só variou de 54% a 85% (8 sementes, média 62%).
   - O cenário "desequilibrado" do teste da cadeia ficou mais desequilibrado, para continuar sendo uma vitória total
     estável.
+
+### Parte E — Laboratório: o boneco de pano na Arena e a busca de combos ✅
+- **Boneco** (`ArenaModel.Dummy`; `Slot.dummy` num cenário; `Arena.Input.dummy`):
+  - **Status:** vida, armadura, RM, raio e velocidade (padrão 10000 / 100 / 100 / 80 / 350).
+  - **Comportamentos** (`Arena.dummyStep`): `parado`; `anda`, de um lado para o outro da rota, virando a cada 1,5 s
+    ou na parede; `foge`, recuando do atacante; `reage`, com Flash para fugir e Purificar pelas regras do Tático
+    (`ComboBench.ReactPolicy`, com Flash + Purificar por padrão). Nunca ataca nem lança habilidades.
+  - **Pode vestir uma build salva** (itens e runas num minuto): a build vira, em memória, uma build da unidade "Boneco
+    de pano" com os status do boneco como base (`ArenaService.dummyInput`; `CombatService.Combatant.build` aceita
+    uma build não salva).
+  - **"Aplica efeitos":** os efeitos de quem acerta dos itens que ele veste (os de `combate_7_3.yml`: Feridas, redução
+    de armadura e RM, corte de escudo, marcas) caem no campeão testado a cada X s, pelo mesmo `onHit` / `reaver` das
+    lutas, ou "no máximo", com 12 acertos a cada 0,5 s.
+  - **Presets:** "Tanque 100/100", "Mago 40/40" e "Atirador 30/30" (2500 de vida). Os bonecos salvos ficam na tabela
+    `arena_dummy` (esquema v17).
+- **`ComboBench`** (sem Spring, sem frames, determinístico):
+  - **Modos:** `uma_vez`, fora de combate e com tudo pronto, da distância inicial, roda o combo como roteiro
+    (`Input.script`) até o tempo máximo + 1,5 s para os danos ao longo do tempo; `repetir N s`, em que o combo volta
+    sempre que pode começar e, entre um e outro, ataca (corpo a corpo) ou faz kite (à distância).
+  - **Métricas:**
+    - dano total, por fonte e por tipo (`FighterStats.damageByType`), após resistências, e DPS;
+    - controle no boneco (s) e a maior janela sem controle durante o combo (`FighterStats.controlSpans`);
+    - marcas consumidas, aplicadas e sobrescritas, encadeado e sobreposto, ativações de runa e item;
+    - recargas no fim (`FighterStats.cooldownsLeft`) e "pronto de novo em";
+    - os passos com o tempo de cada um.
+  - **Nota** = dano + 400 × controle (s) + 150 × marcas consumidas, configurável. Contra os 4 comportamentos (padrão),
+    em média ponderada ou no pior caso.
+- **Busca de combos** (`ComboSearch`, genérica, por campeão, build e minuto):
+  - feixe de K prefixos (64 por padrão), cada prefixo medido do início;
+  - o próximo passo sai do retrato do estado em que o prefixo terminou (`ComboReport.snapshot`): habilidades prontas
+    ou que ficam prontas em até 0,6 s, reconjurações abertas ou por abrir, o ataque, o Flash;
+  - esperas só por eventos com Δ discreto ∈ {0; 0,1; 0,2; 0,35}, e só os que fazem sentido naquele estado: alvo no ar
+    → `alvo_pousa` / `alvo_no_chao`; alvo controlado → `controle_restante`; reconjuração → `reconjuracao_acertaria`;
+    sem marca → `marca_aplicada`;
+  - poda dos prefixos 50% abaixo do melhor a partir do 3º passo (os mais curtos ainda estão montando o combo; com 35%
+    desde o 1º, o puxão do Darius era podado logo de saída);
+  - calibragem coordenada a coordenada dos Δ dos 8 melhores (grade de 0,05 s, duas passadas);
+  - os 8 melhores distintos (pela sequência de ações; as esperas não contam) com nota, métricas por comportamento e a
+    diferença para o melhor;
+  - orçamento de avaliações; paralela e determinística (a mesma ordem com 1 ou 4 threads, coberto pelo teste).
+  Os combos achados vão para a biblioteca com origem `descoberto`, a build e o minuto, as condições de início
+  (`pronto:S == 1` das habilidades usadas, distância) e as métricas. Reexecutar para a mesma build e minuto
+  substitui os achados anteriores; outra build ou minuto gera outra biblioteca.
+- **API:** `POST /api/arena/lab/run`, `/lab/calibrate`, `/lab/search` (em segundo plano, um por vez; `GET` e
+  `DELETE /lab/search/{id}`), `GET/POST/DELETE /api/arena/dummies`. `LabService` monta as entradas.
+- **Tela:** a aba **Laboratório** na Arena tem:
+  - build e minuto; o boneco (preset ou salvo, status, a build que veste, aplica efeitos a cada X s ou no máximo,
+    salvar); modo, distância, comportamentos e média / pior caso;
+  - o editor do combo (passos com a espera e o Δ, a ação, ↑ ↓ ✕), que pode vir da biblioteca ou da linha do tempo do
+    cenário (as ordens do campeão da build viram passos, com esperas por tempo entre elas);
+  - os botões Executar, Calibrar, Salvar/Pôr na biblioteca e Buscar combos (feixe, passos, orçamento, com progresso);
+  - o resultado: o mapa animado do comportamento escolhido, a linha do tempo do combo (passos, controle e Frágil no
+    boneco), o cartão de métricas com dano por fonte e por tipo, a tabela por comportamento e a dos combos achados
+    com a diferença;
+  - a biblioteca, com origem, nota, build/minuto e as ações ativar, testar, editar e apagar.
+  A tela do cenário ainda não tem o boneco no seletor do slot; ele existe no modelo (`Slot.dummy`).
+- **Migração** testada numa cópia do banco real (`SchemaMigrationCopyTest`, `-Darena.dbcopy=`): v15 → v17, as 16 builds
+  e as 109 IAs intactas, todas lidas e migradas do esquema 2.
+- **Testes:**
+  - `ComboSearchTest`: o banco mede um combo do Darius (fontes, tipo, controle, janela livre, recargas,
+    determinismo, os comportamentos fazem diferença).
+  - 🎯 a busca no Darius acha uma sequência que bate o roteiro em dano contra o boneco parado: 1227 contra 1060
+    ("1 → ataque → R → ataque → ataque → ataque"), igual com 1 ou 4 threads.
+  - `ArenaDummyTest`: parado, anda e foge; reage purifica um atordoamento longo; os efeitos dos itens põem Feridas
+    na Vayne.

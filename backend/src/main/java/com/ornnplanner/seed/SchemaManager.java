@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 16;
+    static final int VERSION = 17;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -105,7 +105,7 @@ public class SchemaManager {
             jdbc.execute("ALTER TABLE arena_policy ADD COLUMN team_plan TEXT");
             jdbc.execute("ALTER TABLE arena_policy ADD COLUMN parent_id INTEGER");
         }
-        // v16: arena_combo is a new table, created by schema.sql
+        // v16 / v17: arena_combo and arena_dummy are new tables, created by schema.sql
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {
             jdbc.execute("PRAGMA user_version = " + VERSION);

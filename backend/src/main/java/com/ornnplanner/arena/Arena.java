@@ -99,6 +99,10 @@ public class Arena {
         public List<Combo> combos = new ArrayList<>();
         /** A combo run as soon as the fight starts, without a policy (the bench); null = none. */
         public Combo script;
+        /** A ragdoll (the lab): how it moves and the effects it applies; null = a champion. */
+        public ArenaModel.Dummy dummy;
+        /** Share of its health it starts with (null = full): drills of training, the lab. */
+        public Double startHealth;
 
         /**
          * A shallow copy (same fighter, sheet and build effects, which a run only reads): to change the start or the
@@ -123,6 +127,8 @@ public class Arena {
             c.triggers = triggers;
             c.combos = combos;
             c.script = script;
+            c.dummy = dummy;
+            c.startHealth = startHealth;
             return c;
         }
     }
@@ -283,6 +289,10 @@ public class Arena {
         /** The combo it runs now (its state lives here, never in the policy), and whether the scripted one started. */
         ComboRun combo;
         boolean scriptStarted;
+        /** A ragdoll: its next turn and way (side to side), its next on-hit effects. */
+        double dummyTurnAt = 1.5;
+        int dummyDir = 1;
+        double dummyHitAt;
 
         U(int idx, Input in) {
             this.idx = idx;
@@ -679,6 +689,11 @@ public class Arena {
         }
         for (U u : units) {
             u.r.eventSummary = ArenaEvents.summary(u.r.events);
+            for (String slot : ActionSpace.SLOTS) {
+                if (u.rank(slot) > 0 && ability(u, slot) != null) {
+                    u.r.cooldownsLeft.put(slot, round3(Math.max(0, u.ready.getOrDefault(slot, 0.0) - now)));
+                }
+            }
             for (Action a : u.orders) {
                 result.skipped.add(new Event(a.time, u.idx, describe(a) + ": não foi possível até o fim da luta"));
             }
@@ -697,7 +712,7 @@ public class Arena {
         u.y = in.y;
         u.facing = in.f.team == 0 ? 0 : Math.PI;
         u.maxHp = Math.max(1, u.stat(Stats.MAX_HEALTH));
-        u.hp = u.maxHp;
+        u.hp = in.startHealth == null ? u.maxHp : Math.max(1, u.maxHp * Math.min(1, in.startHealth));
         in.f.shieldSources.forEach((src, v) -> {
             if (!manualItems.contains(src)) {
                 u.shield.merge(key(u, src), v, Double::sum);
@@ -806,6 +821,9 @@ public class Arena {
         }
         if (acted && u.combo != null) {
             endCombo(u, "aborted", "ordem da linha do tempo");
+        }
+        if (u.in.dummy != null && !acted && dummyStep(u)) {
+            return;
         }
         if (u.in.script != null && !u.scriptStarted && u.combo == null && !acted) {
             U t = target(u);
@@ -3682,6 +3700,7 @@ public class Arena {
             if (s.dead) {
                 continue;
             }
+            dummyEffects(s);
             tickStacks(s);
             if (s.combatSince < 0) {
                 continue;
@@ -3868,6 +3887,9 @@ public class Arena {
         t.r.taken += dmg;
         t.r.mitigated += amped - amped * mult;
         a.r.damageBySource.merge(source, dmg, Double::sum);
+        if (dmg > 0) {
+            a.r.damageByType.merge(type, dmg, Double::sum);
+        }
         led(key(a, source)).damage += dmg;
         if (res >= 0 && extraShred > 0 && t.shredSource[res] != null && now < t.shredUntil[res]) {
             led(t.shredSource[res]).extraShred += extraShred * (dmg / Math.max(1e-9, amped * mult));
@@ -5001,6 +5023,61 @@ public class Arena {
         }
     }
 
+    // ------------------------------------------------------------------ the ragdoll (lab)
+
+    /**
+     * A ragdoll's move: it never attacks or casts. parado holds still; anda walks side to side across the lane
+     * (turning every 1.5s or at a wall); foge walks away from its attacker. reage stays still but its policy may Flash
+     * away or Cleanse (true = the step is done).
+     */
+    private boolean dummyStep(U u) {
+        String b = u.in.dummy.behavior == null ? "parado" : u.in.dummy.behavior;
+        switch (b) {
+            case "anda": {
+                boolean wall = Math.abs(u.y + u.dummyDir * 30) > halfWidth - u.radius() - 45;
+                if (now >= u.dummyTurnAt - 1e-9 || wall) {
+                    u.dummyDir = -u.dummyDir;
+                    u.dummyTurnAt = now + 1.5;
+                }
+                moveTo(u, u.x, clampY(u.y + u.dummyDir * 100), u.moveSpeed() * DT);
+                u.busyState = "move";
+                return true;
+            }
+            case "foge":
+                if (target(u) != null) {
+                    retreat(u);
+                }
+                return true;
+            case "reage":
+                return false;   // its policy (Flash away / Cleanse only) decides
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * A ragdoll that applies effects: the on-hit effects of the items it wears (Grievous Wounds, armor / magic resist
+     * shred, shield cut, marks) land on the champion it faces every few seconds as if it hit, or stay at their most.
+     */
+    private void dummyEffects(U u) {
+        ArenaModel.Dummy d = u.in.dummy;
+        if (d == null || !d.appliesEffects || now < u.dummyHitAt - 1e-9) {
+            return;
+        }
+        U t = target(u);
+        if (t == null) {
+            return;
+        }
+        int hits = d.atMax ? 12 : 1;
+        for (int k = 0; k < hits; k++) {
+            onHit(u, t, "fisico", ATTACK);
+            onHit(u, t, "magico", ABILITY);
+            reaver(u, t);
+        }
+        // at their most: refreshed before anything can fall off
+        u.dummyHitAt = now + (d.atMax ? 0.5 : Math.max(0.1, d.hitEvery));
+    }
+
     // ------------------------------------------------------------------ combos
 
     /** A combo may start: its start conditions hold and its first step can be done now (or after its wait). */
@@ -5057,9 +5134,8 @@ public class Arena {
         run.report.end = round3(now);
         run.report.outcome = outcome;
         run.report.reason = reason;
-        if (recordFrames) {
-            result.combos.add(run.report);
-        }
+        snapshot(u, run.target, run.report.snapshot);
+        result.combos.add(run.report);
         count(u, "done".equals(outcome) ? "combo_concluido:" + run.spec.name : "combo_abortado:" + run.spec.name);
         if (!"done".equals(outcome)) {
             event(u, "abortou o combo " + run.spec.name + " no passo " + (run.step + 1) + ": " + reason);
@@ -5068,6 +5144,32 @@ public class Arena {
 
     private static double round3(double v) {
         return Math.round(v * 1000) / 1000.0;
+    }
+
+    /** What the champion could do next and how the target is, when a combo ends (see ComboReport#snapshot). */
+    private void snapshot(U u, U t, Map<String, Double> out) {
+        for (String slot : ActionSpace.SLOTS) {
+            Map<String, Object> ab = ability(u, slot);
+            if (ab != null && u.rank(slot) > 0) {
+                out.put("pronto:" + slot, round3(Math.max(0, u.ready.getOrDefault(slot, 0.0) - now)));
+            }
+            double[] w = u.recast.get(slot);
+            if (w != null && now <= w[1]) {
+                out.put("reconjurar:" + slot, round3(Math.max(0, w[0] - now)));
+            }
+        }
+        for (String name : u.actives) {
+            out.put("ativo:" + name, round3(Math.max(0, u.ready.getOrDefault(name, 0.0) - now)));
+        }
+        out.put("ataque", round3(Math.max(0, u.nextAttack - now)));
+        out.put("ocupado", round3(Math.max(0, u.busyUntil - now) + (u.dash != null ? 0.2 : 0)));
+        if (t != null && !t.dead) {
+            out.put("alvo_no_ar", round3(Math.max(0, t.airUntil - now)));
+            out.put("alvo_controle", round3(controlLeft(t)));
+            out.put("alvo_marca", round3(markLeft(u, t)));
+            out.put("alvo_distancia", round3(dist(u.x, u.y, t.x, t.y)));
+        }
+        out.put("t", round3(now));
     }
 
     /**
@@ -5425,6 +5527,13 @@ public class Arena {
             if (now < t.stunUntil || now < t.airUntil || t.forced != null) {
                 count(t, "tempo_controlado", DT);
                 count(t.ccBy, "controle_causado", DT);
+                List<double[]> spans = t.r.controlSpans;
+                double[] last = spans.isEmpty() ? null : spans.get(spans.size() - 1);
+                if (last != null && now - last[1] <= DT + 1e-6) {
+                    last[1] = round3(now + DT);
+                } else {
+                    spans.add(new double[] {round3(now), round3(now + DT)});
+                }
                 t.ccHeldAt = now;
             }
             if (t.brittleCounted > 0 && now >= t.brittleCounted - 1e-9) {

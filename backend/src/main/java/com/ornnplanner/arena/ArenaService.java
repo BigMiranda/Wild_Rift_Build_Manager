@@ -120,6 +120,23 @@ public class ArenaService {
         int[] perTeam = new int[2];
         int[] ofTeam = {(int) blue, (int) red};
         for (Slot slot : sc.fighters) {
+            if (slot.dummy != null) {
+                Arena.Input in = dummyInput(slot.dummy);
+                in.f.team = slot.team;
+                in.target = slot.target;
+                in.team = plan(sc, slot.team);
+                in.followTeam = slot.followTeam;
+                double[] start = start(slot.team, perTeam[slot.team]++, ofTeam[slot.team]);
+                in.x = slot.x != null ? slot.x : start[0];
+                in.y = slot.y != null ? slot.y : start[1];
+                if ("reage".equals(slot.dummy.behavior)) {
+                    in.policy = new ComboBench.ReactPolicy(in.priority);
+                } else {
+                    in.policy = (o, m) -> com.ornnplanner.arena.ai.Policy.Decision.of(com.ornnplanner.arena.ai.ActionSpace.IDLE);
+                }
+                inputs.add(in);
+                continue;
+            }
             if (slot.buildId == null) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha uma build para cada campeão.");
             }
@@ -221,6 +238,67 @@ public class ArenaService {
 
     public ComboRepository combos() {
         return combos;
+    }
+
+    /** A champion of a saved build at a minute, alone (the lab): as a scenario's slot of the blue side. */
+    public Arena.Input labInput(long buildId, Double minute) {
+        Scenario sc = new Scenario();
+        Slot me = new Slot();
+        me.team = 0;
+        me.buildId = buildId;
+        me.minute = minute;
+        Slot other = new Slot();
+        other.team = 1;
+        other.dummy = new ArenaModel.Dummy();
+        sc.fighters = List.of(me, other);
+        return prepare(sc).get(0);
+    }
+
+    /**
+     * The ragdoll's fighter: its stats alone, or wearing a saved build's items and runes at a minute (the build as
+     * the planner's "Boneco de pano" unit, with the ragdoll's stats as its base).
+     */
+    public Arena.Input dummyInput(ArenaModel.Dummy d) {
+        if (d.wearBuildId == null) {
+            return ComboBench.dummyInput(d);
+        }
+        BuildRepository.Build worn = builds.findBuild(d.wearBuildId).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.BAD_REQUEST, "Build " + d.wearBuildId + " não existe."));
+        BuildRepository.Build b = JSON.convertValue(worn, BuildRepository.Build.class);
+        b.id = null;
+        b.unitCode = com.ornnplanner.seed.ReferenceSeeder.RAGDOLL;
+        b.championSetup = null;
+        b.ragdollStats = new LinkedHashMap<>();
+        b.ragdollStats.put(com.ornnplanner.engine.Stats.MAX_HEALTH, ragdoll(d.health));
+        b.ragdollStats.put(com.ornnplanner.engine.Stats.ARMOR, ragdoll(d.armor));
+        b.ragdollStats.put(com.ornnplanner.engine.Stats.MAGIC_RESIST, ragdoll(d.magicResist));
+        b.ragdollStats.put(com.ornnplanner.engine.Stats.MOVE_SPEED, ragdoll(d.moveSpeed));
+        CombatService.Combatant c = new CombatService.Combatant();
+        c.build = b;
+        c.minute = d.wearMinute;
+        CombatService.ArenaBuild ab = combat.arenaBuild(c, java.util.Set.of());
+        Fighter f = ab.fighter;
+        f.name = d.name == null ? "Boneco de pano" : d.name;
+        f.champion = "Boneco de pano";
+        f.team = 1;
+        f.ranks = new int[4];
+        f.abilities = new ArrayList<>();
+        Arena.Input in = new Arena.Input();
+        in.f = f;
+        in.triggers = ab.triggers;
+        in.build = worn.name;
+        in.baseAttackSpeed = 0.6;
+        in.kit = ComboBench.dummyKit(d);
+        ComboBench.withSpells(in, d);
+        in.dummy = d;
+        return in;
+    }
+
+    private static BuildRepository.RagdollStat ragdoll(double base) {
+        BuildRepository.RagdollStat s = new BuildRepository.RagdollStat();
+        s.base = base;
+        s.growth = 0.0;
+        return s;
     }
 
     /** Default start: next to the side's Nexus, side by side. */

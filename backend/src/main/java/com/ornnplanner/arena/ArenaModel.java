@@ -42,6 +42,72 @@ public final class ArenaModel {
          * nearest enemy, as before team plans. Ignored when the scenario has no plans.
          */
         public boolean followTeam = true;
+        /** A ragdoll instead of a build ({@link #buildId} is then ignored). */
+        public Dummy dummy;
+    }
+
+    /**
+     * The ragdoll of the lab (the planner's "Boneco de pano" unit): its stats, how it moves, the build it may wear
+     * (items and runes of a saved build, at a minute) and, optionally, the on-hit effects of those items applied to the
+     * champion it faces, as if it hit every few seconds or already at their most stacks.
+     */
+    public static class Dummy {
+        public Long id;
+        public String name;
+        public double health = 10000;
+        public double armor = 100;
+        public double magicResist = 100;
+        public double radius = 80;
+        public double moveSpeed = 350;
+        /** parado | anda (side to side) | foge (away from its attacker) | reage (Flash / Cleanse by the tactical rules) */
+        public String behavior = "parado";
+        /** A saved build whose items and runes it wears (null = none), at this minute (null = the build's end). */
+        public Long wearBuildId;
+        public Double wearMinute;
+        /** Spells it may use when it reacts (Flash, Purificar...). */
+        public List<String> spells = new ArrayList<>(List.of("Flash", "Purificar"));
+        /** Applies the on-hit effects of the items it wears (shred, Grievous Wounds, shield cut) to the champion it faces. */
+        public boolean appliesEffects;
+        /** Every this many seconds (as if it hit), or at their most stacks from the start. */
+        public double hitEvery = 1;
+        public boolean atMax;
+
+        /** Presets: the ragdolls of the lab's first screen. */
+        public static List<Dummy> presets() {
+            List<Dummy> out = new ArrayList<>();
+            out.add(preset("Tanque 100/100", 10000, 100, 100));
+            out.add(preset("Mago 40/40", 10000, 40, 40));
+            out.add(preset("Atirador 30/30", 2500, 30, 30));
+            return out;
+        }
+
+        private static Dummy preset(String name, double hp, double armor, double mr) {
+            Dummy d = new Dummy();
+            d.name = name;
+            d.health = hp;
+            d.armor = armor;
+            d.magicResist = mr;
+            return d;
+        }
+
+        public Dummy copy(String behavior) {
+            Dummy d = new Dummy();
+            d.id = id;
+            d.name = name;
+            d.health = health;
+            d.armor = armor;
+            d.magicResist = magicResist;
+            d.radius = radius;
+            d.moveSpeed = moveSpeed;
+            d.behavior = behavior;
+            d.wearBuildId = wearBuildId;
+            d.wearMinute = wearMinute;
+            d.spells = new ArrayList<>(spells);
+            d.appliesEffects = appliesEffects;
+            d.hitEvery = hitEvery;
+            d.atMax = atMax;
+            return d;
+        }
     }
 
     /** How a side picks its targets, shared by every champion of the side that follows it. */
@@ -204,6 +270,12 @@ public final class ArenaModel {
         public String outcome;
         public String reason;
         public List<Event> steps = new ArrayList<>();
+        /**
+         * What could be done when it ended (what a combo search may append): ready slots (pronto:S), open or coming
+         * recasts (reconjurar:S), seconds to the next attack, the target's knock-up / control / mark left.
+         */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, Double> snapshot = new LinkedHashMap<>();
     }
 
     // ------------------------------------------------------------------ results
@@ -296,6 +368,15 @@ public final class ArenaModel {
         /** The events in words, for the report. */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public String eventSummary;
+        /** Damage dealt by type after resistances (fisico, magico, verdadeiro). */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, Double> damageByType = new LinkedHashMap<>();
+        /** Spans [from, to] (s) it spent immobilized (stun, knock-up, displacement). */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public List<double[]> controlSpans = new ArrayList<>();
+        /** Seconds left of each ability's cooldown at the end (0 = ready). */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, Double> cooldownsLeft = new LinkedHashMap<>();
     }
 
     /** A conditional effect of the planner in the run: when it counts, and what it did. */

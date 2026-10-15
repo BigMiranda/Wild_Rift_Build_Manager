@@ -39,6 +39,9 @@ public class CombatService {
 
     public static class Combatant {
         public Long buildId;
+        /** A build that is not saved (the lab's ragdoll wearing a build's items); used instead of {@link #buildId}. */
+        @com.fasterxml.jackson.annotation.JsonIgnore
+        public Build build;
         /** Game minute (null = the build's end of match, else its last purchase). */
         public Double minute;
         public List<String> order;
@@ -478,10 +481,10 @@ public class CombatService {
     }
 
     private Resolved resolve(Combatant c) {
-        if (c == null || c.buildId == null) {
+        if (c == null || c.buildId == null && c.build == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha uma build para cada campeão.");
         }
-        Build build = builds.findBuild(c.buildId)
+        Build build = c.build != null ? c.build : builds.findBuild(c.buildId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Build " + c.buildId + " não existe."));
         TimelineResult full = planner.calculate(build);
         if (full.series.isEmpty()) {

@@ -4,13 +4,14 @@ import { t } from '../i18n.js';
 import { n0, n1, statAbbr, statValue } from '../format.js';
 import MinuteInput from '../components/MinuteInput.jsx';
 import { ChampionAvatar } from '../components/ChampionPicker.jsx';
+import ArenaLab from '../components/ArenaLab.jsx';
 
 /**
  * Orchestrated matchup: a scenario (champions from saved builds at a minute, where they start, and a timeline of
  * orders) run by the backend's arena. The timeline shows every cooldown at every instant; the map plays the fight with
  * circles for champions and simple shapes for the rest (hover them while paused to see what they are).
  */
-const TEAM = ['#4fa8ff', '#f06a5f'];
+export const TEAM = ['#4fa8ff', '#f06a5f'];
 const TEAM_SOFT = ['rgba(79,168,255,.22)', 'rgba(240,106,95,.22)'];
 const SLOTS = ['1', '2', '3', 'R'];
 const ORDER_TYPES = ['ability', 'recast', 'item', 'spell', 'move', 'attack', 'stop'];
@@ -35,7 +36,7 @@ function loadDraft() {
 }
 
 /** Frame at (or right before) a time. */
-function frameAt(result, time) {
+export function frameAt(result, time) {
   if (!result?.frames?.length) return null;
   const i = Math.max(0, Math.min(result.frames.length - 1, Math.round(time / result.frameEvery)));
   return result.frames[i];
@@ -55,6 +56,21 @@ export default function Arena() {
   const [pickPoint, setPickPoint] = useState(null); // action index waiting for a click on the map
   const [message, setMessage] = useState(null);
   const [policies, setPolicies] = useState([]);
+  const [tab, setTab] = useState(() => {
+    try {
+      return localStorage.getItem(`${STORE}-tab`) ?? 'scenario';
+    } catch {
+      return 'scenario';
+    }
+  });
+  const pickTab = (v) => {
+    setTab(v);
+    try {
+      localStorage.setItem(`${STORE}-tab`, v);
+    } catch {
+      /* session only */
+    }
+  };
   const loadPolicies = () => api.get('/api/arena/policies').then(setPolicies).catch(() => {});
 
   useEffect(() => {
@@ -186,8 +202,27 @@ export default function Arena() {
   const frame = frameAt(result, time);
   const names = sc.fighters.map((f, i) => result?.fighters?.[i]?.champion ?? builds.find((b) => b.id === f.buildId)?.unitCode ?? `#${i + 1}`);
 
+  const tabs = (
+    <div className="row arena-tabs" role="tablist">
+      {['scenario', 'lab'].map((k) => (
+        <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'primary' : ''} onClick={() => pickTab(k)}>
+          {t(`arena.tab.${k}`)}
+        </button>
+      ))}
+    </div>
+  );
+  if (tab === 'lab') {
+    return (
+      <div className="main arena-page">
+        {tabs}
+        <ArenaLab builds={builds} scenario={sc} names={names} />
+      </div>
+    );
+  }
+
   return (
     <div className="main arena-page">
+      {tabs}
       <section className="panel">
         <div className="spread">
           <h3>{t('arena.title')}</h3>
@@ -877,7 +912,7 @@ function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onC
 }
 
 /** The map: the lane, champions as circles, everything else as simple shapes; hover while paused to identify. */
-function ArenaMap({ result, frame, paused, names, pickPoint, onPick }) {
+export function ArenaMap({ result, frame, paused, names, pickPoint, onPick }) {
   const svgRef = useRef(null);
   const [hover, setHover] = useState(null);
   const [follow, setFollow] = useState(true);
