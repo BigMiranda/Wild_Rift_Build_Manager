@@ -1098,3 +1098,67 @@ laboratório (`ArenaLab.jsx`). O antigo `ArenaReport` e o `TriggerTable` saíram
     bate com o dano medido na Arena;
   - novo `theReasonsNameTheItems`: Cutelo do aliado, penetração % e fixa por item, Feridas do aliado.
 - Testes: 177. O golden não mudou.
+
+### Relatório final da Rodada 4
+Commits (sem push): parte 1 `09d198d`, parte 2 `78bcf35`, parte 3 `ca32873`, parte 4 `9a15a34`, parte 5 `4bdddfe`.
+
+**O que mudou na tela:**
+- **Arena, relatório da luta** (cenário "Ornn de Coração de Aço vs Rumble"):
+  - no topo, "Vitória do Lado azul em 18,9s", a vida restante de cada lado e o gráfico de vida, em que a linha
+    vermelha do Rumble cai até o ✝ aos 18,9 s;
+  - a tabela dos campeões, com duas fileiras de ícones em cada linha (os 6 itens; a pedra fundamental, as runas
+    menores e os feitiços);
+  - as barras de dano por fonte em duas colunas, com o Frágil roxo (mágico), o ataque laranja (físico) e a Incendiar
+    branca (verdadeiro);
+  - o livro-caixa por campeão, com ícones e o botão "Calcular o valor de cada item", que acrescenta "Sem ele / Δ
+    causado / Δ vivo / Δ lado";
+  - os gatilhos por fonte (o Suserano com 1 ativação);
+  - as seções recolhidas no fim.
+  - A 375 px, as tabelas rolam dentro do painel e as barras ficam numa coluna.
+- **Arena, "Treinar IA":**
+  - "parar a etapa: ao fim das gerações / no platô / na vitória", com "e terminar vivo" ao lado da vitória e uma frase
+    que explica a opção escolhida;
+  - o resultado mostra "🏆 vence o cenário" ou "não vence o cenário", e "aceita" ou "não aceita", separados;
+  - a lista de versões marca 🏆.
+- **Planejador, aba "Testar":**
+  - o painel "Testar esta build num cenário ou combo" (seletor com "Cenários salvos da Arena" e "Combos da
+    biblioteca", minuto, Testar). O resultado aparece em uma linha ("O lado dele perde em 40,9s · causado 3.463 ·
+    recebido 10.110"), seguido dos 3 itens com ícone e o link "Abrir na Arena";
+  - o painel "Visão de outra build" (outra build, minuto, Inverter, efeitos de um aliado com chips de itens), com a
+    lista "de → para" e o minigráfico.
+
+**Causas confirmadas:**
+- **Suserano do Gelo 2 vezes:** o efeito modelado (`glacial`) e o gatilho das defesas (`ao_imobilizar`) tinham
+  recargas separadas e contavam `runa_ativou` cada um, na mesma imobilização. O teste novo mede 2 com o código antigo
+  e 1 com o novo. Eclipse e Manto da Aurora tinham o mesmo defeito.
+- **"Vitória total" e depois derrota na tela:** a regra exigia vencer as 16 lutas de seleção, que não são a luta da
+  tela: inícios deslocados ao acaso, minutos −3/0/+3 e inimigos com Roteiro ou Tático. Ao terminar, a tela também não
+  trocava o slot sozinha. As ordens e o plano do time eram os mesmos.
+
+**Bug achado de passagem:** o dano dos espinhos (Armadura de Espinhos, Colete Espinhoso) saía sem tipo e, portanto,
+sem redução de resistência. Agora é mágico.
+
+**Código removido, movido e portado:**
+- **Removido:**
+  - `CombatController`, `CombatSimulator` (1.340 linhas) e `CombatService.simulate` com os seus tipos;
+  - `Combat.jsx` (413 linhas), a aba, 138 chaves `combat.*` e o CSS do Confronto;
+  - `PlannerLab.jsx`, os endpoints `/api/lab/combo`, `/items` e `/scenarios`, e 72 chaves `plab.*`;
+  - a seção `campeoes` do `combate_7_3.yml`;
+  - a lógica da vitória total (confirmação, aceite forçado);
+  - `T.readyAt`.
+- **Movido para `arena.fight`:** `Fighter`, `ItemEffect`, `Ledger`, `Delay`, `CombatCatalog`, `AbilityParser`,
+  `DamageRules.mitigation` e `FighterBuilder` (ex-`CombatService`: `arenaBuild`, `formDeltas`, `Combatant` com
+  `excludeItems`).
+- **Portado:**
+  - os 13 casos do `CombatSimulatorTest`: 3 em `AbilityParserTest` e 10 em `ArenaRulesTest`;
+  - descartado só o conceito de "contato" da luta rápida, trocado pelo caso da reconjuração da R.
+
+**Testes:** 167 antes (8 opcionais pulados) → 177 depois (os mesmos 8 pulados). O golden não mudou em nenhuma parte.
+
+**Perguntas abertas para o usuário:**
+1. Na "Visão de outra build", os status são os do início da luta, com os condicionais desligados: armadura 366 em vez
+   dos 784 da ficha. Faz sentido mostrar também uma linha com os condicionais ligados, como a ficha do planejador?
+2. Na cadeia, uma versão que vence o cenário mas não passa dos 55% vira a versão da cadeia. Prefere que ela só sirva
+   ao slot da tela e a cadeia siga com a última aceita?
+3. O "Calcular o valor de cada item" de um cenário leva ~1 s por item: cada variante monta as builds de novo, e a luta
+   em si é rápida. Um cache da montagem por (itens, minuto) baixaria isso para frações de segundo. Vale fazer?
