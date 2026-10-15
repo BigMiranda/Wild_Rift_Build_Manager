@@ -73,6 +73,49 @@ public final class Network {
         return a;
     }
 
+    /**
+     * The same network for a wider input and output layout: old input i feeds new input {@code inputMap[i]}, old output
+     * j is new output {@code outputMap[j]}. New inputs weigh zero, so they change nothing; new outputs have zero weights
+     * and the bias {@code newBias} (a score that never beats a real action). Hidden layers stay as they are.
+     */
+    public Network migrate(int[] inputMap, int inputs, int[] outputMap, int outputs, double newBias) {
+        if (inputMap.length != layers[0] || outputMap.length != layers[layers.length - 1]) {
+            throw new IllegalArgumentException("maps of " + inputMap.length + " / " + outputMap.length + " for " + this);
+        }
+        int[] to = layers.clone();
+        to[0] = inputs;
+        to[to.length - 1] = outputs;
+        double[] out = new double[count(to)];
+        int r = 0;
+        int w = 0;
+        for (int l = 1; l < layers.length; l++) {
+            boolean first = l == 1;
+            boolean last = l == layers.length - 1;
+            int in = layers[l - 1];
+            int newIn = to[l - 1];
+            int start = w;
+            boolean[] filled = new boolean[to[l]];
+            for (int j = 0; j < layers[l]; j++) {
+                int nj = last ? outputMap[j] : j;
+                filled[nj] = true;
+                int row = start + nj * (newIn + 1);
+                for (int i = 0; i < in; i++) {
+                    out[row + (first ? inputMap[i] : i)] = weights[r++];
+                }
+                out[row + newIn] = weights[r++];
+            }
+            if (last) {
+                for (int nj = 0; nj < to[l]; nj++) {
+                    if (!filled[nj]) {
+                        out[start + nj * (newIn + 1) + newIn] = newBias;
+                    }
+                }
+            }
+            w = start + to[l] * (newIn + 1);
+        }
+        return new Network(to, out);
+    }
+
     @Override
     public String toString() {
         return "Network" + Arrays.toString(layers) + " (" + weights.length + " weights)";

@@ -43,7 +43,22 @@ public final class ActionSpace {
     public static final int DODGE = KITE + ENEMIES;
     public static final int SIZE = DODGE + 1;
 
+    /** Score of an action a migrated network did not have (a combo): never above a real action's. */
+    public static final double NEW_ACTION_BIAS = -5;
+
     private ActionSpace() {
+    }
+
+    /**
+     * Where each action of an older layout (by its action count) is in this one; the actions it did not have get
+     * {@link #NEW_ACTION_BIAS}. The layouts so far only appended, so the index stays.
+     */
+    public static int[] migration(int oldSize) {
+        int[] map = new int[oldSize];
+        for (int i = 0; i < oldSize; i++) {
+            map[i] = i;
+        }
+        return map;
     }
 
     public static int cast(int slot, int enemy) {

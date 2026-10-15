@@ -37,10 +37,22 @@ class ArenaBenchmarkTest {
             simulated += s.run(false).duration;
         }
         System.out.printf("%nduels on autopilot: mean %.1fs of fight each%n", simulated / duels.size());
+        // the same duels with both champions on the tactical autopilot (it reads the observation every decision)
+        List<ArenaScenarios.Scenario> tactical = new ArrayList<>();
+        for (ArenaScenarios.Scenario s : duels) {
+            tactical.add(new ArenaScenarios.Scenario(s.name + " (tactical)", () -> {
+                List<com.ornnplanner.arena.Arena.Input> in = s.inputs.get();
+                for (com.ornnplanner.arena.Arena.Input x : in) {
+                    x.policy = new com.ornnplanner.arena.ai.TacticalPolicy(x.priority);
+                }
+                return in;
+            }, s.actions, s.duration));
+        }
         int cores = Runtime.getRuntime().availableProcessors();
         for (int threads : new int[] {1, cores}) {
             report("long 1v1 (60s, to the limit)", longFights, threads);
             report("duels 1v1 (until a death)", duels, threads);
+            report("duels 1v1, tactical", tactical, threads);
         }
     }
 

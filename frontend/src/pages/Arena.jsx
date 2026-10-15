@@ -273,7 +273,7 @@ export default function Arena() {
 const champKey = (s) => (s ?? '').normalize('NFD').replace(/[^a-z]/gi, '').toLowerCase();
 const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`);
 const policyLabel = (p) => t('arena.brain.ai', { v: p.version, obj: t(`arena.obj.${p.objective}`), pct: pct(p.betterVsScript) })
-  + (p.accepted ? '' : ` ${t('arena.train.notAccepted')}`);
+  + (p.accepted ? '' : ` ${t('arena.train.notAccepted')}`) + (p.migratedFrom ? ` ${t('arena.brain.migrated', { v: p.migratedFrom })}` : '');
 
 const OBJECTIVES = ['win_fast', 'damage', 'survive', 'team'];
 const RUNNING = ['queued', 'running', 'stopping'];

@@ -295,7 +295,7 @@ public final class ArenaTraining {
         Gym.Report vsScript = gym.compare(validation, ai, reference, objective);
         Gym.Report vsTactical = gym.compare(validation, ai, new TacticalPolicy(priority), objective);
         Double vsPrevious = spec.previous == null ? null : gym.compare(validation, ai,
-                new NeuralPolicy(spec.previous.weights.network(), priority, spec.previous.weights.bonus), objective).better;
+                spec.previous.policy(priority), objective).better;
         if (spec.chained() && changed(spec, base, team)) {
             Opponent before = opponent("cadeia anterior", in -> before(spec, in));
             List<Gym.Episode> old = episodes(spec, team, List.of(before), spec.validation, new Random(spec.seed * 7919 + 17));
@@ -324,7 +324,7 @@ public final class ArenaTraining {
         r.chainRound = spec.chainRound;
         r.teamPlan = spec.teamPlan;
         r.parentId = spec.parentId;
-        r.weights = PolicyRepository.Weights.of(best[0], NeuralPolicy.BASE_BONUS);
+        r.weights = PolicyRepository.Weights.trained(best[0], NeuralPolicy.BASE_BONUS);
         out.policy = policies.insert(r);
         return out;
     }
@@ -411,7 +411,7 @@ public final class ArenaTraining {
     }
 
     private static NeuralPolicy neural(PolicyRepository.Record r, Arena.Input in) {
-        return new NeuralPolicy(r.weights.network(), in.priority, r.weights.bonus);
+        return r.policy(in.priority);
     }
 
     /** A champion's policy in the chain now: its current version, else its own brain (the slot's). */

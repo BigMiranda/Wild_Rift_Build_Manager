@@ -445,3 +445,93 @@ Campos novos, documentados no cabeçalho do `kits_7_3.yml`:
   `interrompe` igual a sem imunidade; puxão anulado no avanço imune. Com a ficha real, em 86 tempos de um E do Darius
   em volta da cabeçada, alguns puxões caem nela e são anulados e a maioria não. O ataque no Frágil como arremesso
   aplica `cc_aplicado:arremesso` no lugar do empurrão.
+
+### Parte C — Previsões genéricas e visão da IA (esquema 3) ✅
+- **Previsões** (calculadas pela ficha, para cada habilidade sobre o alvo atual, o inimigo 0; `Arena.predict`):
+  - `acerto_previsto` (`Self.hitChance`): o alvo precisa andar `escape` para sair da área e o efeito chega em `T`.
+    É 1 se o controle dele dura até lá; senão anda `velocidade × tempo livre` (a lentidão vale até acabar, depois a
+    velocidade cheia). Fica 1 se não alcança sair; senão `escape / distância que anda`, e ×0,8 se ele tem avanço
+    próprio pronto. Fora do alcance, 0. Por forma: linha (largura), cone (borda ou alcance), area (raio), canal (o
+    último golpe quando há, senão o 1º pulso), avanco (corpo do avanço; o Rolamento conta o ataque fortalecido;
+    avanço sem dano = 0), campo (atraso), elemental (aceleração 450 → 1250), ataque, alvo, empurrao e tudo_ou_nada
+    (com alvo: 1 no alcance).
+  - **Avanços que dependem de terreno** (E do Ornn): procura a parede ou o pilar no caminho, como o próprio avanço
+    para; sem terreno, 0. O acerto do corpo do avanço fica à parte em `Self.bodyHit` (fora do vetor).
+  - `reconjuracao_acertaria` (`recastHit`): a volta do elemental, da posição dele na direção Ornn → elemental, desde
+    que esteja ao alcance da cabeçada (senão 0, porque a reconjuração ainda espera); para o 2º avanço do Renekton, a
+    mesma conta de um avanço. Com a janela aberta, `tempo_ate_efeito` e as marcas do slot são as da reconjuração.
+  - `tempo_ate_efeito`, `encadeia_controle` (imobiliza e `T ∈ [controle − 0,3; controle + 0,1]`),
+    `consome_marca` / `aplica_marca`, e o mesmo para o ataque básico (`attackConsumesMark` / `attackAppliesMark`):
+    Frágil por imobilizar (efeitos, último golpe, onda do terreno, volta da R), o 3º dardo da Vayne, a marca do
+    K'Sante pelo ataque, a Hemorragia pela R do Darius (`por_acumulo`).
+  - **Decisões diferentes do prompt, com o motivo (medido no relatório Tático novo × antigo):**
+    - **5 → 6 valores por slot:** acerto, reconjuração, tempo, encadeia, consome, aplica.
+    - **Janela de percepção (`PERCEIVE` = 0,7 s):** o alvo só começa a sair nos últimos 0,7 s antes do efeito, a mesma
+      janela em que o Tático desvia. Sem isso, a R do Ornn (2,6 s de viagem) dava acerto ~0,3 contra qualquer alvo e
+      nunca era lançada, e o Tático novo perdia para o antigo.
+    - **Avanço pronto corta para ×0,8, não ×0,5:** quase todo campeão tem um avanço pronto quase sempre, e ×0,5 levava
+      o acerto de 1 para 0,5, abaixo do limiar.
+- **Fatos novos:**
+  - por alvo: `markLeft`, `marksConsumed`, `controlLeft`, `slowLeft`, `slowPct`, `resourcePct`, `overheatLeft`,
+    `dashReady`, `flashReady`, `cleanseReady`, `attackRange` e `reachesMe`;
+  - próprios: `overheatLeft`, `resourceZone`, `immuneDash`, `recastLeft`, `controlLeft` e `recentLoss` (vida perdida
+    nos últimos 2 s, amostrada a cada 0,1 s).
+- **Observation esquema 3** (`SCHEMA_VERSION = 3`, 153 entradas):
+  - as 85 do esquema 2 nas mesmas posições, depois 24 previsões (4 slots × 6), 2 do ataque, 6 próprias e 12 por
+    inimigo × 3;
+  - `Observation.migration(2)` é o mapa explícito de índices (0..84 → 0..84);
+  - as previsões e os fatos novos dos alvos são preenchidos à parte, na primeira leitura (`Observation.predicted()`;
+    `vector()` chama sozinho), porque a maioria das decisões das regras não os lê.
+- **Migração:** `Network.migrate(mapaEntradas, n, mapaSaídas, m, viés)`; as entradas novas pesam zero e as saídas
+  novas ficam com viés `ActionSpace.NEW_ACTION_BIAS` = −5, para a Parte D. Ela acontece:
+  - **ao carregar:** `PolicyRepository.find` migra os pesos uma vez e os guarda em cache; `Record.compatible()` aceita
+    esquemas migráveis; `Record.migratedFrom` aparece na tela como "(esquema 2, lida no atual)";
+  - **na partida quente:** a cadeia parte da versão migrada, porque `fits` lê as camadas já migradas.
+
+  🎯 `ArenaPolicyMigrationTest`: uma rede v2 aleatória (85 → 16 → 32), com o golden gravado no código v2 (commit
+  8a9f24b, `golden-ai-v2.txt`), carregada pelo caminho do repositório, **joga idêntica** em 4 lutas com cérebro `ai:`
+  (Ornn × Darius, Vayne × Renekton, K'Sante × Rumble, 3v3).
+- **A base residual guarda a versão das regras:** `Weights.base` = "tatico-previsoes" nas versões treinadas a partir
+  de agora; ausente nas antigas, que usam `TacticalPolicy.legacy` (as regras de antes), para jogarem igual. Por isso a
+  partida quente de uma versão v2 continua sobre as regras novas, que é a base nova do treino (Parte H).
+- **Tático com previsões** (`TacticalPolicy`, as regras em bits para medir cada uma):
+  - Purificar num atordoamento com mais de 1 s;
+  - Flash para fugir ao perder mais de 35% da vida em 2 s estando atrás (vida % menor que a do alvo, a menos de 600);
+  - reconjura só com `recastHit` ≥ 0,6;
+  - ataca primeiro quando o ataque consome marca;
+  - prefere a habilidade que encadeia controle;
+  - lança habilidade de mira só com acerto ≥ 0,6 (ou com o corpo do avanço acertando, para o E do Ornn sem parede);
+  - segura um imobilizar que o controle do alvo desperdiçaria em mais de 0,3 s.
+- **Purificar** passou a existir na arena (`combate_7_3.yml`): remove atordoamentos, lentidões e Exaustão (não
+  arremessos nem deslocamentos) e anula atordoamentos por 0,25 s. Pode ser usado atordoado: o `step` pergunta à
+  política com só o Purificar válido (`stunnedTurn`), exceto no roteiro.
+- **Tático novo × antigo** (`TacticalReportTest`, `-Darena.report=true`): 270 duelos, os 6 campeões nos dois lados, 3
+  rotas e Flash + Incendiar / Barreira / Purificar.
+
+  | Lado azul × lado vermelho | V | D | E |
+  |---|---|---|---|
+  | antigo × antigo (referência) | 123 | 145 | 2 |
+  | **novo × antigo** | **139** | **125** | 6 |
+  | antigo × roteiro | 144 | 120 | 6 |
+  | **novo × roteiro** | **168** | **96** | 6 |
+  | roteiro × roteiro | 138 | 132 | 0 |
+
+  Por campeão, novo × antigo contra a referência: Ornn 30/15 (18/26), K'Sante 11/32 (2/43), Vayne 36/9 (36/9),
+  Renekton 28/16 (29/15), Rumble 25/20 (27/18), Darius 9/33 (11/34).
+
+  Ablação com as regras de antes: a de mira com o limiar original, sozinha, fazia 99/165 (era a causa da piora) e o
+  resto sem ela 145/122. As correções acima resolveram isso.
+- **Benchmark** (10 núcleos / 20 threads, s simulados por s):
+
+  | Lutas | Antes da Rodada 3 (0ab31d1) | Depois da Parte C |
+  |---|---|---|
+  | roteiro, 1 thread | 15,0 mil | 13,9 mil (eventos) |
+  | roteiro, 20 threads | 137 mil | 120 mil |
+  | Tático, 1 thread | 4,5 mil | 3,2 mil |
+  | Tático, 20 threads | 38 mil | 27 mil |
+
+  Sem a leitura preguiçosa, o Tático caía para 2,0 mil.
+- Testes: `ArenaPredictionTest` (vetor no tamanho e em [−1, 1]; E sem parede = 0 e com parede ≥ 0,6; avanço pronto
+  reduz; marcas consumidas e aplicadas por habilidade; janela de encadeamento; volta do elemental ≥ 0,6),
+  `ArenaPolicyMigrationTest` (🎯 e o mapa de entradas e saídas). O `tacticalBeatsTheScriptOverAllDuels` de antes
+  passou (168 V / 98 D contra 138 / 132), e o Darius treinado ficou melhor que o roteiro em 77% da validação.

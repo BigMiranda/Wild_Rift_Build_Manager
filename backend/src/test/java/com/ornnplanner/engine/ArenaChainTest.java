@@ -121,7 +121,7 @@ class ArenaChainTest {
         old.champion = "Darius";
         old.objective = "win_fast";
         old.accepted = true;
-        old.obsSchema = Observation.SCHEMA_VERSION - 1;
+        old.obsSchema = 1;   // a layout no migration reads
         old.actions = ActionSpace.SIZE;
         old.weights = PolicyRepository.Weights.of(Network.zeros(Network.DEFAULT_LAYERS), 0.5);
         repo.insert(old);

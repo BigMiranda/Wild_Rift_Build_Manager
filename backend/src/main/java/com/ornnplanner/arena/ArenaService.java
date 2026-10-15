@@ -210,7 +210,7 @@ public class ArenaService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A IA v" + r.version + " é de " + r.champion
                         + ", não de " + in.f.champion + ".");
             }
-            return new NeuralPolicy(r.weights.network(), in.priority, r.weights.bonus);
+            return r.policy(in.priority);   // migrated when read, on the tactical rules it was trained over
         }
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cérebro desconhecido: " + brain + ".");
     }

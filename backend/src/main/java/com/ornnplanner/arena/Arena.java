@@ -262,6 +262,15 @@ public class Arena {
         final Map<String, double[]> recastWatch = new LinkedHashMap<>();
         final Set<double[]> recastUsed = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
         final Map<String, String> recastTry = new LinkedHashMap<>();
+        /** Marks of this unit consumed on each enemy (what the observation shows per target). */
+        final Map<U, Integer> consumedOn = new LinkedHashMap<>();
+        /** Health every 0.1s over the last 2s (oldest first): the recent loss a policy sees. */
+        final java.util.ArrayDeque<double[]> hpHistory = new java.util.ArrayDeque<>();
+        double nextHpSample;
+        /** Cleanse: stuns and slows are void until then. */
+        double cleanseUntil = -1;
+        /** Its dashes and leaps (slot -> kind), read once from the sheet. */
+        Map<String, String> mobility;
 
         U(int idx, Input in) {
             this.idx = idx;
@@ -723,6 +732,10 @@ public class Arena {
             moveDash(u);
             return;
         }
+        if (!u.canAct() && now < u.stunUntil && now >= u.airUntil && u.forced == null && now >= u.stasisUntil
+                && !u.dead && !(u.policy instanceof ScriptedPolicy) && spellReady(u, "Purificar")) {
+            stunnedTurn(u);   // a stun (only) keeps it from acting: it may still Cleanse
+        }
         if (!u.canAct() || now < u.busyUntil) {
             return;
         }
@@ -800,6 +813,22 @@ public class Arena {
                 }
             }
             return;
+        }
+    }
+
+    /** Stunned with Cleanse up: the policy is asked with only Cleanse valid; anything else leaves it stunned. */
+    private void stunnedTurn(U u) {
+        int cleanse = u.actives.indexOf("Purificar");
+        if (cleanse < 0) {
+            return;
+        }
+        int action = ActionSpace.active(cleanse);
+        Turn turn = new Turn(u, false);
+        turn.only = action;
+        if (u.policy.decide(turn.obs, turn).action == action && "done".equals(useSpellNimbus(u, "Purificar", null, null, null))) {
+            if (recordFrames) {
+                result.policyOrders.add(asOrder(turn, action));
+            }
         }
     }
 
@@ -1018,6 +1047,8 @@ public class Arena {
         final U target;
         final Observation obs;
         boolean castsOver;
+        /** The one valid action (Cleanse while stunned), or -1. */
+        int only = -1;
         private List<U> others;
         private boolean[] blocked;
         private double[] threat;
@@ -1027,7 +1058,7 @@ public class Arena {
             this.u = u;
             this.acted = acted;
             this.target = target(u);
-            this.obs = new Observation(o -> observe(this, o));
+            this.obs = new Observation(o -> observe(this, o), o -> predictAll(this, o));
         }
 
         /** Enemy slot k: 0 = the current target, then the other targetable, visible enemies by distance. */
@@ -1067,6 +1098,9 @@ public class Arena {
         public boolean valid(int action) {
             if (action < 0 || action >= ActionSpace.SIZE || blocked != null && blocked[action]) {
                 return false;
+            }
+            if (only >= 0) {
+                return action == only;
             }
             if (ActionSpace.isCast(action)) {
                 U t = enemy(ActionSpace.enemyOf(action));
@@ -1164,6 +1198,26 @@ public class Arena {
         return t != null && dist(u.x, u.y, t.x, t.y) - t.radius() <= range;
     }
 
+    /**
+     * The predictions on the current target and the enemies' schema 3 facts: computed apart, on the first read of them
+     * ({@link Observation#predicted}), since most decisions of the rules never look at them.
+     */
+    private void predictAll(Turn turn, Observation o) {
+        U u = turn.u;
+        Observation.Self s = o.rawSelf();
+        U t0 = turn.enemy(0);
+        if (t0 != null) {
+            for (int k = 0; k < ActionSpace.SLOTS.size(); k++) {
+                predict(u, t0, k, s);
+            }
+            s.attackConsumesMark = attackConsumes(u, t0);
+            s.attackAppliesMark = attackApplies(u);
+        }
+        for (int k = 0; k < ActionSpace.ENEMIES; k++) {
+            enemyFacts(u, turn.enemy(k), o.rawEnemy(k));
+        }
+    }
+
     /** The facts a policy sees (see {@link Observation}). */
     private void observe(Turn turn, Observation o) {
         U u = turn.u;
@@ -1201,6 +1255,26 @@ public class Arena {
         for (int k = 0; k < ActionSpace.ENEMIES; k++) {
             other(u, turn.enemy(k), o.rawEnemy(k), true);
         }
+        // schema 3: predictions on the current target, and the champion's own new facts
+        for (int k = 0; k < ActionSpace.SLOTS.size(); k++) {
+            Map<String, Object> ab = ability(u, ActionSpace.SLOTS.get(k));
+            s.aimed[k] = ab != null && AIMED.contains(String.valueOf(ab.get("forma")))
+                    && !(Boolean.TRUE.equals(ab.get("sem_dano")) && ab.get("proximo_ataque") == null);   // not a bare dash
+            s.immobilizes[k] = ab != null && controls(u, ActionSpace.SLOTS.get(k));
+        }
+        s.overheatLeft = Math.max(0, u.overheatedUntil - now);
+        s.resourceZone = resourceZone(u);
+        s.immuneDash = u.dash != null && u.dash.immune;
+        double recastLeft = 0;
+        for (Map.Entry<String, double[]> e : u.recast.entrySet()) {
+            double[] w = e.getValue();
+            if (!e.getKey().contains(":") && now >= w[0] - 1e-9 && now <= w[1]) {
+                recastLeft = recastLeft == 0 ? w[1] - now : Math.min(recastLeft, w[1] - now);
+            }
+        }
+        s.recastLeft = recastLeft;
+        s.controlLeft = controlLeft(u);
+        s.recentLoss = recentLoss(u);
         List<U> allies = allies(u);
         allies.sort(Comparator.comparingDouble(a -> dist(u.x, u.y, a.x, a.y)));
         for (int k = 0; k < Observation.ALLIES; k++) {
@@ -1228,6 +1302,354 @@ public class Arena {
                 o.inAbilityRange[k] = ab != null && inUseRange(u, x, ab);
             }
         }
+    }
+
+    /** The schema 3 facts of an enemy slot (read with the predictions, only when a policy asks for them). */
+    private void enemyFacts(U u, U x, Observation.Other o) {
+        if (x == null) {
+            return;
+        }
+        {
+            o.markLeft = markLeft(u, x);
+            o.marksConsumed = u.consumedOn.getOrDefault(x, 0);
+            o.controlLeft = controlLeft(x);
+            o.slowPct = x.slowPct();
+            o.slowLeft = o.slowPct > 0 ? Math.max(0, x.slowUntil() - now) : 0;
+            Map<String, Object> res = map(x.kit("recurso"));
+            o.resourcePct = res == null ? 0 : x.resource / Math.max(1, num(res.get("max"), 100));
+            o.overheatLeft = Math.max(0, x.overheatedUntil - now);
+            o.dashReady = dashReady(x);
+            o.flashReady = spellReady(x, "Flash");
+            o.cleanseReady = spellReady(x, "Purificar");
+            o.attackRange = x.attackRange();
+            o.reachesMe = o.distance <= x.attackRange() + u.radius() + x.radius();
+        }
+    }
+
+    // ------------------------------------------------------------------ predictions (observation schema 3)
+
+    /** Shapes of abilities that are aimed at a place, so the target can step out before they land. */
+    static final Set<String> AIMED = Set.of("linha", "cone", "area", "canal", "avanco", "campo", "elemental");
+
+    /** Seconds a target needs to react before it starts stepping out of a skillshot it sees coming. */
+    static final double REACTION = 0.2;
+    /**
+     * How long before an effect lands a target can tell where it will land and start stepping out (the tactical
+     * autopilot dodges within the same window): earlier than that, a long skillshot still looks like it could go anywhere.
+     */
+    static final double PERCEIVE = 0.7;
+    /** A target free to move with a dash of its own up: the hit chance is cut by this. */
+    static final double DASH_DODGE = 0.8;
+
+    private boolean spellReady(U u, String name) {
+        return u.f.spells.contains(name) && now >= u.ready.getOrDefault(name, 0.0) - 1e-9;
+    }
+
+    /** Share of its maximum health the unit lost in the last 2s (0 when it gained). */
+    private double recentLoss(U u) {
+        double[] first = u.hpHistory.peekFirst();
+        return first == null ? 0 : Math.max(0, (first[1] - u.hp) / Math.max(1, u.maxHp));
+    }
+
+    private boolean resourceZone(U u) {
+        Map<String, Object> res = map(u.kit("recurso"));
+        if (res == null) {
+            return false;
+        }
+        if ("calor".equals(res.get("tipo"))) {
+            return u.resource >= num(res.get("zona_de_perigo"), 50) && now >= u.overheatedUntil;
+        }
+        return "furia".equals(res.get("tipo")) && u.resource >= num(res.get("limiar"), 50);
+    }
+
+    /** Move speed without its slows (the speed it gets back when they end). */
+    private double unslowedSpeed(U u) {
+        double ms = u.stat(Stats.MOVE_SPEED) * (1 + u.stat("% Move Speed") / 100);
+        double up = 0;
+        for (double[] x : u.speedUps) {
+            if (now < x[1]) {
+                up += x[0];
+            }
+        }
+        return Math.max(0, ms * (1 + up));
+    }
+
+    /**
+     * Chance (0..1) that a target cannot leave an area it needs `escape` units to get out of, before an effect that
+     * lands in `seconds`: 1 when it is held until then (or cannot cover the distance), less the farther it can walk,
+     * halved when it is free with a dash of its own up. 0 when it is already out (escape <= 0).
+     */
+    private double hitChance(U t, double seconds, double escape) {
+        if (escape <= 0) {
+            return 0;
+        }
+        double held = controlLeft(t);
+        if (held >= seconds - 1e-9) {
+            return 1;
+        }
+        // it starts stepping out once the effect is close enough to judge where it lands (and after reacting)
+        double free = Math.min(seconds - held, PERCEIVE) - REACTION;
+        if (free <= 0) {
+            return 1;
+        }
+        double slowLeft = t.slowPct() > 0 ? Math.max(0, t.slowUntil() - now - held) : 0;
+        double slowed = Math.min(free, slowLeft);
+        double walk = t.moveSpeed() * slowed + unslowedSpeed(t) * (free - slowed);
+        double p = walk <= escape ? 1 : escape / walk;
+        return dashReady(t) ? p * DASH_DODGE : p;
+    }
+
+    /** Seconds Ornn's elemental (or any accelerating unit) takes to cover a distance. */
+    private static double accelTime(double distance, double v0, double accel, double vmax) {
+        if (distance <= 0) {
+            return 0;
+        }
+        if (accel <= 0) {
+            return distance / Math.max(1, v0);
+        }
+        double tMax = Math.max(0, (vmax - v0) / accel);
+        double dMax = v0 * tMax + accel * tMax * tMax / 2;
+        if (distance <= dMax) {
+            return (-v0 + Math.sqrt(v0 * v0 + 2 * accel * distance)) / accel;
+        }
+        return tMax + (distance - dMax) / Math.max(1, vmax);
+    }
+
+    /**
+     * Where a dash from the unit along an angle first meets terrain (a wall of the lane, a pillar) within its range, as
+     * the dash itself stops: {x, y, distance}, or null.
+     */
+    private double[] terrainAlong(U u, double angle, double range) {
+        double r = u.radius();
+        for (double d = 20; d <= range + 1e-6; d += 20) {
+            double x = u.x + Math.cos(angle) * d;
+            double y = u.y + Math.sin(angle) * d;
+            if (Math.abs(y) > halfWidth - r || x < 0 || x > length || blocked(x, y, r)) {
+                return new double[] {u.x + Math.cos(angle) * (d - 20), u.y + Math.sin(angle) * (d - 20), d - 20};
+            }
+        }
+        return null;
+    }
+
+    /** Effects of a sheet entry (or of its last hit) that immobilize: what consumes a Brittle on the target. */
+    private static boolean immobilizesNow(Map<String, Object> ef) {
+        return ef != null && (ef.get("atordoa") != null || ef.get("arremessa") != null || ef.get("puxa") != null);
+    }
+
+    /** The side's Brittle is on the target. */
+    private static boolean brittleOn(U u, U t, double now) {
+        return t.brittleBy != null && now < t.brittleUntil && t.brittleBy.team() == u.team() && map(t.brittleBy.kit("fragil")) != null;
+    }
+
+    /** Seconds left of the longest mark of the champion's side on the target. */
+    private double markLeft(U u, U t) {
+        double left = brittleOn(u, t, now) ? t.brittleUntil - now : 0;
+        double[] b = u.bolts.get(t);
+        if (b != null && b[0] > 0 && now < b[1]) {
+            left = Math.max(left, b[1] - now);
+        }
+        Double k = u.ksMarks.get(t);
+        if (k != null && now < k) {
+            left = Math.max(left, k - now);
+        }
+        double[] st = u.stacks.get(t);
+        if (st != null && st[0] > 0 && now < st[1]) {
+            left = Math.max(left, st[1] - now);
+        }
+        return left;
+    }
+
+    /** The bolt that a hit now would add is the one that pops them (Vayne's third). */
+    private boolean boltPops(U u, U t) {
+        Map<String, Object> m = map(u.kit("marcas"));
+        if (m == null || u.rank(String.valueOf(m.get("habilidade"))) <= 0) {
+            return false;
+        }
+        double[] st = u.bolts.get(t);
+        return st != null && now < st[1] && st[0] + 1 >= num(m.get("max"), 3);
+    }
+
+    private boolean attackConsumes(U u, U t) {
+        Map<String, Object> fr = map(u.kit("fragil"));
+        if (fr != null && fr.get("ataques") != null && brittleOn(u, t, now)) {
+            return true;
+        }
+        Double k = u.ksMarks.get(t);
+        return boltPops(u, t) || k != null && now < k && map(u.kit("marcas_ksante")) != null;
+    }
+
+    private boolean attackApplies(U u) {
+        Map<String, Object> m = map(u.kit("marcas"));
+        return m != null && u.rank(String.valueOf(m.get("habilidade"))) > 0 || map(u.kit("acumulos")) != null;
+    }
+
+    /** An ability's spec consumes / applies a mark on the target (its effects, last hit, wall, empowered attack). */
+    private boolean consumes(U u, U t, Map<String, Object> ab, boolean recast) {
+        Map<String, Object> rec = map(ab.get("reconjurar"));
+        Map<String, Object> ef = recast && rec != null ? map(rec.get("efeitos")) : map(ab.get("efeitos"));
+        boolean immobilize = immobilizesNow(ef) || !recast && (immobilizesNow(map(ab.get("ultimo_golpe")))
+                || immobilizesNow(map(ab.get("terreno"))));
+        if (immobilize && brittleOn(u, t, now)) {
+            return true;
+        }
+        if (!recast && (Boolean.TRUE.equals(ab.get("marca")) || "ataque".equals(ab.get("forma")) && attackConsumes(u, t))
+                && boltPops(u, t)) {
+            return true;
+        }
+        if (!recast && ab.get("por_acumulo") != null) {
+            double[] st = u.stacks.get(t);
+            return st != null && st[0] > 0 && now < st[1];
+        }
+        return false;
+    }
+
+    private boolean applies(U u, Map<String, Object> ab, boolean recast) {
+        Map<String, Object> rec = map(ab.get("reconjurar"));
+        Map<String, Object> ef = recast && rec != null ? map(rec.get("efeitos")) : map(ab.get("efeitos"));
+        if (ef != null && (ef.get("fragil") != null || ef.get("acumulos") != null || Boolean.TRUE.equals(ef.get("marca")))) {
+            return true;
+        }
+        Map<String, Object> last = map(ab.get("ultimo_golpe"));
+        return !recast && (last != null && last.get("fragil") != null || Boolean.TRUE.equals(ab.get("marca")));
+    }
+
+    /** What the ability of slot k would do on the target if cast now (the recast's part when its window is open). */
+    private void predict(U u, U t, int k, Observation.Self s) {
+        String slot = ActionSpace.SLOTS.get(k);
+        Map<String, Object> ab = ability(u, slot);
+        if (ab == null || u.rank(slot) <= 0) {
+            return;
+        }
+        double[] w = u.recast.get(slot);
+        boolean recastOpen = w != null && now >= w[0] - 1e-9 && now <= w[1];
+        double[] cast = castPrediction(u, t, ab);
+        s.hitChance[k] = cast[0];
+        s.timeToEffect[k] = cast[1];
+        s.bodyHit[k] = cast.length > 2 ? cast[2] : cast[0];
+        if (recastOpen) {
+            double[] rec = recastPrediction(u, t, slot, ab);
+            s.recastHit[k] = rec[0];
+            s.timeToEffect[k] = rec[1];
+        }
+        double held = controlLeft(t);
+        boolean immobilizes = recastOpen ? immobilizesNow(map(map(ab.get("reconjurar")) == null ? null
+                : map(ab.get("reconjurar")).get("efeitos"))) : controls(u, slot);
+        s.chainsControl[k] = immobilizes && held > 1e-9 && s.timeToEffect[k] >= held - CHAIN_SLACK - 1e-9
+                && s.timeToEffect[k] <= held + 0.1 + 1e-9;
+        s.consumesMark[k] = consumes(u, t, ab, recastOpen);
+        s.appliesMark[k] = applies(u, ab, recastOpen);
+    }
+
+    /** {hit chance, seconds to effect} of casting the ability at the target now. */
+    private double[] castPrediction(U u, U t, Map<String, Object> ab) {
+        String shape = String.valueOf(ab.get("forma"));
+        double d = dist(u.x, u.y, t.x, t.y);
+        double r = t.radius();
+        double cast = num(ab.get("conjuracao"), 0);
+        double angle = Math.atan2(t.y - u.y, t.x - u.x);
+        switch (shape) {
+            case "linha": {
+                double range = num(ab.get("alcance"), 800);
+                double time = cast + Math.max(0, d - r) / Math.max(1, num(ab.get("velocidade"), 1500));
+                return new double[] {d - r > range ? 0 : hitChance(t, time, num(ab.get("largura"), 100) / 2 + r), time};
+            }
+            case "cone": {
+                double range = num(ab.get("alcance"), 450);
+                double half = Math.toRadians(num(ab.get("angulo"), 50)) / 2;
+                double escape = Math.min(range + r - d, d * Math.sin(half) + r);
+                return new double[] {d - r > range ? 0 : hitChance(t, cast, escape), cast};
+            }
+            case "area": {
+                double radius = num(ab.get("raio"), 300);
+                return new double[] {hitChance(t, cast, radius + r - d), cast};
+            }
+            case "canal": {
+                double dur = num(ab.get("duracao"), 1);
+                double time = ab.get("ultimo_golpe") != null ? dur : num(ab.get("intervalo"), 0.25);
+                double range = num(ab.get("alcance"), 500);
+                double escape = ab.get("angulo") != null ? range + r - d
+                        : Math.min(range + r - d, num(ab.get("largura"), 300) / 2 + r);
+                return new double[] {hitChance(t, time, escape), time};
+            }
+            case "avanco": {
+                double range = num(ab.get("alcance"), 400);
+                double speed = num(ab.get("velocidade"), 1200) + (Boolean.TRUE.equals(ab.get("velocidade_mais_vdm")) ? u.moveSpeed() : 0);
+                Map<String, Object> charge = map(ab.get("carregar"));
+                double wait = cast + (charge == null ? 0 : num(charge.get("max"), 1));
+                Map<String, Object> wall = map(ab.get("terreno"));
+                double hr = num(ab.get("raio"), 100);
+                double bodyTime = wait + Math.max(0, d - hr - r) / Math.max(1, speed);
+                double body = d - hr - r > range ? 0 : hitChance(t, bodyTime, hr + r);
+                if (wall != null) {
+                    // only the shockwave of a wall or pillar on the way holds the target (the body's hit is kept apart)
+                    double[] hit = terrainAlong(u, angle, range);
+                    if (hit == null) {
+                        return new double[] {0, wait + range / Math.max(1, speed), body};
+                    }
+                    double time = wait + hit[2] / Math.max(1, speed);
+                    return new double[] {hitChance(t, time, num(wall.get("raio"), 360) + r - dist(hit[0], hit[1], t.x, t.y)), time, body};
+                }
+                if (Boolean.TRUE.equals(ab.get("sem_dano"))) {
+                    if (ab.get("proximo_ataque") == null) {
+                        return new double[] {0, wait};   // a bare dash hits nobody
+                    }
+                    // a dash that empowers the next attack (Vayne's Tumble): the attack is targeted once in reach
+                    double time = wait + range / Math.max(1, speed) + num(u.kit("espera_ataque"), 0.25) / u.attackSpeed();
+                    return new double[] {d - r <= range + u.attackRange() + u.radius() ? 1 : 0, time};
+                }
+                return new double[] {body, bodyTime};
+            }
+            case "campo": {
+                double time = cast + num(ab.get("atraso"), 0.75);
+                return new double[] {d > num(ab.get("alcance"), 1700) ? 0 : hitChance(t, time, num(ab.get("largura"), 390) / 2 + r), time};
+            }
+            case "elemental": {
+                double far = num(ab.get("distancia"), 2550);
+                double time = cast + accelTime(far - d, num(ab.get("velocidade"), 450), num(ab.get("aceleracao"), 400),
+                        num(ab.get("velocidade_final"), 1250));
+                return new double[] {d > far ? 0 : hitChance(t, time, num(ab.get("largura"), 340) / 2 + r), time};
+            }
+            case "ataque":
+                return new double[] {d <= u.attackRange() + num(ab.get("alcance_extra"), 0) + u.radius() + r ? 1 : 0,
+                    cast + num(u.kit("espera_ataque"), 0.25) / u.attackSpeed()};
+            case "proprio":
+                return new double[] {1, cast};
+            case "empurrao":
+                return new double[] {d - r <= num(ab.get("alcance"), 500) ? 1 : 0,
+                    cast + d / Math.max(1, num(ab.get("velocidade_projetil"), 2200))};
+            default:   // alvo, tudo_ou_nada: targeted, it lands when in range
+                return new double[] {inUseRange(u, t, ab) ? 1 : 0, cast};
+        }
+    }
+
+    /** {hit chance, seconds to effect} of the open recast of a slot on the target. */
+    private double[] recastPrediction(U u, U t, String slot, Map<String, Object> ab) {
+        Map<String, Object> rec = map(ab.get("reconjurar"));
+        if (rec == null) {
+            return new double[] {0, 0};
+        }
+        if ("elemental".equals(ab.get("forma"))) {
+            Elemental e = u.elemental;
+            if (e == null || e.redirected) {
+                return new double[] {0, 0};
+            }
+            double reach = e.width / 2 + u.radius() + num(rec.get("cabecada"), 200) + 60;
+            if (dist(u.x, u.y, e.x, e.y) > reach) {
+                return new double[] {0, 0};   // not within the headbutt's reach yet
+            }
+            double a = Math.atan2(e.y - u.y, e.x - u.x);
+            double dx = Math.cos(a);
+            double dy = Math.sin(a);
+            double along = (t.x - e.x) * dx + (t.y - e.y) * dy;
+            double across = Math.abs((t.x - e.x) * dy - (t.y - e.y) * dx);
+            double far = num(rec.get("distancia"), 1500);
+            double time = num(rec.get("cabecada"), 200) / 1600 + Math.max(0, along) / Math.max(1, num(rec.get("velocidade"), 1250));
+            if (along < -t.radius() - e.width / 2 || along > far + t.radius()) {
+                return new double[] {0, time};
+            }
+            return new double[] {hitChance(t, time, e.width / 2 + t.radius() - across), time};
+        }
+        return castPrediction(u, t, ab);   // a second dash of the same sheet (Renekton's Dice)
     }
 
     /** One order of the timeline: done, wait (try again next step) or drop (impossible). */
@@ -1588,6 +2010,7 @@ public class Arena {
         if (mk != null && now < mk && ksm != null) {
             s.ksCounted.remove(t);
             count(s, "marca_consumida:" + ksMark(s) + ":ataque");
+            s.consumedOn.merge(t, 1, Integer::sum);
             deal(s, t, formula(map(ksm.get("dano")), s, t, 1), "fisico", "Instinto Destemido", ABILITY, 0);
         }
         // Vayne: Silver Bolts on the third hit in a row.
@@ -1971,6 +2394,7 @@ public class Arena {
                     extra = st != null && now < st[1] ? st[0] * num(ab.get("por_acumulo"), 0) : 0;
                     if (extra > 0) {
                         count(u, "marca_consumida:" + map(u.kit("acumulos")).get("nome") + ":" + slot);
+                        u.consumedOn.merge(t, 1, Integer::sum);
                     }
                 }
                 if (ab.get("_parsed") != null) {
@@ -2714,6 +3138,7 @@ public class Arena {
             st[0] = 0;
             s.boltCounted.remove(t);
             count(s, "marca_consumida:" + mark + ":" + via);
+            s.consumedOn.merge(t, 1, Integer::sum);
             Map<String, Object> d = map(m.get("dano"));
             int rank = s.rank(String.valueOf(m.get("habilidade")));
             double v = Math.max(formula(d, s, t, rank), val(d, "minimo", rank, s.f.level, 0));
@@ -2843,6 +3268,13 @@ public class Arena {
             case "Fantasma":
                 u.speedUps.add(new double[] {0.5, now + 3});
                 u.speedUps.add(new double[] {0.25, now + 8});
+                break;
+            case "Purificar":
+                // removes stuns, slows and Exhaust (not knock-ups or displacements); stuns are void for a moment after
+                u.stunUntil = Math.min(u.stunUntil, now);
+                u.slows.clear();
+                u.exhaustUntil = Math.min(u.exhaustUntil, now);
+                u.cleanseUntil = now + num(spell == null ? null : spell.get("imunidade"), 0.25);
                 break;
             default:
                 return "drop";
@@ -2992,6 +3424,9 @@ public class Arena {
             count(t, "atordoamento_adiado");
             return;
         }
+        if (now < t.cleanseUntil) {
+            return;   // Cleanse's moment of immunity
+        }
         double before = controlLeft(t);
         double end = now + seconds * (1 - Math.min(0.9, t.stat("% Tenacity") / 100));
         ccNoted(by, t, "atordoamento", before, end - now);
@@ -3029,6 +3464,7 @@ public class Arena {
         t.brittleBy = null;
         t.brittleCounted = -1;
         count(s, "marca_consumida:" + BRITTLE + ":" + via);
+        s.consumedOn.merge(t, 1, Integer::sum);
         event(s, "quebrou o Frágil de " + t.f.name);
         Map<String, Object> d = map(m.get("dano"));
         deal(by, t, formula(d, by, t, 1), type(d), "Frágil", DOT, 0);
@@ -4513,6 +4949,13 @@ public class Arena {
      * its abilities (dashes; targeted abilities that leap).
      */
     Map<String, String> mobility(U u) {
+        if (u.mobility == null) {
+            u.mobility = readMobility(u);
+        }
+        return u.mobility;
+    }
+
+    private Map<String, String> readMobility(U u) {
         Map<String, Object> m = map(u.kit("mobilidade"));
         Map<String, String> out = new LinkedHashMap<>();
         if (m != null) {
@@ -4632,6 +5075,13 @@ public class Arena {
         for (U t : units) {
             if (t.dead) {
                 continue;
+            }
+            if (now >= t.nextHpSample - 1e-9) {
+                t.nextHpSample = now + 0.1;
+                t.hpHistory.addLast(new double[] {now, t.hp});
+                while (t.hpHistory.size() > 1 && t.hpHistory.peekFirst()[0] < now - 2 - 1e-9) {
+                    t.hpHistory.removeFirst();
+                }
             }
             if (now < t.stunUntil || now < t.airUntil || t.forced != null) {
                 count(t, "tempo_controlado", DT);

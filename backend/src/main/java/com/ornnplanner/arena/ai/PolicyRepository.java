@@ -82,19 +82,64 @@ public class PolicyRepository {
             r.chainRound = chainRound;
             r.teamPlan = teamPlan;
             r.parentId = parentId;
+            r.migratedFrom = migratedFrom;
             return r;
         }
 
-        /** Weights of the current observation and action layout. */
+        /** The observation schema its weights were migrated from when read (null = saved with the current one). */
+        public Integer migratedFrom;
+
+        /**
+         * Weights of the current observation and action layout, or of an older one they migrate from when read
+         * ({@link #upgrade}): usable either way.
+         */
         public boolean compatible() {
-            return obsSchema == Observation.SCHEMA_VERSION && actions == ActionSpace.SIZE;
+            return migratable(obsSchema, actions);
+        }
+
+        /** The learned policy of these weights, on the base it was trained with. */
+        public NeuralPolicy policy(List<String> priority) {
+            return weights.policy(priority);
         }
     }
 
+    /** Observation schemas whose weights read into the current one, and the action counts they had. */
+    static final Map<Integer, Integer> OBS_SIZES = Map.of(2, Observation.V2_SIZE, 3, Observation.SIZE);
+    /** Actions of the layouts before the current one (32 until combos). */
+    static final List<Integer> OLD_ACTIONS = List.of(32);
+
+    public static boolean migratable(int obsSchema, int actions) {
+        return OBS_SIZES.containsKey(obsSchema) && obsSchema <= Observation.SCHEMA_VERSION
+                && (actions == ActionSpace.SIZE || OLD_ACTIONS.contains(actions));
+    }
+
+    /**
+     * Weights of an older layout in the current one: the observation's inputs by the explicit index map of its schema
+     * ({@link Observation#migration}, new inputs weigh zero) and the actions by theirs ({@link ActionSpace#migration},
+     * new actions start at {@link ActionSpace#NEW_ACTION_BIAS}). The same weights when already current or unknown.
+     */
+    public static Weights upgrade(Weights w, int obsSchema, int actions) {
+        if (w == null || w.layers == null || !migratable(obsSchema, actions)
+                || obsSchema == Observation.SCHEMA_VERSION && actions == ActionSpace.SIZE
+                || w.layers[0] != OBS_SIZES.get(obsSchema)) {
+            return w;
+        }
+        Network net = w.network().migrate(Observation.migration(obsSchema), Observation.SIZE,
+                ActionSpace.migration(actions), ActionSpace.SIZE, ActionSpace.NEW_ACTION_BIAS);
+        Weights out = Weights.of(net, w.bonus);
+        out.base = w.base;
+        return out;
+    }
+
     public static class Weights {
+        /** The tactical rules it is residual over: the ones with predictions (schema 3 on), null for older versions. */
+        public static final String PREDICTIVE = "tatico-previsoes";
+
         public int[] layers;
         public double[] weights;
         public double bonus = NeuralPolicy.BASE_BONUS;
+        /** {@link #PREDICTIVE}, or null: the tactical rules before the predictions ({@link TacticalPolicy#legacy}). */
+        public String base;
 
         public static Weights of(Network net, double bonus) {
             Weights w = new Weights();
@@ -104,8 +149,21 @@ public class PolicyRepository {
             return w;
         }
 
+        /** Weights of a new training: residual over the tactical rules with predictions. */
+        public static Weights trained(Network net, double bonus) {
+            Weights w = of(net, bonus);
+            w.base = PREDICTIVE;
+            return w;
+        }
+
         public Network network() {
             return new Network(layers, weights);
+        }
+
+        /** The policy of these weights on their own base. */
+        public NeuralPolicy policy(List<String> priority) {
+            return new NeuralPolicy(network(), bonus,
+                    PREDICTIVE.equals(base) ? new TacticalPolicy(priority) : TacticalPolicy.legacy(priority));
         }
     }
 
@@ -133,7 +191,8 @@ public class PolicyRepository {
     public Optional<Record> find(long id) {
         List<Record> out = jdbc.query("SELECT " + COLUMNS + ", weights_json FROM arena_policy WHERE id = ?", (rs, i) -> {
             Record r = row(rs, i);
-            r.weights = cache.computeIfAbsent(r.id, k -> read(rs));
+            // older layouts are migrated once, when read ("migrate on load")
+            r.weights = cache.computeIfAbsent(r.id, k -> upgrade(read(rs), r.obsSchema, r.actions));
             return r;
         }, id);
         return out.stream().findFirst();
@@ -238,6 +297,9 @@ public class PolicyRepository {
         r.chainId = rs.getString("chain_id");
         r.chainRound = integer(rs, "chain_round");
         r.parentId = lng(rs, "parent_id");
+        if (r.obsSchema != Observation.SCHEMA_VERSION && r.compatible()) {
+            r.migratedFrom = r.obsSchema;   // its weights are migrated when read
+        }
         String plan = rs.getString("team_plan");
         if (plan != null) {
             try {

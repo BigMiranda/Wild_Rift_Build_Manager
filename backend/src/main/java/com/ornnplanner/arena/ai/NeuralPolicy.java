@@ -25,10 +25,20 @@ public final class NeuralPolicy implements Policy {
         this(net, priority, BASE_BONUS);
     }
 
+    /** Residual over the tactical autopilot with predictions (what training uses since observation schema 3). */
     public NeuralPolicy(Network net, List<String> priority, double bonus) {
+        this(net, bonus, new TacticalPolicy(priority));
+    }
+
+    /** Residual over a given base (a saved version keeps the base it was trained on: {@link TacticalPolicy#legacy}). */
+    public NeuralPolicy(Network net, double bonus, Policy base) {
         this.net = net;
-        this.base = new TacticalPolicy(priority);
+        this.base = base;
         this.bonus = bonus;
+    }
+
+    public Policy base() {
+        return base;
     }
 
     public Network network() {

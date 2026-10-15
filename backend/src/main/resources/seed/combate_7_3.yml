@@ -139,6 +139,9 @@ feiticos:
   Exaustão: {reduz_dano_causado: 0.40, duracao: 2.5}
   Barreira: {escudo: 120, escudo_nv15: 560}
   Curar: {cura: 110, cura_nv15: 400}
+  # Purificar: remove atordoamentos, lentidões e Exaustão (não arremessos nem deslocamentos) e anula atordoamentos
+  # por `imunidade` s; pode ser usado atordoado (WR)
+  Purificar: {imunidade: 0.25}
 
 # Status da build que só valem depois de um tempo ou de acertos na luta: até lá são descontados (a build conta com eles
 # ligados no simulador, mesmo com o condicional da compra / do campeão desligado). Chave: item, runa ou efeito de
