@@ -980,7 +980,10 @@ td.nowrap { white-space: nowrap; }
 .effect-value.dmg-fisico { border-left-color: #f08c3c; }
 .effect-value.dmg-magico { border-left-color: #a07af0; }
 .effect-value.dmg-verdadeiro { border-left-color: #e6e9ee; }
-.dock-passives { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 4px 16px; padding: 6px 0 2px;
-  max-height: 40vh; overflow-y: auto; }
+.dock-passives { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 4px 16px; padding: 6px 0 2px;
+  max-height: 32vh; overflow-y: auto; }
+.dock-passives-head { grid-column: 1 / -1; }
 .dock-passive-src { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-2); }
 .dock-passive .effect-values { margin-top: 2px; }
+.effect-detail { display: block; color: var(--muted); font-size: 11px; margin-top: 1px; }
+.effect-values.stale, .dock-passives.stale .effect-values { opacity: .5; }

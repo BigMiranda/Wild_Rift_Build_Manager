@@ -207,12 +207,17 @@ function ShareBar({ value, thin = false }) {
  */
 /** One effect's value line: the number in the damage type's color. */
 export function EffectValue({ v }) {
-  return <li className={`effect-value${v.type ? ` dmg-${v.type}` : ''}`}>{v.text}</li>;
+  return (
+    <li className={`effect-value${v.type ? ` dmg-${v.type}` : ''}`}>
+      {v.text}
+      {v.detail && <small className="effect-detail">{v.detail}</small>}
+    </li>
+  );
 }
 
 export function PassivesPanel({ point, series, itemsById, builds = [], draft }) {
   const read = useItemReader();
-  const values = useEffectValues(builds.length > 1 ? null : draft, point?.minute);
+  const { values, stale } = useEffectValues(builds.length > 1 ? null : draft, point?.minute);
   if (!point) return null;
   if (builds.length > 1) {
     const columns = builds.map((b) => ({
@@ -253,7 +258,7 @@ export function PassivesPanel({ point, series, itemsById, builds = [], draft }) 
               <ItemIcon id={g.itemId} size={24} />{g.itemName}
             </button>
             {valuesOf(g.itemName).length > 0 && (
-              <ul className="effect-values" title={t('passives.valuesTitle')}>
+              <ul className={`effect-values${stale ? ' stale' : ''}`} title={t('passives.valuesTitle')}>
                 {valuesOf(g.itemName).map((v, k) => <EffectValue key={k} v={v} />)}
               </ul>
             )}
@@ -279,7 +284,7 @@ export function PassivesPanel({ point, series, itemsById, builds = [], draft }) 
             {others.map((name) => (
               <li key={name}>
                 <span className="with-icon passive-item">{findRune(name) && <img src={runeIcon(findRune(name))} alt="" width={22} height={22} className="rune-img on" />}{name}</span>
-                <ul className="effect-values">{valuesOf(name).map((v, k) => <EffectValue key={k} v={v} />)}</ul>
+                <ul className={`effect-values${stale ? ' stale' : ''}`}>{valuesOf(name).map((v, k) => <EffectValue key={k} v={v} />)}</ul>
               </li>
             ))}
           </ul>

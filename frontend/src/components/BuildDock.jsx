@@ -31,9 +31,14 @@ const loadOpen = () => {
  * chart's selected minute, or the last purchase) and its stats in a collapsible row. Clicking an item opens its full
  * reading (stats, passives, modeled effects and what it adds at that moment) right there.
  */
-/** One effect's value line in the bar (the damage type's color on the left). */
+/** One effect's value line in the bar (the damage type's color on the left), with how it adds up. */
 function DockValue({ v }) {
-  return <li className={`effect-value${v.type ? ` dmg-${v.type}` : ''}`}>{v.text}</li>;
+  return (
+    <li className={`effect-value${v.type ? ` dmg-${v.type}` : ''}`}>
+      {v.text}
+      {v.detail && <small className="effect-detail">{v.detail}</small>}
+    </li>
+  );
 }
 
 const PASSIVES_KEY = 'ornn-planner-dock-passives';
@@ -55,7 +60,7 @@ export default function BuildDock({ point, itemsById, selected, readerId, onRead
     }
     return !o;
   });
-  const values = useEffectValues(point ? draft : null, point?.minute);
+  const { values, stale } = useEffectValues(point ? draft : null, point?.minute);
   const toggleStats = () => setStatsOpen((o) => {
     try {
       localStorage.setItem(OPEN_KEY, o ? 'closed' : 'open');
@@ -122,8 +127,11 @@ export default function BuildDock({ point, itemsById, selected, readerId, onRead
         </div>
       )}
       {point && passivesOpen && (
-        <div className="dock-passives">
-          {values == null && <small className="muted">{t('dock.passivesLoading')}</small>}
+        <div className={`dock-passives${stale ? ' stale' : ''}`}>
+          <small className="dock-passives-head muted">
+            {t('dock.passivesAt', { time: mmss(point.minute), level: point.level })}{stale ? ` · ${t('dock.passivesLoading')}` : ''}
+          </small>
+          {values == null && !stale && <small className="muted">{t('dock.passivesLoading')}</small>}
           {values != null && values.length === 0 && <small className="muted">{t('passives.none')}</small>}
           {[...new Set((values ?? []).map((v) => v.source))].map((source) => {
             const item = [...itemsById.values()].find((i) => i.name === source && ids.includes(i.id));

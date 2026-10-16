@@ -1181,6 +1181,14 @@ sem redução de resistência. Agora é mágico.
   - no botão "Passivas ▾", ao lado de "Status", com a lista por item e por runa e os ícones;
   - na leitura do item que abre ao clicar no ícone ("Valor em mm:ss").
   - A barra e a aba usam o mesmo pedido (`effectValues.js`, com cache).
+- **Detalhe do cálculo:** cada valor traz a conta termo a termo (`detail`), montada pelos mesmos termos que somam o
+  valor (`Arena.Calc`). Por isso o detalhe e o número nunca divergem. Exemplos aos 23:17:
+  - Coração de Aço: "140 + 3,5% × 7.903 Vida máxima (277) = 417";
+  - Suserano do Gelo: "100 (15–100 pelo nível; 15 agora) + 5% × 5.365 Vida adicional (268) = 368".
+  - Os efeitos condicionais dizem que o valor é medido pelo planejador (a build com o efeito ligado menos desligado).
+- **Acompanha o momento:** a lista segue o ponto clicado no gráfico. O cabeçalho diz "Passivas em 6:26 (nível 8)", e
+  os valores antigos ficam esmaecidos, com "calculando…", até chegarem os novos. A lista da barra fixa ficou mais baixa
+  (32% da altura da tela) para não cobrir o gráfico. Antes, aberta, ela tapava o gráfico e o clique caía nela.
 - `POST /api/lab/effect-values` aceita o rascunho da build, sem precisar salvar (`Slot.build`, que nunca é gravado).
 - Também: os gatilhos dizem o tipo de dano em português ("mágico", não "magico").
 - Teste: `ArenaRulesTest.effectValuesMatchWhatTheFightDoes`. O valor refletido mostrado (36) é o que a luta mede por

@@ -265,6 +265,8 @@ class ArenaRulesTest {
         Map<String, Object> thorns = values.stream().filter(v -> String.valueOf(v.get("text")).startsWith("Reflete")).findFirst().orElseThrow();
         assertEquals(20 + 0.06 * 100 + 0.01 * 1000, ((Number) thorns.get("value")).doubleValue(), 1e-6);
         assertTrue(String.valueOf(thorns.get("text")).contains("mágico"), thorns.toString());
+        // the detail is the formula's terms, adding up to the value shown
+        assertEquals("20 + 6% × 100 Armadura adicional (6) + 1% × 1.000 Vida adicional (10) = 36", thorns.get("detail"));
         assertTrue(values.stream().anyMatch(v -> String.valueOf(v.get("text")).startsWith("Feridas Dolorosas: −50%")), values.toString());
         // the fight: each attack reflects that much before resistances (the attacker has no MR)
         Result fight = run(List.of(attacker(100), b), List.of(), 5);
