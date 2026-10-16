@@ -34,8 +34,8 @@ class ArenaTest {
     @BeforeAll
     @SuppressWarnings("unchecked")
     static void load() throws Exception {
-        catalog = new CombatCatalog(new ClassPathResource("seed/combate_7_3.yml"));
-        try (InputStream in = new ClassPathResource("seed/kits_7_3.yml").getInputStream()) {
+        catalog = new CombatCatalog(new ClassPathResource("seed/combate_7_3b.yml"));
+        try (InputStream in = new ClassPathResource("seed/kits_7_3b.yml").getInputStream()) {
             Map<String, Object> root = new Yaml().load(in);
             kits = (Map<String, Object>) root.get("campeoes");
             map = (Map<String, Object>) root.get("mapa");
@@ -259,8 +259,8 @@ class ArenaTest {
         Arena.Input b = champion("Darius", 1, 1200, 0, 50000, 0, 0);
         b.f.total.put(Stats.MOVE_SPEED, 0.0);
         Result r = run(List.of(a, b), List.of(), 7.5);
-        // contact ~0.6s: procs at ~3.6s and ~6.6s, 3.3% of 5000 each
-        assertEquals(2 * 0.033 * 5000, r.fighters.get(0).damageBySource.get("Aperto dos Mortos-Vivos"), 1e-6);
+        // contact ~0.6s: procs at ~3.6s and ~6.6s, 3% of 5000 each (3.3% before 7.3b)
+        assertEquals(2 * 0.03 * 5000, r.fighters.get(0).damageBySource.get("Aperto dos Mortos-Vivos"), 1e-6);
     }
 
     @Test

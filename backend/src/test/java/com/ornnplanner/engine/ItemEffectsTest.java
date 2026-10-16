@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Modeled item effects (efeitos_itens_7_3.yml): effective stats with their own switch, options and stack rates. */
+/** Modeled item effects (efeitos_itens_7_3b.yml): effective stats with their own switch, options and stack rates. */
 class ItemEffectsTest {
 
     private static final double EPS = 1e-6;
@@ -33,7 +33,7 @@ class ItemEffectsTest {
 
     @BeforeAll
     static void load() {
-        effects = new ItemEffectCatalog(new ClassPathResource("seed/efeitos_itens_7_3.yml"),
+        effects = new ItemEffectCatalog(new ClassPathResource("seed/efeitos_itens_7_3b.yml"),
                 new ClassPathResource("seed/precos_status.yml"));
     }
 
@@ -146,8 +146,8 @@ class ItemEffectsTest {
 
     @Test
     void omnivampRuneAndPricesByFactor() {
-        RuneCatalog runes = new RuneCatalog(new ClassPathResource("seed/runas_7_3.yml"),
-                new ClassPathResource("seed/feiticos_7_3.yml"), new ClassPathResource("seed/precos_status.yml"));
+        RuneCatalog runes = new RuneCatalog(new ClassPathResource("seed/runas_7_3b.yml"),
+                new ClassPathResource("seed/feiticos_7_3b.yml"), new ClassPathResource("seed/precos_status.yml"));
         ItemDef linhagem = runes.toItem("Lenda: Linhagem", null, -1).orElseThrow();
         assertTrue(linhagem.stats.stream().anyMatch(l -> "% Omnivamp".equals(l.type) && l.value == 1));
 

@@ -2,6 +2,8 @@ package com.ornnplanner.arena.ai;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ornnplanner.seed.ChampionCatalog;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -86,6 +88,8 @@ public class PolicyRepository {
             r.level = level;
             r.guidelines = guidelines;
             r.winsScenario = winsScenario;
+            r.gamePatch = gamePatch;
+            r.otherPatch = otherPatch;
             return r;
         }
 
@@ -97,6 +101,10 @@ public class PolicyRepository {
         public List<com.ornnplanner.arena.ArenaModel.Guideline> guidelines;
         /** Its side wins the training scenario's own fight with it in the slot (null = not measured, before v19). */
         public Boolean winsScenario;
+        /** The game data patch it was trained on (the champion catalog's; "7.3" for versions saved before v20). */
+        public String gamePatch;
+        /** Trained on another patch than the current game data (it still loads; the screen warns). */
+        public boolean otherPatch;
 
         /**
          * Weights of the current observation and action layout, or of an older one they migrate from when read
@@ -179,14 +187,26 @@ public class PolicyRepository {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String COLUMNS = "id, champion, objective, version, fitness, better_vs_script, winrate, winrate_script, "
             + "better_vs_tactical, better_vs_previous, accepted, generations, population, seed, scenario, obs_schema, actions, created_at, "
-            + "chain_id, chain_round, team_plan, parent_id, level, guidelines, wins_scenario";
+            + "chain_id, chain_round, team_plan, parent_id, level, guidelines, wins_scenario, game_patch";
 
     private final JdbcTemplate jdbc;
+    /** Patch of the game data new versions are trained on (null in tests that build the repository by hand). */
+    private final String gamePatch;
     /** Weights never change once saved: read once. */
     private final Map<Long, Weights> cache = new ConcurrentHashMap<>();
 
     public PolicyRepository(JdbcTemplate jdbc) {
+        this(jdbc, (String) null);
+    }
+
+    @Autowired
+    public PolicyRepository(JdbcTemplate jdbc, ChampionCatalog champions) {
+        this(jdbc, champions.patch());
+    }
+
+    public PolicyRepository(JdbcTemplate jdbc, String gamePatch) {
         this.jdbc = jdbc;
+        this.gamePatch = gamePatch;
     }
 
     /** Saved policies, newest version first (a champion's only when given). */
@@ -249,12 +269,15 @@ public class PolicyRepository {
         }
         r.createdAt = Instant.now().toString();
         r.version = nextVersion(r.champion);
+        if (r.gamePatch == null) {
+            r.gamePatch = gamePatch;
+        }
         KeyHolder key = new GeneratedKeyHolder();
         jdbc.update(c -> {
             PreparedStatement ps = c.prepareStatement("INSERT INTO arena_policy (champion, objective, version, fitness, "
                     + "better_vs_script, winrate, winrate_script, better_vs_tactical, better_vs_previous, accepted, generations, "
                     + "population, seed, scenario, weights_json, obs_schema, actions, created_at, chain_id, chain_round, team_plan, "
-                    + "parent_id, level, guidelines, wins_scenario) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    + "parent_id, level, guidelines, wins_scenario, game_patch) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     Statement.RETURN_GENERATED_KEYS);
             int i = 1;
             ps.setString(i++, r.champion);
@@ -281,7 +304,8 @@ public class PolicyRepository {
             ps.setObject(i++, r.parentId);
             ps.setString(i++, r.level);
             ps.setString(i++, guidelines);
-            ps.setObject(i, r.winsScenario == null ? null : r.winsScenario ? 1 : 0);
+            ps.setObject(i++, r.winsScenario == null ? null : r.winsScenario ? 1 : 0);
+            ps.setString(i, r.gamePatch);
             return ps;
         }, key);
         r.id = key.getKey() == null ? null : key.getKey().longValue();
@@ -322,6 +346,8 @@ public class PolicyRepository {
         r.level = rs.getString("level");
         int wins = rs.getInt("wins_scenario");
         r.winsScenario = rs.wasNull() ? null : wins != 0;
+        r.gamePatch = rs.getString("game_patch");
+        r.otherPatch = gamePatch != null && r.gamePatch != null && !gamePatch.equals(r.gamePatch);
         String gl = rs.getString("guidelines");
         if (gl != null) {
             try {

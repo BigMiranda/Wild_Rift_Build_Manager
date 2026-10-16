@@ -328,7 +328,8 @@ export default function Arena() {
 const champKey = (s) => (s ?? '').normalize('NFD').replace(/[^a-z]/gi, '').toLowerCase();
 const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`);
 const policyLabel = (p) => t('arena.brain.ai', { v: p.version, obj: t(`arena.obj.${p.objective}`), pct: pct(p.betterVsScript) })
-  + (p.accepted ? '' : ` ${t('arena.train.notAccepted')}`) + (p.migratedFrom ? ` ${t('arena.brain.migrated', { v: p.migratedFrom })}` : '');
+  + (p.accepted ? '' : ` ${t('arena.train.notAccepted')}`) + (p.migratedFrom ? ` ${t('arena.brain.migrated', { v: p.migratedFrom })}` : '')
+  + (p.otherPatch ? ` ${t('arena.brain.otherPatch', { patch: p.gamePatch })}` : '');
 
 const OBJECTIVES = ['win_fast', 'damage', 'survive', 'team', 'escapar'];
 const RUNNING = ['queued', 'running', 'stopping'];
@@ -663,6 +664,7 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
                       {p.winsScenario && <span className="good" title={t('arena.train.winsScenario')}> 🏆</span>} <small className="muted">{p.scenario}{p.chainRound != null ? ` · ${t('arena.chain.roundShort', { r: p.chainRound })}` : ''}
                       {` · ${t(`arena.level.${p.level ?? 'sozinha'}`)}`}</small>
                       {p.level === 'dicas' && !sameRules(p) && <small className="warn" title={t('arena.levels.otherRulesTitle')}> ⚠ {t('arena.levels.otherRules')}</small>}
+                      {p.otherPatch && <small className="warn" title={t('arena.brain.otherPatchTitle')}> {t('arena.brain.otherPatch', { patch: p.gamePatch })}</small>}
                     </td>
                     <td>{t(`arena.obj.${p.objective}`)}</td>
                     <td>{pct(p.betterVsScript)}</td><td>{pct(p.betterVsTactical)}</td><td>{pct(p.betterVsPrevious)}</td>

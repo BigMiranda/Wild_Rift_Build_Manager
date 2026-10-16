@@ -69,8 +69,17 @@ public class CatalogImporter {
 
     /** The patch of the seed catalog ({@code patch:} of loja_&lt;patch&gt;.yml). */
     public String seedPatch() {
+        return String.valueOf(seedInfo().get("patch"));
+    }
+
+    /** {patch, fonte (notas de patch | prints), atualizado (yyyy-mm-dd)} of the seed catalog, for the screens. */
+    public Map<String, Object> seedInfo() {
         Map<String, Object> root = readYaml(catalogFile);
-        return String.valueOf(root.get("patch"));
+        Map<String, Object> info = new LinkedHashMap<>();
+        info.put("patch", String.valueOf(root.get("patch")));
+        info.put("fonte", root.get("fonte") == null ? "prints" : String.valueOf(root.get("fonte")));
+        info.put("atualizado", root.get("atualizado") == null ? null : String.valueOf(root.get("atualizado")));
+        return info;
     }
 
     @Transactional

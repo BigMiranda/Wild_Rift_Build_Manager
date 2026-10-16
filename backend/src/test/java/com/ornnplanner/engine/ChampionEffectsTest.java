@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Champion passives / abilities from campeoes_7_3.yml, checked against values read in the game's training mode. */
+/** Champion passives / abilities from campeoes_7_3b.yml, checked against values read in the game's training mode. */
 class ChampionEffectsTest {
 
     private static final double EPS = 1e-6;
@@ -31,7 +31,7 @@ class ChampionEffectsTest {
 
     @BeforeAll
     static void load() {
-        champions = new ChampionCatalog(new ClassPathResource("seed/campeoes_7_3.yml"),
+        champions = new ChampionCatalog(new ClassPathResource("seed/campeoes_7_3b.yml"),
                 new ClassPathResource("seed/precos_status.yml"));
         ref = new ReferenceData();
         double[] xp = {0, 280, 660, 1140, 1720, 2400, 3180, 4060, 5040, 6120, 7300, 8580, 9960, 11440, 13020};

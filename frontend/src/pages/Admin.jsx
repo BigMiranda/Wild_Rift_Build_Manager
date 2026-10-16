@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { currentLang, statLabel } from '../i18n.js';
 import { n0, n2, pct } from '../format.js';
 import ItemIcon from '../components/ItemIcon.jsx';
+import BaseInfo from '../components/BaseInfo.jsx';
 import { StatIcon } from '../components/StatIcon.jsx';
 
 /** Admin-only strings (kept here instead of the shared dictionary). */
@@ -104,6 +105,7 @@ export default function Admin({ meta, items, onChanged }) {
           <button key={k} className={tab === k ? 'active' : ''} onClick={() => { setTab(k); setMsg(null); }}>{a(k)}</button>
         ))}
       </div>
+      <BaseInfo base={meta?.base} />
       {msg && (
         <div className="notice spread"><span>{msg}</span><button className="link" onClick={() => setMsg(null)}>{a('close')}</button></div>
       )}

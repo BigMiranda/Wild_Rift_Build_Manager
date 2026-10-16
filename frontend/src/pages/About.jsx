@@ -1,16 +1,18 @@
 import { currentLang } from '../i18n.js';
+import BaseInfo from '../components/BaseInfo.jsx';
 
 const LINK = (
   <a href="https://github.com/changchiyou/wildrift-gold-efficiency" target="_blank" rel="noreferrer">changchiyou/wildrift-gold-efficiency</a>
 );
 const LICENSE = <code>backend/src/test/resources/referencia/LICENSE-wildrift-gold-efficiency.txt</code>;
 
-export default function About() {
+export default function About({ base }) {
   const en = currentLang() === 'en';
   return (
     <div className="main" style={{ maxWidth: 820 }}>
       <section className="panel">
         <h2>{en ? 'About' : 'Sobre'}</h2>
+        <BaseInfo base={base} />
         <p>
           {en
             ? 'Personal tool to plan and compare Ornn\'s item purchase order (tank/support) in League of Legends: Wild Rift. It does not interact with the game in any way.'
@@ -19,8 +21,8 @@ export default function About() {
         <h3>{en ? 'Data credits' : 'Créditos dos dados'}</h3>
         <p>
           {en
-            ? <>The item catalog (patch 7.3, in Portuguese) was transcribed from screenshots of the game's own shop, and so were the icons. Item names and passive texts stay in Portuguese, as in the shop. The price-per-stat and static gold efficiency methodology comes from {LINK}, MIT License — Copyright (c) 2024 changchiyou; full notice in {LICENSE}.</>
-            : <>O catálogo de itens (patch 7.3, em português) foi transcrito de capturas da loja do próprio jogo, assim como os ícones. A metodologia de preço por status e de eficiência de ouro estática vem do projeto {LINK}, licença MIT — Copyright (c) 2024 changchiyou; o aviso completo está em {LICENSE}.</>}
+            ? <>The item catalog (in Portuguese) was transcribed from screenshots of the game's own shop on patch 7.3, and so were the icons; the changes of later patches without screenshots come from the official patch notes (docs/patches/). Item names and passive texts stay in Portuguese, as in the shop. The price-per-stat and static gold efficiency methodology comes from {LINK}, MIT License — Copyright (c) 2024 changchiyou; full notice in {LICENSE}.</>
+            : <>O catálogo de itens (em português) foi transcrito de capturas da loja do próprio jogo no patch 7.3, assim como os ícones; as mudanças dos patches seguintes sem prints vêm das notas de patch oficiais (docs/patches/). A metodologia de preço por status e de eficiência de ouro estática vem do projeto {LINK}, licença MIT — Copyright (c) 2024 changchiyou; o aviso completo está em {LICENSE}.</>}
         </p>
         <p>{en ? 'Ornn base stats and Living Forge: wiki.leagueoflegends.com/en-us/WR:Ornn.' : 'Status base do Ornn e da passiva Forja Viva: wiki.leagueoflegends.com/en-us/WR:Ornn.'}</p>
         <p>{en ? 'Item icons and texts: Riot Games (League of Legends: Wild Rift), cropped from the shop screenshots. Stat icons are original drawings in the game\'s colors.' : 'Ícones e textos dos itens: Riot Games (League of Legends: Wild Rift), recortados das capturas da loja. Os ícones de status são desenhos próprios nas cores do jogo.'}</p>

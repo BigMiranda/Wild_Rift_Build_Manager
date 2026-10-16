@@ -96,7 +96,7 @@ export default function App() {
       {meta && tab === 'planner' && <Planner meta={meta} items={items} settings={settings} />}
       {meta && tab === 'arena' && <Arena />}
       {meta && tab === 'admin' && <Admin meta={meta} items={items} onChanged={reload} />}
-      {tab === 'about' && <About />}
+      {tab === 'about' && <About base={meta?.base} />}
     </>
   );
 }

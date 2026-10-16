@@ -533,8 +533,8 @@ class TimelineEngineTest {
 
     private com.ornnplanner.seed.RuneCatalog runeCatalog() {
         return new com.ornnplanner.seed.RuneCatalog(
-                new org.springframework.core.io.ClassPathResource("seed/runas_7_3.yml"),
-                new org.springframework.core.io.ClassPathResource("seed/feiticos_7_3.yml"),
+                new org.springframework.core.io.ClassPathResource("seed/runas_7_3b.yml"),
+                new org.springframework.core.io.ClassPathResource("seed/feiticos_7_3b.yml"),
                 new org.springframework.core.io.ClassPathResource("seed/precos_status.yml"));
     }
 
@@ -551,17 +551,17 @@ class TimelineEngineTest {
         in.xpPerMin = 0;
         in.itemIds = List.of(cheap.id);
         in.matchEnd = 20.0;
-        // 2.05 activations per minute x 10 health -> 20.5 health per minute (410 over a 20:00 match).
+        // 2.05 activations per minute x 8 health (10 before 7.3b) -> 16.4 health per minute (328 over a 20:00 match).
         in.runes.add(runes.toItem("Aperto dos Mortos-Vivos", null, -1, List.<double[]>of(new double[] {0, 2.05})).orElseThrow());
         in.runes.add(runes.toItem("Tempestade Crescente", null, -2).orElseThrow());
         TimelineResult r = new TimelineEngine(ref).run(in);
 
         Model.MinutePoint last = r.series.get(r.series.size() - 1);
         assertEquals(20.0, last.minute, EPS);                     // the timeline goes up to the end of the match
-        assertEquals(1000 + 410, last.total.get(MAX_HEALTH), EPS);
+        assertEquals(1000 + 328, last.total.get(MAX_HEALTH), EPS);
         java.util.function.DoubleFunction<Model.MinutePoint> at = m -> r.series.stream()
                 .filter(p -> Math.abs(p.minute - m) < 1e-9).findFirst().orElseThrow();
-        assertEquals(1000 + 205, at.apply(10).total.get(MAX_HEALTH), EPS);
+        assertEquals(1000 + 164, at.apply(10).total.get(MAX_HEALTH), EPS);
         double[][] storm = {{5, 0}, {6, 2}, {8, 2}, {9, 5}, {12, 9}, {15, 14}, {18, 20}};   // 2, 5, 9, 14, 20...
         for (double[] m : storm) {
             assertEquals(m[1], at.apply(m[0]).total.get(Stats.ATTACK_DAMAGE), EPS, "Tempestade at " + m[0]);
@@ -663,8 +663,8 @@ class TimelineEngineTest {
                 StatLine.flat(MAGIC_RESIST, 85));
         double[][] armorBoots = {{415, 270}, {525, 343}, {666, 436}, {498, 324}};
         com.ornnplanner.seed.RuneCatalog runes = new com.ornnplanner.seed.RuneCatalog(
-                new org.springframework.core.io.ClassPathResource("seed/runas_7_3.yml"),
-                new org.springframework.core.io.ClassPathResource("seed/feiticos_7_3.yml"),
+                new org.springframework.core.io.ClassPathResource("seed/runas_7_3b.yml"),
+                new org.springframework.core.io.ClassPathResource("seed/feiticos_7_3b.yml"),
                 new org.springframework.core.io.ClassPathResource("seed/precos_status.yml"));
         for (int c = 0; c <= armorBoots.length; c++) {
             boolean withRune = c == armorBoots.length;

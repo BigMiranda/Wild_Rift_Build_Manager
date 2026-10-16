@@ -47,6 +47,24 @@ class PolicyRepositoryTest {
     }
 
     @Test
+    void remembersThePatchItWasTrainedOn(@TempDir Path dir) {
+        DriverManagerDataSource ds = new DriverManagerDataSource("jdbc:sqlite:" + dir.resolve("t.db"));
+        ds.setDriverClassName("org.sqlite.JDBC");
+        new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(ds);
+        PolicyRepository old = new PolicyRepository(new JdbcTemplate(ds), "7.3");
+        long id = old.insert(record("Darius", "win_fast", true, 1)).id;
+        assertEquals("7.3", old.find(id).orElseThrow().gamePatch);
+        assertFalse(old.find(id).orElseThrow().otherPatch);
+        // the game data moved on: the version still loads, flagged as trained on another patch
+        PolicyRepository now = new PolicyRepository(new JdbcTemplate(ds), "7.3b");
+        PolicyRepository.Record read = now.find(id).orElseThrow();
+        assertTrue(read.otherPatch);
+        assertTrue(read.compatible());
+        assertTrue(now.best("Darius", "win_fast").isPresent());
+        assertEquals("7.3b", now.insert(record("Darius", "win_fast", true, 2)).gamePatch);
+    }
+
+    @Test
     void savesVersionsAndReadsTheWeightsBack(@TempDir Path dir) {
         PolicyRepository repo = repo(dir);
         PolicyRepository.Record a = repo.insert(record("Darius", "win_fast", true, 1));

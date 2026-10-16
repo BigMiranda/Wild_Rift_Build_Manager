@@ -27,6 +27,8 @@
 #               condicional = só vale em certas situações (acúmulos, combate, vida baixa); o cálculo deixa ligar/desligar.
 #   revisar     dúvidas que só o usuário pode resolver (o resto foi conferido cruzando árvores e listas "Fabrica")
 patch: "7.3b"
+fonte: notas de patch      # de onde vieram os números deste patch: notas de patch | prints
+atualizado: "2026-10-16"   # quando a base deste patch foi atualizada
 itens:
   Máscara Abissal:
     custo: 2400

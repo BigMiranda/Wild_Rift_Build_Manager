@@ -9,6 +9,7 @@ import com.ornnplanner.repo.BuildRepository;
 import com.ornnplanner.repo.BuildRepository.Build;
 import com.ornnplanner.repo.BuildRepository.Folder;
 import com.ornnplanner.repo.ReferenceRepository;
+import com.ornnplanner.seed.CatalogImporter;
 import com.ornnplanner.service.PlannerService;
 import com.ornnplanner.service.PlannerService.ItemView;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,11 +37,14 @@ public class PlannerController {
     private final PlannerService planner;
     private final BuildRepository builds;
     private final ReferenceRepository reference;
+    private final CatalogImporter importer;
 
-    public PlannerController(PlannerService planner, BuildRepository builds, ReferenceRepository reference) {
+    public PlannerController(PlannerService planner, BuildRepository builds, ReferenceRepository reference,
+                             CatalogImporter importer) {
         this.planner = planner;
         this.builds = builds;
         this.reference = reference;
+        this.importer = importer;
     }
 
     // ------------------------------------------------------------ reference (read only)
@@ -66,6 +70,7 @@ public class PlannerController {
         m.put("maxLevel", TimelineEngine.MAX_LEVEL);
         m.put("forgeTiers", reference.findForgeTiers());
         m.put("xpTable", reference.findXpTable());
+        m.put("base", importer.seedInfo());
         return m;
     }
 

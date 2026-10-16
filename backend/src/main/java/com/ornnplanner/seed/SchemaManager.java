@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 19;
+    static final int VERSION = 20;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -113,6 +113,11 @@ public class SchemaManager {
         if (version < 19 && tableExists("arena_policy") && !columnExists("arena_policy", "wins_scenario")) {
             // v19: whether a version wins its training scenario's own fight (a fact next to its acceptance)
             jdbc.execute("ALTER TABLE arena_policy ADD COLUMN wins_scenario INTEGER");
+        }
+        if (version < 20 && tableExists("arena_policy") && !columnExists("arena_policy", "game_patch")) {
+            // v20: the game data patch a version was trained on; every version before it was trained on 7.3
+            jdbc.execute("ALTER TABLE arena_policy ADD COLUMN game_patch TEXT");
+            jdbc.execute("UPDATE arena_policy SET game_patch = '7.3'");
         }
         // v16 / v17 / v18: arena_combo, arena_dummy and arena_guideline are new tables, created by schema.sql
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
