@@ -68,6 +68,11 @@ public final class Model {
         /** Conversion that reads only the flat bonus of its source stat (items, runes), before any multiplier. */
         public boolean refPre;
         /**
+         * Multiplier of the total that reads only the part of its stat not coming from items (runes and the
+         * champion's effects; e.g. Warmog's Abençoado does not amplify item shields).
+         */
+        public boolean refOutsideItems;
+        /**
          * Conditional line with its own switch (a modeled item effect the build turns on or off by itself): it counts
          * whenever present, whatever the purchase's conditional choice (lines of an effect turned off are not added).
          */

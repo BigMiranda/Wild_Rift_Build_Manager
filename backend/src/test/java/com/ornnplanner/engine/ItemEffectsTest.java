@@ -102,13 +102,35 @@ class ItemEffectsTest {
     }
 
     @Test
-    void shieldScalesWithBonusHealthAndWarmogAmplifiesIt() {
+    void shieldScalesWithBonusHealthAndWarmogDoesNotAmplifyIt() {
         ItemDef gargoyle = item(3, "Placa Gargolítica", StatLine.flat(MAX_HEALTH, 200));
         ItemDef warmog = item(4, "Armadura de Warmog", StatLine.flat(MAX_HEALTH, 700));
         assertEquals(100 + 0.9 * 200, totals(List.of(gargoyle), Map.of(), Map.of(), Map.of(), 1).get("Shield"), EPS);
         Map<String, Double> both = totals(List.of(gargoyle, warmog), Map.of(), Map.of(), Map.of(), 1);
-        assertEquals((100 + 0.9 * 900) * 1.3, both.get("Shield"), EPS);
+        // Abençoado does not amplify shields from items (checked in game: Placa, Sterak, Eclipse, Medalhão)
+        assertEquals(100 + 0.9 * 900, both.get("Shield"), EPS);
         assertEquals(1900, both.get(MAX_HEALTH), EPS);   // shields never raise the max health
+    }
+
+    @Test
+    void warmogAmplifiesShieldsFromRunesAndTheChampionOnly() {
+        ReferenceData ref = new ReferenceData();
+        ref.xpTable.put(1, 0.0);
+        ItemDef gargoyle = item(3, "Placa Gargolítica", StatLine.flat(MAX_HEALTH, 200));
+        ItemDef warmog = item(4, "Armadura de Warmog", StatLine.flat(MAX_HEALTH, 700));
+        for (ItemDef i : List.of(gargoyle, warmog)) {
+            ref.items.put(i.id, effects.apply(i, Map.of(), Map.of(), Map.of()));
+        }
+        EngineInput in = new EngineInput();
+        in.unit = unit();
+        in.goldPerMin = 1e6;
+        in.itemIds = List.of(gargoyle.id, warmog.id);
+        in.includeConditional = false;
+        in.matchEnd = 2.0;
+        in.runes.add(item(-1, "Guardião", StatLine.flat("Shield", 100)));   // a rune's shield (held like the runes)
+        MinutePoint p = new TimelineEngine(ref).run(in).series.stream().filter(m -> Math.abs(m.minute - 1) < 1e-9)
+                .findFirst().orElseThrow();
+        assertEquals(100 * 1.3 + (100 + 0.9 * 900), p.total.get("Shield"), EPS);
     }
 
     @Test

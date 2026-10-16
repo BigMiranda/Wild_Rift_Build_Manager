@@ -580,8 +580,7 @@ public class TimelineEngine {
         // Step 1: flat stats of every owned item (level ranges interpolated, conditional ones only when enabled).
         for (Owned o : inventory) {
             for (StatLine l : o.item.stats) {
-                if (l.countsAsFlat() && o.counts(l) && (l.minLevel == null || level >= l.minLevel)
-                        && (l.minMinute == null || minute >= l.minMinute - 1e-9)) {
+                if (countsAsFlat(o, l, level, minute)) {
                     s.itemFlat.merge(l.type, l.valueAt(level, minute), Double::sum);
                 }
             }
@@ -605,6 +604,12 @@ public class TimelineEngine {
         s.total.put(Stats.MANA_REGEN, s.base.getOrDefault(Stats.MANA_REGEN, 0.0)
                 * (1 + bonusOf(s, Stats.PCT_MANA_REGEN) / 100.0));
         return s;
+    }
+
+    /** Whether a flat line of an owned item counts now (level ranges, conditional ones only when enabled). */
+    private static boolean countsAsFlat(Owned o, StatLine l, int level, double minute) {
+        return l.countsAsFlat() && o.counts(l) && (l.minLevel == null || level >= l.minLevel)
+                && (l.minMinute == null || minute >= l.minMinute - 1e-9);
     }
 
     /** A ratio line of an owned item. */
@@ -709,6 +714,17 @@ public class TimelineEngine {
                 return base + s.itemFlat.getOrDefault(stat, 0.0);
             }
             double pre = s.itemFlat.getOrDefault(stat, 0.0);
+            // the part of pre from runes and the champion's effects (owners before the first purchase)
+            double preOutsideItems = 0;
+            for (Owned o : inventory) {
+                if (o.purchaseIndex < 0) {
+                    for (StatLine l : o.item.stats) {
+                        if (l.type.equals(stat) && countsAsFlat(o, l, level, minute)) {
+                            preOutsideItems += l.valueAt(level, minute);
+                        }
+                    }
+                }
+            }
             for (RatioLine r : lines) {
                 if (r.line.dynamicPercent() && r.conversion() && r.line.type.equals(stat)) {
                     // refPre (e.g. Vladimir, Pyke): only the flat bonus of the source, so two conversions between the
@@ -727,6 +743,9 @@ public class TimelineEngine {
                             + scopeLabel(r.line.refScope) + ", valor final) = " + fmt(d.value) + " " + stat
                             + (r.line.conditional ? " (condicional)" : "");
                     pre += d.value;
+                    if (r.owner.purchaseIndex < 0) {
+                        preOutsideItems += d.value;
+                    }
                     s.itemPassives.merge(stat, d.value, Double::sum);
                 }
             }
@@ -750,6 +769,19 @@ public class TimelineEngine {
             for (RatioLine r : multiplierLines(stat, RefScope.TOTAL)) {
                 PassiveDetail d = detail(r);
                 d.refBase = base;
+                if (r.line.refOutsideItems) {
+                    // only what runes and the champion give (e.g. Abençoado: item shields are not amplified)
+                    double outside = base + preOutsideItems;
+                    d.refItems = outside - base;
+                    d.refTotal = outside;
+                    d.value = r.line.ratioAt(level, minute) * outside;
+                    d.formula = fmt(r.line.ratioAt(level, minute)) + " × " + fmt(outside) + " " + stat
+                            + " (sem o que vem de itens: runas e campeão) = " + fmt(d.value)
+                            + (r.line.conditional ? " (condicional)" : "");
+                    totalGains += d.value;
+                    s.itemPassives.merge(stat, d.value, Double::sum);
+                    continue;
+                }
                 d.refItems = totalBeforeBuffs - base;
                 d.refTotal = totalBeforeBuffs;
                 d.value = r.line.ratioAt(level, minute) * totalBeforeBuffs;

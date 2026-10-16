@@ -138,6 +138,7 @@ public final class EffectSpec {
         s.passive = passive;
         s.conditional = Boolean.TRUE.equals(l.get("condicional"));
         s.refPre = Boolean.TRUE.equals(l.get("ref_pre"));
+        s.refOutsideItems = Boolean.TRUE.equals(l.get("ref_fora_dos_itens"));
         boolean ratio = l.get("ratio") != null;
         List<Double> values = new ArrayList<>();
         for (int level = 1; level <= TimelineEngine.MAX_LEVEL; level++) {
@@ -217,6 +218,9 @@ public final class EffectSpec {
             }
             if (Boolean.TRUE.equals(l.get("ref_pre"))) {
                 b.append(" (só o adicional de itens e runas)");
+            }
+            if (Boolean.TRUE.equals(l.get("ref_fora_dos_itens"))) {
+                b.append(" (só o que não vem de itens: runas e campeão)");
             }
         } else {
             boolean pct = tipo.startsWith("% ");

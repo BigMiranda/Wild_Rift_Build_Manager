@@ -16,7 +16,7 @@
 #   por_minuto   cresce sem limite (acúmulos permanentes): a build informa a taxa por minuto, em períodos; cada
 #                acúmulo vale as linhas (ratio também: x acúmulos)
 #   linhas       tipo (nome do status), valor (+ valor_nv15: faixa pelo nível) ou ratio + ref + escopo (total / bonus
-#                / base)
+#                / base); ref_fora_dos_itens: o ratio lê só a parte do status que não vem de itens (runas e campeão)
 #   nota         premissa da estimativa
 #
 # Status efetivos (precos_status.yml): não mudam a Vida máxima nem a Aceleração mostradas, têm preço próprio:
@@ -235,9 +235,9 @@ itens:
   Armadura de Warmog:
     Abençoado:
       passiva: Abençoado
-      nota: "não aumenta Escudo Mágico nem Escudo Físico (conferido no jogo pelo usuário em 16/10/2026)"
+      nota: "não aumenta escudos de itens, nem Escudo Mágico / Físico; aumenta a Cura e os escudos de runas e do campeão (conferido no jogo pelo usuário em 16/10/2026)"
       linhas:
-      - {tipo: Escudo, ratio: 0.3, ref: Escudo, escopo: total}
+      - {tipo: Escudo, ratio: 0.3, ref: Escudo, escopo: total, ref_fora_dos_itens: true}
       - {tipo: Cura, ratio: 0.3, ref: Cura, escopo: total}
   Anjo Guardião:
     Ressurreição:
