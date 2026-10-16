@@ -17,7 +17,8 @@
 #   receita     componentes diretos (árvore de construção, um nível); {item, qtd} quando repetido
 #   fabrica     nomes dos itens em que este se transforma ("Fabrica:")
 #   captura     arquivo de origem do detalhe
-#   fonte_7_3b  'nota de patch': números mudados pelas notas do 7.3a/7.3b, sem print (o resto do texto é o print)
+#   fonte_7_3b  'nota de patch': números mudados pelas notas do 7.3a/7.3b, sem print (o resto do texto é o print);
+#               'conferido no jogo': número conferido pelo usuário no jogo, sem print
 #   evolucao    item em que este se transforma sozinho (missão / carga de mana), com seus status
 #   exclusivo   grupos dos quais só se pode ter 1 item no inventário (regra do jogo: % de penetração, Lâmina Arcana,
 #               Lágrima da Deusa, Salva-Vidas, item de suporte); botas ficam fora dos grupos de penetração
@@ -507,6 +508,7 @@ itens:
     - Defesa
     resumo: Regeneração de Vida fora de combate
     marcador: alterado
+    fonte_7_3b: conferido no jogo
     captura: 18 - Defesa.png
     status:
     - tipo: Vida Máxima
@@ -519,7 +521,7 @@ itens:
     - nome: Abençoado
       texto: aumenta em 30% todos os efeitos de cura e de escudo em você.
     - nome: Coração de Warmog
-      texto: se você tiver pelo menos 950 de Vida adicional, restaura 3,5% da Vida máxima por segundo caso você não tenha sofrido dano nos últimos
+      texto: se você tiver pelo menos 1250 de Vida adicional, restaura 3,5% da Vida máxima por segundo caso você não tenha sofrido dano nos últimos
         5s.
     receita:
     - Gema Ardente

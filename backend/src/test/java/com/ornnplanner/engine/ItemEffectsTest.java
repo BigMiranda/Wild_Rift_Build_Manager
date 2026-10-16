@@ -112,6 +112,15 @@ class ItemEffectsTest {
     }
 
     @Test
+    void warmogDoesNotAmplifyShieldsOfOneDamageType() {
+        // Abençoado: healing and general shields +30%, magic / physical-only shields unchanged (checked in game)
+        ItemDef rookern = item(3, "Rookern Lamúrico", StatLine.flat(MAX_HEALTH, 400));
+        ItemDef warmog = item(4, "Armadura de Warmog", StatLine.flat(MAX_HEALTH, 700));
+        Map<String, Double> both = totals(List.of(rookern, warmog), Map.of(), Map.of(), Map.of(), 1);
+        assertEquals(50 + 0.14 * 2100, both.get("Magic Shield"), EPS);
+    }
+
+    @Test
     void optionsMultiplyPerFightEffects() {
         ItemDef solari = item(5, "Medalhão dos Solari de Ferro");
         Map<String, Double> t = totals(List.of(solari),

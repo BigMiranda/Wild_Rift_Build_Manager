@@ -235,10 +235,9 @@ itens:
   Armadura de Warmog:
     Abençoado:
       passiva: Abençoado
+      nota: "não aumenta Escudo Mágico nem Escudo Físico (conferido no jogo pelo usuário em 16/10/2026)"
       linhas:
       - {tipo: Escudo, ratio: 0.3, ref: Escudo, escopo: total}
-      - {tipo: Escudo Mágico, ratio: 0.3, ref: Escudo Mágico, escopo: total}
-      - {tipo: Escudo Físico, ratio: 0.3, ref: Escudo Físico, escopo: total}
       - {tipo: Cura, ratio: 0.3, ref: Cura, escopo: total}
   Anjo Guardião:
     Ressurreição:
