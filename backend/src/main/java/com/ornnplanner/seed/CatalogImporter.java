@@ -67,6 +67,12 @@ public class CatalogImporter {
         this.pricesFile = pricesFile;
     }
 
+    /** The patch of the seed catalog ({@code patch:} of loja_&lt;patch&gt;.yml). */
+    public String seedPatch() {
+        Map<String, Object> root = readYaml(catalogFile);
+        return String.valueOf(root.get("patch"));
+    }
+
     @Transactional
     @SuppressWarnings("unchecked")
     public ImportReport importAll(boolean overwriteEdited) {

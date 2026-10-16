@@ -36,6 +36,12 @@ public class CatalogRepository {
         return n == null ? 0 : n;
     }
 
+    /** Whether any item came from the given patch's seed (items edited by hand keep the patch they were edited on). */
+    public boolean hasItemsFromPatch(String patch) {
+        Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM item WHERE source_patch = ?", Integer.class, patch);
+        return n != null && n > 0;
+    }
+
     /** All items keyed by id, with stats and components, in id order. */
     public Map<Long, ItemDef> findAllItems() {
         Map<Long, ItemDef> items = new LinkedHashMap<>();

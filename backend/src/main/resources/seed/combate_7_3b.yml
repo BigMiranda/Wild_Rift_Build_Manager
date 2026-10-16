@@ -1,0 +1,345 @@
+# Patch 7.3b: cópia do 7.3 com as mudanças do 7.3a e do 7.3b tiradas das notas de patch oficiais, não de prints
+# (levantamento e fontes em docs/patches/7.3a-7.3b.md). Linhas mudadas por nota levam `fonte_7_3b: nota de patch`.
+# Quando houver prints deste patch, eles prevalecem sobre as notas.
+#
+# Efeitos de combate dos itens nas lutas da Arena (patch 7.3): o que depende do inimigo e não cabe nos
+# status (dano dos itens, redução de resistência, Feridas Dolorosas, corte de escudo, amplificação e redução de dano).
+# Status planos (penetração, crítico, roubo de vida...) e status efetivos (escudos, curas, estase) vêm do cálculo da
+# build; aqui ficam só os efeitos que acontecem na luta. Valores de Campeões corpo a corpo quando o texto diferencia.
+#
+# Tipos (campo `tipo`):
+#   ao_contato     ataques causam `dano` (+ `pdh` x PdH, + `vida_atual_alvo` x Vida atual do alvo) de `dano_tipo`
+#   a_cada_ataque  todo `n`º ataque causa `dano` (+ `dda_base`, `vida`, `dano_nv15`) de `dano_tipo`
+#   lamina         Lâmina Arcana: o ataque depois de uma habilidade causa dano extra (recarga 1,5s): `dda_base`, `dda`,
+#                  `pdh`, `armadura_bonus`, `vida_max_alvo`; `cura_vida_max_alvo` / `cura_vida_bonus` / `cura_pdh`
+#   queimadura     habilidades queimam por `duracao` s: `por_s` + `pdh_por_s` x PdH + `vida_max_alvo_por_s`
+#   aura           a cada `a_cada` s em combate, a todos os inimigos: `dano` + `vida_bonus` x Vida adicional +
+#                  `vida_max` x Vida máxima; `cura_do_dano`: cura uma fração do dano causado
+#   golpe          dano periódico no alvo (recarga `recarga`): `dano` (+ `dano_nv15`), `vida_max` (sua), `vida_max_alvo`,
+#                  `pdh`, `dda_bonus`; `gatilho`: ataque | habilidade | qualquer
+#   espinhos       ao ser atingido por um ataque devolve `dano` + `armadura_bonus` x Armadura adicional + `vida_bonus` x
+#                  Vida adicional de `dano_tipo`
+#   feridas        Feridas Dolorosas de `pct` por 3s ao causar dano (`gatilho`: fisico | magico | qualquer) ou ao ser
+#                  atingido por ataques (`ao_ser_atingido: true`)
+#   corta_escudo   ao causar dano, reduz os escudos do alvo em `base` + `dda_bonus` x DdA adicional (+ `pdh` x PdH),
+#                  até `max` (por 3s; os escudos que ele já tem e os que receber)
+#   reduz_resistencia  cada acerto (`gatilho`) reduz a `resistencia` (armadura | rm) do alvo em `por_acerto`, até `max`
+#                  por `duracao` s
+#   amplifica      dano causado a mais: `pct` (+ `pct_por_s` em combate até `max`); `dano_tipo` restringe; `alvo_vida_bonus`
+#                  (Lembranças: até `max` com 1.200 de Vida adicional do alvo); `vida_alta`: só acima de 50% de Vida
+#   amplifica_alvo inimigos sofrem `pct` a mais (`aura`: todos os inimigos, com `dano_tipo`; `marca`: o alvo de uma
+#                  habilidade por `duracao` s)
+#   reduz_dano     dano sofrido a menos: `pct` contra `contra` (ataque | critico)
+#   critico        Acertos Críticos causam `mult` (200% sem o item)
+#   reduz_vel_ataque  inimigos na luta atacam `pct` mais devagar (Coração Congelado; Carapaça do Vigia: ao ser atingido,
+#                  contado como sempre ativo)
+#   ativo          ativo de dano (ordem da linha do tempo ou do cérebro): `dano` (+ `dano_nv15`), `dda`, `dda_base`, `dda_bonus`,
+#                  `pdh`, `vida_max_alvo`; `cura_dda`; `recarga`
+patch: "7.3b"
+itens:
+  # ------------------------------------------------------------- Feridas Dolorosas
+  Chamado do Carrasco: [{tipo: feridas, pct: 0.4, gatilho: fisico}]
+  Serrespada Quimiopunk: [{tipo: feridas, pct: 0.5, gatilho: fisico}]
+  Lembrete Mortal: [{tipo: feridas, pct: 0.5, gatilho: fisico}]
+  Orbe do Oblívio: [{tipo: feridas, pct: 0.4, gatilho: magico}]
+  Morellonomicon: [{tipo: feridas, pct: 0.5, gatilho: magico}]
+  Colete Espinhoso:
+  - {tipo: feridas, pct: 0.4, gatilho: qualquer}
+  - {tipo: feridas, pct: 0.4, ao_ser_atingido: true}
+  - {tipo: espinhos, dano: 4, armadura_bonus: 0.06, dano_tipo: magico}
+  Armadura de Espinhos:
+  - {tipo: feridas, pct: 0.5, gatilho: qualquer}
+  - {tipo: feridas, pct: 0.5, ao_ser_atingido: true}
+  - {tipo: espinhos, dano: 20, armadura_bonus: 0.06, vida_bonus: 0.01, dano_tipo: magico}
+
+  # ------------------------------------------------------------- Corte de escudo
+  Presa da Serpente: [{tipo: corta_escudo, base: 0.40, dda_bonus: 0.001, max: 0.60}]
+  Tridente da Oceânide: [{tipo: corta_escudo, base: 0.40, pdh: 0.0005, max: 0.60}]
+
+  # ------------------------------------------------------------- Redução de resistência
+  Cutelo Negro: [{tipo: reduz_resistencia, resistencia: armadura, por_acerto: 0.06, max: 0.30, gatilho: fisico, duracao: 6}]
+  Maldição Sanguinária: [{tipo: reduz_resistencia, resistencia: rm, por_acerto: 0.075, max: 0.30, gatilho: magico, duracao: 6}]
+
+  # ------------------------------------------------------------- Amplificação de dano
+  Máscara Abissal: [{tipo: amplifica_alvo, aura: true, pct: 0.12, dano_tipo: magico}]
+  Mandato Imperial: [{tipo: amplifica_alvo, marca: true, pct: 0.07, duracao: 4}]
+  Lembranças do Lorde Dominik: [{tipo: amplifica, alvo_vida_bonus: 1200, max: 0.12}]
+  Tormento de Liandry:
+  - {tipo: amplifica, pct_por_s: 0.02, max: 0.06}
+  - {tipo: queimadura, vida_max_alvo_por_s: 0.02, duracao: 3, dano_tipo: magico}
+  Máscara Assustadora: [{tipo: amplifica, pct_por_s: 0.02, max: 0.06}]
+  Criafendas: [{tipo: amplifica, pct_por_s: 0.02, max: 0.08}]
+  Passos Imortais: [{tipo: amplifica, pct: 0.05, vida_alta: true}]
+  Lança de Shojin: [{tipo: amplifica, pct_por_s: 0.03, max: 0.12, so_habilidade: true}]
+
+  # ------------------------------------------------------------- Redução de dano sofrido
+  Botas Galvanizadas de Aço: [{tipo: reduz_dano, pct: 0.10, contra: ataque}]
+  Mobilização Blindada: [{tipo: reduz_dano, pct: 0.10, contra: ataque}]
+  Presságio de Randuin: [{tipo: reduz_dano, pct: 0.30, contra: critico}]
+
+  Coração Congelado: [{tipo: reduz_vel_ataque, pct: 0.25}]
+  Carapaça do Vigia: [{tipo: reduz_vel_ataque, pct: 0.15}]
+
+  # ------------------------------------------------------------- Dano ao contato e a cada N ataques
+  Limite da Razão: [{tipo: ao_contato, dano: 40, dano_tipo: magico}]
+  Lâmina da Fúria de Guinsoo: [{tipo: ao_contato, dano: 30, dano_tipo: magico}]
+  Terminus: [{tipo: ao_contato, dano: 30, dano_tipo: magico}]
+  Arco Recurvo: [{tipo: ao_contato, dano: 15, dano_tipo: fisico}]
+  Dente de Na'Shor: [{tipo: ao_contato, dano: 15, pdh: 0.2, dano_tipo: magico}]
+  Espada do Rei Destruído: [{tipo: ao_contato, vida_atual_alvo: 0.08, dano_tipo: fisico}]
+  Hidra Titânica: [{tipo: a_cada_ataque, n: 2, dano: 25, vida_bonus: 0.03, dano_tipo: fisico}]
+  Mata-Cráquens: [{tipo: a_cada_ataque, n: 3, dano: 150, dano_nv15: 210, dano_tipo: fisico}]
+  Quebracascos: [{tipo: a_cada_ataque, n: 4, dda_base: 1.6, vida: 0.05, dano_tipo: fisico}]
+  Chuva de Canivete: [{tipo: a_cada_ataque, n: 4, dano: 120, dano_tipo: magico}]
+  Canhão Fumegante: [{tipo: a_cada_ataque, n: 4, dano: 80, dano_tipo: magico}]
+  Faca de Statikk: [{tipo: a_cada_ataque, n: 3, dano: 60, dano_tipo: magico}]
+  Muramana:
+  - {tipo: ao_contato, mana: 0.015, dano_tipo: fisico}
+  - {tipo: golpe, mana: 0.035, gatilho: habilidade, recarga: 0, dano_tipo: fisico}
+  Gume do Infinito: [{tipo: critico, mult: 2.3}]
+
+  # ------------------------------------------------------------- Lâmina Arcana
+  Fulgor: [{tipo: lamina, dda_base: 1.0, dano_tipo: fisico}]
+  Força da Trindade: [{tipo: lamina, dda_base: 2.0, dano_tipo: fisico}]
+  Ruptor Divino: [{tipo: lamina, vida_max_alvo: 0.10, cura_vida_max_alvo: 0.06, dano_tipo: fisico}]
+  Manopla dos Glacinatas: [{tipo: lamina, dda_base: 1.0, armadura_bonus: 0.25, dano_tipo: fisico}]
+  Perdição de Lich: [{tipo: lamina, dda_base: 0.75, pdh: 0.45, dano_tipo: magico}]
+  Aurora e Crepúsculo: [{tipo: lamina, dda_base: 0.75, pdh: 0.10, cura_vida_bonus: 0.03, cura_pdh: 0.10, dano_tipo: magico}]
+  Colhedor de Essência: [{tipo: lamina, dda_base: 1.35, critico_dano: 80, dano_tipo: fisico}]
+
+  # ------------------------------------------------------------- Queimaduras e auras
+  Tocha de Chamas Negras: [{tipo: queimadura, por_s: 20, pdh_por_s: 0.02, duracao: 3, dano_tipo: magico}]
+  Cinzas do Destino: [{tipo: queimadura, por_s: 1.67, duracao: 3, dano_tipo: magico}]
+  Égide de Fogo Solar: [{tipo: aura, a_cada: 1, dano: 20, vida_bonus: 0.015, dano_tipo: magico}]
+  Resplendor Vazio: [{tipo: aura, a_cada: 1, dano: 20, dano_nv15: 30, vida_bonus: 0.01, dano_tipo: magico}]
+  Brasa de Bami: [{tipo: aura, a_cada: 1, dano: 10, dano_nv15: 20, dano_tipo: magico}]
+  Desespero Eterno: [{tipo: aura, a_cada: 4, vida_max: 0.03, cura_do_dano: 2.5, dano_tipo: magico}]
+
+  # ------------------------------------------------------------- Golpes periódicos
+  Coração de Aço: [{tipo: golpe, gatilho: ataque, recarga: 20, dano: 140, vida_max: 0.035, dano_tipo: fisico}]
+  Eclipse: [{tipo: golpe, gatilho: qualquer, recarga: 6, vida_max_alvo: 0.07, dano_tipo: fisico}]
+  Crepúsculo de Draktharr: [{tipo: golpe, gatilho: ataque, recarga: 10, dano: 60, dano_nv15: 160, dano_tipo: fisico}]
+  Eco de Luden: [{tipo: golpe, gatilho: habilidade, recarga: 9, dano: 155, pdh: 0.128, dano_tipo: magico}]
+  Alternador Hextec: [{tipo: golpe, gatilho: qualquer, recarga: 20, dano: 25, dano_nv15: 60, dano_tipo: magico}]
+  Estilhaço de Kircheis: [{tipo: golpe, gatilho: ataque, recarga: 10, dano: 40, dano_tipo: magico}]
+  Ápice da Tempestade: [{tipo: golpe, gatilho: habilidade, recarga: 25, dano: 125, pdh: 0.10, dano_tipo: magico}]
+  Manto da Aurora: [{tipo: golpe, gatilho: habilidade, recarga: 3, dano: 40, vida_bonus: 0.025, dano_tipo: magico}]
+
+  # ------------------------------------------------------------- Ataques fortalecidos
+  # Céu Dividido: o 1º ataque num Campeão é crítico (160%) e cura (6s de recarga por alvo); cura em gatilhos (modelado)
+  Céu Dividido: [{tipo: lumescudo, mult: 1.6, recarga: 6, cura_dda_base: 1.25, cura_vida_perdida: 0.06}]
+
+  # ------------------------------------------------------------- Ativos de dano
+  Hemodrenário: [{tipo: ativo, recarga: 12, dda_base: 1.75, cura_dda: 0.20, dano_tipo: fisico}]
+  Quebrapassos: [{tipo: ativo, recarga: 25, dda: 1.0, dano_tipo: fisico}]
+  Força do Vendaval: [{tipo: ativo, recarga: 60, dano: 120, dano_nv15: 375, dda_bonus: 1.05, dano_tipo: fisico}]
+  Explocinturão Hextec: [{tipo: ativo, recarga: 30, dano: 100, pdh: 0.10, dano_tipo: magico}]
+  Redenção: [{tipo: ativo, recarga: 60, vida_max_alvo: 0.10, dano_tipo: verdadeiro}]
+
+# Feitiços da build usados na luta (automaticamente): Incendiar e Exaustão no começo, no alvo; Barreira e Curar
+# abaixo de 35% de Vida.
+feiticos:
+  Incendiar: {dano: 72, dano_nv15: 380, duracao: 5, feridas: 0.4}
+  Exaustão: {reduz_dano_causado: 0.40, duracao: 2.5}
+  Barreira: {escudo: 120, escudo_nv15: 560}
+  Curar: {cura: 110, cura_nv15: 400}
+  # Purificar: remove atordoamentos, lentidões e Exaustão (não arremessos nem deslocamentos) e anula atordoamentos
+  # por `imunidade` s; pode ser usado atordoado (WR)
+  Purificar: {imunidade: 0.25}
+
+# Status da build que só valem depois de um tempo ou de acertos na luta: até lá são descontados (a build conta com eles
+# ligados no simulador, mesmo com o condicional da compra / do campeão desligado). Chave: item, runa ou efeito de
+# campeão; `passiva` limita às linhas daquela passiva do item. Condições (todas precisam valer):
+#   segundos          a partir deste tempo de luta (Duplaguarda: 1 acúmulo por segundo, 5 acúmulos)
+#   acertos           ataques / habilidades que o campeão acertou em Campeões
+#   acertos_sofridos  habilidades de Campeões que ele sofreu
+# Na Arena, quem liga esses efeitos são os gatilhos (abaixo); esta lista só marca o que entra ligado ao medir, no
+# planejador, o que cada forma do campeão muda nos status.
+ativacao:
+  Duplaguarda de Amaranto: {passiva: Tolerância, segundos: 5}
+  Força da Natureza: {passiva: Absorção, acertos_sofridos: 4}
+  Ritmo Fatal: {acertos: 6}
+  Conquistador: {acertos: 6}
+  Hemorragia: {acertos: 5, segundos: 3}   # Darius: 5 acúmulos, no mínimo ~3s
+
+# Efeitos das runas na luta. Valores corpo a corpo; `_nv15`: faixa pelo nível do campeão (1–15).
+# `adaptativo`: Dano Físico, ou Mágico quando o Poder de Habilidade passa do Dano de Ataque adicional.
+#   eletrocutar        `acertos` ataques / habilidades no mesmo Campeão em `janela` s: dano (recarga pelo nível)
+#   colheita           dano num Campeão com menos de `vida_alvo` de Vida (recarga)
+#   fortalecimento     `ataques` seguidos no mesmo Campeão: dano e `amplifica` de dano até sair de combate (recarga)
+#   ritmo_fatal        com os acúmulos no máximo (gatilho da runa ativo), ataques causam dano (+ `por_vel_ataque` por
+#                      1% de VdA adicional)
+#   aperto             a cada `a_cada` s em combate o próximo ataque num Campeão causa `vida_max` x sua Vida máxima e
+#                      cura `cura_vida_max` x Vida máxima (o +8 de Vida permanente é do planejador, por minuto)
+#   aery               ataques e habilidades mandam a Aery: dano; ela volta em `retorno` s
+#   cometa             habilidade que causa dano lança o cometa: dano depois de `atraso` s (+ `por_acerto` por acerto)
+#   primeiro_ataque    dano nos primeiros `janela` s de combate: `pct` de Dano Verdadeiro a mais por `duracao` s
+#   suserano           ao imobilizar: explosão de dano em `raio` depois de `atraso` s e Lentidão (gatilho dá as defesas)
+#   golpe_desleal      dano em alvo com Lentidão ou imobilizado (recarga)
+#   impacto            depois de um avanço ou Flash, o próximo dano em `janela` s soma dano (recarga)
+#   ataque_fortalecido a cada `a_cada` s o próximo ataque num Campeão soma dano
+#   sequencia          habilidade que causa dano marca: os próximos `golpes` ataques / habilidades somam dano (recarga)
+#   tirano             dano num Campeão com menos de `vida_alvo` de Vida soma dano (recarga)
+#   zelo               habilidades básicas: +`por_s` de dano por segundo em combate, até `max` acúmulos
+#   ate_a_morte        ataques: +`min` a +`max` de dano com a Vida de `vida_de` a `vida_ate`
+#   dilacerar          ataques: +`pct` em Campeões acima de `vida_alvo_acima`
+#   misericordia       +`pct` em Campeões abaixo de `vida_alvo_abaixo`
+#   chamuscar          habilidade que causa dano queima: dano depois de `atraso` s (recarga)
+#   arcanista          ultimate: +`pct` de dano
+#   transcendencia     a partir do `nivel_min`: habilidade básica que acerta reduz a própria recarga em `pct` (recarga)
+#   nimbus             depois de um feitiço: +`pct` de Velocidade de Movimento por `duracao` s
+#   revitalizar        curas e escudos em alvos abaixo de `vida_abaixo`: +`pct`
+#   hubris             ao abater: +`dda` de Dano de Ataque por `duracao` s
+runas:
+  Eletrocutar: [{tipo: eletrocutar, acertos: 3, janela: 3, dano: 60, dano_nv15: 210, dda_bonus: 0.10, pdh: 0.05, recarga: 20, recarga_nv15: 13, dano_tipo: adaptativo}]
+  Colheita Sombria: [{tipo: colheita, vida_alvo: 0.5, dano: 35, dda_bonus: 0.10, pdh: 0.05, recarga: 20, dano_tipo: adaptativo}]
+  Fortalecimento: [{tipo: fortalecimento, ataques: 3, dano: 40, dano_nv15: 165, recarga: 4, amplifica: 0.08, dano_tipo: adaptativo}]
+  Ritmo Fatal: [{tipo: ritmo_fatal, dano: 9, dano_nv15: 30, por_vel_ataque: 0.005, dano_tipo: adaptativo}]
+  Aperto dos Mortos-Vivos: [{tipo: aperto, a_cada: 3, vida_max: 0.03, cura_vida_max: 0.013, dano_tipo: magico}]
+  Aery: [{tipo: aery, dano: 15, dano_nv15: 70, dda_bonus: 0.10, pdh: 0.05, retorno: 2, dano_tipo: adaptativo}]
+  Cometa Arcano: [{tipo: cometa, dano: 15, dano_nv15: 100, por_acerto: 2, dda_bonus: 0.10, pdh: 0.05, atraso: 1, recarga: 16, recarga_nv15: 8, dano_tipo: adaptativo}]
+  Primeiro Ataque: [{tipo: primeiro_ataque, janela: 0.25, duracao: 3, pct: 0.07}]
+  Suserano do Gelo: [{tipo: suserano, atraso: 1, raio: 300, dano: 15, dano_nv15: 100, vida_bonus: 0.05, lentidao: 0.15, lentidao_por_vida_bonus: 0.0001, recarga: 20, dano_tipo: magico}]
+  Golpe Desleal: [{tipo: golpe_desleal, dano: 10, dano_nv15: 45, recarga: 5, dano_tipo: verdadeiro}]
+  Impacto Repentino: [{tipo: impacto, janela: 4, dano: 10, dano_nv15: 75, recarga: 15, dano_tipo: verdadeiro}]   # +5 no nível 5 e no 9
+  Ataque Fortalecido: [{tipo: ataque_fortalecido, a_cada: 8, dano: 20, dano_nv15: 60, dano_tipo: adaptativo}]
+  Ataque em Sequência: [{tipo: sequencia, golpes: 2, dano: 12, dano_nv15: 38, dda_bonus: 0.03, pdh: 0.015, recarga: 15, dano_tipo: adaptativo}]
+  Tirano: [{tipo: tirano, vida_alvo: 0.5, dano: 20, dano_nv15: 70, dda_bonus: 0.06, pdh: 0.03, recarga: 10, dano_tipo: adaptativo}]
+  Brutal: [{tipo: ao_contato, dano: 6, dda_bonus: 0.08, dano_tipo: adaptativo}]
+  Zelo de Combate: [{tipo: zelo, por_s: 0.014, max: 3}]
+  Até a Morte: [{tipo: ate_a_morte, min: 0.05, max: 0.11, vida_de: 0.6, vida_ate: 0.3}]
+  Dilacerar: [{tipo: dilacerar, pct: 0.065, vida_alvo_acima: 0.6}]
+  Golpe de Misericórdia: [{tipo: misericordia, pct: 0.08, vida_alvo_abaixo: 0.4}]
+  Chamuscar: [{tipo: chamuscar, dano: 21, dano_nv15: 49, atraso: 1, recarga: 8, dano_tipo: magico}]
+  Arcanista do Axioma: [{tipo: arcanista, pct: 0.10}]
+  Transcendência: [{tipo: transcendencia, nivel_min: 9, pct: 0.08, recarga: 8}]
+  Manto de Nimbus: [{tipo: nimbus, pct: 0.25, duracao: 3}]   # 10–40% pela recarga do feitiço: 25% (EST)
+  Revitalizar: [{tipo: revitalizar, pct: 0.10, vida_abaixo: 0.4}]
+  Húbris: [{tipo: hubris, dda: 6, duracao: 30}]   # 5 + 1 por abate
+
+# Quando cada efeito condicional do planejador vale na Arena. Chave: "Item|Efeito" (efeitos_itens), "Item|Passiva"
+# (linhas condicionais da loja), runa ou efeito de campeão. O status que o efeito dá (com a Forja Viva e o resto da
+# build) é a diferença entre a build com ele ligado e desligado; escudos e curas são dados no acionamento.
+#   quando  inicio           desde o começo da luta
+#           fora_de_combate  até o primeiro dano dado ou sofrido (`ate: ataque`: até o primeiro ataque)
+#           combate          depois de `segundos` em combate, `acertos` dados ou `acertos_sofridos` (de habilidades)
+#           vida_abaixo      dano que deixa a Vida abaixo de `vida` (`dano_tipo` restringe)
+#           vida_acima       enquanto a Vida está acima de `vida`
+#           escala_vida      cresce com a Vida perdida até o máximo abaixo de `vida`
+#           ativo            ativo do item: ordem na linha do tempo ou, sem ordem, sozinho com a Vida abaixo de
+#                            `auto_vida_abaixo` (`auto_controlado`: ao sofrer imobilização)
+#           ao_usar_ult      ao conjurar a ultimate
+#           ao_conjurar      ao conjurar qualquer habilidade
+#           ao_atacar        ataque que acerta um Campeão
+#           ao_causar_dano   dano num Campeão (`dano_tipo`, `de`: ataque | habilidade)
+#           ao_sofrer_dano   dano de um Campeão (`dano_tipo`)
+#           ao_sofrer_critico  acerto crítico sofrido
+#           ao_controlar     Lentidão ou imobilização num Campeão (`so_imobilizar`)
+#           ao_imobilizar    imobilização num Campeão
+#           ao_ser_imobilizado  imobilização sofrida (`ou_imobilizar`: também ao imobilizar)
+#           golpe_do_item    junto do golpe do `item` (Eclipse)
+#           excesso_de_cura  a cura do Roubo de Vida acima da Vida máxima vira escudo, até o valor do efeito
+#           ao_curar_aliado  ao curar ou proteger um aliado
+#           abate            um Campeão que ele feriu nos últimos 3s morre
+#           ao_morrer        dano letal (Anjo Guardião: `estase` s e volta com a cura do efeito)
+#           acertos_janela   `acertos` em Campeões em `janela` s
+#           dano_sofrido_janela  mais de `limite` de dano sofrido em `janela` s
+#           periodico        a cada `a_cada` s em combate
+#           estatico         depende da partida (abates, acúmulos, mana): segue a escolha da build, a luta toda
+#           modelado         o efeito de combate do item / runa já faz o que ele faz (a cura do status sai da conta)
+#           nunca            não acontece numa luta da Arena (`nota` diz por quê)
+#   duracao (s; sem ela, até o fim da luta), duracao_escudo, decai (o escudo cai até zero na duração), recarga
+#   (+ recarga_nv15), por_acionamento (o valor do efeito com a opção em 1: cada acionamento vale isso),
+#   acumulos (até N; cada um vale 1/N do efeito, ou o efeito inteiro com por_acionamento), cura_ao_longo (s),
+#   estase (s), purifica, reduz_recargas (fração das recargas restantes das básicas), velocidade (+% de VdM, com
+#   _nv15), cura_vida_perdida (fração da Vida perdida, no lugar da cura do efeito), cura_fixa, reduz_golpes {golpes,
+#   valor, valor_nv15, janela}, dano {dano, vida_bonus, dano_tipo, raio}
+gatilhos:
+  # ------------------------------------------------------------- itens
+  Hexoplaca Experimental|Turbo: {quando: ao_usar_ult, duracao: 8, recarga: 30}
+  Mandato Imperial|Controle (ultimate): {quando: estatico, nota: "depende de a ultimate do campeão ter controle"}
+  Adagas Rápidas Navori|Golpes Hábeis: {quando: modelado, nota: "cada ataque corta 15% das recargas restantes das básicas"}
+  Medalhão dos Solari de Ferro|Medalhão: {quando: ativo, duracao: 2.5, auto_vida_abaixo: 0.5}
+  Placa Gargolítica|Placa: {quando: ativo, duracao: 2.5, decai: true, auto_vida_abaixo: 0.5}
+  Sinal de Sterak|Salva-Vidas: {quando: vida_abaixo, vida: 0.35, duracao: 5, decai: true, recarga: 70}
+  Eclipse|Lua Sempre Crescente: {quando: golpe_do_item, item: Eclipse, duracao: 2, por_acionamento: true}
+  Fimbulwinter|Colosso Congelado: {quando: ao_controlar, duracao: 3, recarga: 8}
+  Rookern Lamúrico|Perdição dos Magos: {quando: inicio, nota: "carregado antes da luta (12s sem Dano Mágico)"}
+  Mandíbula de Malmortius|Salva-Vidas: {quando: vida_abaixo, vida: 0.35, dano_tipo: magico, duracao_escudo: 3, recarga: 70}
+  Sedenta por Sangue|Ícor-escudo: {quando: excesso_de_cura}
+  Arco-escudo Imortal|Salva-Vidas: {quando: vida_abaixo, vida: 0.35, duracao: 3, recarga: 70}
+  Abraço de Seraph|Salva-Vidas: {quando: vida_abaixo, vida: 0.35, duracao: 3, recarga: 90}
+  Esmagadores Acorrentados|Persistência Noxiana: {quando: ao_sofrer_dano, dano_tipo: magico, duracao: 5, recarga: 12, por_acionamento: true}
+  Mobilização Blindada|Tolerância Noxiana: {quando: ao_sofrer_dano, dano_tipo: fisico, duracao: 5, recarga: 12, por_acionamento: true}
+  Manto da Meia-noite|Salva-Vidas (mobilidade): {quando: vida_abaixo, vida: 0.30, duracao: 5, recarga: 90}
+  Manto da Meia-noite|Salva-Vidas (restauração): {quando: vida_abaixo, vida: 0.30, cura_ao_longo: 5, recarga: 90}
+  Manto da Meia-noite|Salva-Vidas: {quando: vida_abaixo, vida: 0.30, duracao: 5, recarga: 90}
+  Virtude Radiante|Luz-guia: {quando: ao_usar_ult, duracao: 6, cura_ao_longo: 6, recarga: 60}
+  Desespero Eterno|Angústia: {quando: modelado, nota: "o pulso a cada 4s cura 250% do dano"}
+  Anjo Guardião|Ressurreição: {quando: ao_morrer, estase: 4, recarga: 180}
+  Dança da Morte|Desafiar: {quando: abate, cura_ao_longo: 2}
+  Céu Dividido|Golpe de Lumescudo: {quando: modelado, nota: "o 1º ataque num Campeão é crítico e cura"}
+  Hemodrenário|Corte Sedento: {quando: modelado, nota: "o ativo cura na luta"}
+  Catalisador das Eras|Eternidade: {quando: ao_conjurar, por_acionamento: true}
+  Bastão das Eras|Eternidade: {quando: ao_conjurar, por_acionamento: true}
+  Bastão das Eras|Veterano: {quando: estatico, nota: "tempo de partida"}
+  Capuz do Espectro|Visitação Espectral: {quando: ao_sofrer_dano, duracao: 10}
+  Aurora e Crepúsculo|Lâmina Arcana: {quando: modelado, nota: "a Lâmina Arcana cura na luta"}
+  Criptoflora|Vida na Morte: {quando: abate, recarga: 60}
+  Redenção|Intervenção: {quando: ativo, auto_vida_abaixo: 0.5}
+  Bênção de Mikael|Purificar: {quando: ativo, auto_vida_abaixo: 0.5}
+  Diadema de Canções|Diadema: {quando: periodico, a_cada: 1, por_acionamento: true}
+  Ecos de Helia|Sifão da Alma: {quando: periodico, a_cada: 6, nota: "EST: Fragmentos cheios a cada 6s"}
+  Grevas do Berserker|Lâmina Abençoada: {quando: ao_atacar, por_acionamento: true}
+  Grevas Bélicas|Lâmina Abençoada: {quando: ao_atacar, por_acionamento: true}
+  Grevas Bélicas|Marcha Noxiana: {quando: ao_atacar, duracao: 2}
+  Criafendas|Corrupção do Vazio: {quando: combate, segundos: 4}
+  Ampulheta de Zhonya|Estase: {quando: ativo, estase: 2.5, auto_vida_abaixo: 0.3}
+  Armaguarda da Caçadora|Estase: {quando: ativo, estase: 2.5, auto_vida_abaixo: 0.3}
+  Duplaguarda de Amaranto|Tolerância (tenacidade): {quando: combate, segundos: 5}
+  Duplaguarda de Amaranto|Tolerância: {quando: combate, segundos: 5}
+  Cimitarra Mercurial|Perseverança: {quando: ativo, duracao: 1.5, purifica: true, auto_controlado: true}
+  Bandana de Mercúrio|Perseverança: {quando: ativo, duracao: 1.5, purifica: true, auto_controlado: true}
+  Armadilha de Yordle|Apanhador: {quando: ao_controlar, duracao: 8}
+  Presságio de Randuin|Contracorrente: {quando: ao_sofrer_critico, duracao: 2, acumulos: 4, por_acionamento: true}
+  Couraça do Defunto|Embalo: {quando: fora_de_combate, ate: ataque}
+  Armadura Sangrenta do Suserano|Retaliação: {quando: escala_vida, vida: 0.30}
+  Cutelo Negro|Perseguir: {quando: ao_causar_dano, dano_tipo: fisico, duracao: 2}
+  Quebrapassos|Marcha: {quando: ao_causar_dano, dano_tipo: fisico, duracao: 2}
+  Força da Trindade|Valentia: {quando: ao_atacar, duracao: 2}
+  Fago|Fúria: {quando: ao_atacar, duracao: 2}
+  Lâmina Fantasma de Youmuu|Embalo: {quando: fora_de_combate}
+  Botas Esmaga-armaduras|Andarilho das Nuvens: {quando: fora_de_combate}
+  Ímpeto Cósmico|Dança Enfeitiçada: {quando: ao_causar_dano, dano_tipo: [magico, verdadeiro], duracao: 4}
+  Dançarina Fantasma|Valsa Espectral: {quando: ao_atacar, duracao: 6, acumulos: 5, por_acionamento: true}
+  Lâmina da Fúria de Guinsoo|Golpe Fervente: {quando: ao_atacar, duracao: 5, acumulos: 4}
+  Flechatroz de Yun Tal|Agitação: {quando: ao_atacar, duracao: 6, recarga: 25}
+  Terminus|Justaposição: {quando: ao_atacar, duracao: 5, acumulos: 6}
+  Tocha de Chamas Negras|Chamas Negras: {quando: ao_causar_dano, de: habilidade, duracao: 3}
+  Turíbulo Ardente|Turíbulo: {quando: ao_curar_aliado, duracao: 6}
+  Cajado Aquafluxo|Corredeira: {quando: ao_curar_aliado, duracao: 6}
+  Botas de Mana|Equilíbrio: {quando: estatico, nota: "só para Campeões sem Mana"}
+  Sapatos Enfeitiçados|Equilíbrio: {quando: estatico, nota: "só para Campeões sem Mana"}
+  Manto da Aurora|Emissário da Aurora: {quando: ao_ser_imobilizado, ou_imobilizar: true, duracao: 3, recarga: 3, dano: {dano: 40, vida_bonus: 0.025, dano_tipo: magico, raio: 400}}
+  Força da Natureza|Absorção: {quando: combate, acertos_sofridos: 4}
+  Ladrão de Almas de Mejai|Temor: {quando: estatico, nota: "acúmulos da partida"}
+  # ------------------------------------------------------------- runas
+  Ritmo Fatal: {quando: combate, acertos: 6}
+  Conquistador: {quando: combate, acertos: 6}
+  Agilidade nos Pés: {quando: periodico, a_cada: 6, nota: "EST: 100 de Energia a cada ~6s de luta (andar e atacar)"}
+  Aperto dos Mortos-Vivos: {quando: modelado, nota: "cada golpe a cada 3s em combate cura"}
+  Guardião: {quando: dano_sofrido_janela, limite: 70, limite_nv15: 240, janela: 2.5, duracao: 1.5, recarga: 55, recarga_nv15: 25}
+  Aery: {quando: nunca, nota: "o escudo vai para aliados alvos dos seus ataques e habilidades, que a Arena não tem"}
+  Ímpeto Gradual: {quando: acertos_janela, acertos: 3, janela: 4, duracao: 3, recarga: 21, recarga_nv15: 7, reduz_recargas: 0.2, velocidade: 0.4, velocidade_nv15: 0.6}
+  Suserano do Gelo: {quando: ao_imobilizar, duracao: 2.5, recarga: 20}
+  Triunfo: {quando: abate, cura_vida_perdida: 0.10}
+  Ventos Revigorantes: {quando: ao_sofrer_dano, recarga: 5, cura_fixa: 6, cura_vida_perdida: 0.03, cura_ao_longo: 5}
+  Orbe Anulador: {quando: vida_abaixo, vida: 0.35, duracao: 4, recarga: 60}
+  Osso Revestido: {quando: ao_sofrer_dano, recarga: 40, reduz_golpes: {golpes: 4, valor: 30, valor_nv15: 60, janela: 1.5}}
+  Perseverança: {quando: ao_ser_imobilizado, duracao: 1.5}
+  Fonte da Vida: {quando: ao_causar_dano, de: [ataque, habilidade], recarga: 20}
+  Coragem do Colosso: {quando: ao_imobilizar, duracao: 3, recarga: 18}
+  "Lenda: Espontaneidade": {quando: estatico, nota: "abates da partida"}
+  "Lenda: Aceleração": {quando: estatico, nota: "abates da partida"}
+  "Lenda: Linhagem": {quando: estatico, nota: "abates da partida"}
+  Foco Absoluto: {quando: vida_acima, vida: 0.65}

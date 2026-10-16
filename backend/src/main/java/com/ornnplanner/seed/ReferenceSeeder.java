@@ -54,7 +54,9 @@ public class ReferenceSeeder implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (catalog.countItems() == 0 || catalog.countStatDefs() == 0 || schema.isCatalogReimportNeeded()) {
+        // A new patch's seed re-imports by itself (edited items are kept, as in the Admin re-import).
+        if (catalog.countItems() == 0 || catalog.countStatDefs() == 0 || schema.isCatalogReimportNeeded()
+                || !catalog.hasItemsFromPatch(importer.seedPatch())) {
             importer.importAll(false);
         }
         if (reference.findUnit(ORNN).isEmpty()) {

@@ -22,7 +22,7 @@ public class CombatCatalog {
     private final Map<String, Map<String, Object>> triggers = new LinkedHashMap<>();
 
     @SuppressWarnings("unchecked")
-    public CombatCatalog(@Value("${planner.seed.combat:classpath:seed/combate_7_3.yml}") Resource file) {
+    public CombatCatalog(@Value("${planner.seed.combat:classpath:seed/combate_7_3b.yml}") Resource file) {
         try (InputStream in = file.getInputStream()) {
             Map<String, Object> root = new Yaml().load(in);
             items.putAll((Map<String, List<Map<String, Object>>>) root.get("itens"));
