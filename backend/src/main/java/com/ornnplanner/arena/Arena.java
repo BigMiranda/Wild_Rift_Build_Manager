@@ -5221,10 +5221,28 @@ public class Arena {
             MANA_MAX = "Mana máxima";
 
     /**
-     * What each item and rune effect of a champion is worth as the fight starts: the same formulas and stats the fight
-     * uses, each with its terms ("detail"); the parts that depend on the target stay as a share of its health. Then the
-     * planner's conditional effects with what they give when on.
+     * What each item and rune effect of a champion is worth: the same formulas the fight uses, each with its terms
+     * ("detail"), on the planner's sheet when the fighter carries one (its stats with the build's conditional switches,
+     * as the planner shows them), else on the stats as the fight starts; the parts that depend on the target stay as a
+     * share of its health. Then the planner's conditional effects with what they give when on.
      */
+    /** A stat for the planner's view: its sheet when given (the build's switches), else the fight's. */
+    private static double st(U u, String s) {
+        return u.f.sheet != null ? u.f.sheet.getOrDefault(s, 0.0) : u.stat(s);
+    }
+
+    private static double bs(U u, String s) {
+        return u.f.sheetBase != null ? u.f.sheetBase.getOrDefault(s, 0.0) : u.base(s);
+    }
+
+    private static double bn(U u, String s) {
+        return st(u, s) - bs(u, s);
+    }
+
+    private static double hp(U u) {
+        return u.f.sheet != null ? st(u, Stats.MAX_HEALTH) : u.maxHp;
+    }
+
     private void describeEffects(U u) {
         int lv = u.f.level;
         for (ItemEffect e : u.f.effects) {
@@ -5232,24 +5250,24 @@ public class Arena {
             String type = type(p);
             switch (e.kind()) {
                 case "ao_contato": {
-                    Calc c = new Calc().flat(num(p.get("dano"), 0), null).ratio(p, "pdh", u.stat(Stats.ABILITY_POWER), AP)
-                            .ratio(p, "mana", u.stat(Stats.MAX_MANA), MANA_MAX).target(p, "vida_atual_alvo", "Vida atual");
+                    Calc c = new Calc().flat(num(p.get("dano"), 0), null).ratio(p, "pdh", st(u, Stats.ABILITY_POWER), AP)
+                            .ratio(p, "mana", st(u, Stats.MAX_MANA), MANA_MAX).target(p, "vida_atual_alvo", "Vida atual");
                     value(u, e.item, "Cada ataque: " + n0(c.total) + " de dano " + typeText(type) + c.targetText(), c.total, type, c.detail());
                     break;
                 }
                 case "a_cada_ataque": {
-                    Calc c = new Calc().level(p, "dano", lv).ratio(p, "dda_base", u.base(Stats.ATTACK_DAMAGE), AD_BASE)
-                            .ratio(p, "vida", u.maxHp, HP_MAX).ratio(p, "vida_bonus", u.bonus(Stats.MAX_HEALTH), HP_BONUS);
+                    Calc c = new Calc().level(p, "dano", lv).ratio(p, "dda_base", bs(u, Stats.ATTACK_DAMAGE), AD_BASE)
+                            .ratio(p, "vida", hp(u), HP_MAX).ratio(p, "vida_bonus", bn(u, Stats.MAX_HEALTH), HP_BONUS);
                     value(u, e.item, "A cada " + (int) num(p.get("n"), 3) + " ataques: " + n0(c.total) + " de dano " + typeText(type),
                             c.total, type, c.detail());
                     break;
                 }
                 case "lamina": {
-                    Calc c = new Calc().ratio(p, "dda_base", u.base(Stats.ATTACK_DAMAGE), AD_BASE).ratio(p, "dda", u.stat(Stats.ATTACK_DAMAGE), AD)
-                            .ratio(p, "pdh", u.stat(Stats.ABILITY_POWER), AP).ratio(p, "armadura_bonus", u.bonus(Stats.ARMOR), ARMOR_BONUS)
+                    Calc c = new Calc().ratio(p, "dda_base", bs(u, Stats.ATTACK_DAMAGE), AD_BASE).ratio(p, "dda", st(u, Stats.ATTACK_DAMAGE), AD)
+                            .ratio(p, "pdh", st(u, Stats.ABILITY_POWER), AP).ratio(p, "armadura_bonus", bn(u, Stats.ARMOR), ARMOR_BONUS)
                             .target(p, "vida_max_alvo", "Vida máxima");
-                    Calc heal = new Calc().ratio(p, "cura_vida_bonus", u.bonus(Stats.MAX_HEALTH), HP_BONUS)
-                            .ratio(p, "cura_pdh", u.stat(Stats.ABILITY_POWER), AP).target(p, "cura_vida_max_alvo", "Vida máxima");
+                    Calc heal = new Calc().ratio(p, "cura_vida_bonus", bn(u, Stats.MAX_HEALTH), HP_BONUS)
+                            .ratio(p, "cura_pdh", st(u, Stats.ABILITY_POWER), AP).target(p, "cura_vida_max_alvo", "Vida máxima");
                     boolean heals = !heal.parts.isEmpty() || !heal.target.isEmpty();
                     value(u, e.item, "Lâmina Arcana (ataque depois de uma habilidade, recarga 1,5s): " + n0(c.total) + " de dano "
                             + typeText(type) + c.targetText() + (heals ? "; cura " + n0(heal.total) + heal.targetText() : ""),
@@ -5257,7 +5275,7 @@ public class Arena {
                     break;
                 }
                 case "queimadura": {
-                    Calc c = new Calc().flat(num(p.get("por_s"), 0), null).ratio(p, "pdh_por_s", u.stat(Stats.ABILITY_POWER), AP)
+                    Calc c = new Calc().flat(num(p.get("por_s"), 0), null).ratio(p, "pdh_por_s", st(u, Stats.ABILITY_POWER), AP)
                             .target(p, "vida_max_alvo_por_s", "Vida máxima");
                     int ticks = (int) num(p.get("duracao"), 3);
                     value(u, e.item, "Queimadura das habilidades por " + ticks + "s, dano " + typeText(type) + ": "
@@ -5268,8 +5286,8 @@ public class Arena {
                 }
                 case "aura": {
                     double every = num(p.get("a_cada"), 1);
-                    Calc c = new Calc().level(p, "dano", lv).ratio(p, "vida_bonus", u.bonus(Stats.MAX_HEALTH), HP_BONUS)
-                            .ratio(p, "vida_max", u.maxHp, HP_MAX);
+                    Calc c = new Calc().level(p, "dano", lv).ratio(p, "vida_bonus", bn(u, Stats.MAX_HEALTH), HP_BONUS)
+                            .ratio(p, "vida_max", hp(u), HP_MAX);
                     double heal = num(p.get("cura_do_dano"), 0);
                     value(u, e.item, "Aura em combate (inimigos a 400): " + n0(c.total) + " de dano " + typeText(type) + " a cada " + n1(every)
                             + "s (" + n0(c.total / every) + "/s por inimigo)" + (heal > 0 ? "; cura " + pctText(heal) + " do dano causado ("
@@ -5279,9 +5297,9 @@ public class Arena {
                     break;
                 }
                 case "golpe": {
-                    Calc c = new Calc().level(p, "dano", lv).ratio(p, "vida_max", u.maxHp, HP_MAX).ratio(p, "pdh", u.stat(Stats.ABILITY_POWER), AP)
-                            .ratio(p, "dda_bonus", u.bonus(Stats.ATTACK_DAMAGE), AD_BONUS).ratio(p, "vida_bonus", u.bonus(Stats.MAX_HEALTH), HP_BONUS)
-                            .ratio(p, "mana", u.stat(Stats.MAX_MANA), MANA_MAX).target(p, "vida_max_alvo", "Vida máxima");
+                    Calc c = new Calc().level(p, "dano", lv).ratio(p, "vida_max", hp(u), HP_MAX).ratio(p, "pdh", st(u, Stats.ABILITY_POWER), AP)
+                            .ratio(p, "dda_bonus", bn(u, Stats.ATTACK_DAMAGE), AD_BONUS).ratio(p, "vida_bonus", bn(u, Stats.MAX_HEALTH), HP_BONUS)
+                            .ratio(p, "mana", st(u, Stats.MAX_MANA), MANA_MAX).target(p, "vida_max_alvo", "Vida máxima");
                     String when = "habilidade".equals(p.get("gatilho")) ? "ao acertar uma habilidade"
                             : "ataque".equals(p.get("gatilho")) ? "ao atacar" : "ao acertar";
                     value(u, e.item, "Golpe " + when + " (recarga " + n1(num(p.get("recarga"), 10)) + "s): " + n0(c.total) + " de dano "
@@ -5289,8 +5307,8 @@ public class Arena {
                     break;
                 }
                 case "espinhos": {
-                    Calc c = new Calc().flat(num(p.get("dano"), 0), null).ratio(p, "armadura_bonus", u.bonus(Stats.ARMOR), ARMOR_BONUS)
-                            .ratio(p, "vida_bonus", u.bonus(Stats.MAX_HEALTH), HP_BONUS);
+                    Calc c = new Calc().flat(num(p.get("dano"), 0), null).ratio(p, "armadura_bonus", bn(u, Stats.ARMOR), ARMOR_BONUS)
+                            .ratio(p, "vida_bonus", bn(u, Stats.MAX_HEALTH), HP_BONUS);
                     value(u, e.item, "Reflete " + n0(c.total) + " de dano " + typeText(type) + " a cada ataque sofrido", c.total, type, c.detail());
                     break;
                 }
@@ -5302,14 +5320,14 @@ public class Arena {
                     break;
                 case "corta_escudo": {
                     double base = num(p.get("base"), 0);
-                    double ad = num(p.get("dda_bonus"), 0) * u.bonus(Stats.ATTACK_DAMAGE);
-                    double ap = num(p.get("pdh"), 0) * u.stat(Stats.ABILITY_POWER);
+                    double ad = num(p.get("dda_bonus"), 0) * bn(u, Stats.ATTACK_DAMAGE);
+                    double ap = num(p.get("pdh"), 0) * st(u, Stats.ABILITY_POWER);
                     double max = num(p.get("max"), 0.6);
                     double cut = Math.min(max, base + ad + ap);
                     String detail = pctText(base) + " base"
-                            + (ad > 0 ? " + " + pctText(num(p.get("dda_bonus"), 0)) + " × " + n0(u.bonus(Stats.ATTACK_DAMAGE)) + " Dano de Ataque adicional ("
+                            + (ad > 0 ? " + " + pctText(num(p.get("dda_bonus"), 0)) + " × " + n0(bn(u, Stats.ATTACK_DAMAGE)) + " Dano de Ataque adicional ("
                             + pctText(ad) + ")" : "")
-                            + (ap > 0 ? " + " + pctText(num(p.get("pdh"), 0)) + " × " + n0(u.stat(Stats.ABILITY_POWER)) + " Poder de Habilidade ("
+                            + (ap > 0 ? " + " + pctText(num(p.get("pdh"), 0)) + " × " + n0(st(u, Stats.ABILITY_POWER)) + " Poder de Habilidade ("
                             + pctText(ap) + ")" : "")
                             + (ad + ap > 0 ? " = " + pctText(base + ad + ap) : "") + "; máximo " + pctText(max);
                     value(u, e.item, "Corta " + pctText(cut) + " dos escudos do alvo (os que ele tem e os que receber por 3s)", cut, null, detail);
@@ -5359,10 +5377,10 @@ public class Arena {
                             "a até 700; vale o maior entre os itens dos inimigos");
                     break;
                 case "ativo": {
-                    Calc c = new Calc().level(p, "dano", lv).ratio(p, "dda", u.stat(Stats.ATTACK_DAMAGE), AD)
-                            .ratio(p, "dda_base", u.base(Stats.ATTACK_DAMAGE), AD_BASE).ratio(p, "dda_bonus", u.bonus(Stats.ATTACK_DAMAGE), AD_BONUS)
-                            .ratio(p, "pdh", u.stat(Stats.ABILITY_POWER), AP).target(p, "vida_max_alvo", "Vida máxima");
-                    Calc heal = new Calc().ratio(p, "cura_dda", u.stat(Stats.ATTACK_DAMAGE), AD);
+                    Calc c = new Calc().level(p, "dano", lv).ratio(p, "dda", st(u, Stats.ATTACK_DAMAGE), AD)
+                            .ratio(p, "dda_base", bs(u, Stats.ATTACK_DAMAGE), AD_BASE).ratio(p, "dda_bonus", bn(u, Stats.ATTACK_DAMAGE), AD_BONUS)
+                            .ratio(p, "pdh", st(u, Stats.ABILITY_POWER), AP).target(p, "vida_max_alvo", "Vida máxima");
+                    Calc heal = new Calc().ratio(p, "cura_dda", st(u, Stats.ATTACK_DAMAGE), AD);
                     value(u, e.item, "Ativo (recarga " + n0(num(p.get("recarga"), 60)) + "s): " + n0(c.total) + " de dano " + typeText(type)
                             + c.targetText() + (heal.total > 0 ? "; cura " + n0(heal.total) : ""), c.total, type,
                             "dano: " + c.detail() + (heal.total > 0 ? " · cura: " + heal.detail() : ""));
@@ -5370,16 +5388,17 @@ public class Arena {
                 }
                 default:
                     if (p.get("dano") != null) {   // a rune's proc (Electrocute, Glacial Augment, Grasp...): runeDamage
-                        String t = fxType(u, p);
-                        Calc c = new Calc().level(p, "dano", lv).ratio(p, "dda_bonus", u.bonus(Stats.ATTACK_DAMAGE), AD_BONUS)
-                                .ratio(p, "pdh", u.stat(Stats.ABILITY_POWER), AP).ratio(p, "vida_bonus", u.bonus(Stats.MAX_HEALTH), HP_BONUS)
-                                .ratio(p, "vida_max", u.maxHp, HP_MAX);
+                        String t = "adaptativo".equals(p.get("dano_tipo"))
+                                ? (st(u, Stats.ABILITY_POWER) > bn(u, Stats.ATTACK_DAMAGE) ? "magico" : "fisico") : fxType(u, p);
+                        Calc c = new Calc().level(p, "dano", lv).ratio(p, "dda_bonus", bn(u, Stats.ATTACK_DAMAGE), AD_BONUS)
+                                .ratio(p, "pdh", st(u, Stats.ABILITY_POWER), AP).ratio(p, "vida_bonus", bn(u, Stats.MAX_HEALTH), HP_BONUS)
+                                .ratio(p, "vida_max", hp(u), HP_MAX);
                         value(u, e.item, "Dano: " + n0(c.total) + " " + typeText(t) + (p.get("recarga") != null
                                 ? " (recarga " + n1(level(p, "recarga", lv)) + "s)" : ""), c.total, t,
                                 c.detail() + ("adaptativo".equals(p.get("dano_tipo")) ? "; adaptativo: mágico quando o Poder de Habilidade"
                                         + " passa do Dano de Ataque adicional" : ""));
                     } else if (p.get("vida_max") != null) {
-                        Calc c = new Calc().ratio(p, "vida_max", u.maxHp, HP_MAX);
+                        Calc c = new Calc().ratio(p, "vida_max", hp(u), HP_MAX);
                         value(u, e.item, "Dano: " + n0(c.total), c.total, null, c.detail());
                     } else if (p.get("pct") != null) {
                         value(u, e.item, "+" + pctText(num(p.get("pct"), 0)) + " de dano", num(p.get("pct"), 0), null, null);
@@ -5406,7 +5425,8 @@ public class Arena {
                 value(u, t.d.source, (t.d.effect.equals(t.d.source) ? "" : t.d.effect + ": ") + String.join(", ", gives)
                         + " (" + t.rep.how + ")", t.d.delta.getOrDefault("Shield", t.d.delta.getOrDefault("Heal", null)), null,
                         "medido pelo planejador: os status da build com o efeito ligado menos desligado, neste minuto (Forja Viva"
-                                + " e o resto da build incluídos)");
+                                + " e o resto da build incluídos); " + (t.d.buildOn ? "ligado na build: já está nos status da ficha"
+                                : "desligado na build: fora dos status da ficha"));
             }
         }
     }

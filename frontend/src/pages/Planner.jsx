@@ -390,7 +390,7 @@ export default function Planner({ meta, items }) {
 
       <main className="main">
         <ItemReaderContext.Provider value={setReaderId}>
-        <BuildDock point={point} itemsById={itemsById} selected={selectedMinute != null} readerId={readerId} draft={draft}
+        <BuildDock point={point} itemsById={itemsById} selected={selectedMinute != null} readerId={readerId} draft={payload}
           onRead={setReaderId} onShop={() => shopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
         {message && (
           <div className="notice spread">
@@ -600,7 +600,7 @@ export default function Planner({ meta, items }) {
               )}
               {momentTab === 'passives' && (
                   <PassivesPanel
-                    point={point} series={result.series} itemsById={itemsById} draft={draft}
+                    point={point} series={result.series} itemsById={itemsById} draft={payload}
                     builds={chartSeries.filter((s) => s.result).map((s) => ({
                       key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length], series: s.result.series,
                     }))}

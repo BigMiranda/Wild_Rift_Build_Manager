@@ -37,6 +37,12 @@ public class Fighter {
     public Map<String, Double> allyShieldSources = new LinkedHashMap<>();
     public Map<String, Double> allyHealSources = new LinkedHashMap<>();
     public Map<String, Double> vampSources = new LinkedHashMap<>();
+    /**
+     * The planner's sheet at the minute (total and base stats, the conditional effects as the build switches them), for
+     * the planner's view of the passives; null in fights.
+     */
+    public Map<String, Double> sheet;
+    public Map<String, Double> sheetBase;
     /** Where its penetration comes from (stat -> item / rune -> amount), to explain how it sees a defender. */
     public Map<String, Map<String, Double>> statSources = new LinkedHashMap<>();
 

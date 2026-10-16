@@ -1189,6 +1189,13 @@ sem redução de resistência. Agora é mágico.
 - **Acompanha o momento:** a lista segue o ponto clicado no gráfico. O cabeçalho diz "Passivas em 6:26 (nível 8)", e
   os valores antigos ficam esmaecidos, com "calculando…", até chegarem os novos. A lista da barra fixa ficou mais baixa
   (32% da altura da tela) para não cobrir o gráfico. Antes, aberta, ela tapava o gráfico e o clique caía nela.
+- **Status da ficha, não do início da luta:** os valores usam os status que a ficha do planejador mostra no minuto,
+  com os efeitos condicionais como a build os liga, igual ao relatório de relevância (`Fighter.sheet` / `sheetBase`,
+  vindos de `FighterBuilder.plannerPoint`). Antes usavam os status de uma luta que começa com as condicionais
+  desligadas: o Colete Espinhoso contava 177 de Armadura adicional quando a ficha tinha quase 800 de Armadura.
+  Conferido na build "Sup sem ser sup" aos 14:26: Armadura 809 − base 106 = 703 adicional, e a conta do Colete é "4 +
+  6% × 703 Armadura adicional (42) = 46". Os efeitos condicionais dizem se já estão nos status da ficha (ligados na
+  build) ou não.
 - `POST /api/lab/effect-values` aceita o rascunho da build, sem precisar salvar (`Slot.build`, que nunca é gravado).
 - Também: os gatilhos dizem o tipo de dano em português ("mágico", não "magico").
 - Teste: `ArenaRulesTest.effectValuesMatchWhatTheFightDoes`. O valor refletido mostrado (36) é o que a luta mede por

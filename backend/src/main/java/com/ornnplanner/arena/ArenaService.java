@@ -112,7 +112,15 @@ public class ArenaService {
         other.team = 1;
         other.dummy = new ArenaModel.Dummy();
         sc.fighters = List.of(me, other);
-        return new Arena(catalog, map).withoutFrames().withEffectValues().run(prepare(sc), List.of(), 0).fighters.get(0).effectValues;
+        List<Arena.Input> inputs = prepare(sc);
+        // the stats of the planner's sheet at the minute (the conditional effects as the build switches them)
+        FighterBuilder.Combatant c = new FighterBuilder.Combatant();
+        c.build = build;
+        c.minute = minute;
+        com.ornnplanner.engine.Model.MinutePoint p = combat.plannerPoint(c);
+        inputs.get(0).f.sheet = new LinkedHashMap<>(p.total);
+        inputs.get(0).f.sheetBase = new LinkedHashMap<>(p.base);
+        return new Arena(catalog, map).withoutFrames().withEffectValues().run(inputs, List.of(), 0).fighters.get(0).effectValues;
     }
 
     /** The same fight without frames (numbers only). */

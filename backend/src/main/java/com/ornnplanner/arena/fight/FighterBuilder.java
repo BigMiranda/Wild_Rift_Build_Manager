@@ -45,6 +45,8 @@ public class FighterBuilder {
     /** A combatant resolved: its build, inventory, level and minute. */
     private static final class Resolved {
         Build build;
+        /** The planner's point at the minute (what its sheet shows). */
+        MinutePoint point;
         List<Long> items;
         int level;
         double minute;
@@ -104,6 +106,11 @@ public class FighterBuilder {
     public static class ArenaBuild {
         public Fighter fighter;
         public List<Triggered> triggers = new ArrayList<>();
+    }
+
+    /** The planner's point of the build at the minute: its sheet's stats, with the build's own switches. */
+    public MinutePoint plannerPoint(Combatant c) {
+        return resolve(c).point;
     }
 
     /** The champion's name of a combatant's build (decides its ability sheet). */
@@ -342,6 +349,7 @@ public class FighterBuilder {
         }
         Resolved r = new Resolved();
         r.build = build;
+        r.point = p;
         r.c = c;
         r.minute = minute;
         r.level = p.level;
