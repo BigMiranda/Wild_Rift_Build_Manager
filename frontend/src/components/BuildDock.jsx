@@ -3,6 +3,8 @@ import { statAbbr, statLabel, t } from '../i18n.js';
 import { DERIVED_STATS, EFFECTIVE_STATS, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
 import { describeStats } from '../shopModel.js';
 import ItemIcon from './ItemIcon.jsx';
+import { useEffectValues, valuesOf } from '../effectValues.js';
+import { findRune, runeIcon } from '../runes.js';
 import InventorySlots from './InventorySlots.jsx';
 import RichText from './RichText.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
@@ -29,8 +31,31 @@ const loadOpen = () => {
  * chart's selected minute, or the last purchase) and its stats in a collapsible row. Clicking an item opens its full
  * reading (stats, passives, modeled effects and what it adds at that moment) right there.
  */
-export default function BuildDock({ point, itemsById, selected, readerId, onRead, onShop }) {
+/** One effect's value line in the bar (the damage type's color on the left). */
+function DockValue({ v }) {
+  return <li className={`effect-value${v.type ? ` dmg-${v.type}` : ''}`}>{v.text}</li>;
+}
+
+const PASSIVES_KEY = 'ornn-planner-dock-passives';
+
+export default function BuildDock({ point, itemsById, selected, readerId, onRead, onShop, draft }) {
   const [statsOpen, setStatsOpen] = useState(loadOpen);
+  const [passivesOpen, setPassivesOpen] = useState(() => {
+    try {
+      return localStorage.getItem(PASSIVES_KEY) === 'open';
+    } catch {
+      return false;
+    }
+  });
+  const togglePassives = () => setPassivesOpen((o) => {
+    try {
+      localStorage.setItem(PASSIVES_KEY, o ? 'closed' : 'open');
+    } catch {
+      /* this session only */
+    }
+    return !o;
+  });
+  const values = useEffectValues(point ? draft : null, point?.minute);
   const toggleStats = () => setStatsOpen((o) => {
     try {
       localStorage.setItem(OPEN_KEY, o ? 'closed' : 'open');
@@ -61,6 +86,12 @@ export default function BuildDock({ point, itemsById, selected, readerId, onRead
           onPick={(id) => onRead(readerId === id ? null : id)} />
         <button className="link dock-shop" onClick={onShop}>{t('dock.shop')}</button>
         {point && (
+          <button className={`opt dock-toggle${passivesOpen ? ' on' : ''}`} aria-expanded={passivesOpen} onClick={togglePassives}
+            title={t('passives.valuesTitle')}>
+            {t('dock.passives')} {passivesOpen ? '▴' : '▾'}
+          </button>
+        )}
+        {point && (
           <button className={`opt dock-toggle${statsOpen ? ' on' : ''}`} aria-expanded={statsOpen} onClick={toggleStats}>
             {t('dock.stats')} {statsOpen ? '▴' : '▾'}
           </button>
@@ -90,15 +121,34 @@ export default function BuildDock({ point, itemsById, selected, readerId, onRead
           )}
         </div>
       )}
+      {point && passivesOpen && (
+        <div className="dock-passives">
+          {values == null && <small className="muted">{t('dock.passivesLoading')}</small>}
+          {values != null && values.length === 0 && <small className="muted">{t('passives.none')}</small>}
+          {[...new Set((values ?? []).map((v) => v.source))].map((source) => {
+            const item = [...itemsById.values()].find((i) => i.name === source && ids.includes(i.id));
+            const rune = item ? null : findRune(source);
+            return (
+              <div key={source} className="dock-passive">
+                <span className="dock-passive-src" title={source}>
+                  {item ? <ItemIcon id={item.id} size={20} /> : rune ? <img src={runeIcon(rune)} alt="" width={20} height={20} className="rune-img on" /> : null}
+                  {source}
+                </span>
+                <ul className="effect-values">{valuesOf(values, source).map((v, k) => <DockValue key={k} v={v} />)}</ul>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {reader && (
-        <ItemReader item={reader} point={point} onClose={() => onRead(null)} />
+        <ItemReader item={reader} point={point} values={valuesOf(values, reader.name)} onClose={() => onRead(null)} />
       )}
     </div>
   );
 }
 
 /** Full reading of an item, as in the shop, plus what it adds to the build at the moment inspected. */
-export function ItemReader({ item, point, onClose }) {
+export function ItemReader({ item, point, onClose, values = [] }) {
   const { flat, modeled } = describeStats(item);
   const held = (point?.contributions ?? []).filter((c) => !c.rune && c.itemId === item.id);
   const gold = held.reduce((a, c) => a + c.flatGold + c.passiveGold, 0);
@@ -155,6 +205,11 @@ export function ItemReader({ item, point, onClose }) {
               {held.length === 0 ? <small className="muted">{t('dock.notHeld')}</small> : (
                 <>
                   <p>{t('eff.worthOfCost', { worth: n0(gold), cost: n0(item.cost) })}{item.cost > 0 ? ` · ${pct((gold / item.cost) * 100)}` : ''}</p>
+                  {values.length > 0 && (
+                    <ul className="effect-values" title={t('passives.valuesTitle')}>
+                      {values.map((v, k) => <DockValue key={k} v={v} />)}
+                    </ul>
+                  )}
                   <ul>
                     {parts.map((p, i) => (
                       <li key={i} style={{ color: statColor(p.stat) }}>

@@ -390,7 +390,7 @@ export default function Planner({ meta, items }) {
 
       <main className="main">
         <ItemReaderContext.Provider value={setReaderId}>
-        <BuildDock point={point} itemsById={itemsById} selected={selectedMinute != null} readerId={readerId}
+        <BuildDock point={point} itemsById={itemsById} selected={selectedMinute != null} readerId={readerId} draft={draft}
           onRead={setReaderId} onShop={() => shopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
         {message && (
           <div className="notice spread">

@@ -1177,6 +1177,10 @@ sem redução de resistência. Agora é mágico.
   numa luta de 0 s contra o boneco. Usam as mesmas fórmulas e os mesmos status que a luta usa: os do início dela, com
   os efeitos condicionais ainda desligados. O que depende do alvo fica como fração da Vida dele, e o dano é antes das
   resistências do alvo. Para os efeitos condicionais do planejador, mostra o que dão quando ligados e quando ligam.
+- Os mesmos valores aparecem na **barra fixa da build**:
+  - no botão "Passivas ▾", ao lado de "Status", com a lista por item e por runa e os ícones;
+  - na leitura do item que abre ao clicar no ícone ("Valor em mm:ss").
+  - A barra e a aba usam o mesmo pedido (`effectValues.js`, com cache).
 - `POST /api/lab/effect-values` aceita o rascunho da build, sem precisar salvar (`Slot.build`, que nunca é gravado).
 - Também: os gatilhos dizem o tipo de dano em português ("mágico", não "magico").
 - Teste: `ArenaRulesTest.effectValuesMatchWhatTheFightDoes`. O valor refletido mostrado (36) é o que a luta mede por

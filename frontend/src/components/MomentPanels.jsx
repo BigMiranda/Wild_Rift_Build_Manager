@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { api } from '../api.js';
+import { useEffectValues } from '../effectValues.js';
 import { statLabel, t } from '../i18n.js';
 import { DERIVED_STATS, EFFECTIVE_STATS, PERCENT_STATS, SHEET_STATS, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
 import ItemIcon from './ItemIcon.jsx';
@@ -206,25 +205,8 @@ function ShareBar({ value, thin = false }) {
  * Passives held at a moment, grouped by item, each with its gold estimate and since when it is held. With compared
  * builds (`builds`: [{ key, name, color, series }], the active one first) they are shown side by side instead.
  */
-/** What each item and rune effect of the build is worth at the minute, by the arena's formulas (debounced). */
-function useEffectValues(draft, minute) {
-  const [values, setValues] = useState(null);
-  const key = draft ? JSON.stringify(draft) : null;
-  useEffect(() => {
-    if (!key || minute == null) return undefined;
-    let live = true;
-    const timer = setTimeout(() => {
-      api.post('/api/lab/effect-values', { build: JSON.parse(key), minute })
-        .then((v) => { if (live) setValues(v); })
-        .catch(() => { if (live) setValues(null); });
-    }, 300);
-    return () => { live = false; clearTimeout(timer); };
-  }, [key, minute]);
-  return values;
-}
-
 /** One effect's value line: the number in the damage type's color. */
-function EffectValue({ v }) {
+export function EffectValue({ v }) {
   return <li className={`effect-value${v.type ? ` dmg-${v.type}` : ''}`}>{v.text}</li>;
 }
 
