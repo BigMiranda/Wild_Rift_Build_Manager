@@ -246,4 +246,30 @@ class ArenaRulesTest {
         // 30% armor reduction: 70 armor -> 100/170 of the damage
         assertEquals(100 * 100 / 170.0, DamageRules.mitigation(100, 0.3, 0, 0) * 100, 1e-9);
     }
+
+    /**
+     * The planner's view of the passives: each effect's value at the fight's start, by the fight's own formulas. The
+     * reflection Thornmail shows is the one a fight measures per attack (before the attacker's MR).
+     */
+    @Test
+    void effectValuesMatchWhatTheFightDoes() {
+        Arena.Input b = post(100000, 0, 0);
+        b.f.base.put(Stats.ARMOR, 0.0);
+        b.f.total.put(Stats.ARMOR, 100.0);
+        b.f.base.put(Stats.MAX_HEALTH, 99000.0);   // 1000 bonus health
+        for (Map<String, Object> e : CATALOG.effects("Armadura de Espinhos")) {
+            b.f.effects.add(new ItemEffect("Armadura de Espinhos", e));
+        }
+        Result r = new Arena(CATALOG, ArenaScenarios.MAP).withoutFrames().withEffectValues().run(List.of(attacker(100), b), List.of(), 0);
+        List<Map<String, Object>> values = r.fighters.get(1).effectValues;
+        Map<String, Object> thorns = values.stream().filter(v -> String.valueOf(v.get("text")).startsWith("Reflete")).findFirst().orElseThrow();
+        assertEquals(20 + 0.06 * 100 + 0.01 * 1000, ((Number) thorns.get("value")).doubleValue(), 1e-6);
+        assertTrue(String.valueOf(thorns.get("text")).contains("mágico"), thorns.toString());
+        assertTrue(values.stream().anyMatch(v -> String.valueOf(v.get("text")).startsWith("Feridas Dolorosas: −50%")), values.toString());
+        // the fight: each attack reflects that much before resistances (the attacker has no MR)
+        Result fight = run(List.of(attacker(100), b), List.of(), 5);
+        double reflected = fight.fighters.get(1).damageBySource.get("Armadura de Espinhos");
+        assertEquals(0, reflected % 36, 1e-6, "whole reflections of 36: " + reflected);
+        assertTrue(fight.fighters.get(1).effectValues.isEmpty(), "only when asked for");
+    }
 }

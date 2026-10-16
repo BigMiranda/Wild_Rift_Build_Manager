@@ -973,3 +973,10 @@ td.nowrap { white-space: nowrap; }
 .test-items li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .chip-item { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border-strong); border-radius: 12px; padding: 1px 4px 1px 2px; font-size: 12px; }
 .chip-item .item-icon { border-radius: 50%; }
+
+/* What each passive is worth at the minute (the arena's formulas) */
+.effect-values { list-style: none; margin: 2px 0 4px 6px; padding: 0; }
+.effect-value { font-size: 12px; color: var(--text); border-left: 2px solid var(--gold, #c8aa6e); padding-left: 6px; margin: 2px 0; }
+.effect-value.dmg-fisico { border-left-color: #f08c3c; }
+.effect-value.dmg-magico { border-left-color: #a07af0; }
+.effect-value.dmg-verdadeiro { border-left-color: #e6e9ee; }

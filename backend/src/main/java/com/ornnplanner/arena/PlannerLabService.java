@@ -286,6 +286,11 @@ public class PlannerLabService {
         return out;
     }
 
+    /** What each item and rune effect of the build is worth at the minute (the planner's passives tab). */
+    public List<Map<String, Object>> effectValues(BuildRepository.Build build, Double minute) {
+        return arena.effectValues(build, minute);
+    }
+
     // ------------------------------------------------------------------ 2. seen by another build
 
     /** Items with on-hit effects that change how a defender is seen (an ally's: Black Cleaver, wounds, shield cut). */

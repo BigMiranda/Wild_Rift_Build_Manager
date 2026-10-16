@@ -600,7 +600,7 @@ export default function Planner({ meta, items }) {
               )}
               {momentTab === 'passives' && (
                   <PassivesPanel
-                    point={point} series={result.series} itemsById={itemsById}
+                    point={point} series={result.series} itemsById={itemsById} draft={draft}
                     builds={chartSeries.filter((s) => s.result).map((s) => ({
                       key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length], series: s.result.series,
                     }))}

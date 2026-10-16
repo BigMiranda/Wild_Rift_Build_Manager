@@ -622,6 +622,14 @@ public class Arena {
         return this;
     }
 
+    /** Also writes what each item and rune effect is worth as the fight starts ({@link FighterStats#effectValues}). */
+    public Arena withEffectValues() {
+        describeEffects = true;
+        return this;
+    }
+
+    private boolean describeEffects;
+
     /** With a side's safe zone (null = none): see {@link ArenaModel.SafeZone}. */
     public Arena withSafeZone(ArenaModel.SafeZone zone) {
         this.safeZone = zone;
@@ -665,6 +673,9 @@ public class Arena {
             u.r.startShields.put("any", sum(u.shield));
             u.r.startShields.put("magico", sum(u.shieldMagic));
             u.r.startShields.put("fisico", sum(u.shieldPhysical));
+            if (describeEffects) {
+                describeEffects(u);
+            }
         }
         List<Action> sorted = new ArrayList<>(actions);
         sorted.sort(Comparator.comparingDouble(a -> a.time));
@@ -4259,7 +4270,9 @@ public class Arena {
         String dur = s.get("duracao") != null ? " por " + fmtS(num(s.get("duracao"), 0)) + "s" : "";
         String cd = s.get("recarga") != null ? "; recarga " + fmtS(num(s.get("recarga"), 0)) + "s" : "";
         String pct = s.get("vida") != null ? Math.round(num(s.get("vida"), 0) * 100) + "%" : "";
-        String type = s.get("dano_tipo") == null ? "" : " (" + s.get("dano_tipo") + ")";
+        Object dt = s.get("dano_tipo");
+        String type = dt == null ? "" : " (" + (dt instanceof List ? ((List<?>) dt).stream().map(x -> typeText(String.valueOf(x)))
+                .collect(java.util.stream.Collectors.joining(" ou ")) : typeText(String.valueOf(dt))) + ")";
         String text;
         switch (d.mode) {
             case "estatico":
@@ -5096,6 +5109,213 @@ public class Arena {
                 }
             }
         });
+    }
+
+    // ------------------------------------------------------------------ what each effect is worth (the planner)
+
+    private static String n0(double v) {
+        return String.format(java.util.Locale.ROOT, "%,.0f", v).replace(',', '.');
+    }
+
+    private static String n1(double v) {
+        return String.format(java.util.Locale.ROOT, "%.1f", v).replace('.', ',');
+    }
+
+    private static String pctText(double v) {
+        return Math.round(v * 1000) / 10.0 % 1 == 0 ? Math.round(v * 100) + "%" : n1(v * 100) + "%";
+    }
+
+    /** Stat names as the shop writes them (for the planner's texts). */
+    private static final Map<String, String> STAT_PT = Map.ofEntries(Map.entry(Stats.ARMOR, "Armadura"),
+            Map.entry(Stats.MAGIC_RESIST, "Resistência Mágica"), Map.entry(Stats.MAX_HEALTH, "Vida"),
+            Map.entry(Stats.ATTACK_DAMAGE, "Dano de Ataque"), Map.entry(Stats.ABILITY_POWER, "Poder de Habilidade"),
+            Map.entry(Stats.ABILITY_HASTE, "Aceleração de Habilidade"), Map.entry(Stats.MOVE_SPEED, "Velocidade de Movimento"),
+            Map.entry("% Move Speed", "% de Velocidade de Movimento"), Map.entry("% Attack Speed", "% de Velocidade de Ataque"),
+            Map.entry("% Tenacity", "% de Tenacidade"), Map.entry("% Omnivamp", "% de Vampirismo Universal"),
+            Map.entry("% Lifesteal", "% de Roubo de Vida"), Map.entry("% Armor Penetration", "% de Penetração de Armadura"),
+            Map.entry("% Magic Penetration", "% de Penetração Mágica"), Map.entry("Armor Penetration", "Penetração de Armadura"),
+            Map.entry("Magic Penetration", "Penetração Mágica"), Map.entry("% Critical Rate", "% de Chance de Crítico"));
+
+    private static String typeText(String type) {
+        return "magico".equals(type) ? "mágico" : "verdadeiro".equals(type) ? "verdadeiro" : "fisico".equals(type) ? "físico" : type;
+    }
+
+    private void value(U u, String source, String text, Double amount, String type) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("source", source);
+        m.put("text", text);
+        if (amount != null) {
+            m.put("value", Math.round(amount * 10) / 10.0);
+        }
+        if (type != null) {
+            m.put("type", type);
+        }
+        u.r.effectValues.add(m);
+    }
+
+    /** "+ 7% da Vida máxima do alvo" when the effect also scales with the target. */
+    private static String targetPart(Map<String, Object> p, String key, String what) {
+        double v = num(p.get(key), 0);
+        return v > 0 ? " + " + pctText(v) + " da " + what + " do alvo" : "";
+    }
+
+    /**
+     * What each item and rune effect of a champion is worth as the fight starts: the same formulas and stats the fight
+     * uses (the parts that depend on the target stay as a share of its health), and the planner's conditional effects
+     * with what they give when on.
+     */
+    private void describeEffects(U u) {
+        for (ItemEffect e : u.f.effects) {
+            Map<String, Object> p = e.p;
+            String type = type(p);
+            switch (e.kind()) {
+                case "ao_contato": {
+                    double v = num(p.get("dano"), 0) + num(p.get("pdh"), 0) * u.stat(Stats.ABILITY_POWER)
+                            + num(p.get("mana"), 0) * u.stat(Stats.MAX_MANA);
+                    value(u, e.item, "Cada ataque: " + n0(v) + " de dano " + typeText(type)
+                            + targetPart(p, "vida_atual_alvo", "Vida atual"), v, type);
+                    break;
+                }
+                case "a_cada_ataque": {
+                    double v = level(p, "dano", u.f.level) + num(p.get("dda_base"), 0) * u.base(Stats.ATTACK_DAMAGE)
+                            + num(p.get("vida"), 0) * u.maxHp + num(p.get("vida_bonus"), 0) * u.bonus(Stats.MAX_HEALTH);
+                    value(u, e.item, "A cada " + (int) num(p.get("n"), 3) + " ataques: " + n0(v) + " de dano " + typeText(type), v, type);
+                    break;
+                }
+                case "lamina": {
+                    double v = num(p.get("dda_base"), 0) * u.base(Stats.ATTACK_DAMAGE) + num(p.get("dda"), 0) * u.stat(Stats.ATTACK_DAMAGE)
+                            + num(p.get("pdh"), 0) * u.stat(Stats.ABILITY_POWER) + num(p.get("armadura_bonus"), 0) * u.bonus(Stats.ARMOR);
+                    double heal = num(p.get("cura_vida_bonus"), 0) * u.bonus(Stats.MAX_HEALTH) + num(p.get("cura_pdh"), 0) * u.stat(Stats.ABILITY_POWER);
+                    value(u, e.item, "Lâmina Arcana (ataque depois de uma habilidade, recarga 1,5s): " + n0(v) + " de dano "
+                            + typeText(type) + targetPart(p, "vida_max_alvo", "Vida máxima")
+                            + (heal > 0 || num(p.get("cura_vida_max_alvo"), 0) > 0 ? "; cura " + n0(heal)
+                            + targetPart(p, "cura_vida_max_alvo", "Vida máxima") : ""), v, type);
+                    break;
+                }
+                case "queimadura": {
+                    double per = num(p.get("por_s"), 0) + num(p.get("pdh_por_s"), 0) * u.stat(Stats.ABILITY_POWER);
+                    int ticks = (int) num(p.get("duracao"), 3);
+                    double pctAlvo = num(p.get("vida_max_alvo_por_s"), 0);
+                    value(u, e.item, "Queimadura das habilidades por " + ticks + "s, dano " + typeText(type) + ": "
+                            + (per > 0 ? n0(per) + "/s (" + n0(per * ticks) + ")" : "")
+                            + (per > 0 && pctAlvo > 0 ? " + " : "")
+                            + (pctAlvo > 0 ? pctText(pctAlvo) + " da Vida máxima do alvo por segundo" : ""), per * ticks, type);
+                    break;
+                }
+                case "aura": {
+                    double every = num(p.get("a_cada"), 1);
+                    double v = level(p, "dano", u.f.level) + num(p.get("vida_bonus"), 0) * u.bonus(Stats.MAX_HEALTH)
+                            + num(p.get("vida_max"), 0) * u.maxHp;
+                    double heal = num(p.get("cura_do_dano"), 0);
+                    value(u, e.item, "Aura em combate (inimigos a 400): " + n0(v) + " de dano " + typeText(type) + " a cada " + n1(every)
+                            + "s (" + n0(v / every) + "/s por inimigo)" + (heal > 0 ? "; cura " + pctText(heal) + " do dano causado ("
+                            + n0(v * heal) + " por pulso num alvo, antes das resistências)" : ""), v / every, type);
+                    break;
+                }
+                case "golpe": {
+                    double v = level(p, "dano", u.f.level) + num(p.get("vida_max"), 0) * u.maxHp + num(p.get("pdh"), 0) * u.stat(Stats.ABILITY_POWER)
+                            + num(p.get("dda_bonus"), 0) * u.bonus(Stats.ATTACK_DAMAGE) + num(p.get("vida_bonus"), 0) * u.bonus(Stats.MAX_HEALTH)
+                            + num(p.get("mana"), 0) * u.stat(Stats.MAX_MANA);
+                    String when = "habilidade".equals(p.get("gatilho")) ? "ao acertar uma habilidade"
+                            : "ataque".equals(p.get("gatilho")) ? "ao atacar" : "ao acertar";
+                    value(u, e.item, "Golpe " + when + " (recarga " + n1(num(p.get("recarga"), 10)) + "s): " + n0(v) + " de dano "
+                            + typeText(type) + targetPart(p, "vida_max_alvo", "Vida máxima"), v, type);
+                    break;
+                }
+                case "espinhos": {
+                    double v = num(p.get("dano"), 0) + num(p.get("armadura_bonus"), 0) * u.bonus(Stats.ARMOR)
+                            + num(p.get("vida_bonus"), 0) * u.bonus(Stats.MAX_HEALTH);
+                    value(u, e.item, "Reflete " + n0(v) + " de dano " + typeText(type) + " a cada ataque sofrido", v, type);
+                    break;
+                }
+                case "feridas":
+                    value(u, e.item, "Feridas Dolorosas: −" + pctText(num(p.get("pct"), 0.4)) + " de cura e escudo por 3s, "
+                            + (Boolean.TRUE.equals(p.get("ao_ser_atingido")) ? "em quem ataca este campeão"
+                            : "ao causar dano" + ("qualquer".equals(String.valueOf(p.getOrDefault("gatilho", "qualquer"))) ? ""
+                            : " " + typeText(String.valueOf(p.get("gatilho"))))), num(p.get("pct"), 0.4), null);
+                    break;
+                case "corta_escudo": {
+                    double cut = Math.min(num(p.get("max"), 0.6), num(p.get("base"), 0)
+                            + num(p.get("dda_bonus"), 0) * u.bonus(Stats.ATTACK_DAMAGE) + num(p.get("pdh"), 0) * u.stat(Stats.ABILITY_POWER));
+                    value(u, e.item, "Corta " + pctText(cut) + " dos escudos do alvo (os que ele tem e os que receber por 3s)", cut, null);
+                    break;
+                }
+                case "reduz_resistencia":
+                    value(u, e.item, "Reduz a " + ("armadura".equals(p.get("resistencia")) ? "Armadura" : "Resistência Mágica") + " do alvo em "
+                            + pctText(num(p.get("por_acerto"), 0.06)) + " por acerto, até " + pctText(num(p.get("max"), 0.3)) + " ("
+                            + n1(num(p.get("duracao"), 6)) + "s)", num(p.get("max"), 0.3), null);
+                    break;
+                case "amplifica": {
+                    String scope = (p.get("dano_tipo") != null ? " " + typeText(String.valueOf(p.get("dano_tipo"))) : "")
+                            + (Boolean.TRUE.equals(p.get("so_habilidade")) ? " de habilidades" : "");
+                    String text = p.get("pct_por_s") != null
+                            ? "+" + pctText(num(p.get("pct_por_s"), 0)) + " de dano" + scope + " por segundo em combate, até " + pctText(num(p.get("max"), 1))
+                            : p.get("alvo_vida_bonus") != null
+                            ? "Até +" + pctText(num(p.get("max"), 0)) + " de dano" + scope + " (máximo com " + n0(num(p.get("alvo_vida_bonus"), 1200))
+                            + " de Vida adicional do alvo)"
+                            : "+" + pctText(num(p.get("pct"), 0)) + " de dano" + scope + (Boolean.TRUE.equals(p.get("vida_alta")) ? " acima de 50% da Vida" : "");
+                    value(u, e.item, text, num(p.containsKey("pct") ? p.get("pct") : p.get("max"), 0), null);
+                    break;
+                }
+                case "amplifica_alvo":
+                    value(u, e.item, (Boolean.TRUE.equals(p.get("aura")) ? "Inimigos próximos sofrem" : "O alvo de uma habilidade sofre")
+                            + " +" + pctText(num(p.get("pct"), 0)) + " de dano" + (p.get("dano_tipo") != null ? " "
+                            + typeText(String.valueOf(p.get("dano_tipo"))) : "") + (Boolean.TRUE.equals(p.get("marca"))
+                            ? " por " + n1(num(p.get("duracao"), 4)) + "s" : ""), num(p.get("pct"), 0), null);
+                    break;
+                case "reduz_dano":
+                    value(u, e.item, "−" + pctText(num(p.get("pct"), 0)) + " do dano "
+                            + ("critico".equals(p.get("contra")) ? "de acertos críticos" : "de ataques") + " sofrido", num(p.get("pct"), 0), null);
+                    break;
+                case "critico":
+                    value(u, e.item, "Acertos críticos causam " + pctText(num(p.get("mult"), 2)), num(p.get("mult"), 2), null);
+                    break;
+                case "reduz_vel_ataque":
+                    value(u, e.item, "Inimigos próximos atacam " + pctText(num(p.get("pct"), 0)) + " mais devagar", num(p.get("pct"), 0), null);
+                    break;
+                case "ativo": {
+                    double v = level(p, "dano", u.f.level) + num(p.get("dda"), 0) * u.stat(Stats.ATTACK_DAMAGE)
+                            + num(p.get("dda_base"), 0) * u.base(Stats.ATTACK_DAMAGE) + num(p.get("dda_bonus"), 0) * u.bonus(Stats.ATTACK_DAMAGE)
+                            + num(p.get("pdh"), 0) * u.stat(Stats.ABILITY_POWER);
+                    double heal = num(p.get("cura_dda"), 0) * u.stat(Stats.ATTACK_DAMAGE);
+                    value(u, e.item, "Ativo (recarga " + n0(num(p.get("recarga"), 60)) + "s): " + n0(v) + " de dano " + typeText(type)
+                            + targetPart(p, "vida_max_alvo", "Vida máxima") + (heal > 0 ? "; cura " + n0(heal) : ""), v, type);
+                    break;
+                }
+                default:
+                    if (p.get("dano") != null) {   // a rune's proc (Electrocute, Glacial Augment, Grasp...)
+                        String t = fxType(u, p);
+                        double v = runeDamage(u, p);
+                        value(u, e.item, "Dano: " + n0(v) + " " + typeText(t) + (p.get("recarga") != null
+                                ? " (recarga " + n1(level(p, "recarga", u.f.level)) + "s)" : ""), v, t);
+                    } else if (p.get("vida_max") != null || p.get("pct") != null) {
+                        value(u, e.item, p.get("vida_max") != null ? "Dano: " + n0(num(p.get("vida_max"), 0) * u.maxHp) + " ("
+                                + pctText(num(p.get("vida_max"), 0)) + " da sua Vida máxima)" : "+" + pctText(num(p.get("pct"), 0)) + " de dano",
+                                p.get("vida_max") != null ? num(p.get("vida_max"), 0) * u.maxHp : num(p.get("pct"), 0), null);
+                    }
+                    break;
+            }
+        }
+        // the planner's conditional effects: when they turn on and what they give (shields, heals, stats)
+        for (T t : u.trigs) {
+            if (!t.d.fightTriggered() || t.d.delta.isEmpty()) {
+                continue;
+            }
+            List<String> gives = new ArrayList<>();
+            t.d.delta.forEach((stat, v) -> {
+                if (Math.abs(v) < 0.5 && !stat.startsWith("%")) {
+                    return;
+                }
+                String name = "Shield".equals(stat) ? "de escudo" : "Magic Shield".equals(stat) ? "de escudo mágico"
+                        : "Physical Shield".equals(stat) ? "de escudo físico" : "Heal".equals(stat) ? "de cura"
+                        : "Stasis".equals(stat) ? "s de estase" : STAT_PT.getOrDefault(stat, stat);
+                gives.add(("Stasis".equals(stat) ? n1(v) : (v > 0 ? "+" : "") + n0(v)) + (name.startsWith("%") || name.startsWith("s ") ? "" : " ") + name);
+            });
+            if (!gives.isEmpty()) {
+                value(u, t.d.source, (t.d.effect.equals(t.d.source) ? "" : t.d.effect + ": ") + String.join(", ", gives)
+                        + " (" + t.rep.how + ")", t.d.delta.getOrDefault("Shield", t.d.delta.getOrDefault("Heal", null)), null);
+            }
+        }
     }
 
     /** Whether a trigger of a source is on (Lethal Tempo at full stacks). */

@@ -1,5 +1,6 @@
 package com.ornnplanner.arena;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.util.ArrayList;
@@ -46,6 +47,9 @@ public final class ArenaModel {
         public Dummy dummy;
         /** Items of the build left out (the lab's value of each item); null = none. */
         public java.util.Set<Long> excludeItems;
+        /** A build that is not saved (the planner's draft), used instead of {@link #buildId}; never stored. */
+        @JsonIgnore
+        public com.ornnplanner.repo.BuildRepository.Build build;
     }
 
     /**
@@ -430,6 +434,12 @@ public final class ArenaModel {
         /** Damage dealt by source and type after resistances (source -> fisico | magico | verdadeiro -> damage). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public Map<String, Map<String, Double>> damageBySourceType = new LinkedHashMap<>();
+        /**
+         * What each item and rune effect is worth as the fight starts ({source, text, value, type}; only with
+         * {@code Arena.withEffectValues}): the planner's view of the passives.
+         */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public List<Map<String, Object>> effectValues = new ArrayList<>();
         /** Second of each activation of its runes and items, by source (all parts of one activation count once). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public Map<String, List<Double>> procTimes = new LinkedHashMap<>();

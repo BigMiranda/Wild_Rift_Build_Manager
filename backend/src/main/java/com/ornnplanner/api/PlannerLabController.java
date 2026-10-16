@@ -40,6 +40,21 @@ public class PlannerLabController {
         return lab.allyItems();
     }
 
+    /** A build (the planner's draft, saved or not) at a minute. */
+    public static class EffectRequest {
+        public com.ornnplanner.repo.BuildRepository.Build build;
+        public Double minute;
+    }
+
+    /** What each item and rune effect of the build is worth at the minute, by the arena's formulas. */
+    @PostMapping("/effect-values")
+    public List<Map<String, Object>> effectValues(@RequestBody EffectRequest req) {
+        if (req.build == null) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Sem build.");
+        }
+        return lab.effectValues(req.build, req.minute);
+    }
+
     /** How another build sees this one (or the other way), now and minute by minute. */
     @PostMapping("/seen-by")
     public Map<String, Object> seenBy(@RequestBody PlannerLabService.Request req) {

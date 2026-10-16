@@ -1162,3 +1162,22 @@ sem redução de resistência. Agora é mágico.
    ao slot da tela e a cadeia siga com a última aceita?
 3. O "Calcular o valor de cada item" de um cenário leva ~1 s por item: cada variante monta as builds de novo, e a luta
    em si é rápida. Um cache da montagem por (itens, minuto) baixaria isso para frações de segundo. Vale fazer?
+
+### Depois da Rodada 4 — o valor de cada passiva no momento
+- A aba **Passivas** do momento mostra, embaixo de cada item, o que cada efeito vale naquele minuto. Exemplos da
+  Big Carry do Ornn aos 23:17:
+  - "Reflete 89 de dano mágico a cada ataque sofrido" (Armadura de Espinhos), mais as Feridas Dolorosas de −50%;
+  - "100 de dano mágico a cada 1,0s" (Égide de Fogo Solar);
+  - "237 de dano mágico a cada 4,0s; cura 250% do dano causado (593 por pulso)" (Desespero Eterno);
+  - "+535 de escudo mágico" (Esmagadores Acorrentados).
+  - Também entram o escudo do Sterak, o corte de escudo, a redução de resistência, as amplificações e os ativos.
+  - No fim vêm as runas e os demais efeitos: o dano do Suserano, as defesas que ele dá, o escudo da Coragem do
+    Colosso.
+- **Sem fórmula paralela:** os textos saem de dentro da `Arena` (`withEffectValues`, `FighterStats.effectValues`),
+  numa luta de 0 s contra o boneco. Usam as mesmas fórmulas e os mesmos status que a luta usa: os do início dela, com
+  os efeitos condicionais ainda desligados. O que depende do alvo fica como fração da Vida dele, e o dano é antes das
+  resistências do alvo. Para os efeitos condicionais do planejador, mostra o que dão quando ligados e quando ligam.
+- `POST /api/lab/effect-values` aceita o rascunho da build, sem precisar salvar (`Slot.build`, que nunca é gravado).
+- Também: os gatilhos dizem o tipo de dano em português ("mágico", não "magico").
+- Teste: `ArenaRulesTest.effectValuesMatchWhatTheFightDoes`. O valor refletido mostrado (36) é o que a luta mede por
+  ataque, e os valores só são calculados quando pedidos. Testes: 178. O golden não mudou.

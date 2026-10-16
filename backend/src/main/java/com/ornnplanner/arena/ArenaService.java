@@ -98,6 +98,23 @@ public class ArenaService {
         return new Arena(catalog, map).withSafeZone(sc.safeZone).run(inputs, sc.actions == null ? List.of() : sc.actions, duration(sc));
     }
 
+    /**
+     * What each item and rune effect of a build (saved or not) is worth at a minute, by the fight's own formulas: a
+     * zero-second fight against the ragdoll ({@link Arena#withEffectValues}).
+     */
+    public List<Map<String, Object>> effectValues(BuildRepository.Build build, Double minute) {
+        Scenario sc = new Scenario();
+        Slot me = new Slot();
+        me.team = 0;
+        me.build = build;
+        me.minute = minute;
+        Slot other = new Slot();
+        other.team = 1;
+        other.dummy = new ArenaModel.Dummy();
+        sc.fighters = List.of(me, other);
+        return new Arena(catalog, map).withoutFrames().withEffectValues().run(prepare(sc), List.of(), 0).fighters.get(0).effectValues;
+    }
+
     /** The same fight without frames (numbers only). */
     public ArenaModel.Result runQuiet(Scenario sc) {
         List<Arena.Input> inputs = prepare(sc);
@@ -223,13 +240,14 @@ public class ArenaService {
                 inputs.add(in);
                 continue;
             }
-            if (slot.buildId == null) {
+            if (slot.buildId == null && slot.build == null) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha uma build para cada campeão.");
             }
-            BuildRepository.Build build = builds.findBuild(slot.buildId).orElseThrow(
+            BuildRepository.Build build = slot.build != null ? slot.build : builds.findBuild(slot.buildId).orElseThrow(
                     () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Build " + slot.buildId + " não existe."));
             FighterBuilder.Combatant c = new FighterBuilder.Combatant();
             c.buildId = slot.buildId;
+            c.build = slot.build;
             c.minute = slot.minute;
             c.activations = slot.activations;
             c.excludeItems = slot.excludeItems;

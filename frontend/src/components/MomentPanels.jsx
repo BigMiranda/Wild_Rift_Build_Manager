@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { api } from '../api.js';
 import { statLabel, t } from '../i18n.js';
 import { DERIVED_STATS, EFFECTIVE_STATS, PERCENT_STATS, SHEET_STATS, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
 import ItemIcon from './ItemIcon.jsx';
@@ -204,8 +206,31 @@ function ShareBar({ value, thin = false }) {
  * Passives held at a moment, grouped by item, each with its gold estimate and since when it is held. With compared
  * builds (`builds`: [{ key, name, color, series }], the active one first) they are shown side by side instead.
  */
-export function PassivesPanel({ point, series, itemsById, builds = [] }) {
+/** What each item and rune effect of the build is worth at the minute, by the arena's formulas (debounced). */
+function useEffectValues(draft, minute) {
+  const [values, setValues] = useState(null);
+  const key = draft ? JSON.stringify(draft) : null;
+  useEffect(() => {
+    if (!key || minute == null) return undefined;
+    let live = true;
+    const timer = setTimeout(() => {
+      api.post('/api/lab/effect-values', { build: JSON.parse(key), minute })
+        .then((v) => { if (live) setValues(v); })
+        .catch(() => { if (live) setValues(null); });
+    }, 300);
+    return () => { live = false; clearTimeout(timer); };
+  }, [key, minute]);
+  return values;
+}
+
+/** One effect's value line: the number in the damage type's color. */
+function EffectValue({ v }) {
+  return <li className={`effect-value${v.type ? ` dmg-${v.type}` : ''}`}>{v.text}</li>;
+}
+
+export function PassivesPanel({ point, series, itemsById, builds = [], draft }) {
   const read = useItemReader();
+  const values = useEffectValues(builds.length > 1 ? null : draft, point?.minute);
   if (!point) return null;
   if (builds.length > 1) {
     const columns = builds.map((b) => ({
@@ -230,6 +255,9 @@ export function PassivesPanel({ point, series, itemsById, builds = [] }) {
     else byItem.push({ itemId: x.itemId, itemName: x.itemName, passives: [x] });
   }
   const gold = list.reduce((a, x) => a + x.gold, 0);
+  const itemNames = new Set(byItem.map((g) => g.itemName));
+  const valuesOf = (name) => (values ?? []).filter((v) => v.source === name);
+  const others = [...new Set((values ?? []).map((v) => v.source).filter((s) => !itemNames.has(s)))];
   return (
     <section className="panel">
       <h3>{t('passives.title', { time: mmss(point.minute), level: point.level })}</h3>
@@ -242,6 +270,11 @@ export function PassivesPanel({ point, series, itemsById, builds = [] }) {
             <button className="link with-icon passive-item item-link" onClick={() => read(g.itemId)} title={t('dock.read', { name: g.itemName })}>
               <ItemIcon id={g.itemId} size={24} />{g.itemName}
             </button>
+            {valuesOf(g.itemName).length > 0 && (
+              <ul className="effect-values" title={t('passives.valuesTitle')}>
+                {valuesOf(g.itemName).map((v, k) => <EffectValue key={k} v={v} />)}
+              </ul>
+            )}
             <ul>
               {g.passives.map((x) => (
                 <li key={x.key} className="passive-entry">
@@ -257,6 +290,20 @@ export function PassivesPanel({ point, series, itemsById, builds = [] }) {
           </li>
         ))}
       </ul>
+      {others.length > 0 && (
+        <>
+          <h4>{t('passives.otherValues')}</h4>
+          <ul className="passive-groups">
+            {others.map((name) => (
+              <li key={name}>
+                <span className="with-icon passive-item">{findRune(name) && <img src={runeIcon(findRune(name))} alt="" width={22} height={22} className="rune-img on" />}{name}</span>
+                <ul className="effect-values">{valuesOf(name).map((v, k) => <EffectValue key={k} v={v} />)}</ul>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {values && <p className="muted small">{t('passives.valuesHelp')}</p>}
     </section>
   );
 }
