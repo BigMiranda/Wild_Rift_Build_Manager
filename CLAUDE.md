@@ -54,10 +54,10 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
 - `arena/fight/` — what a fight is built from: `FighterBuilder` (a saved build at a minute → `Fighter` with its item
   and rune effects and its conditional effects as `Triggered`; `excludeItems` gives the per-item counterfactual),
   `Fighter`, `ItemEffect`, `Ledger`, `Delay`, `DamageRules.mitigation`, `AbilityParser` (damage formulas read from the
-  game's ability text) and `CombatCatalog` (`combate_7_3.yml`: item combat effects, rune effects, `gatilhos`).
+  game's ability text) and `CombatCatalog` (`combate_<patch>.yml`: item combat effects, rune effects, `gatilhos`).
 - `arena/` — 2D orchestrated fight (Howling Abyss as a straight lane): `Arena` is the deterministic simulator (0.02s
   steps); `ArenaService` runs scenarios; `ArenaModel` holds scenario/result types. Champion kits come from
-  `kits_7_3.yml`; champions without a kit fall back to text-parsed damage on a targeted ability.
+  `kits_<patch>.yml`; champions without a kit fall back to text-parsed damage on a targeted ability.
 - `arena/ai/` — decision-making "brains": `Policy` interface with `ScriptedPolicy` (default "Roteiro"),
   `TacticalPolicy` (rules), `NeuralPolicy` (small MLP that is **residual over Tactical**: zero weights == Tactical),
   `Trainer` (OpenAI-ES, Java only, parallel and deterministic by seed), `Observation`/`ActionSpace`/`ActionMask`
@@ -68,11 +68,21 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
 - `repo/` — JdbcTemplate data access. `service/PlannerService` assembles reference data and runs the engine.
 - `api/` — REST controllers under `/api/...` (planner, admin, champions, runes, arena, planner lab, item icons).
 
-**Data lives in YAML seeds, not code** (`backend/src/main/resources/seed/`, patch-suffixed `_7_3`): `loja_7_3.yml`
-(171 shop items; header documents each field), `precos_status.yml`, `efeitos_itens_7_3.yml`, `campeoes_7_3.yml`,
-`runas_7_3.yml` (+ `runas/` icons), `feiticos_7_3.yml`, `combate_7_3.yml`, `kits_7_3.yml`, `regras_loja.yml`.
-New game data or modeled effects usually mean editing these files plus a test, not Java. `LojaCatalogTest` enforces
-catalog consistency (components exist and cost less, every stat has a price).
+**Data lives in YAML seeds, not code** (`backend/src/main/resources/seed/`, patch-suffixed; current patch **7.3b**,
+suffix `_7_3b`): `loja_7_3b.yml` (171 shop items; header documents each field), `precos_status.yml`,
+`efeitos_itens_7_3b.yml`, `campeoes_7_3b.yml`, `runas_7_3b.yml` (+ `runas/` icons), `feiticos_7_3b.yml`,
+`combate_7_3b.yml`, `kits_7_3b.yml`, `regras_loja.yml`. `application.properties` and the `@Value` defaults point at
+the current patch; older `_7_3` files stay as history. New game data or modeled effects usually mean editing these
+files plus a test, not Java. `LojaCatalogTest` enforces catalog consistency (components exist and cost less, every
+stat has a price).
+
+**Patch updates**: 7.3 was transcribed from screenshots; 7.3b is 7.3 plus the official 7.3a/7.3b patch notes. Each
+update from patch notes is logged in `docs/patches/` (one table per category: before → after, base key, status
+aplicar | já estava | divergente | fora do modelo, source link), and `/atualizar-patch <from> <to>`
+(`.claude/commands/atualizar-patch.md`) is the procedure. Lines changed from notes carry `fonte_<patch>: nota de patch`;
+screenshots of a patch, when taken, prevail over the notes and replace those marks. The shop catalog re-imports by
+itself at startup when the seed's patch differs from the items' `source_patch`; saved arena policies record
+`game_patch` and the screen warns when it is not the current one.
 
 **Schema changes**: bump `SchemaManager.VERSION` and add an idempotent `if (version < N && …)` migration step (version
 is `PRAGMA user_version`); `schema.sql` runs afterwards and must stay idempotent. Spring's own SQL init is disabled.

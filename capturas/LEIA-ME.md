@@ -30,3 +30,18 @@ python tools/capturas_icones.py loja_<patch>.yml capturas/<patch>
 ```
 
 O primeiro confere as receitas pelos ícones das árvores e das listas "Fabrica"; o segundo recorta os ícones.
+
+## Patches sem prints (notas de patch)
+
+Quando não há prints de um patch, a base pode ser atualizada só pelas notas de patch oficiais, com o comando
+`/atualizar-patch <origem> <destino>` (`.claude/commands/atualizar-patch.md`). O levantamento de cada atualização
+fica em `docs/patches/` (o 7.3b, por exemplo, está em `docs/patches/7.3a-7.3b.md`). Os itens, runas e campeões
+mudados por nota levam a marca `fonte_<patch>: nota de patch` no YAML, e os selos da loja (`marcador`) desses patches
+são deduzidos das notas.
+
+**Os prints prevalecem sobre as notas.** Quando você tirar prints de um patch que foi atualizado por notas:
+
+- transcreva-os como de costume;
+- onde o print diverge da nota, vale o print;
+- apague a marca `fonte_<patch>: nota de patch` dos itens que passaram a ter print;
+- confira os selos `marcador` e as linhas "divergente" do levantamento em `docs/patches/`.
