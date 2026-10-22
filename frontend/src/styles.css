@@ -994,3 +994,58 @@ td.nowrap { white-space: nowrap; }
 .dock-passive .effect-values { margin-top: 2px; }
 .effect-detail { display: block; color: var(--muted); font-size: 11px; margin-top: 1px; }
 .effect-values.stale, .dock-passives.stale .effect-values { opacity: .5; }
+
+/* visual bars (seen under effects, test, ranking) */
+.vbars { list-style: none; margin: 4px 0 10px; padding: 0; display: grid; gap: 3px; }
+.vbars li { display: grid; grid-template-columns: minmax(120px, 220px) 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
+.vbars-label { display: inline-flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vbars-track { height: 10px; background: var(--grid); border-radius: 5px; overflow: hidden; }
+.vbars-fill { display: block; height: 100%; border-radius: 5px; background: var(--gold); min-width: 2px; }
+.vbars-fill.warn { background: var(--error); }
+.vbars-fill.neg { background: var(--muted); }
+.vbars-value { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text-2); }
+.seen-report h5 { margin: 8px 0 2px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.seen-total { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-size: 15px; margin: 6px 0; }
+.seen-total .warn { color: var(--error); }
+@media (max-width: 600px) { .vbars li { grid-template-columns: 1fr; gap: 2px; } }
+
+/* ranking page */
+.ranking .chips { margin-bottom: 10px; }
+.rank-setup { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
+.rank-setup h4 { margin: 4px 0 6px; }
+.rank-checks { list-style: none; margin: 6px 0; padding: 0; max-height: 280px; overflow-y: auto; columns: 2; font-size: 13px; }
+.rank-checks li { break-inside: avoid; }
+@media (max-width: 800px) { .rank-setup { grid-template-columns: 1fr; } .rank-checks { columns: 1; } }
+.rank-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.rank-list > li { border: 1px solid var(--border); border-radius: 6px; }
+.rank-list > li.open { border-color: var(--border-strong); }
+.rank-row { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; grid-template-columns: 28px minmax(140px, 1.2fr) 2fr auto 90px; gap: 10px; align-items: center; padding: 6px 10px; }
+.rank-row:hover { background: var(--surface-2); }
+.rank-row.scenario { grid-template-columns: 28px minmax(140px, 1.2fr) auto 1.5fr auto 90px; }
+.rank-pos { font-weight: 700; color: var(--gold); text-align: center; }
+.rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-bar { position: relative; height: 12px; background: var(--grid); border-radius: 6px; overflow: hidden; }
+.rank-bar-plain { position: absolute; inset: 0 auto 0 0; background: rgba(200, 170, 110, .3); border-radius: 6px; }
+.rank-bar-now { position: absolute; inset: 0 auto 0 0; background: var(--gold); border-radius: 6px; }
+.rank-value { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rank-best { display: inline-flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.rank-outcome { white-space: nowrap; font-weight: 600; }
+.rank-outcome.good { color: var(--ok); }
+.rank-outcome.warn { color: var(--error); }
+.rank-detail { padding: 4px 12px 10px 48px; }
+@media (max-width: 700px) {
+  .rank-row, .rank-row.scenario { grid-template-columns: 24px 1fr auto; }
+  .rank-row .rank-bar { grid-column: 2 / 4; }
+  .rank-detail { padding-left: 12px; }
+}
+.table-scroll { overflow-x: auto; }
+table.heat td { text-align: center; }
+table.heat th { text-align: center; vertical-align: bottom; }
+.heat-head { display: block; max-width: 110px; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
+table.heat tr.heat-total td { border-top: 1px solid var(--border-strong); }
+.rank-items { display: grid; gap: 6px; }
+.rank-items-row { display: grid; grid-template-columns: minmax(140px, 220px) 1fr; gap: 10px; align-items: center; }
+.rank-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.rank-chip { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--border); border-radius: 12px; padding: 1px 6px 1px 2px; font-variant-numeric: tabular-nums; }
+.rank-chip.best { border-color: var(--ok); }
+@media (max-width: 600px) { .rank-items-row { grid-template-columns: 1fr; } }

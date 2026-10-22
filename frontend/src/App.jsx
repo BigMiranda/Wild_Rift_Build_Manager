@@ -5,8 +5,9 @@ import Planner from './pages/Planner.jsx';
 import Admin from './pages/Admin.jsx';
 import About from './pages/About.jsx';
 import Arena from './pages/Arena.jsx';
+import Ranking from './pages/Ranking.jsx';
 
-const TABS = ['planner', 'arena', 'admin', 'about'];
+const TABS = ['planner', 'arena', 'ranking', 'admin', 'about'];
 
 export default function App() {
   const [tab, setTab] = useState('planner');
@@ -95,6 +96,7 @@ export default function App() {
       )}
       {meta && tab === 'planner' && <Planner meta={meta} items={items} settings={settings} />}
       {meta && tab === 'arena' && <Arena />}
+      {meta && tab === 'ranking' && <Ranking items={items} />}
       {meta && tab === 'admin' && <Admin meta={meta} items={items} onChanged={reload} />}
       {tab === 'about' && <About base={meta?.base} />}
     </>

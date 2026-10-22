@@ -109,6 +109,22 @@ class SeenByTest {
         assertEquals("Tridente da Oceânide", s.shieldCutBy);
     }
 
+    /** The mixed effective health follows the chosen physical part: all physical, all magic, and in between. */
+    @Test
+    void mixedEffectiveHealthFollowsThePhysicalPart() {
+        SeenBy.Base base = SeenBy.base(ArenaScenarios.CATALOG, ArenaScenarios.MAP, defender(), attacker());
+        // not the 30% shred: the test fighter has MR = 70% of its armor, and the two would meet
+        List<Applied> fx = List.of(new Applied("Punhal Serrilhado", SeenBy.ARMOR_PEN, 10));
+        SeenBy physical = SeenBy.apply(base, fx, 1);
+        SeenBy magic = SeenBy.apply(base, fx, 0);
+        SeenBy half = SeenBy.apply(base, fx, 0.5);
+        assertEquals(physical.effectiveHpPhysical, physical.effectiveHpMixed, 1e-6);
+        assertEquals(magic.effectiveHpMagic, magic.effectiveHpMixed, 1e-6);
+        assertTrue(half.effectiveHpMixed > Math.min(physical.effectiveHpMixed, magic.effectiveHpMixed)
+                && half.effectiveHpMixed < Math.max(physical.effectiveHpMixed, magic.effectiveHpMixed));
+        assertEquals(under(fx).effectiveArmor, half.effectiveArmor, 1e-9, "the same arithmetic as a full run");
+    }
+
     @Test
     void itemsOnlyGiveTheEffectsThatChangeHowADefenderIsHit() {
         assertEquals(null, EffectSources.combatOption(Map.of("tipo", "amplifica", "pct", 0.05)));

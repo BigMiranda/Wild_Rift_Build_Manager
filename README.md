@@ -330,8 +330,9 @@ Nos detalhes de um momento da linha do tempo, a aba **Testar** tem dois painéis
 
 - **Testar esta build num cenário ou combo:** um cenário salvo da Arena que tenha o campeão (a build entra no slot
   dele, no minuto escolhido) ou um combo da biblioteca contra o boneco. Mostra o vencedor (ou o dano do combo), o dano
-  causado e recebido e os 3 itens que mais pesaram: a mesma luta sem cada item. "Abrir na Arena" leva ao cenário (uma
-  cópia com esta build) ou ao laboratório, com o relatório completo.
+  causado e recebido e, em barras, o peso de cada item: a mesma luta sem ele. No cenário, o peso é a vida que o lado
+  mantém com o item quando vence, e os segundos a mais viva quando perde (na derrota, todas as variantes terminam com
+  0 de vida). "Abrir na Arena" leva ao cenário (uma cópia com esta build) ou ao laboratório, com o relatório completo.
 - **Visão sob efeitos:** os status desta build no início de uma luta sob os efeitos que você escolher, de itens
   (Cutelo Negro, Maldição Sanguinária, Feridas Dolorosas, Presa da Serpente, Tridente da Oceânide, itens de
   penetração) e de passivas e habilidades de campeões (penetração de Ambessa, Darius, Mordekaiser, Nilah e Pantheon;
@@ -339,9 +340,29 @@ Nos detalhes de um momento da linha do tempo, a aba **Testar** tem dois painéis
   habilidades) e pode ser editado. Os que dependem de um status trazem um campo para ele, e o valor segue a fórmula até
   o limite: o corte de escudo da Tridente é 40% + 0,05% por PdH e o da Presa é 40% + 0,1% por DdA adicional, até 60%;
   a penetração da Nilah é 28% da Taxa de Crítico. Mostra a armadura e a RM efetivas com o motivo de cada queda, o dano
-  que passa por tipo, a vida efetiva contra físico e mágico, escudos depois do corte e cura depois das Feridas. As
-  penetrações % se somam; reduções, cortes e Feridas valem pelo mais forte. Um minigráfico traz a vida efetiva física e
-  mágica ao longo da partida, sob os mesmos efeitos.
+  que passa por tipo, a vida efetiva contra físico, mágico e mista (com a parte física do dano escolhida), escudos
+  depois do corte e cura depois das Feridas. As penetrações % se somam; reduções, cortes e Feridas valem pelo mais
+  forte. Em barras: o que cada efeito tira da vida efetiva (a build sob todos os outros, menos sob todos) e o que cada
+  item da build segura sob os efeitos (com ele, menos sem ele). Um minigráfico traz a vida efetiva física e mágica ao
+  longo da partida, sob os mesmos efeitos.
+
+## Ranking de builds
+
+A aba **Ranking** põe lado a lado, no mesmo minuto, as builds de uma pasta (ou de todas), com uma lista de caixas para
+tirar as que não devem entrar. Dois modos:
+
+- **Sob efeitos escolhidos:** os mesmos efeitos da "Visão sob efeitos", com o valor de cada um. Ordena pela vida
+  efetiva escolhida (mista, física ou mágica), com a barra sem os efeitos e sob eles e o item que mais segura. Um mapa
+  de calor mostra a parte da vida efetiva que cada efeito tira de cada build (e a média por efeito), e uma faixa por
+  build mostra o que cada item dela soma sob os efeitos, o mais forte primeiro. Clicar numa build abre as barras dela.
+- **Num cenário da Arena:** cada build entra no slot do seu campeão (as de outro campeão ficam de fora) e o cenário
+  roda como no "Testar". Ordena por vitória, vida que sobra do lado, tempo viva e dano causado, e mostra o item de cada
+  build que mais segurou o cenário (mudar o vencedor primeiro; depois a vida do lado na vitória, ou os segundos viva na
+  derrota).
+
+As builds rodam uma a uma e as linhas aparecem conforme ficam prontas; "Parar" interrompe. A escolha fica salva no
+navegador. Os status base de cada build e minuto ficam em cache no backend, então refazer o ranking com outros efeitos
+é rápido; o modo cenário roda uma luta por item de cada build e demora mais.
 
 ## Arena
 

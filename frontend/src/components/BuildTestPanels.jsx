@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { mmss, n0, n1 } from '../format.js';
 import EffectPicker, { applied } from './EffectPicker.jsx';
+import SeenByReport, { Bars, MetricControls } from './SeenByReport.jsx';
 import ItemIcon from './ItemIcon.jsx';
 import MinuteInput from './MinuteInput.jsx';
 
@@ -45,12 +46,13 @@ function PanelHead({ title, help, how }) {
   );
 }
 
-export default function BuildTestPanels({ buildId, minute }) {
+export default function BuildTestPanels({ buildId, minute, items }) {
+  const idOf = useMemo(() => new Map((items ?? []).map((i) => [i.name, i.id])), [items]);
   if (!buildId) return <p className="muted">{t('ptest.saveFirst')}</p>;
   return (
     <div className="planner-lab">
       <TestPanel buildId={buildId} minute={minute} />
-      <SeenByPanel buildId={buildId} minute={minute} />
+      <SeenByPanel buildId={buildId} minute={minute} idOf={idOf} />
     </div>
   );
 }
@@ -151,16 +153,19 @@ function TestPanel({ buildId, minute }) {
           {result.items.length > 0 && (
             <>
               <small className="muted">{t('ptest.weighed')}</small>
-              <ul className="test-items">
-                {result.items.map((w) => (
-                  <li key={w.itemId}>
-                    <span title={w.item}><ItemIcon id={w.itemId} size={22} /></span> {w.item}:
-                    {w.winnerWithout != null && w.winnerWithout !== result.winner && <span className="warn"> {t('ptest.without', { out: outcome(w.winnerWithout) })} ·</span>}
-                    {' '}{t('ptest.dDealt', { v: signed(w.dealt) })}
-                    {result.kind === 'scenario' && <> · {t('ptest.dSide', { v: signed(w.side) })} · {t('ptest.dAlive', { v: signed(w.alive, 1) })}</>}
-                  </li>
-                ))}
-              </ul>
+              <Bars rows={result.items.map((w) => ({
+                key: w.itemId,
+                label: w.item,
+                icon: <ItemIcon id={w.itemId} size={18} />,
+                // on a loss every variant ends at 0 health on its side: the seconds alive tell the items apart
+                value: result.kind !== 'scenario' ? w.dealt : result.winner === result.team ? w.side : w.alive,
+                text: [
+                  w.winnerWithout != null && w.winnerWithout !== result.winner ? t('ptest.without', { out: outcome(w.winnerWithout) }) : null,
+                  result.kind === 'scenario' ? t('ptest.dSide', { v: signed(w.side) }) : null,
+                  t('ptest.dDealt', { v: signed(w.dealt) }),
+                  result.kind === 'scenario' ? t('ptest.dAlive', { v: signed(w.alive, 1) }) : null,
+                ].filter(Boolean).join(' · '),
+              }))} />
             </>
           )}
           <button className="link" onClick={open}>{t('ptest.open')}</button>
@@ -172,8 +177,10 @@ function TestPanel({ buildId, minute }) {
 
 // ------------------------------------------------------------------ 5.2 seen under chosen effects
 
-function SeenByPanel({ buildId, minute }) {
+function SeenByPanel({ buildId, minute, idOf }) {
   const [chosen, setChosen] = useState([]);
+  const [metric, setMetric] = useState('mixed');
+  const [share, setShare] = useState(50);
   const [seen, setSeen] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -186,7 +193,7 @@ function SeenByPanel({ buildId, minute }) {
       setBusy(true);
       setError(null);
       try {
-        const r = await api.post('/api/lab/seen-by', { buildId, minute, effects: fx });
+        const r = await api.post('/api/lab/seen-by', { buildId, minute, effects: fx, physicalShare: share / 100, items: true });
         if (live) setSeen(r);
       } catch (e) {
         if (live) setError(e.message);
@@ -195,14 +202,16 @@ function SeenByPanel({ buildId, minute }) {
       }
     }, 300);
     return () => { live = false; clearTimeout(id); };
-  }, [buildId, minute, key]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [buildId, minute, key, share]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <section className="panel-sub">
       <PanelHead title={t('pseen.title')} help={t('pseen.help')} how={t('pseen.how')} />
       <EffectPicker chosen={chosen} onChange={setChosen} />
+      <MetricControls metric={metric} onMetric={setMetric} share={share} onShare={setShare} />
       {busy && <small className="muted">{t('ptest.busy')}</small>}
       {error && <p className="error">{error}</p>}
+      {seen && <SeenByReport result={seen} metric={metric} idOf={idOf} />}
       {seen && <SeenByView seen={seen} />}
     </section>
   );
@@ -222,6 +231,7 @@ function SeenByView({ seen }) {
     [t('plab.s.ehpPhys'), `${n0(s.health)} → ${n0(s.effectiveHpPhysical)}`],
     s.attackReduction > 0 && [t('plab.s.ehpAttacks'), `${n0(s.health)} → ${n0(s.effectiveHpAttacks)}`],
     [t('plab.s.ehpMagic'), `${n0(s.health)} → ${n0(s.effectiveHpMagic)}`],
+    [t('plab.s.ehpMixed', { p: pct(s.physicalShare) }), `${n0(s.health)} → ${n0(s.effectiveHpMixed)}`],
   ].filter(Boolean);
   const data = (seen.series ?? []).map((x) => ({ minute: x.minute, phys: Math.round(x.effectiveHpPhysical), magic: Math.round(x.effectiveHpMagic) }));
   return (

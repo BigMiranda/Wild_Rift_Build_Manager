@@ -67,10 +67,13 @@ public final class SeenBy {
     public double shieldCut;
     /** Share of the defender's healing that lands (Grievous Wounds). */
     public double healingKept;
-    /** Effective health: against physical damage, physical attacks only, and magic damage. */
+    /** The physical part of the damage the mixed effective health assumes (the rest is magic). */
+    public double physicalShare;
+    /** Effective health: against physical damage, physical attacks only, magic damage, and the mix. */
     public double effectiveHpPhysical;
     public double effectiveHpAttacks;
     public double effectiveHpMagic;
+    public double effectiveHpMixed;
     /** Why the resistances drop, in words ("Cutelo Negro −30%", "Lembranças do Lorde Dominik 35% de penetração"). */
     public List<String> armorReasons = new ArrayList<>();
     public List<String> magicReasons = new ArrayList<>();
@@ -98,6 +101,8 @@ public final class SeenBy {
         public double shieldMagic;
         /** Reduction against attacks (the defender's items), 0..1. */
         public double attackReduction;
+        /** The build's items at the minute (name -> id), for the counterfactual of each one. */
+        public Map<String, Long> items = new java.util.LinkedHashMap<>();
     }
 
     /**
@@ -135,18 +140,23 @@ public final class SeenBy {
                 b.attackReduction = Math.min(0.9, b.attackReduction + Arena.num(e.p.get("pct"), 0));
             }
         }
+        b.items.putAll(defender.f.items);
         return b;
     }
 
     /** The defender under the effects (a zero-second run, then {@link #apply}). */
     public static SeenBy under(CombatCatalog catalog, Map<String, Object> map, Arena.Input defender, Arena.Input opponent,
                                List<Applied> effects) {
-        return apply(base(catalog, map, defender, opponent), effects);
+        return apply(base(catalog, map, defender, opponent), effects, 0.5);
     }
 
-    /** The defender's starting stats under the effects: pure arithmetic, by the fight's mitigation rule. */
-    public static SeenBy apply(Base b, List<Applied> effects) {
+    /**
+     * The defender's starting stats under the effects: pure arithmetic, by the fight's mitigation rule.
+     * {@code physicalShare} is the physical part of the damage for the mixed effective health (the rest is magic).
+     */
+    public static SeenBy apply(Base b, List<Applied> effects, double physicalShare) {
         SeenBy s = new SeenBy();
+        s.physicalShare = Math.max(0, Math.min(1, physicalShare));
         s.health = b.health;
         s.armor = b.armor;
         s.magicResist = b.magicResist;
@@ -234,6 +244,8 @@ public final class SeenBy {
         s.effectiveHpPhysical = (s.health + (any + phys) * k) / Math.max(1e-9, s.physicalThrough);
         s.effectiveHpAttacks = (s.health + (any + phys) * k) / Math.max(1e-9, s.physicalThrough * (1 - s.attackReduction));
         s.effectiveHpMagic = (s.health + (any + mag) * k) / Math.max(1e-9, s.magicThrough);
+        double mix = s.physicalShare * s.physicalThrough + (1 - s.physicalShare) * s.magicThrough;
+        s.effectiveHpMixed = (s.health + s.shields * k) / Math.max(1e-9, mix);
         return s;
     }
 

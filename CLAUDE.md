@@ -93,7 +93,7 @@ Catalog re-import (Admin screen) upserts by name and preserves hand-edited items
 validation depend on it.
 
 Frontend: React 18 + Vite 5 + Recharts, plain JS (no TypeScript), **no router** — `App.jsx` switches pages
-(`pages/Planner`, `Arena`, `Admin`, `About`). `api.js` wraps all backend calls. Client-side game math
+(`pages/Planner`, `Arena`, `Ranking`, `Admin`, `About`). `api.js` wraps all backend calls. Client-side game math
 mirrors the backend in `abilityMath.js`, `effective.js`, `passives.js`, `runes.js`, `shopModel.js`, `skills.js` —
 keep these in sync with the Java side when a rule changes.
 

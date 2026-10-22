@@ -41,6 +41,12 @@ public class PlannerLabService {
         public ComboBench.Config bench;
         /** "Visão sob efeitos": the effects applied to the build, each at its value. */
         public List<SeenBy.Applied> effects = new ArrayList<>();
+        /** The physical part of the damage for the mixed effective health (null = half). */
+        public Double physicalShare;
+        /** Also minute by minute (the panel's chart; the ranking does without). */
+        public boolean series = true;
+        /** Also what each item of the build holds under the effects (the build without it). */
+        public boolean items;
         /** Compare builds: the builds, each with its own best combo. */
         public List<Long> buildIds = new ArrayList<>();
     }
@@ -80,7 +86,9 @@ public class PlannerLabService {
         public double dealt;
         public double taken;
         public Double alive;
-        /** The three items that weighed most (by the change of winner, then of side health and damage). */
+        /** Scenario: the health left on the build's side at the end. */
+        public Double side;
+        /** Every item by its weight, most first (the change of winner, then of side health and damage). */
         public List<ItemWeight> items = new ArrayList<>();
         /** What "Abrir na Arena" opens: the scenario with this build in the slot, or the combo. */
         public Scenario scenario;
@@ -228,6 +236,7 @@ public class PlannerLabService {
         for (ArenaModel.FighterStats f : r.fighters) {
             side += f.team == me.team ? Math.max(0, f.health) : 0;
         }
+        out.side = side;
         for (ArenaModel.ItemValue v : arena.itemValues(sc, slot)) {
             ItemWeight w = new ItemWeight();
             w.item = v.item;
@@ -241,7 +250,6 @@ public class PlannerLabService {
         int winner = r.winner;
         out.items.sort(Comparator.comparingDouble((ItemWeight w) -> -((w.winnerWithout != null && w.winnerWithout != winner ? 1e9 : 0)
                 + Math.abs(w.side) + Math.abs(w.dealt))));
-        out.items = new ArrayList<>(out.items.subList(0, Math.min(3, out.items.size())));
         out.scenario = sc;
         return out;
     }
@@ -276,7 +284,6 @@ public class PlannerLabService {
             out.items.add(w);
         }
         out.items.sort(Comparator.comparingDouble((ItemWeight w) -> -Math.abs(w.dealt)));
-        out.items = new ArrayList<>(out.items.subList(0, Math.min(3, out.items.size())));
         out.combo = c;
         out.dummy = lr.dummy;
         return out;
@@ -294,7 +301,29 @@ public class PlannerLabService {
         return sources.list();
     }
 
-    /** The build under the effects at the minute, and along the minutes of its timeline. */
+    /** What an effect or an item is worth in effective health: physical, magic and mixed. */
+    public static class Worth {
+        public String source;
+        public String item;
+        public Long itemId;
+        public double physical;
+        public double magic;
+        public double mixed;
+
+        static Worth of(SeenBy a, SeenBy b) {
+            Worth w = new Worth();
+            w.physical = a.effectiveHpPhysical - b.effectiveHpPhysical;
+            w.magic = a.effectiveHpMagic - b.effectiveHpMagic;
+            w.mixed = a.effectiveHpMixed - b.effectiveHpMixed;
+            return w;
+        }
+    }
+
+    /**
+     * The build under the effects at the minute: the stats with them and without any ("plain"), what each source takes
+     * away (the build under all the effects but that source, minus under all of them), what each item holds (with it
+     * minus without it, under the effects) and, minute by minute, the stats under the same effects.
+     */
     public Map<String, Object> seenBy(Request req) {
         if (req.buildId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Salve a build para usar este painel.");
@@ -302,17 +331,50 @@ public class PlannerLabService {
         BuildRepository.Build b = builds.findBuild(req.buildId).orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "Build " + req.buildId + " não existe."));
         List<SeenBy.Applied> fx = req.effects == null ? List.of() : req.effects;
+        double share = req.physicalShare == null ? 0.5 : req.physicalShare;
         Map<String, Object> out = new LinkedHashMap<>();
-        SeenBy now = SeenBy.apply(base(b, req.minute, null), fx);
+        out.put("buildId", b.id);
+        out.put("name", b.name);
+        out.put("unitCode", b.unitCode);
+        SeenBy.Base base = base(b, req.minute, null);
+        SeenBy now = SeenBy.apply(base, fx, share);
         now.minute = req.minute;
         out.put("now", now);
-        List<SeenBy> series = new ArrayList<>();
-        for (Map.Entry<Double, SeenBy.Base> e : series(b).entrySet()) {
-            SeenBy s = SeenBy.apply(e.getValue(), fx);
-            s.minute = e.getKey();
-            series.add(s);
+        out.put("plain", SeenBy.apply(base, List.of(), share));
+        List<Worth> contributions = new ArrayList<>();
+        LinkedHashSet<String> sources = new LinkedHashSet<>();
+        fx.forEach(e -> sources.add(e.source));
+        for (String src : sources) {
+            List<SeenBy.Applied> rest = new ArrayList<>();
+            for (SeenBy.Applied e : fx) {
+                if (!Objects.equals(e.source, src)) {
+                    rest.add(e);
+                }
+            }
+            Worth w = Worth.of(SeenBy.apply(base, rest, share), now);
+            w.source = src;
+            contributions.add(w);
         }
-        out.put("series", series);
+        out.put("contributions", contributions);
+        if (req.items) {
+            List<Worth> items = new ArrayList<>();
+            base.items.forEach((name, id) -> {
+                Worth w = Worth.of(now, SeenBy.apply(base(b, req.minute, Set.of(id)), fx, share));
+                w.item = name;
+                w.itemId = id;
+                items.add(w);
+            });
+            out.put("items", items);
+        }
+        if (req.series) {
+            List<SeenBy> series = new ArrayList<>();
+            for (Map.Entry<Double, SeenBy.Base> e : series(b).entrySet()) {
+                SeenBy s = SeenBy.apply(e.getValue(), fx, share);
+                s.minute = e.getKey();
+                series.add(s);
+            }
+            out.put("series", series);
+        }
         return out;
     }
 

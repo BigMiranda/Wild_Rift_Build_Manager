@@ -1221,3 +1221,34 @@ sem redução de resistência. Agora é mágico.
   dá "Armadura 366 → 241 (Cutelo Negro −30%, Presa da Serpente 15 de penetração)" e corte de escudo de 55%.
 - **Testes** (`SeenByTest`): a vida efetiva física sob a penetração de um atacante continua batendo com a luta; o
   corte da Tridente e da Presa escala e para em 60%; os motivos nomeiam as fontes (item e passiva de campeão).
+
+### Depois da Rodada 4 — ranking de builds e relatório visual
+- **Aba "Ranking"** (`pages/Ranking.jsx`): as builds de uma pasta (ou de todas), com caixas para tirar as que não
+  entram, no mesmo minuto. As builds rodam uma a uma no frontend, com barra de progresso e "Parar".
+  - **Sob efeitos escolhidos:** o mesmo `EffectPicker` da "Visão sob efeitos". Cada build é um `POST /api/lab/seen-by`
+    com `series: false, items: true`. Ordena pela vida efetiva mista, física ou mágica.
+    - Mapa de calor: a parte da vida efetiva que cada efeito tira de cada build, com a média por efeito.
+    - Faixa por build: o que cada item soma sob os efeitos.
+  - **Num cenário da Arena:** cada build é um `POST /api/lab/test` com o cenário, no slot do seu campeão. Ordena por
+    vitória, vida do lado, tempo viva e dano causado.
+- **`/api/lab/seen-by` agora devolve:**
+  - `plain`: os status sem efeito nenhum;
+  - `contributions`: por fonte, a build sob todos os outros efeitos menos sob todos;
+  - `items` (quando pedido): por item, com ele menos sem ele, sob os efeitos. Usa `SeenBy.base` sem o item, também
+    em cache;
+  - a vida efetiva mista volta, com `physicalShare` escolhido na tela (antes vinha da outra build).
+- **`/api/lab/test`:**
+  - devolve todos os itens (antes só 3) e a vida que sobra do lado (`side`);
+  - o painel "Testar" mostra todos os itens em barras.
+- **Decisão:** no cenário, o peso de um item na derrota é o tempo viva a mais, e não a vida do lado. Na derrota, todas
+  as variantes terminam com 0 de vida no lado. Na vitória, continua a vida do lado. Mudar o vencedor vem antes dos
+  dois.
+- **Verificado na tela:**
+  - Pasta Ornn, 4 builds aos 15:00, sob Cutelo Negro, Tridente da Oceânide (300 de PdH) e Apreender do Darius:
+    - a Big Carry v1 lidera com 12.783 de vida efetiva mista (16.185 sem os efeitos, −21%);
+    - o Apreender tira 11–13% de cada build, e o Cutelo 9–10%;
+    - a Tridente tira 0%, porque essas builds não começam a luta com escudo: os escudos vêm de efeitos condicionais;
+    - o item que mais segura é o Coração de Aço (+4.781 na Big Carry).
+    - 14 s para as 4 builds.
+  - Cenário "Darius ganha de Ornn": as 4 perdem. O Coração de Aço mantém a Big Carry viva 4,7 s a mais.
+- **Teste novo:** `SeenByTest.mixedEffectiveHealthFollowsThePhysicalPart`.
