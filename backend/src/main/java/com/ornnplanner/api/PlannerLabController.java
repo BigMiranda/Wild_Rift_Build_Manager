@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
-/** The planner's panels: this build tested in a scenario or combo, and seen by another build. */
+/** The planner's panels: this build tested in a scenario or combo, and seen under chosen effects. */
 @RestController
 @RequestMapping("/api/lab")
 public class PlannerLabController {
@@ -34,10 +34,10 @@ public class PlannerLabController {
         return lab.test(req);
     }
 
-    /** Items whose on-hit effects an ally can bring (resistance reduction, shield cut, wounds). */
-    @GetMapping("/ally-items")
-    public List<String> allyItems() {
-        return lab.allyItems();
+    /** Items and champion passives / abilities the "seen under effects" panel can apply, with their values. */
+    @GetMapping("/effect-sources")
+    public List<com.ornnplanner.arena.EffectSources.Source> effectSources() {
+        return lab.effectSources();
     }
 
     /** A build (the planner's draft, saved or not) at a minute. */
@@ -55,7 +55,7 @@ public class PlannerLabController {
         return lab.effectValues(req.build, req.minute);
     }
 
-    /** How another build sees this one (or the other way), now and minute by minute. */
+    /** The build under chosen item and champion effects, now and minute by minute. */
     @PostMapping("/seen-by")
     public Map<String, Object> seenBy(@RequestBody PlannerLabService.Request req) {
         return lab.seenBy(req);

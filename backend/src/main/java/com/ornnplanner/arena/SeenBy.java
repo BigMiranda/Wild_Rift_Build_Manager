@@ -11,18 +11,46 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * How one champion sees another ("visto por"): the defender's stats in practice for that attacker. Everything comes
- * from the fight's own rules: the stats both have as a fight starts (a zero-second run of the arena), the share of a
- * hit that gets through ({@link Arena#through}, the function every hit uses) and the attacker's (and an ally
- * ragdoll's) item effects at their most: resistance reduction, penetration, lethality, shield cut, Grievous Wounds,
- * the defender's damage reduction against attacks.
+ * A build seen under chosen effects ("visão sob efeitos"): the defender's stats in practice when hit by an item's or a
+ * champion's effects, each at the value the screen sets (the Ocean Trident's shield cut grows with ability power, the
+ * Serpent's Fang's with bonus attack damage). Everything comes from the fight's own rules: the stats the defender has
+ * as a fight starts (a zero-second run of the arena) and the share of a hit that gets through ({@link Arena#through},
+ * the function every hit uses); plus the defender's own damage reduction against attacks.
  */
 public final class SeenBy {
+
+    /** Kinds of applied effect. Shares are fractions (0.3 = 30%); flat penetration is in points. */
+    public static final String ARMOR_SHRED = "reduz_armadura";
+    public static final String MAGIC_SHRED = "reduz_rm";
+    public static final String ARMOR_PEN_PCT = "pen_armadura_pct";
+    public static final String ARMOR_PEN = "pen_armadura";
+    public static final String MAGIC_PEN_PCT = "pen_magica_pct";
+    public static final String MAGIC_PEN = "pen_magica";
+    public static final String SHIELD_CUT = "corta_escudo";
+    public static final String WOUNDS = "feridas";
+    public static final List<String> KINDS = List.of(ARMOR_SHRED, MAGIC_SHRED, ARMOR_PEN_PCT, ARMOR_PEN, MAGIC_PEN_PCT,
+            MAGIC_PEN, SHIELD_CUT, WOUNDS);
+
+    /** One effect applied to the defender: where it comes from, its kind and its value. */
+    public static class Applied {
+        public String source;
+        public String kind;
+        public double value;
+
+        public Applied() {
+        }
+
+        public Applied(String source, String kind, double value) {
+            this.source = source;
+            this.kind = kind;
+            this.value = value;
+        }
+    }
 
     public double health;
     public double armor;
     public double magicResist;
-    /** Armor and magic resist that count for this attacker (after reduction, % and flat penetration). */
+    /** Armor and magic resist that count under the effects (after reduction, % and flat penetration). */
     public double effectiveArmor;
     public double effectiveMagicResist;
     /** Share of physical / magic damage that gets through (after resistances). */
@@ -30,26 +58,23 @@ public final class SeenBy {
     public double magicThrough;
     /** Reduction of the defender against attacks (items), 0..1. */
     public double attackReduction;
-    /** Resistance reduction applied at its most (attacker's and ally's items). */
+    /** Resistance reduction applied (the strongest of each resistance). */
     public double armorShred;
     public double magicShred;
-    /** Shields as the fight starts, and after the attacker's shield cut. */
+    /** Shields as the fight starts, and after the shield cut. */
     public double shields;
     public double shieldsAfterCut;
     public double shieldCut;
-    /** Share of the defender's healing that lands (Grievous Wounds of the attacker or the ally). */
+    /** Share of the defender's healing that lands (Grievous Wounds). */
     public double healingKept;
-    /** The attacker's damage split (physical share), by its attack damage and ability power. */
-    public double physicalShare;
-    /** Effective health: against physical damage, physical attacks only, magic damage, and the attacker's mix. */
+    /** Effective health: against physical damage, physical attacks only, and magic damage. */
     public double effectiveHpPhysical;
     public double effectiveHpAttacks;
     public double effectiveHpMagic;
-    public double effectiveHpMixed;
     /** Why the resistances drop, in words ("Cutelo Negro −30%", "Lembranças do Lorde Dominik 35% de penetração"). */
     public List<String> armorReasons = new ArrayList<>();
     public List<String> magicReasons = new ArrayList<>();
-    /** The items behind the shield cut and the Grievous Wounds (null = none). */
+    /** The sources behind the shield cut and the Grievous Wounds (null = none). */
     public String shieldCutBy;
     public String healCutBy;
     public Double minute;
@@ -58,74 +83,128 @@ public final class SeenBy {
     }
 
     private static String pct(double v) {
-        return Math.round(v * 100) + "%";
+        long tenths = Math.round(v * 1000);
+        return tenths % 10 == 0 ? tenths / 10 + "%" : tenths / 10 + "," + tenths % 10 + "%";
     }
 
-    /** The defender seen by the attacker, with an ally's item effects (null = none) applied at their most. */
-    public static SeenBy of(CombatCatalog catalog, Map<String, Object> map, Arena.Input defender, Arena.Input attacker,
-                            List<ItemEffect> allyEffects) {
+    /** What the defender brings as a fight starts, before any effect: it depends on the build and minute only. */
+    public static class Base {
+        public double health;
+        public double armor;
+        public double magicResist;
+        /** Shields as the fight starts: against any damage, physical only, magic only. */
+        public double shieldAny;
+        public double shieldPhysical;
+        public double shieldMagic;
+        /** Reduction against attacks (the defender's items), 0..1. */
+        public double attackReduction;
+    }
+
+    /**
+     * The defender's starting stats: a zero-second run of the arena. {@code opponent} only stands across the defender
+     * (a ragdoll); its own stats count for nothing.
+     */
+    public static Base base(CombatCatalog catalog, Map<String, Object> map, Arena.Input defender, Arena.Input opponent) {
         Arena.Input d = defender.copy();
-        Arena.Input a = attacker.copy();
+        Arena.Input o = opponent.copy();
         d.f = defender.f;
-        a.f = attacker.f;
+        o.f = opponent.f;
         d.x = 1000;
-        a.x = 1200;
+        o.x = 1200;
         int dTeam = d.f.team;
-        int aTeam = a.f.team;
+        int oTeam = o.f.team;
         d.f.team = 0;
-        a.f.team = 1;
+        o.f.team = 1;
         Result r;
         try {
-            r = new Arena(catalog, map).withoutFrames().run(List.of(d, a), List.of(), 0);
+            r = new Arena(catalog, map).withoutFrames().run(List.of(d, o), List.of(), 0);
         } finally {
             d.f.team = dTeam;
-            a.f.team = aTeam;
+            o.f.team = oTeam;
         }
         FighterStats ds = r.fighters.get(0);
-        FighterStats as = r.fighters.get(1);
-        SeenBy s = new SeenBy();
-        s.health = ds.startStats.getOrDefault(Stats.MAX_HEALTH, 0.0);
-        s.armor = ds.startStats.getOrDefault(Stats.ARMOR, 0.0);
-        s.magicResist = ds.startStats.getOrDefault(Stats.MAGIC_RESIST, 0.0);
-        List<ItemEffect> hitting = new ArrayList<>(attacker.f.effects);
-        int own = hitting.size();
-        if (allyEffects != null) {
-            hitting.addAll(allyEffects);
+        Base b = new Base();
+        b.health = ds.startStats.getOrDefault(Stats.MAX_HEALTH, 0.0);
+        b.armor = ds.startStats.getOrDefault(Stats.ARMOR, 0.0);
+        b.magicResist = ds.startStats.getOrDefault(Stats.MAGIC_RESIST, 0.0);
+        b.shieldAny = ds.startShields.getOrDefault("any", 0.0);
+        b.shieldPhysical = ds.startShields.getOrDefault("fisico", 0.0);
+        b.shieldMagic = ds.startShields.getOrDefault("magico", 0.0);
+        for (ItemEffect e : defender.f.effects) {
+            if ("reduz_dano".equals(e.kind()) && "ataque".equals(String.valueOf(e.p.get("contra")))) {
+                b.attackReduction = Math.min(0.9, b.attackReduction + Arena.num(e.p.get("pct"), 0));
+            }
         }
+        return b;
+    }
+
+    /** The defender under the effects (a zero-second run, then {@link #apply}). */
+    public static SeenBy under(CombatCatalog catalog, Map<String, Object> map, Arena.Input defender, Arena.Input opponent,
+                               List<Applied> effects) {
+        return apply(base(catalog, map, defender, opponent), effects);
+    }
+
+    /** The defender's starting stats under the effects: pure arithmetic, by the fight's mitigation rule. */
+    public static SeenBy apply(Base b, List<Applied> effects) {
+        SeenBy s = new SeenBy();
+        s.health = b.health;
+        s.armor = b.armor;
+        s.magicResist = b.magicResist;
+        s.attackReduction = b.attackReduction;
+        double pctArmorPen = 0;
+        double flatArmorPen = 0;
+        double pctMagicPen = 0;
+        double flatMagicPen = 0;
         double cut = 0;
         double gw = 0;
         String armorBy = null;
         String magicBy = null;
-        for (int i = 0; i < hitting.size(); i++) {
-            ItemEffect e = hitting.get(i);
-            String who = e.item + (i >= own ? " (aliado)" : "");
-            switch (e.kind()) {
-                case "reduz_resistencia":
-                    double max = Arena.num(e.p.get("max"), 0.3);
-                    if ("armadura".equals(e.p.get("resistencia"))) {
-                        if (max > s.armorShred) {
-                            s.armorShred = max;
-                            armorBy = who;
-                        }
-                    } else if (max > s.magicShred) {
-                        s.magicShred = max;
-                        magicBy = who;
+        List<String> armorPen = new ArrayList<>();
+        List<String> magicPen = new ArrayList<>();
+        for (Applied e : effects == null ? List.<Applied>of() : effects) {
+            double v = Math.max(0, e.value);
+            if (v <= 0 || e.kind == null) {
+                continue;
+            }
+            switch (e.kind) {
+                case ARMOR_SHRED:
+                    if (Math.min(1, v) > s.armorShred) {
+                        s.armorShred = Math.min(1, v);
+                        armorBy = e.source;
                     }
                     break;
-                case "corta_escudo":
-                    double c = Math.min(Arena.num(e.p.get("max"), 0.6), Arena.num(e.p.get("base"), 0)
-                            + Arena.num(e.p.get("dda_bonus"), 0) * Math.max(0, as.startStats.getOrDefault(Stats.ATTACK_DAMAGE, 0.0)
-                            - attacker.f.base.getOrDefault(Stats.ATTACK_DAMAGE, 0.0))
-                            + Arena.num(e.p.get("pdh"), 0) * as.startStats.getOrDefault(Stats.ABILITY_POWER, 0.0));
-                    if (c > cut) {
-                        cut = c;
-                        s.shieldCutBy = who;
+                case MAGIC_SHRED:
+                    if (Math.min(1, v) > s.magicShred) {
+                        s.magicShred = Math.min(1, v);
+                        magicBy = e.source;
                     }
                     break;
-                case "feridas":
-                    if (Arena.num(e.p.get("pct"), 0.4) > gw) {
-                        gw = Arena.num(e.p.get("pct"), 0.4);
-                        s.healCutBy = who;
+                case ARMOR_PEN_PCT:
+                    pctArmorPen += v;
+                    armorPen.add(e.source + " " + pct(v) + " de penetração");
+                    break;
+                case ARMOR_PEN:
+                    flatArmorPen += v;
+                    armorPen.add(e.source + " " + Math.round(v) + " de penetração");
+                    break;
+                case MAGIC_PEN_PCT:
+                    pctMagicPen += v;
+                    magicPen.add(e.source + " " + pct(v) + " de penetração");
+                    break;
+                case MAGIC_PEN:
+                    flatMagicPen += v;
+                    magicPen.add(e.source + " " + Math.round(v) + " de penetração");
+                    break;
+                case SHIELD_CUT:
+                    if (Math.min(1, v) > cut) {
+                        cut = Math.min(1, v);
+                        s.shieldCutBy = e.source;
+                    }
+                    break;
+                case WOUNDS:
+                    if (Math.min(1, v) > gw) {
+                        gw = Math.min(1, v);
+                        s.healCutBy = e.source;
                     }
                     break;
                 default:
@@ -138,44 +217,24 @@ public final class SeenBy {
         if (magicBy != null) {
             s.magicReasons.add(magicBy + " −" + pct(s.magicShred));
         }
-        reasons(s.armorReasons, attacker.f.statSources, "% Armor Penetration", "Armor Penetration");
-        reasons(s.magicReasons, attacker.f.statSources, "% Magic Penetration", "Magic Penetration");
-        for (ItemEffect e : defender.f.effects) {
-            if ("reduz_dano".equals(e.kind()) && "ataque".equals(String.valueOf(e.p.get("contra")))) {
-                s.attackReduction = Math.min(0.9, s.attackReduction + Arena.num(e.p.get("pct"), 0));
-            }
-        }
-        double pctArmorPen = as.startStats.getOrDefault("% Armor Penetration", 0.0) / 100;
-        double flatArmorPen = as.startStats.getOrDefault("Armor Penetration", 0.0);
-        double pctMagicPen = as.startStats.getOrDefault("% Magic Penetration", 0.0) / 100;
-        double flatMagicPen = as.startStats.getOrDefault("Magic Penetration", 0.0);
-        s.physicalThrough = Arena.through(s.armor, s.armorShred, pctArmorPen, flatArmorPen);
-        s.magicThrough = Arena.through(s.magicResist, s.magicShred, pctMagicPen, flatMagicPen);
+        s.armorReasons.addAll(armorPen);
+        s.magicReasons.addAll(magicPen);
+        s.physicalThrough = Arena.through(s.armor, s.armorShred, Math.min(1, pctArmorPen), flatArmorPen);
+        s.magicThrough = Arena.through(s.magicResist, s.magicShred, Math.min(1, pctMagicPen), flatMagicPen);
         s.effectiveArmor = resist(s.physicalThrough);
         s.effectiveMagicResist = resist(s.magicThrough);
-        double any = ds.startShields.getOrDefault("any", 0.0);
-        double phys = ds.startShields.getOrDefault("fisico", 0.0);
-        double mag = ds.startShields.getOrDefault("magico", 0.0);
+        double any = b.shieldAny;
+        double phys = b.shieldPhysical;
+        double mag = b.shieldMagic;
         s.shields = any + phys + mag;
         s.shieldCut = cut;
         s.shieldsAfterCut = s.shields * (1 - cut);
         s.healingKept = 1 - gw;
-        double ad = Math.max(0, as.startStats.getOrDefault(Stats.ATTACK_DAMAGE, 0.0));
-        double ap = Math.max(0, as.startStats.getOrDefault(Stats.ABILITY_POWER, 0.0));
-        s.physicalShare = ad + ap <= 0 ? 1 : ad / (ad + ap);
         double k = 1 - cut;
         s.effectiveHpPhysical = (s.health + (any + phys) * k) / Math.max(1e-9, s.physicalThrough);
         s.effectiveHpAttacks = (s.health + (any + phys) * k) / Math.max(1e-9, s.physicalThrough * (1 - s.attackReduction));
         s.effectiveHpMagic = (s.health + (any + mag) * k) / Math.max(1e-9, s.magicThrough);
-        double mix = s.physicalShare * s.physicalThrough + (1 - s.physicalShare) * s.magicThrough;
-        s.effectiveHpMixed = (s.health + s.shields * k) / Math.max(1e-9, mix);
         return s;
-    }
-
-    /** The attacker's penetration by source, in words: "% de penetração" and flat "de penetração". */
-    private static void reasons(List<String> out, Map<String, Map<String, Double>> sources, String pctStat, String flatStat) {
-        sources.getOrDefault(pctStat, Map.of()).forEach((src, v) -> out.add(src + " " + Math.round(v) + "% de penetração"));
-        sources.getOrDefault(flatStat, Map.of()).forEach((src, v) -> out.add(src + " " + Math.round(v) + " de penetração"));
     }
 
     /** The resistance that lets the given share through (100 / (100 + r)), negative ones too. */

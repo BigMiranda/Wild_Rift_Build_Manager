@@ -332,11 +332,16 @@ Nos detalhes de um momento da linha do tempo, a aba **Testar** tem dois painéis
   dele, no minuto escolhido) ou um combo da biblioteca contra o boneco. Mostra o vencedor (ou o dano do combo), o dano
   causado e recebido e os 3 itens que mais pesaram: a mesma luta sem cada item. "Abrir na Arena" leva ao cenário (uma
   cópia com esta build) ou ao laboratório, com o relatório completo.
-- **Visão de outra build:** os status desta build como qualquer outra build salva os enxerga no início de uma luta:
-  armadura e RM efetivas (redução %, penetração % e fixa) com o motivo de cada queda, o dano que passa por tipo, a
-  vida efetiva contra físico, mágico e a mistura da outra build, escudos depois do corte e cura depois das Feridas.
-  Os efeitos de um aliado dela (Cutelo Negro, Feridas, corte de escudo) entram no máximo de acúmulos. "Inverter" mostra
-  o contrário. Um minigráfico traz a vida efetiva física e mágica ao longo da partida.
+- **Visão sob efeitos:** os status desta build no início de uma luta sob os efeitos que você escolher, de itens
+  (Cutelo Negro, Maldição Sanguinária, Feridas Dolorosas, Presa da Serpente, Tridente da Oceânide, itens de
+  penetração) e de passivas e habilidades de campeões (penetração de Ambessa, Darius, Mordekaiser, Nilah e Pantheon;
+  redução de Armadura do Renekton e de RM do Rumble). Cada efeito começa no valor dos arquivos (no rank máximo, para
+  habilidades) e pode ser editado. Os que dependem de um status trazem um campo para ele, e o valor segue a fórmula até
+  o limite: o corte de escudo da Tridente é 40% + 0,05% por PdH e o da Presa é 40% + 0,1% por DdA adicional, até 60%;
+  a penetração da Nilah é 28% da Taxa de Crítico. Mostra a armadura e a RM efetivas com o motivo de cada queda, o dano
+  que passa por tipo, a vida efetiva contra físico e mágico, escudos depois do corte e cura depois das Feridas. As
+  penetrações % se somam; reduções, cortes e Feridas valem pelo mais forte. Um minigráfico traz a vida efetiva física e
+  mágica ao longo da partida, sob os mesmos efeitos.
 
 ## Arena
 

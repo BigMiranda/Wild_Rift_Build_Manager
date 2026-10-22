@@ -1200,3 +1200,24 @@ sem redução de resistência. Agora é mágico.
 - Também: os gatilhos dizem o tipo de dano em português ("mágico", não "magico").
 - Teste: `ArenaRulesTest.effectValuesMatchWhatTheFightDoes`. O valor refletido mostrado (36) é o que a luta mede por
   ataque, e os valores só são calculados quando pedidos. Testes: 178. O golden não mudou.
+
+### Depois da Rodada 4 — visão sob efeitos no lugar da visão de outra build
+- O painel **"Visão de outra build"** virou **"Visão sob efeitos"**: em vez de escolher outra build (e inverter, e
+  somar um aliado), escolhem-se os efeitos que atingem a build, cada um com o valor editável.
+  - **Fontes** (`GET /api/lab/effect-sources`, `EffectSources`): os itens com redução de resistência, Feridas, corte de
+    escudo (`combate_7_3b.yml`) e penetração (status da loja e linhas de `efeitos_itens_7_3b.yml`, como o Terminus);
+    e as passivas e habilidades de campeões com penetração (`campeoes_7_3b.yml`) ou redução de resistência nas fichas
+    da Arena (`kits_7_3b.yml`: Renekton e Rumble). Habilidades entram no rank máximo; o texto mostra os ranks.
+  - **Multiplicador por status:** o efeito que escala traz um campo para o status, e o valor segue a fórmula até o
+    limite. Tridente da Oceânide: 40% + 0,05% por PdH; Presa da Serpente: 40% + 0,1% por DdA adicional (até 60%);
+    Nilah: 28% da Taxa de Crítico.
+  - **Regras:** penetrações % se somam (como o status na luta); reduções, corte e Feridas valem pelo mais forte.
+  - Saíram a vida efetiva mista (dependia da proporção de DdA/PdH da outra build), `pseen.reverse`/`ally*` e
+    `GET /api/lab/ally-items`.
+- **Status base em cache:** `SeenBy.base` (a corrida de 0 s da Arena) depende só da build e do minuto; `SeenBy.apply`
+  aplica os efeitos com aritmética. O `PlannerLabService` guarda as bases por build, `updatedAt`, minuto e itens
+  retirados. Big Carry v1 (20 minutos na série): a primeira consulta leva ~10 s; trocar efeitos leva ~50 ms.
+- **Verificado na tela** (Ornn "Big Carry v1", 22:39): Cutelo Negro 30% + Presa da Serpente com 150 de DdA adicional
+  dá "Armadura 366 → 241 (Cutelo Negro −30%, Presa da Serpente 15 de penetração)" e corte de escudo de 55%.
+- **Testes** (`SeenByTest`): a vida efetiva física sob a penetração de um atacante continua batendo com a luta; o
+  corte da Tridente e da Presa escala e para em 60%; os motivos nomeiam as fontes (item e passiva de campeão).

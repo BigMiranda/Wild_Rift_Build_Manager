@@ -52,6 +52,11 @@ public final class EffectSpec {
         /** Lines in words ("+25/30/35/40% da Armadura total"). */
         public List<String> summary = new ArrayList<>();
         transient List<Map<String, Object>> lines = new ArrayList<>();
+
+        /** The lines as in the seed file (tipo, valor, ratio, ref...), read-only. */
+        public List<Map<String, Object>> rawLines() {
+            return java.util.Collections.unmodifiableList(lines);
+        }
     }
 
     private final Map<String, String> statCodes;

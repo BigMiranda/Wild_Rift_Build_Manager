@@ -3,13 +3,14 @@ import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, X
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { mmss, n0, n1 } from '../format.js';
+import EffectPicker, { applied } from './EffectPicker.jsx';
 import ItemIcon from './ItemIcon.jsx';
 import MinuteInput from './MinuteInput.jsx';
 
 /**
  * The planner's two panels for the open build (as saved) at the chosen minute: test it in a saved arena scenario or a
- * library combo (compact result, the items that weighed most, a link to the arena), and see its stats as another build
- * meets them. The arena keeps the full lab (search, ragdolls, the whole report).
+ * library combo (compact result, the items that weighed most, a link to the arena), and see its stats under chosen
+ * item and champion effects, each at its value. The arena keeps the full lab (search, ragdolls, the whole report).
  */
 const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`);
 const signed = (v, digits = 0) => (v == null ? '—' : `${v > 0 ? '+' : ''}${digits ? n1(v) : n0(v)}`);
@@ -44,12 +45,12 @@ function PanelHead({ title, help, how }) {
   );
 }
 
-export default function BuildTestPanels({ buildId, minute, builds, items }) {
+export default function BuildTestPanels({ buildId, minute }) {
   if (!buildId) return <p className="muted">{t('ptest.saveFirst')}</p>;
   return (
     <div className="planner-lab">
       <TestPanel buildId={buildId} minute={minute} />
-      <SeenByPanel buildId={buildId} minute={minute} builds={builds} items={items} />
+      <SeenByPanel buildId={buildId} minute={minute} />
     </div>
   );
 }
@@ -169,76 +170,45 @@ function TestPanel({ buildId, minute }) {
   );
 }
 
-// ------------------------------------------------------------------ 5.2 seen by another build
+// ------------------------------------------------------------------ 5.2 seen under chosen effects
 
-function SeenByPanel({ buildId, minute, builds, items }) {
-  const [other, setOther] = useState(null);
-  const [otherMinute, setOtherMinute] = useState(null);
-  const [allyList, setAllyList] = useState([]);
-  const [ally, setAlly] = useState([]);
-  const [reverse, setReverse] = useState(false);
+function SeenByPanel({ buildId, minute }) {
+  const [chosen, setChosen] = useState([]);
   const [seen, setSeen] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const idOf = useMemo(() => new Map((items ?? []).map((i) => [i.name, i.id])), [items]);
+  const fx = useMemo(() => applied(chosen), [chosen]);
+  const key = JSON.stringify(fx);
 
   useEffect(() => {
-    api.get('/api/lab/ally-items').then(setAllyList).catch(() => {});
-  }, []);
-  const load = async (rev = reverse) => {
-    if (other == null) return;
-    setBusy(true);
-    setError(null);
-    try {
-      setSeen(await api.post('/api/lab/seen-by', { buildId, minute, otherBuildId: other, otherMinute, allyItems: ally, reverse: rev }));
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-  useEffect(() => { load(); }, [buildId, minute, other, otherMinute, ally]); // eslint-disable-line react-hooks/exhaustive-deps
-  const flip = () => {
-    setReverse((r) => !r);
-    load(!reverse);
-  };
-  const choices = builds.filter((b) => b.id !== buildId && b.unitCode !== 'RAGDOLL');
+    let live = true;
+    const id = setTimeout(async () => {
+      setBusy(true);
+      setError(null);
+      try {
+        const r = await api.post('/api/lab/seen-by', { buildId, minute, effects: fx });
+        if (live) setSeen(r);
+      } catch (e) {
+        if (live) setError(e.message);
+      } finally {
+        if (live) setBusy(false);
+      }
+    }, 300);
+    return () => { live = false; clearTimeout(id); };
+  }, [buildId, minute, key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <section className="panel-sub">
       <PanelHead title={t('pseen.title')} help={t('pseen.help')} how={t('pseen.how')} />
-      <div className="row">
-        <label className="inline">{t('pseen.build')}
-          <select value={other ?? ''} onChange={(e) => setOther(e.target.value ? Number(e.target.value) : null)}>
-            <option value="">—</option>
-            {choices.map((b) => <option key={b.id} value={b.id}>{b.unitCode} · {b.name}</option>)}
-          </select>
-        </label>
-        <label className="inline">{t('ptest.minute')}<MinuteInput value={otherMinute} onChange={setOtherMinute} placeholder={mmss(minute)} style={{ width: 70 }} /></label>
-        <button onClick={flip} disabled={other == null || busy} title={t('pseen.reverseTitle')}>{t('pseen.reverse')}</button>
-      </div>
-      <div className="row">
-        <label className="inline" title={t('pseen.allyTitle')}>{t('pseen.ally')}
-          <select value="" onChange={(e) => e.target.value && !ally.includes(e.target.value) && setAlly([...ally, e.target.value])}>
-            <option value="">+</option>
-            {allyList.filter((n) => !ally.includes(n)).map((n) => <option key={n} value={n}>{n}</option>)}
-          </select>
-        </label>
-        {ally.map((n) => (
-          <span key={n} className="chip-item">
-            {idOf.get(n) != null && <ItemIcon id={idOf.get(n)} size={20} />}{n}
-            <button className="icon" onClick={() => setAlly(ally.filter((x) => x !== n))} aria-label={t('pseen.removeAlly', { item: n })}>✕</button>
-          </span>
-        ))}
-      </div>
+      <EffectPicker chosen={chosen} onChange={setChosen} />
       {busy && <small className="muted">{t('ptest.busy')}</small>}
       {error && <p className="error">{error}</p>}
-      {seen && <SeenByView seen={seen} reverse={reverse} />}
+      {seen && <SeenByView seen={seen} />}
     </section>
   );
 }
 
-function SeenByView({ seen, reverse }) {
+function SeenByView({ seen }) {
   const s = seen.now;
   const why = (list) => (list?.length ? ` (${list.join(', ')})` : '');
   const rows = [
@@ -252,12 +222,11 @@ function SeenByView({ seen, reverse }) {
     [t('plab.s.ehpPhys'), `${n0(s.health)} → ${n0(s.effectiveHpPhysical)}`],
     s.attackReduction > 0 && [t('plab.s.ehpAttacks'), `${n0(s.health)} → ${n0(s.effectiveHpAttacks)}`],
     [t('plab.s.ehpMagic'), `${n0(s.health)} → ${n0(s.effectiveHpMagic)}`],
-    [t('plab.s.ehpMixed', { p: pct(s.physicalShare) }), `${n0(s.health)} → ${n0(s.effectiveHpMixed)}`],
   ].filter(Boolean);
   const data = (seen.series ?? []).map((x) => ({ minute: x.minute, phys: Math.round(x.effectiveHpPhysical), magic: Math.round(x.effectiveHpMagic) }));
   return (
     <div className="lab-metrics">
-      <p className="small muted">{t(reverse ? 'pseen.whoReverse' : 'pseen.who')} {t('pseen.startNote')}</p>
+      <p className="small muted">{t('pseen.who')} {t('pseen.startNote')}</p>
       <dl>{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       {data.length > 1 && (
         <ResponsiveContainer width="100%" height={160}>

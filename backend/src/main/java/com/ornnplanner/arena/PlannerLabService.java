@@ -24,14 +24,14 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * The two panels of the build planner, for the open build at a minute: "test this build in a scenario or combo" (a
  * saved arena scenario with this build in a slot of its champion, or a library combo on the ragdoll; the result and the
- * items that weighed most) and "seen by another build" (this build's stats as another build, with an ally's on-hit
- * effects, meets them). Also the scored bench a future automatic build search will call ({@link #score}, cached;
+ * items that weighed most) and "seen under effects" (this build's stats under chosen item and champion effects,
+ * each at its value). Also the scored bench a future automatic build search will call ({@link #score}, cached;
  * {@link #compareBuilds}).
  */
 @Service
 public class PlannerLabService {
 
-    /** What the screen asks: the build, the minute, the ragdoll and, optionally, a combo and another build. */
+    /** What the screen asks: the build, the minute, the ragdoll and, optionally, a combo or the effects to apply. */
     public static class Request {
         public Long buildId;
         public Double minute;
@@ -39,13 +39,8 @@ public class PlannerLabService {
         public Long comboId;
         public Combo combo;
         public ComboBench.Config bench;
-        /** "Visto por": the other build, at its minute (null = the same minute). */
-        public Long otherBuildId;
-        public Double otherMinute;
-        /** "Efeitos de um aliado dela": real items whose on-hit effects count at their most stacks. */
-        public List<String> allyItems = new ArrayList<>();
-        /** "Visto por" the other way: how this build sees the other. */
-        public boolean reverse;
+        /** "Visão sob efeitos": the effects applied to the build, each at its value. */
+        public List<SeenBy.Applied> effects = new ArrayList<>();
         /** Compare builds: the builds, each with its own best combo. */
         public List<Long> buildIds = new ArrayList<>();
     }
@@ -103,24 +98,25 @@ public class PlannerLabService {
         public boolean generated;
     }
 
-    /** Kinds of on-hit item effects that change how a defender is seen (resistance reduction, shield cut, wounds). */
-    static final Set<String> ON_HIT = Set.of("reduz_resistencia", "corta_escudo", "feridas");
-
     private final ArenaService arena;
     private final LabService lab;
     private final ComboRepository combos;
     private final BuildRepository builds;
     private final CombatCatalog catalog;
+    private final EffectSources sources;
     private final Map<String, Object> map;
     private final Map<String, ComboBench.Report> cache = new ConcurrentHashMap<>();
+    private final Map<String, SeenBy.Base> bases = new ConcurrentHashMap<>();
 
     @SuppressWarnings("unchecked")
-    public PlannerLabService(ArenaService arena, LabService lab, ComboRepository combos, BuildRepository builds, CombatCatalog catalog) {
+    public PlannerLabService(ArenaService arena, LabService lab, ComboRepository combos, BuildRepository builds, CombatCatalog catalog,
+                             EffectSources sources) {
         this.arena = arena;
         this.lab = lab;
         this.combos = combos;
         this.builds = builds;
         this.catalog = catalog;
+        this.sources = sources;
         this.map = (Map<String, Object>) arena.kits().get("mapa");
     }
 
@@ -291,58 +287,62 @@ public class PlannerLabService {
         return arena.effectValues(build, minute);
     }
 
-    // ------------------------------------------------------------------ 2. seen by another build
+    // ------------------------------------------------------------------ 2. seen under chosen effects
 
-    /** Items with on-hit effects that change how a defender is seen (an ally's: Black Cleaver, wounds, shield cut). */
-    public List<String> allyItems() {
-        List<String> out = new ArrayList<>();
-        catalog.items().forEach((name, fx) -> {
-            if (fx.stream().anyMatch(e -> ON_HIT.contains(String.valueOf(e.get("tipo"))))) {
-                out.add(name);
-            }
-        });
-        return out;
+    /** The items and champion passives / abilities the panel can apply, with their default values and formulas. */
+    public List<EffectSources.Source> effectSources() {
+        return sources.list();
     }
 
-    /** How the other build (at its minute) sees this one, or the other way; and along the minutes of the timeline. */
+    /** The build under the effects at the minute, and along the minutes of its timeline. */
     public Map<String, Object> seenBy(Request req) {
-        if (req.otherBuildId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha a outra build.");
+        if (req.buildId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Salve a build para usar este painel.");
         }
+        BuildRepository.Build b = builds.findBuild(req.buildId).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Build " + req.buildId + " não existe."));
+        List<SeenBy.Applied> fx = req.effects == null ? List.of() : req.effects;
         Map<String, Object> out = new LinkedHashMap<>();
-        List<ItemEffect> ally = allyEffects(req.allyItems);
-        Long def = req.reverse ? req.otherBuildId : req.buildId;
-        Long att = req.reverse ? req.buildId : req.otherBuildId;
-        Double defMin = req.reverse ? (req.otherMinute != null ? req.otherMinute : req.minute) : req.minute;
-        Double attMin = req.reverse ? req.minute : (req.otherMinute != null ? req.otherMinute : req.minute);
-        SeenBy now = SeenBy.of(catalog, map, input(def, defMin), input(att, attMin), ally);
-        now.minute = defMin;
+        SeenBy now = SeenBy.apply(base(b, req.minute, null), fx);
+        now.minute = req.minute;
         out.put("now", now);
-        // minute by minute, both builds at the same minute, until the end of the defender's match
-        BuildRepository.Build b = builds.findBuild(def).orElseThrow();
-        double end = b.matchEnd != null ? b.matchEnd : 20;
         List<SeenBy> series = new ArrayList<>();
-        for (int m = 1; m <= Math.min(30, (int) Math.ceil(end)); m++) {
-            try {
-                SeenBy s = SeenBy.of(catalog, map, input(def, (double) m), input(att, (double) m), ally);
-                s.minute = (double) m;
-                series.add(s);
-            } catch (RuntimeException e) {
-                // a minute a build cannot be computed at (no gold yet): left out
-            }
+        for (Map.Entry<Double, SeenBy.Base> e : series(b).entrySet()) {
+            SeenBy s = SeenBy.apply(e.getValue(), fx);
+            s.minute = e.getKey();
+            series.add(s);
         }
         out.put("series", series);
         return out;
     }
 
-    /** The on-hit effects of an ally's items (as in the combat file), at their most. */
-    private List<ItemEffect> allyEffects(List<String> items) {
-        List<ItemEffect> out = new ArrayList<>();
-        for (String name : items == null ? List.<String>of() : items) {
-            for (Map<String, Object> e : catalog.effects(name)) {
-                if (ON_HIT.contains(String.valueOf(e.get("tipo")))) {
-                    out.add(new ItemEffect(name, e));
-                }
+    /**
+     * The build's starting stats at a minute (without some items: null = all of them), cached by the build's last save:
+     * the effects only change the arithmetic on top of them.
+     */
+    SeenBy.Base base(BuildRepository.Build b, Double minute, Set<Long> without) {
+        String key = b.id + "|" + b.updatedAt + "|" + minute + "|" + (without == null ? "" : new java.util.TreeSet<>(without));
+        SeenBy.Base hit = bases.get(key);
+        if (hit != null) {
+            return hit;
+        }
+        SeenBy.Base base = SeenBy.base(catalog, map, arena.labInput(b.id, minute, without), arena.dummyInput(new Dummy()));
+        if (bases.size() > 20000) {
+            bases.clear();
+        }
+        bases.put(key, base);
+        return base;
+    }
+
+    /** Minute by minute (1, 2, ... until the end of the build's match, at most 30): the starting stats. */
+    private Map<Double, SeenBy.Base> series(BuildRepository.Build b) {
+        Map<Double, SeenBy.Base> out = new LinkedHashMap<>();
+        double end = b.matchEnd != null ? b.matchEnd : 20;
+        for (int m = 1; m <= Math.min(30, (int) Math.ceil(end)); m++) {
+            try {
+                out.put((double) m, base(b, (double) m, null));
+            } catch (RuntimeException e) {
+                // a minute the build cannot be computed at (no gold yet): left out
             }
         }
         return out;

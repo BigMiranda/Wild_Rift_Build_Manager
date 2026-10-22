@@ -2,10 +2,11 @@ package com.ornnplanner.engine;
 
 import com.ornnplanner.arena.Arena;
 import com.ornnplanner.arena.ArenaModel.Result;
+import com.ornnplanner.arena.EffectSources;
 import com.ornnplanner.arena.SeenBy;
+import com.ornnplanner.arena.SeenBy.Applied;
 import com.ornnplanner.arena.ai.ActionSpace;
 import com.ornnplanner.arena.ai.Policy;
-import com.ornnplanner.arena.fight.ItemEffect;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -14,7 +15,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** "Visto por": the defender's stats in practice for an attacker, by the fight's own rules. */
+/** "Visão sob efeitos": the defender's stats in practice under chosen effects, by the fight's own rules. */
 class SeenByTest {
 
     private static Arena.Input defender() {
@@ -33,10 +34,20 @@ class SeenByTest {
         return a;
     }
 
-    /** 🎯 The physical effective health matches the raw damage of the attacks that killed the defender in a fight. */
+    private static final List<Applied> PEN = List.of(new Applied("Último Sussurro", SeenBy.ARMOR_PEN_PCT, 0.20),
+            new Applied("Punhal Serrilhado", SeenBy.ARMOR_PEN, 10));
+
+    private static SeenBy under(List<Applied> fx) {
+        return SeenBy.under(ArenaScenarios.CATALOG, ArenaScenarios.MAP, defender(), attacker(), fx);
+    }
+
+    /**
+     * 🎯 Under the penetration of an attacker, the physical effective health matches the raw damage of that attacker's
+     * attacks that killed the defender in a fight.
+     */
     @Test
     void physicalEffectiveHealthMatchesAFightOfAttacks() {
-        SeenBy s = SeenBy.of(ArenaScenarios.CATALOG, ArenaScenarios.MAP, defender(), attacker(), List.of());
+        SeenBy s = under(PEN);
         Result r = new Arena(ArenaScenarios.CATALOG, ArenaScenarios.MAP).run(List.of(attacker(), defender()), List.of(), 120);
         assertTrue(r.fighters.get(1).deathTime != null, "the attacks kill");
         double attacks = r.fighters.get(0).damageBySource.get("Ataque") / (180 * s.physicalThrough);
@@ -50,33 +61,61 @@ class SeenByTest {
     }
 
     @Test
-    void anAllyRagdollAtItsMostShredsAndCutsHealing() {
-        List<ItemEffect> ally = List.of(
-                new ItemEffect("Cutelo Negro", Map.of("tipo", "reduz_resistencia", "resistencia", "armadura", "por_acerto", 0.06,
-                        "max", 0.30, "gatilho", "fisico", "duracao", 6)),
-                new ItemEffect("Lembrete Mortal", Map.of("tipo", "feridas", "pct", 0.5, "gatilho", "fisico")));
-        SeenBy plain = SeenBy.of(ArenaScenarios.CATALOG, ArenaScenarios.MAP, defender(), attacker(), List.of());
-        SeenBy with = SeenBy.of(ArenaScenarios.CATALOG, ArenaScenarios.MAP, defender(), attacker(), ally);
+    void aShredAndWoundsAtTheirValues() {
+        SeenBy plain = under(List.of());
+        SeenBy with = under(List.of(new Applied("Cutelo Negro", SeenBy.ARMOR_SHRED, 0.30),
+                new Applied("Lembrete Mortal", SeenBy.WOUNDS, 0.5)));
+        assertEquals(120, plain.effectiveArmor, 1e-6, "nothing applied: the armor as it is");
         assertEquals(0.30, with.armorShred, 1e-9);
-        assertEquals(120 * 0.7 * 0.8 - 10, with.effectiveArmor, 1e-6);
+        assertEquals(120 * 0.7, with.effectiveArmor, 1e-6);
         assertTrue(with.effectiveHpPhysical < plain.effectiveHpPhysical);
         assertEquals(0.5, with.healingKept, 1e-9);
         assertEquals(plain.effectiveHpMagic, with.effectiveHpMagic, 1e-6, "the magic side does not change");
     }
 
-    /** Each value says from where to where and why: the shred of the ally's item and the attacker's penetration items. */
+    /** Each value says from where to where and why: the shred's source and each penetration source. */
     @Test
-    void theReasonsNameTheItems() {
-        Arena.Input a = attacker();
-        a.f.statSources.put("% Armor Penetration", new java.util.LinkedHashMap<>(Map.of("Lembranças do Lorde Dominik", 20.0)));
-        a.f.statSources.put("Armor Penetration", new java.util.LinkedHashMap<>(Map.of("Lâmina Fantasma de Youmuu", 10.0)));
-        List<ItemEffect> ally = List.of(new ItemEffect("Cutelo Negro", Map.of("tipo", "reduz_resistencia", "resistencia", "armadura",
-                "por_acerto", 0.06, "max", 0.30, "gatilho", "fisico", "duracao", 6)),
-                new ItemEffect("Lembrete Mortal", Map.of("tipo", "feridas", "pct", 0.5, "gatilho", "fisico")));
-        SeenBy s = SeenBy.of(ArenaScenarios.CATALOG, ArenaScenarios.MAP, defender(), a, ally);
-        assertEquals(List.of("Cutelo Negro (aliado) −30%", "Lembranças do Lorde Dominik 20% de penetração",
-                "Lâmina Fantasma de Youmuu 10 de penetração"), s.armorReasons);
+    void theReasonsNameTheSources() {
+        SeenBy s = under(List.of(new Applied("Cutelo Negro", SeenBy.ARMOR_SHRED, 0.30),
+                new Applied("Lembranças do Lorde Dominik", SeenBy.ARMOR_PEN_PCT, 0.35),
+                new Applied("Ambessa: Execução Pública (R)", SeenBy.ARMOR_PEN_PCT, 0.30),
+                new Applied("Lâmina Fantasma de Youmuu", SeenBy.ARMOR_PEN, 10),
+                new Applied("Lembrete Mortal", SeenBy.WOUNDS, 0.5)));
+        assertEquals(List.of("Cutelo Negro −30%", "Lembranças do Lorde Dominik 35% de penetração",
+                "Ambessa: Execução Pública (R) 30% de penetração", "Lâmina Fantasma de Youmuu 10 de penetração"), s.armorReasons);
         assertTrue(s.magicReasons.isEmpty());
-        assertEquals("Lembrete Mortal (aliado)", s.healCutBy);
+        assertEquals("Lembrete Mortal", s.healCutBy);
+        // % penetrations add up, as the stat does in a fight: 120 * 0.7 * (1 - 0.65) - 10
+        assertEquals(120 * 0.7 * 0.35 - 10, s.effectiveArmor, 1e-6);
+    }
+
+    /** The Ocean Trident's and the Serpent's Fang's shield cut: a base, a share per stat point and a cap, as in the file. */
+    @Test
+    void shieldCutsScaleWithTheirStat() {
+        EffectSources.Option trident = EffectSources.combatOption(ArenaScenarios.CATALOG.effects("Tridente da Oceânide").get(0));
+        assertEquals(SeenBy.SHIELD_CUT, trident.kind);
+        assertEquals("PdH", trident.scale);
+        assertEquals(0.40, trident.value, 1e-9, "by default, the base");
+        assertEquals(0.60, Math.min(trident.max, trident.base + trident.per * 400), 1e-9, "400 AP reaches the cap");
+        assertEquals(0.45, Math.min(trident.max, trident.base + trident.per * 100), 1e-9);
+        EffectSources.Option fang = EffectSources.combatOption(ArenaScenarios.CATALOG.effects("Presa da Serpente").get(0));
+        assertEquals("DdA adicional", fang.scale);
+        assertEquals(0.50, Math.min(fang.max, fang.base + fang.per * 100), 1e-9);
+        assertEquals("40% + 0,1% por DdA adicional, até 60%", fang.text);
+        // the cut applies to the shields as the fight starts
+        SeenBy s = under(List.of(new Applied("Tridente da Oceânide", SeenBy.SHIELD_CUT, 0.45)));
+        assertEquals(0.45, s.shieldCut, 1e-9);
+        assertEquals(s.shields * 0.55, s.shieldsAfterCut, 1e-6);
+        assertEquals("Tridente da Oceânide", s.shieldCutBy);
+    }
+
+    @Test
+    void itemsOnlyGiveTheEffectsThatChangeHowADefenderIsHit() {
+        assertEquals(null, EffectSources.combatOption(Map.of("tipo", "amplifica", "pct", 0.05)));
+        assertEquals(null, EffectSources.combatOption(Map.of("tipo", "feridas", "pct", 0.4, "ao_ser_atingido", true)));
+        EffectSources.Option cleaver = EffectSources.combatOption(ArenaScenarios.CATALOG.effects("Cutelo Negro").get(0));
+        assertEquals(SeenBy.ARMOR_SHRED, cleaver.kind);
+        assertEquals(0.30, cleaver.value, 1e-9);
+        assertEquals("6% por acerto, até 30%", cleaver.text);
     }
 }

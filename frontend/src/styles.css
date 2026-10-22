@@ -973,6 +973,13 @@ td.nowrap { white-space: nowrap; }
 .test-items li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .chip-item { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border-strong); border-radius: 12px; padding: 1px 4px 1px 2px; font-size: 12px; }
 .chip-item .item-icon { border-radius: 50%; }
+.effect-picker { margin: 6px 0; }
+.effect-list { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 6px; }
+.effect-list > li { border: 1px solid var(--border-strong); border-radius: 6px; padding: 4px 8px; }
+.effect-head { display: flex; align-items: center; gap: 6px; }
+.effect-head .icon { margin-left: auto; }
+.effect-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; font-size: 13px; }
+.effect-kind { min-width: 150px; color: var(--muted, #8a94a3); }
 
 /* What each passive is worth at the minute (the arena's formulas) */
 .effect-values { list-style: none; margin: 2px 0 4px 6px; padding: 0; }
