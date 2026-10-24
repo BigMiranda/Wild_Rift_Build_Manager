@@ -98,3 +98,43 @@ A barra fixa não mostra o relatório de relevância (só o valor de cada item n
 da Forja; a passiva de 6% da Armadura adicional dividida entre os itens (o item sem Armadura recebe 0) e a base indo
 para o campeão; fontes encadeadas mantêm o total geral, sem nada ligado as contribuições são idênticas às de antes.
 Testes: 206 → 209. Golden sem mudança.
+
+## Parte 3 — Arena: legenda das recargas por clique, ligada ao mapa ✅
+
+**O que a luta passou a registrar (backend):** cada uso de habilidade, ativo de item e feitiço vira um `Use` do
+lutador (`FighterStats.uses`: segundo, chave da recarga, nome, dano depois das resistências por alvo, controles
+aplicados, escudo dado). Só com quadros (`recordFrames`): treino e busca não pagam nada. O dano de uma fonte "slot ·
+nome" ou do nome do ativo / feitiço vai para o último uso dela; o controle, para a última habilidade conjurada. É
+aproximado: um projétil lançado antes de um segundo uso e que acerta depois dele conta para o segundo. `uses` é
+descritivo e fica fora da impressão digital do golden (`ArenaScenarios.DESCRIPTIVE`); o golden não mudou.
+
+**Tela:**
+- A coluna da esquerda das listras mostra o nome da habilidade em letra pequena e, colado à listra, o slot (1, 2, 3,
+  R) ou o ícone de 16 px do item ou do feitiço. A coluna é fixa ao rolar, então o rótulo fica sempre no começo da
+  listra. A faixa ficou um pouco mais alta (16 px) para o clique e o toque.
+- Clicar numa listra abre o cartão (`CooldownCard`) junto ao ponto clicado, preso dentro da janela (também em tela
+  estreita): ícone, nome, campeão, o estado naquele segundo, cargas, o último uso e o que fez, o próximo uso e "Mais
+  detalhes". Os detalhes reaproveitam o `Ability` do `ChampionPanel` (exportado; rank do plano da build no nível da
+  luta, valores com os status do ponto do planejador no minuto da build) e o `ItemReader` da barra fixa; para
+  feitiços, o texto do catálogo. Acrescenta "Na luta: recarga de 48,2s com 16 de Aceleração de Habilidade".
+- "Pausar ao clicar" ao lado do relógio, ligado por padrão e lembrado no navegador.
+- Mapa: clicar numa forma (pelo rótulo "Nome (Campeão)", o id do slot, "elemental" → R, "pilar" → 1) ou num campeão
+  (o que ele conjura, senão o último uso) abre o cartão e destaca a listra, rolando até ela. Com o cartão aberto, a
+  forma daquela habilidade fica com contorno branco grosso e o campeão com um anel tracejado.
+- Esc ou ✕ fecham o cartão; Enter numa listra (teclado) também o abre.
+
+**Sem pesar a execução:** as listras são calculadas uma vez por resultado (memo) e, agora, as linhas da faixa de tempo
+também: a reprodução só move um cursor único sobre todas elas (antes cada linha tinha o seu cursor e a faixa inteira
+era desenhada a cada quadro). O cartão só existe aberto; não há handler por quadro.
+
+**Tempo de quadro** (cenário 3v3 de 60 s: Ornn Big Carry, Darius, Renekton contra Rumble, Kalista, Ornn; cérebro
+Tático; 59 listras). Medido com um `Profiler` do React em volta do palco (mapa + faixa), só em desenvolvimento
+(`window.__arenaRenders = []` no console liga a coleta), em 150 atualizações de tempo ao longo da luta: o painel do
+navegador estava oculto, e o `requestAnimationFrame` não anda em segundo plano, então medi o tempo de render de cada
+atualização de tempo (o mesmo trabalho de um quadro da reprodução), não o intervalo entre quadros.
+- antes: média 15,8 ms, mediana 16,6, p95 20,7, máximo 22,0;
+- depois: média 7,3 ms, mediana 7,9, p95 10,5, máximo 13,4.
+Build de desenvolvimento do React (a de produção é mais rápida nos dois casos).
+
+**Teste novo (`ArenaRulesTest`):** sem quadros nada é registrado; com quadros, a soma do dano dos usos de cada slot é
+o dano por fonte daquele slot. Testes: 209 → 210. Golden sem mudança.

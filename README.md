@@ -413,11 +413,17 @@ Nexus (ou onde você os colocar).
   num espelho). Validada em lutas nunca usadas no treino; cada versão fica salva com o quanto supera o Roteiro e o
   Tático. "→ linha do tempo" transforma o que o cérebro fez em ordens editáveis, e o relatório mostra as decisões da
   IA com seus placares. Detalhes em [docs/proposta-ia-arena.md](docs/proposta-ia-arena.md).
-- **Recargas em cada instante**: embaixo da faixa de cada campeão, uma barra por habilidade, ativo de item e feitiço
-  mostra quando está em recarga; o quadro de cada instante traz o tempo que falta de cada uma.
+- **Recargas em cada instante**: embaixo da faixa de cada campeão, uma listra por habilidade, ativo de item e feitiço
+  mostra quando está em recarga, com o slot (ou o ícone) logo antes dela. **Clicar numa listra** abre um cartão junto
+  ao ponto clicado: o estado naquele segundo ("pronta" ou "em recarga: falta x s de y s", cargas), quando foi usada e o
+  que fez naquele uso (dano por alvo, controle, escudo), o próximo uso e "Mais detalhes" (a descrição da habilidade
+  como no planejador: rank do plano no nível, valores com os status da build no minuto dela e a recarga com Aceleração
+  de Habilidade; para itens, a leitura do item; para feitiços, o texto). "Pausar ao clicar" (ligado por padrão,
+  lembrado no navegador) pausa no segundo clicado; desligado, o cartão acompanha a reprodução.
 - **Mapa**: círculos para os campeões (com vida e escudo) e formas simples para o resto (projéteis, áreas, cones,
-  campos, pilar de magma, elemental). Pausado, passar o mouse identifica cada forma; nos campeões mostra vida,
-  estado, marcas e recargas.
+  campos, pilar de magma, elemental). Clicar (ou tocar) numa forma ou num campeão abre o mesmo cartão (do campeão, o
+  que ele conjura ou o último uso) e destaca a listra; o cartão aberto destaca a forma no mapa. Pausado, passar o mouse
+  identifica cada forma; nos campeões mostra vida, estado, marcas e recargas.
 - **Efeitos do planejador na luta**: todo efeito condicional da build (passivas e ativos dos itens, linhas
   condicionais da loja, runas, efeitos do campeão) liga pelo seu **gatilho**, escrito em `gatilhos` de
   [`seed/combate_7_3.yml`](backend/src/main/resources/seed/combate_7_3.yml), em vez de valer a luta toda. Exemplos:

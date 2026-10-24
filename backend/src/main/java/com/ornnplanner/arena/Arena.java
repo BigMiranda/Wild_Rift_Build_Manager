@@ -193,6 +193,8 @@ public class Arena {
         boolean stasisUsed;
         // cooldowns: ready time by slot / item / spell name
         Map<String, Double> ready = new LinkedHashMap<>();
+        /** Last use of each ability / active / spell (frames only), where what it does is written. */
+        final Map<String, ArenaModel.Use> lastUse = new java.util.HashMap<>();
         Map<String, Integer> charges = new LinkedHashMap<>();
         Map<String, Double> chargeAt = new LinkedHashMap<>();
         // shields by source key, any / magic / physical; with expiry for timed ones
@@ -2429,6 +2431,7 @@ public class Arena {
         u.busyUntil = now + castTime + num(ab.get("trava"), 0);
         u.busyState = "cast:" + slot;
         event(u, "usou " + slot + " (" + ab.get("nome") + ")" + (strong ? " fortalecida" : ""));
+        noteUse(u, slot, String.valueOf(ab.get("nome")));
         u.lastCast = slot;
         fireAll(u, "ao_conjurar", null);
         if ("R".equals(slot)) {
@@ -3378,6 +3381,7 @@ public class Arena {
         }
         u.ready.put(name, now + cd);
         event(u, "usou " + name);
+        noteUse(u, name, name);
         proc(u, "item", name);
         return "done";
     }
@@ -3459,7 +3463,30 @@ public class Arena {
         }
         u.ready.put(name, now + cd);
         event(u, "usou " + name);
+        noteUse(u, name, name);
         return "done";
+    }
+
+    /** Opens the record of a use (frames only: training never pays for it); what it does is added as it happens. */
+    private void noteUse(U u, String key, String name) {
+        if (!recordFrames) {
+            return;
+        }
+        ArenaModel.Use use = new ArenaModel.Use();
+        use.t = Math.round(now * 1000) / 1000.0;
+        use.key = key;
+        use.name = name;
+        u.r.uses.add(use);
+        u.lastUse.put(key, use);
+    }
+
+    /** The last use a damage / shield source belongs to: "slot · name" for abilities, the name for actives and spells. */
+    private static ArenaModel.Use useOf(U u, String source) {
+        int dot = source.indexOf(" · ");
+        if (dot > 0 && u.lastUse.containsKey(source.substring(0, dot))) {
+            return u.lastUse.get(source.substring(0, dot));
+        }
+        return u.lastUse.get(source);
     }
 
     // ------------------------------------------------------------------ movement and crowd control
@@ -3965,6 +3992,13 @@ public class Arena {
             a.r.damageBySourceType.computeIfAbsent(source, k -> new LinkedHashMap<>()).merge(type, dmg, Double::sum);
         }
         led(key(a, source)).damage += dmg;
+        if (recordFrames && dmg > 0) {
+            ArenaModel.Use use = useOf(a, source);
+            if (use != null) {
+                use.damage += dmg;
+                use.targets.merge(t.f.name, dmg, Double::sum);
+            }
+        }
         if (res >= 0 && extraShred > 0 && t.shredSource[res] != null && now < t.shredUntil[res]) {
             led(t.shredSource[res]).extraShred += extraShred * (dmg / Math.max(1e-9, amped * mult));
         }
@@ -4157,6 +4191,14 @@ public class Arena {
 
     private void addShield(U s, double amount, String source, double until, String type) {
         amount *= revitalize(s);
+        int bar = source.indexOf('|');
+        if (recordFrames && bar > 0 && source.substring(0, bar).chars().allMatch(Character::isDigit)) {
+            int owner = Integer.parseInt(source.substring(0, bar));
+            ArenaModel.Use use = owner < units.size() ? useOf(units.get(owner), source.substring(bar + 1)) : null;
+            if (use != null) {
+                use.shield += amount;
+            }
+        }
         double cut = now < s.shieldCutUntil ? s.shieldCutPct : 0;
         if (cut > 0 && s.shieldCutSource != null) {
             led(s.shieldCutSource).shieldCut += amount * cut;
@@ -6000,6 +6042,10 @@ public class Arena {
             return;
         }
         count(by, "cc_aplicado:" + type);
+        if (recordFrames && by.lastCast != null && by.lastUse.containsKey(by.lastCast)) {
+            by.lastUse.get(by.lastCast).cc.add(type + " " + String.format(java.util.Locale.ROOT, "%.2f", seconds)
+                    .replace('.', ',') + "s em " + t.f.name);
+        }
         if (before > 1e-9) {
             count(by, Math.min(before, seconds) > CHAIN_SLACK + 1e-9 ? "cc_sobreposto" : "cc_encadeado");
         } else if (now - t.ccHeldAt <= 0.1 + DT + 1e-9) {

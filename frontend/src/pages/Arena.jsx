@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, Profiler, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { n0, n1 } from '../format.js';
@@ -6,6 +6,7 @@ import MinuteInput from '../components/MinuteInput.jsx';
 import { ChampionAvatar } from '../components/ChampionPicker.jsx';
 import ArenaLab from '../components/ArenaLab.jsx';
 import FightReport from '../components/FightReport.jsx';
+import CooldownCard, { CooldownTag, cooldownName } from '../components/CooldownCard.jsx';
 
 /**
  * Orchestrated matchup: a scenario (champions from saved builds at a minute, where they start, and a timeline of
@@ -37,6 +38,14 @@ function loadDraft() {
 }
 
 /** Frame at (or right before) a time. */
+/**
+ * Render time of the stage (map + timeline) per commit, for measuring playback cost: set `window.__arenaRenders = []`
+ * in the console, play, and read the durations (ms). Nothing is kept unless asked; production builds do not profile.
+ */
+const onStageRender = (id, phase, actualDuration) => {
+  if (Array.isArray(window.__arenaRenders)) window.__arenaRenders.push(actualDuration);
+};
+
 export function frameAt(result, time) {
   if (!result?.frames?.length) return null;
   const i = Math.max(0, Math.min(result.frames.length - 1, Math.round(time / result.frameEvery)));
@@ -57,6 +66,31 @@ export default function Arena() {
   const [pickPoint, setPickPoint] = useState(null); // action index waiting for a click on the map
   const [message, setMessage] = useState(null);
   const [policies, setPolicies] = useState([]);
+  /** Cooldown card: {fighter, key, x, y} (where it was clicked), and whether clicking pauses at that second. */
+  const [card, setCard] = useState(null);
+  const [pauseOnClick, setPauseOnClick] = useState(() => {
+    try {
+      return localStorage.getItem(`${STORE}-pause-click`) !== 'off';
+    } catch {
+      return true;
+    }
+  });
+  const togglePauseOnClick = (on) => {
+    setPauseOnClick(on);
+    try {
+      localStorage.setItem(`${STORE}-pause-click`, on ? 'on' : 'off');
+    } catch {
+      /* session only */
+    }
+  };
+  /** Opens the card of a cooldown (from a stripe or the map), pausing at the second clicked when chosen. */
+  const openCard = (fighter, key, at, x, y) => {
+    if (pauseOnClick) {
+      setPlaying(false);
+      if (at != null) setTime(at);
+    }
+    setCard({ fighter, key, x, y });
+  };
   const [tab, setTab] = useState(() => {
     try {
       return localStorage.getItem(`${STORE}-tab`) ?? 'scenario';
@@ -203,6 +237,8 @@ export default function Arena() {
   };
 
   const frame = frameAt(result, time);
+  const cardBars = useMemo(() => cooldownBars(result), [result]);
+  useEffect(() => setCard(null), [result]);
   const names = sc.fighters.map((f, i) => result?.fighters?.[i]?.champion ?? builds.find((b) => b.id === f.buildId)?.unitCode ?? `#${i + 1}`);
 
   const tabs = (
@@ -283,6 +319,7 @@ export default function Arena() {
         {error && <p className="error">{error}</p>}
       </section>
 
+      <Profiler id="arena-stage" onRender={onStageRender}>
       <section className="panel arena-stage">
         <div className="spread">
           <div className="row">
@@ -294,21 +331,31 @@ export default function Arena() {
               {[0.25, 0.5, 1, 2, 4].map((s) => <option key={s} value={s}>{s}×</option>)}
             </select>
             <strong className="arena-clock">{n1(time)}s</strong>
+            <label className="check" title={t('arena.card.pauseTitle')}>
+              <input type="checkbox" checked={pauseOnClick} onChange={(e) => togglePauseOnClick(e.target.checked)} />{t('arena.card.pause')}
+            </label>
             {busy && <small className="muted">{t('arena.running')}</small>}
           </div>
           {result && <Outcome result={result} />}
         </div>
-        <ArenaMap result={result} frame={frame} paused={!playing} names={names} pickPoint={pickPoint}
-          onPick={(x, y) => { if (pickPoint != null) { setAction(pickPoint, { x: Math.round(x), y: Math.round(y), target: null }); setPickPoint(null); } }} />
-        <Timeline sc={sc} result={result} time={time} names={names} editing={editing}
+        <ArenaMap result={result} frame={frame} paused={!playing} names={names} pickPoint={pickPoint} highlight={card}
+          onPick={(x, y) => { if (pickPoint != null) { setAction(pickPoint, { x: Math.round(x), y: Math.round(y), target: null }); setPickPoint(null); } }}
+          onSelect={(fighter, key, x, y) => openCard(fighter, key, null, x, y)} />
+        <Timeline sc={sc} result={result} time={time} names={names} editing={editing} selected={card}
           onTime={(tm) => { setPlaying(false); setTime(tm); }} onAdd={addAction} onEdit={setEditing}
-          onMove={(i, tm) => setAction(i, { time: Math.max(0, Math.round(tm * 10) / 10) })} />
+          onMove={(i, tm) => setAction(i, { time: Math.max(0, Math.round(tm * 10) / 10) })}
+          onPickCooldown={openCard} />
+        {card && result && card.key && (
+          <CooldownCard result={result} sel={card} time={time} frame={frame} bars={cardBars[card.fighter]?.find((c) => c.name === card.key)?.bars}
+            buildOf={(i) => builds.find((b) => b.id === sc.fighters[i]?.buildId)} onClose={() => setCard(null)} />
+        )}
         {editing != null && sc.actions[editing] && (
           <ActionEditor action={sc.actions[editing]} fighters={sc.fighters} names={names} stats={result?.fighters}
             onChange={(p) => setAction(editing, p)} onRemove={() => removeAction(editing)} onClose={() => setEditing(null)}
             onPickPoint={() => setPickPoint(editing)} picking={pickPoint === editing} />
         )}
       </section>
+      </Profiler>
 
       {ready && (
         <TrainPanel sc={sc} names={names} policies={policies} onTrained={loadPolicies}
@@ -1090,7 +1137,7 @@ function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onC
 }
 
 /** The map: the lane, champions as circles, everything else as simple shapes; hover while paused to identify. */
-export function ArenaMap({ result, frame, paused, names, pickPoint, onPick }) {
+export function ArenaMap({ result, frame, paused, names, pickPoint, onPick, onSelect, highlight }) {
   const svgRef = useRef(null);
   const [hover, setHover] = useState(null);
   const [follow, setFollow] = useState(true);
@@ -1113,8 +1160,7 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick }) {
     const p = pt.matrixTransform(svgRef.current.getScreenCTM().inverse());
     return { x: p.x, y: -p.y };
   };
-  const onMove = (ev) => {
-    if (!paused) return;
+  const hits = (ev) => {
     const p = toWorld(ev);
     const found = [];
     frame.units.forEach((u, i) => {
@@ -1123,7 +1169,41 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick }) {
     frame.shapes.forEach((s) => {
       if (hitShape(s, p.x, p.y, span / 150)) found.push({ shape: s });
     });
+    return found;
+  };
+  const onMove = (ev) => {
+    if (!paused) return;
+    const found = hits(ev);
     setHover(found.length ? { x: ev.clientX, y: ev.clientY, found } : null);
+  };
+  // A click (or tap) on a shape or a champion opens the cooldown card of what it is; a champion gives what it is
+  // casting, else its last use.
+  const onClick = (ev) => {
+    if (pickPoint != null) {
+      const p = toWorld(ev);
+      onPick(p.x, p.y);
+      return;
+    }
+    if (!onSelect) return;
+    const found = hits(ev);
+    const shape = found.find((h) => h.shape && shapeOwner(h.shape, result)?.key);
+    if (shape) {
+      const o = shapeOwner(shape.shape, result);
+      onSelect(o.fighter, o.key, ev.clientX, ev.clientY);
+      return;
+    }
+    const unit = found.find((h) => h.unit);
+    if (unit) {
+      const casting = unit.unit.state.match(/^(?:cast|channel):(.+)$/)?.[1];
+      const uses = (result.fighters[unit.i].uses ?? []).filter((u) => u.t <= frame.t + 1e-6);
+      const key = casting ?? uses.at(-1)?.key ?? Object.keys(unit.unit.cooldowns)[0];
+      if (key) onSelect(unit.i, key, ev.clientX, ev.clientY);
+    }
+  };
+  const lit = (s) => {
+    if (!highlight) return false;
+    const o = shapeOwner(s, result);
+    return o != null && o.fighter === highlight.fighter && o.key === highlight.key;
   };
   return (
     <div className="arena-map">
@@ -1133,8 +1213,8 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick }) {
         {paused && <small className="muted">{t('arena.hoverHint')}</small>}
       </div>
       <svg ref={svgRef} viewBox={view} preserveAspectRatio="xMidYMid meet" width="100%" height={H}
-        onMouseMove={onMove} onMouseLeave={() => setHover(null)} onClick={(ev) => { if (pickPoint != null) { const p = toWorld(ev); onPick(p.x, p.y); } }}
-        style={{ cursor: pickPoint != null ? 'crosshair' : 'default' }}>
+        onMouseMove={onMove} onMouseLeave={() => setHover(null)} onClick={onClick}
+        style={{ cursor: pickPoint != null ? 'crosshair' : 'pointer' }}>
         <g transform="scale(1,-1)">
           <rect x={0} y={-result.mapWidth / 2} width={result.mapLength} height={result.mapWidth} className="arena-lane" />
           {[0, 1].map((team) => (
@@ -1144,8 +1224,9 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick }) {
             <rect key={s.id} x={s.x - s.length / 2} y={-s.width / 2} width={s.length} height={s.width} fill={TEAM_SOFT[s.team] ?? 'none'}
               stroke={TEAM[s.team]} strokeDasharray="40 30" strokeWidth={10}><title>{s.label}</title></rect>
           ))}
-          {frame.shapes.map((s) => <ShapeView key={s.id} s={s} />)}
-          {frame.units.map((u, i) => <UnitView key={i} u={u} i={i} name={names[i]} team={result.fighters[i]?.team ?? 0} span={span} />)}
+          {frame.shapes.map((s) => <ShapeView key={s.id} s={s} lit={lit(s)} />)}
+          {frame.units.map((u, i) => <UnitView key={i} u={u} i={i} name={names[i]} team={result.fighters[i]?.team ?? 0} span={span}
+            lit={highlight?.fighter === i} />)}
         </g>
       </svg>
       {hover && (
@@ -1187,14 +1268,32 @@ function hitShape(s, x, y, pad) {
   return false;
 }
 
-function ShapeView({ s }) {
-  const color = s.team < 0 ? '#9a8f7a' : TEAM[s.team];
+/** Which fighter and cooldown a map shape comes from: "Ruptura Vulcânica (Ornn)" -> Ornn's "1"; null when unknown. */
+function shapeOwner(s, result) {
+  const m = /^(.*) \(([^)]+)\)(?:,.*)?$/.exec(s.label ?? '');
+  const what = (m ? m[1] : s.label ?? '').toLowerCase();
+  const champ = m?.[2];
+  const fi = result.fighters.findIndex((f) => (!champ || f.champion === champ) && (s.team < 0 || f.team === s.team));
+  if (fi < 0 || !champ) return null;
+  const f = result.fighters[fi];
+  const ab = (f.abilities ?? []).find((a) => a.name && (what.includes(a.name.toLowerCase()) || a.name.toLowerCase().includes(what)));
+  if (ab) return { fighter: fi, key: ab.slot };
+  if (SLOTS.includes(s.id)) return { fighter: fi, key: s.id };
+  if (String(s.id).startsWith('elemental') || what.includes('elemental')) return { fighter: fi, key: 'R' };
+  if (what.includes('pilar')) return { fighter: fi, key: '1' };
+  const use = (f.uses ?? []).find((u) => what.includes(String(u.name).toLowerCase()));
+  return { fighter: fi, key: use?.key ?? null };
+}
+
+function ShapeView({ s, lit }) {
+  const color = lit ? '#ffffff' : s.team < 0 ? '#9a8f7a' : TEAM[s.team];
   const fill = s.team < 0 ? 'rgba(154,143,122,.6)' : TEAM_SOFT[s.team];
-  if (s.kind === 'circle') return <circle cx={s.x} cy={s.y} r={s.radius ?? 20} fill={fill} stroke={color} strokeWidth={6} />;
+  const sw = lit ? 18 : 6;
+  if (s.kind === 'circle') return <circle cx={s.x} cy={s.y} r={s.radius ?? 20} fill={fill} stroke={color} strokeWidth={sw} />;
   if (s.kind === 'rect') {
     const deg = (s.angle * 180) / Math.PI;
     return (
-      <rect x={s.x - s.length / 2} y={s.y - s.width / 2} width={s.length} height={s.width} fill={fill} stroke={color} strokeWidth={6}
+      <rect x={s.x - s.length / 2} y={s.y - s.width / 2} width={s.length} height={s.width} fill={fill} stroke={color} strokeWidth={sw}
         transform={`rotate(${deg} ${s.x} ${s.y})`} />
     );
   }
@@ -1210,18 +1309,19 @@ function ShapeView({ s }) {
     const a2 = s.angle + s.arc / 2;
     const p1 = [s.x + Math.cos(a1) * s.radius, s.y + Math.sin(a1) * s.radius];
     const p2 = [s.x + Math.cos(a2) * s.radius, s.y + Math.sin(a2) * s.radius];
-    return <path d={`M ${s.x} ${s.y} L ${p1[0]} ${p1[1]} A ${s.radius} ${s.radius} 0 0 1 ${p2[0]} ${p2[1]} Z`} fill={fill} stroke={color} strokeWidth={6} />;
+    return <path d={`M ${s.x} ${s.y} L ${p1[0]} ${p1[1]} A ${s.radius} ${s.radius} 0 0 1 ${p2[0]} ${p2[1]} Z`} fill={fill} stroke={color} strokeWidth={sw} />;
   }
   return null;
 }
 
-function UnitView({ u, i, name, team, span }) {
+function UnitView({ u, i, name, team, span, lit }) {
   const r = 80;
   const dead = u.state === 'dead';
   const pct = u.maxHp > 0 ? Math.max(0, u.hp / u.maxHp) : 0;
   const font = Math.max(60, span / 45);
   return (
     <g opacity={dead ? 0.3 : u.invisible ? 0.45 : 1}>
+      {lit && <circle cx={u.x} cy={u.y} r={r + 34} fill="none" stroke="#ffffff" strokeWidth={10} strokeDasharray="24 14" />}
       <circle cx={u.x} cy={u.y} r={r} fill={TEAM[team]} stroke={u.state === 'stun' || u.state === 'air' ? '#fff' : '#0b1621'} strokeWidth={u.state === 'stun' || u.state === 'air' ? 18 : 8}
         strokeDasharray={u.state === 'stasis' ? '20 12' : undefined} />
       <rect x={u.x - 110} y={u.y + r + 30} width={220} height={26} fill="#0b1621" />
@@ -1237,27 +1337,34 @@ function UnitView({ u, i, name, team, span }) {
 
 /**
  * Timeline: one track per champion with its orders (drag to move, click to edit; click an empty place to add one) and,
- * under it, a bar per ability / active showing when it is on cooldown, from the run.
+ * under it, a stripe per ability / active / spell showing when it is on cooldown, from the run, with its short tag
+ * (slot or 16 px icon) right before it. Clicking a stripe opens its card. The rows only change with the run (the
+ * playback moves one cursor over all of them), so playing does not render them again.
  */
-function Timeline({ sc, result, time, names, editing, onTime, onAdd, onEdit, onMove }) {
+function Timeline({ sc, result, time, names, editing, selected, onTime, onAdd, onEdit, onMove, onPickCooldown }) {
   const width = sc.duration * PX_PER_S;
   const [drag, setDrag] = useState(null);
   const ref = useRef(null);
+  // Latest handlers, read at event time, so the memoized rows do not depend on them.
+  const on = useRef(null);
+  on.current = { onTime, onAdd, onEdit, onMove, onPickCooldown, drag };
   const toTime = (ev) => {
     const box = ref.current.getBoundingClientRect();
     return Math.max(0, Math.min(sc.duration, (ev.clientX - box.left + ref.current.scrollLeft - 110) / PX_PER_S));
   };
   const cds = useMemo(() => cooldownBars(result), [result]);
-  return (
-    <div className="arena-timeline" ref={ref}
-      onMouseMove={(ev) => { if (drag) onMove(drag, toTime(ev)); }} onMouseUp={() => setDrag(null)} onMouseLeave={() => setDrag(null)}>
+  const selKey = selected ? `${selected.fighter}|${selected.key}` : null;
+  useEffect(() => {
+    if (selKey) ref.current?.querySelector('.tl-cd.selected')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [selKey, selected]);
+  const rows = useMemo(() => (
+    <>
       <div className="tl-row tl-axis" style={{ width: width + 110 }}>
         <span className="tl-label" />
-        <div className="tl-track" style={{ width }} onClick={(ev) => onTime(toTime(ev))}>
+        <div className="tl-track" style={{ width }} onClick={(ev) => on.current.onTime(toTime(ev))}>
           {Array.from({ length: Math.floor(sc.duration) + 1 }, (_, s) => (
             <span key={s} className={`tl-tick${s % 5 === 0 ? ' major' : ''}`} style={{ left: s * PX_PER_S }}>{s % 5 === 0 ? `${s}s` : ''}</span>
           ))}
-          <span className="tl-cursor" style={{ left: time * PX_PER_S }} />
         </div>
       </div>
       {sc.fighters.map((f, fi) => (
@@ -1265,10 +1372,10 @@ function Timeline({ sc, result, time, names, editing, onTime, onAdd, onEdit, onM
           <div className="tl-row" style={{ width: width + 110 }}>
             <span className="tl-label" style={{ color: TEAM[f.team] }}>{fi + 1} · {names[fi]}</span>
             <div className="tl-track orders" style={{ width }}
-              onClick={(ev) => { if (ev.target === ev.currentTarget) onAdd(fi, toTime(ev)); }} title={t('arena.addHint')}>
+              onClick={(ev) => { if (ev.target === ev.currentTarget) on.current.onAdd(fi, toTime(ev)); }} title={t('arena.addHint')}>
               {sc.actions.map((a, ai) => (a.fighter !== fi ? null : (
                 <button key={ai} className={`tl-order${editing === ai ? ' active' : ''}`} style={{ left: a.time * PX_PER_S }}
-                  onMouseDown={(ev) => { ev.stopPropagation(); setDrag(ai); }} onClick={(ev) => { ev.stopPropagation(); onEdit(ai); }}
+                  onMouseDown={(ev) => { ev.stopPropagation(); setDrag(ai); }} onClick={(ev) => { ev.stopPropagation(); on.current.onEdit(ai); }}
                   title={orderText(a, names)}>
                   {shortOrder(a)}
                 </button>
@@ -1276,23 +1383,43 @@ function Timeline({ sc, result, time, names, editing, onTime, onAdd, onEdit, onM
               {result && (result.skipped ?? []).filter((e) => e.fighter === fi).map((e, k) => (
                 <span key={`s${k}`} className="tl-skip" style={{ left: e.t * PX_PER_S }} title={e.text}>⊘</span>
               ))}
-              <span className="tl-cursor" style={{ left: time * PX_PER_S }} />
             </div>
           </div>
-          {(cds[fi] ?? []).map((c) => (
-            <div key={c.name} className="tl-row tl-cd" style={{ width: width + 110 }}>
-              <span className="tl-label sub">{c.name}</span>
-              <div className="tl-track" style={{ width }}>
-                {c.bars.map(([a, b], k) => (
-                  <span key={k} className="tl-cdbar" style={{ left: a * PX_PER_S, width: Math.max(2, (b - a) * PX_PER_S) }}
-                    title={t('arena.cdBar', { name: c.name, from: n1(a), to: n1(b) })} />
-                ))}
-                <span className="tl-cursor" style={{ left: time * PX_PER_S }} />
+          {(cds[fi] ?? []).map((c) => {
+            const fighter = result?.fighters?.[fi];
+            const full = cooldownName(fighter, c.name);
+            const sel = selKey === `${fi}|${c.name}`;
+            return (
+              <div key={c.name} className={`tl-row tl-cd${sel ? ' selected' : ''}`} style={{ width: width + 110 }}>
+                <span className="tl-label sub" title={full}>
+                  <span className="tl-cd-name">{full}</span><CooldownTag fighter={fighter} name={c.name} />
+                </span>
+                <div className="tl-track" style={{ width }} role="button" tabIndex={0} aria-label={t('arena.card.open', { name: full })}
+                  onClick={(ev) => on.current.onPickCooldown(fi, c.name, toTime(ev), ev.clientX, ev.clientY)}
+                  onKeyDown={(ev) => {
+                    if (ev.key === 'Enter') {
+                      const box = ev.currentTarget.getBoundingClientRect();
+                      on.current.onPickCooldown(fi, c.name, null, box.left + 20, box.bottom);
+                    }
+                  }}>
+                  {c.bars.map(([a, b], k) => (
+                    <span key={k} className="tl-cdbar" style={{ left: a * PX_PER_S, width: Math.max(2, (b - a) * PX_PER_S) }} />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </Fragment>
       ))}
+    </>
+    // toTime reads the ref and the duration only; handlers come from `on`
+  ), [sc.fighters, sc.actions, sc.duration, result, cds, names, editing, selKey, width]);
+  return (
+    <div className="arena-timeline" ref={ref}
+      onMouseMove={(ev) => { if (on.current.drag != null) on.current.onMove(on.current.drag, toTime(ev)); }}
+      onMouseUp={() => setDrag(null)} onMouseLeave={() => setDrag(null)}>
+      {rows}
+      <span className="tl-cursor tl-cursor-all" style={{ left: 110 + time * PX_PER_S }} />
     </div>
   );
 }

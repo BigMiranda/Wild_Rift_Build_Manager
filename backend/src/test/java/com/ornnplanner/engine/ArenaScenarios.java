@@ -166,7 +166,7 @@ final class ArenaScenarios {
      */
     static final java.util.Set<String> DESCRIPTIVE = java.util.Set.of("events", "eventSummary", "damageByType", "controlSpans",
             "cooldownsLeft", "escapedAt", "startStats", "startShields", "procTimes", "items", "runes", "spells",
-            "damageBySourceType", "effectValues");
+            "damageBySourceType", "effectValues", "uses");
 
     /** SHA-256 of the whole result as JSON (but {@link #DESCRIPTIVE}): any change in any number, event or frame changes it. */
     static String fingerprint(Result r) {

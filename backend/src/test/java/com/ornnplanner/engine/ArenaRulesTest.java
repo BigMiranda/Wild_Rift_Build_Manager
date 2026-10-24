@@ -274,4 +274,25 @@ class ArenaRulesTest {
         assertEquals(0, reflected % 36, 1e-6, "whole reflections of 36: " + reflected);
         assertTrue(fight.fighters.get(1).effectValues.isEmpty(), "only when asked for");
     }
+
+    @Test
+    void usesAreRecordedOnlyWithFramesAndAddUpToTheDamageOfTheirAbilities() {
+        ArenaScenarios.Scenario s = ArenaScenarios.all().stream().filter(x -> x.name.equals("3v3")).findFirst().get();
+        Result framed = s.run(true);
+        Result bare = s.run(false);
+        for (FighterStats f : bare.fighters) {
+            assertTrue(f.uses.isEmpty(), "no frames, nothing recorded");
+        }
+        boolean any = false;
+        for (FighterStats f : framed.fighters) {
+            for (String slot : java.util.List.of("1", "2", "3", "R")) {
+                double byUse = f.uses.stream().filter(u -> u.key.equals(slot)).mapToDouble(u -> u.damage).sum();
+                double bySource = f.damageBySource.entrySet().stream().filter(e -> e.getKey().startsWith(slot + " · "))
+                        .mapToDouble(java.util.Map.Entry::getValue).sum();
+                assertEquals(bySource, byUse, 1e-6, f.champion + " " + slot);
+                any |= byUse > 0;
+            }
+        }
+        assertTrue(any);
+    }
 }

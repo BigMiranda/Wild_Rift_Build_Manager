@@ -446,6 +446,23 @@ public final class ArenaModel {
         /** Seconds left of each ability's cooldown at the end (0 = ready). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public Map<String, Double> cooldownsLeft = new LinkedHashMap<>();
+        /** Each use of an ability, item active or spell and what it did (only with frames, for the cooldown card). */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public List<Use> uses = new ArrayList<>();
+    }
+
+    /** One use of an ability (key "1", "2", "3", "R"), item active or spell (its name), and what it did. */
+    public static class Use {
+        public double t;
+        public String key;
+        public String name;
+        /** Damage dealt after resistances, in total and by target champion. */
+        public double damage;
+        public Map<String, Double> targets = new LinkedHashMap<>();
+        /** Immobilizes applied ("atordoamento 1,00s em Rumble"). */
+        public List<String> cc = new ArrayList<>();
+        /** Shield given (on the user or allies). */
+        public double shield;
     }
 
     /**

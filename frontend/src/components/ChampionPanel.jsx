@@ -64,7 +64,7 @@ function Text({ parts }) {
   );
 }
 
-function Ability({ a, tag, stats, planRank, level }) {
+export function Ability({ a, tag, stats, planRank, level }) {
   const [picked, setPicked] = useState(null);
   const rows = Object.entries(a.niveis ?? {});
   const maxRank = Math.max(1, ...rows.map(([, v]) => (Array.isArray(v) ? v.length : 1)));
