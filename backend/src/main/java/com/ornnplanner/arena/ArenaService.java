@@ -421,7 +421,11 @@ public class ArenaService {
         in.f = f;
         in.triggers = ab.triggers;
         in.build = worn.name;
-        in.baseAttackSpeed = 0.6;
+        in.baseAttackSpeed = ComboBench.dummyAttackSpeed(d);
+        if (d.attackDamage > 0) {
+            f.total.put(com.ornnplanner.engine.Stats.ATTACK_DAMAGE, f.total.getOrDefault(com.ornnplanner.engine.Stats.ATTACK_DAMAGE, 0.0)
+                    + d.attackDamage);
+        }
         in.kit = ComboBench.dummyKit(d);
         ComboBench.withSpells(in, d);
         in.dummy = d;

@@ -106,13 +106,13 @@ public final class ComboBench {
             m.put(Stats.ARMOR, d.armor);
             m.put(Stats.MAGIC_RESIST, d.magicResist);
             m.put(Stats.MOVE_SPEED, d.moveSpeed);
-            m.put(Stats.ATTACK_DAMAGE, 0.0);
+            m.put(Stats.ATTACK_DAMAGE, d.attackDamage);
         }
         f.ranks = new int[4];
         Arena.Input in = new Arena.Input();
         in.f = f;
         in.build = f.name;
-        in.baseAttackSpeed = 0.6;
+        in.baseAttackSpeed = dummyAttackSpeed(d);
         in.kit = dummyKit(d);
         withSpells(in, d);
         in.dummy = d;
@@ -127,6 +127,11 @@ public final class ComboBench {
             }
             in.activeCooldowns.putIfAbsent(s, "Flash".equals(s) ? 150.0 : 110.0);
         }
+    }
+
+    /** A ragdoll that attacks hits once a second; the others keep the old 0.6 (they never attack). */
+    static double dummyAttackSpeed(Dummy d) {
+        return "ataca".equals(d.behavior) ? 1.0 : 0.6;
     }
 
     /** The radius of the ragdoll goes into its sheet (it has no abilities). */

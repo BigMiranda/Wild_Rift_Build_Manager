@@ -43,6 +43,12 @@ public class Fighter {
      */
     public Map<String, Double> sheet;
     public Map<String, Double> sheetBase;
+    /**
+     * The planner's sheet at the minute with every conditional effect the fight decides off (where the fight starts)
+     * and with all of them on at once, for "stats over the fight"; null when not built from a build.
+     */
+    public Map<String, Double> sheetAllOff;
+    public Map<String, Double> sheetAllOn;
     /** Where its penetration comes from (stat -> item / rune -> amount), to explain how it sees a defender. */
     public Map<String, Map<String, Double>> statSources = new LinkedHashMap<>();
 

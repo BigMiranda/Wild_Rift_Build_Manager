@@ -2,35 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
-import { mmss, n0, n1 } from '../format.js';
+import { n0 } from '../format.js';
 import EffectPicker, { applied } from './EffectPicker.jsx';
-import SeenByReport, { Bars, MetricControls } from './SeenByReport.jsx';
-import ItemIcon from './ItemIcon.jsx';
-import MinuteInput from './MinuteInput.jsx';
+import SeenByReport, { MetricControls } from './SeenByReport.jsx';
 
 /**
- * The planner's two panels for the open build (as saved) at the chosen minute: test it in a saved arena scenario or a
- * library combo (compact result, the items that weighed most, a link to the arena), and see its stats under chosen
- * item and champion effects, each at its value. The arena keeps the full lab (search, ragdolls, the whole report).
+ * The planner's panel for the open build (as saved) at the chosen minute: its stats under chosen item and champion
+ * effects, each at its value. Testing it in a fight is the "Testar na Arena" button (TestInArena), which opens the
+ * arena itself.
  */
 const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`);
-const signed = (v, digits = 0) => (v == null ? '—' : `${v > 0 ? '+' : ''}${digits ? n1(v) : n0(v)}`);
-
-/** Opens the arena on a scenario or on the lab, with this build already in place (the arena reads its saved state). */
-function openArena(tab, state) {
-  try {
-    if (tab === 'scenario') {
-      localStorage.setItem('ornn-planner-arena', JSON.stringify(state));
-    } else {
-      const lab = JSON.parse(localStorage.getItem('ornn-planner-lab') || '{}');
-      localStorage.setItem('ornn-planner-lab', JSON.stringify({ ...lab, ...state }));
-    }
-    localStorage.setItem('ornn-planner-arena-tab', tab);
-  } catch {
-    /* storage unavailable: the arena opens as it was */
-  }
-  window.dispatchEvent(new CustomEvent('ornn-open-tab', { detail: 'arena' }));
-}
 
 /** A help sentence on top and a "how it works" link that opens a short explanation. */
 function PanelHead({ title, help, how }) {
@@ -51,127 +32,8 @@ export default function BuildTestPanels({ buildId, minute, items }) {
   if (!buildId) return <p className="muted">{t('ptest.saveFirst')}</p>;
   return (
     <div className="planner-lab">
-      <TestPanel buildId={buildId} minute={minute} />
       <SeenByPanel buildId={buildId} minute={minute} idOf={idOf} />
     </div>
-  );
-}
-
-// ------------------------------------------------------------------ 5.1 test this build in a scenario or combo
-
-function TestPanel({ buildId, minute }) {
-  const [options, setOptions] = useState(null);
-  const [pick, setPick] = useState('');
-  const [at, setAt] = useState(null);
-  const [dummies, setDummies] = useState([]);
-  const [dummy, setDummy] = useState(0);
-  const [result, setResult] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    setOptions(null);
-    setResult(null);
-    api.get(`/api/lab/test-options?buildId=${buildId}`).then((o) => {
-      setOptions(o);
-      const s = o.scenarios[0];
-      setPick(s ? `s:${s.id}:${s.slots[0].index}` : o.combos[0] ? `c:${o.combos[0].id}` : '');
-    }).catch((e) => setError(e.message));
-  }, [buildId]);
-  useEffect(() => {
-    api.get('/api/arena/dummies').then((d) => setDummies([...d.presets, ...d.saved])).catch(() => {});
-  }, []);
-  useEffect(() => setResult(null), [minute, pick]);
-
-  const [kind, id, slot] = pick.split(':');
-  const run = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const body = { buildId, minute: at ?? minute };
-      if (kind === 's') Object.assign(body, { scenarioId: Number(id), slot: Number(slot) });
-      else Object.assign(body, { comboId: Number(id), dummy: dummies[dummy] ?? null });
-      setResult(await api.post('/api/lab/test', body));
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-  const open = () => {
-    if (result.kind === 'scenario') {
-      openArena('scenario', { ...result.scenario, id: null, name: `${result.scenario.name} (${t('ptest.copy')})` });
-    } else {
-      openArena('lab', { buildId, minute: at ?? minute, combo: result.combo, dummy: result.dummy });
-    }
-  };
-  const outcome = (w) => (w < 0 ? t('report.drawShort') : t('report.winShort', { team: t(`report.team${w}`) }));
-
-  return (
-    <section className="panel-sub">
-      <PanelHead title={t('ptest.title')} help={t('ptest.help')} how={t('ptest.how.test')} />
-      {options && !options.scenarios.length && !options.combos.length && <p className="muted small">{t('ptest.nothing', { champion: options.champion })}</p>}
-      <div className="row">
-        <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label={t('ptest.pick')} disabled={!options}>
-          {options?.scenarios.length > 0 && (
-            <optgroup label={t('ptest.scenarios')}>
-              {options.scenarios.flatMap((s) => s.slots.map((sl) => (
-                <option key={`${s.id}:${sl.index}`} value={`s:${s.id}:${sl.index}`}>
-                  {s.name}{s.slots.length > 1 ? ` · ${t('ptest.slot', { n: sl.index + 1, side: t(`report.team${sl.team}`) })}` : ''}
-                </option>
-              )))}
-            </optgroup>
-          )}
-          {options?.combos.length > 0 && (
-            <optgroup label={t('ptest.combos')}>
-              {options.combos.map((c) => <option key={c.id} value={`c:${c.id}`}>{c.name}{c.score != null ? ` (${n0(c.score)})` : ''}</option>)}
-            </optgroup>
-          )}
-        </select>
-        <label className="inline">{t('ptest.minute')}<MinuteInput value={at} onChange={setAt} placeholder={mmss(minute)} style={{ width: 70 }} /></label>
-        {kind === 'c' && (
-          <label className="inline">{t('ptest.dummy')}
-            <select value={dummy} onChange={(e) => setDummy(Number(e.target.value))}>
-              {dummies.map((d, i) => <option key={i} value={i}>{d.name}</option>)}
-            </select>
-          </label>
-        )}
-        <button className="primary" onClick={run} disabled={busy || !pick}>{busy ? t('ptest.busy') : t('ptest.run')}</button>
-      </div>
-      {error && <p className="error">{error}</p>}
-      {result && (
-        <div className="test-result">
-          <p>
-            {result.kind === 'scenario'
-              ? <strong className={result.winner === result.team ? 'good' : result.winner < 0 ? '' : 'warn'}>
-                {result.winner === result.team ? t('ptest.won', { s: n1(result.duration) })
-                  : result.winner < 0 ? t('ptest.draw', { s: n1(result.duration) }) : t('ptest.lost', { s: n1(result.duration) })}
-              </strong>
-              : <strong>{t('ptest.comboDamage', { v: n0(result.dealt), s: n1(result.duration) })}</strong>}
-            {' · '}{t('ptest.dealtTaken', { dealt: n0(result.dealt), taken: n0(result.taken) })}
-          </p>
-          {result.items.length > 0 && (
-            <>
-              <small className="muted">{t('ptest.weighed')}</small>
-              <Bars rows={result.items.map((w) => ({
-                key: w.itemId,
-                label: w.item,
-                icon: <ItemIcon id={w.itemId} size={18} />,
-                // on a loss every variant ends at 0 health on its side: the seconds alive tell the items apart
-                value: result.kind !== 'scenario' ? w.dealt : result.winner === result.team ? w.side : w.alive,
-                text: [
-                  w.winnerWithout != null && w.winnerWithout !== result.winner ? t('ptest.without', { out: outcome(w.winnerWithout) }) : null,
-                  result.kind === 'scenario' ? t('ptest.dSide', { v: signed(w.side) }) : null,
-                  t('ptest.dDealt', { v: signed(w.dealt) }),
-                  result.kind === 'scenario' ? t('ptest.dAlive', { v: signed(w.alive, 1) }) : null,
-                ].filter(Boolean).join(' · '),
-              }))} />
-            </>
-          )}
-          <button className="link" onClick={open}>{t('ptest.open')}</button>
-        </div>
-      )}
-    </section>
   );
 }
 

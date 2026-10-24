@@ -65,7 +65,10 @@ public final class ArenaModel {
         public double magicResist = 100;
         public double radius = 80;
         public double moveSpeed = 350;
-        /** parado | anda (side to side) | foge (away from its attacker) | reage (Flash / Cleanse by the tactical rules) */
+        /**
+         * parado | anda (side to side) | foge (away from its attacker) | reage (Flash / Cleanse by the tactical rules) |
+         * ataca (walks to the champion and hits it with a basic attack every second)
+         */
         public String behavior = "parado";
         /** A saved build whose items and runes it wears (null = none), at this minute (null = the build's end). */
         public Long wearBuildId;
@@ -77,6 +80,8 @@ public final class ArenaModel {
         /** Every this many seconds (as if it hit), or at their most stacks from the start. */
         public double hitEvery = 1;
         public boolean atMax;
+        /** Attack Damage of its basic attacks (behavior "ataca": one attack per second, so "in combat" effects start). */
+        public double attackDamage;
 
         /** Presets: the ragdolls of the lab's first screen. */
         public static List<Dummy> presets() {
@@ -112,6 +117,7 @@ public final class ArenaModel {
             d.appliesEffects = appliesEffects;
             d.hitEvery = hitEvery;
             d.atMax = atMax;
+            d.attackDamage = attackDamage;
             return d;
         }
     }
@@ -449,6 +455,49 @@ public final class ArenaModel {
         /** Each use of an ability, item active or spell and what it did (only with frames, for the cooldown card). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public List<Use> uses = new ArrayList<>();
+        /**
+         * Its effective stats over the fight (frames only), written only when they change: the first point has them all,
+         * the next ones only what changed. Keys: {@link #TRACKED}.
+         */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public List<StatPoint> statTrack = new ArrayList<>();
+        /** When each conditional effect (planner effects, delayed stats, forms) turned on and off (frames only). */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public List<Toggle> toggles = new ArrayList<>();
+        /** The planner's sheet at the minute with every fight-decided conditional on / off, in the keys of statTrack. */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, Double> sheetOn = new LinkedHashMap<>();
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, Double> sheetOff = new LinkedHashMap<>();
+    }
+
+    /**
+     * Stats followed over the fight: max health, armor, magic resist, attack damage, ability power, attacks per second,
+     * move speed (slows and speed-ups included), shield left and damage reduction (0..1) on now.
+     */
+    public static final List<String> TRACKED = List.of("Max Health", "Armor", "Magic Resistance", "Attack Damage",
+            "Ability Power", "attackSpeed", "moveSpeed", "shield", "damageReduction");
+
+    /** Stats at a second of the fight: all of them in the first point, then only the ones that changed. */
+    public static class StatPoint {
+        public double t;
+        public Map<String, Double> v = new LinkedHashMap<>();
+    }
+
+    /** A conditional effect turning on or off. */
+    public static class Toggle {
+        public double t;
+        public String source;
+        public boolean on;
+
+        public Toggle() {
+        }
+
+        public Toggle(double t, String source, boolean on) {
+            this.t = t;
+            this.source = source;
+            this.on = on;
+        }
     }
 
     /** One use of an ability (key "1", "2", "3", "R"), item active or spell (its name), and what it did. */

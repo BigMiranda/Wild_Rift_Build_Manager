@@ -3,6 +3,7 @@ package com.ornnplanner.engine;
 import com.ornnplanner.arena.Arena;
 import com.ornnplanner.arena.ArenaModel;
 import com.ornnplanner.arena.ArenaModel.Action;
+import com.ornnplanner.arena.ArenaModel.FighterStats;
 import com.ornnplanner.arena.ArenaModel.Result;
 import com.ornnplanner.arena.fight.CombatCatalog;
 import com.ornnplanner.arena.fight.FighterBuilder;
@@ -299,5 +300,99 @@ class ArenaTest {
                 .filter(s -> s.id.startsWith("elemental-")).findFirst().get();
         assertEquals(480.0, body.length, 1e-9);
         assertEquals(340.0, body.width, 1e-9);
+    }
+
+    // ------------------------------------------------------------------ stats over the fight ("photos")
+
+    private static com.ornnplanner.arena.fight.FighterBuilder.Triggered trigger(String source, String effect,
+            java.util.Map<String, Object> spec, String stat, double amount) {
+        com.ornnplanner.arena.fight.FighterBuilder.Triggered t = new com.ornnplanner.arena.fight.FighterBuilder.Triggered();
+        t.key = effect.equals(source) ? source : source + "|" + effect;
+        t.source = source;
+        t.effect = effect;
+        t.kind = effect.equals(source) ? "runa" : "item";
+        t.spec = spec;
+        t.mode = String.valueOf(spec.get("quando"));
+        t.buildOn = true;
+        t.delta.put(stat, amount);
+        return t;
+    }
+
+    private static Arena.Input attackingDummy(double x) {
+        com.ornnplanner.arena.ArenaModel.Dummy d = new com.ornnplanner.arena.ArenaModel.Dummy();
+        d.behavior = "ataca";
+        d.attackDamage = 100;
+        d.spells = new java.util.ArrayList<>();
+        Arena.Input in = com.ornnplanner.arena.ComboBench.dummyInput(d);
+        in.x = x;
+        in.y = 0;
+        return in;
+    }
+
+    /** A stat of a fighter at a second, rebuilt from the changes written over the fight. */
+    private static double trackedAt(FighterStats f, String stat, double t) {
+        double v = Double.NaN;
+        for (ArenaModel.StatPoint p : f.statTrack) {
+            if (p.t > t + 1e-9) {
+                break;
+            }
+            if (p.v.containsKey(stat)) {
+                v = p.v.get(stat);
+            }
+        }
+        return v;
+    }
+
+    @Test
+    void duplaguardaArmorComesAfterFiveSecondsInCombatAndIsTheArmorTheHitsMeet() {
+        Arena.Input darius = champion("Darius", 0, 1000, 0, 5000, 0, 50);
+        darius.triggers.add(trigger("Duplaguarda de Amaranto", "Tolerância", java.util.Map.of("quando", "combate", "segundos", 5.0),
+                Stats.ARMOR, 100));
+        Result r = run(List.of(darius, attackingDummy(1400)), List.of(), 12);
+        FighterStats f = r.fighters.get(0);
+        ArenaModel.Toggle on = f.toggles.stream().filter(x -> x.on && x.source.startsWith("Duplaguarda")).findFirst().get();
+        assertTrue(on.t >= 5.0, "on at " + on.t);
+        assertEquals(50.0, trackedAt(f, Stats.ARMOR, on.t - 0.2), 1e-6);
+        assertEquals(150.0, trackedAt(f, Stats.ARMOR, on.t), 1e-6);
+        // Every hit of the ragdoll (100 physical) lands on the armor of its frame: 100 x 100 / (100 + armor).
+        int checked = 0;
+        for (int k = 1; k < r.frames.size(); k++) {
+            double t = r.frames.get(k).t;
+            double drop = r.frames.get(k - 1).units.get(0).hp - r.frames.get(k).units.get(0).hp;
+            if (drop < 1 || Math.abs(t - on.t) < 0.25) {
+                continue;
+            }
+            double armor = trackedAt(f, Stats.ARMOR, t);
+            assertEquals(100 * 100 / (100 + armor), drop, 0.2, "hit at " + t + " on armor " + armor);
+            checked++;
+        }
+        assertTrue(checked >= 6, "hits checked: " + checked);
+        // Without frames nothing is followed.
+        Arena.Input again = champion("Darius", 0, 1000, 0, 5000, 0, 50);
+        Result bare = new Arena(catalog, map).withoutFrames().run(List.of(again, attackingDummy(1400)), List.of(), 12);
+        assertTrue(bare.fighters.get(0).statTrack.isEmpty());
+        assertTrue(bare.fighters.get(0).toggles.isEmpty());
+    }
+
+    @Test
+    void glacialDefensesLastTwoAndAHalfSecondsAndWaitTwentyToComeBack() {
+        Arena.Input renekton = champion("Renekton", 0, 1000, 0, 5000, 100, 40);
+        renekton.triggers.add(trigger("Suserano do Gelo", "Suserano do Gelo",
+                java.util.Map.of("quando", "ao_imobilizar", "duracao", 2.5, "recarga", 20.0), Stats.ARMOR, 40));
+        com.ornnplanner.arena.ArenaModel.Dummy d = new com.ornnplanner.arena.ArenaModel.Dummy();
+        d.spells = new java.util.ArrayList<>();
+        Arena.Input dummy = com.ornnplanner.arena.ComboBench.dummyInput(d);
+        dummy.x = 1250;
+        dummy.y = 0;
+        Result r = run(List.of(renekton, dummy), List.of(order(0, 1, "ability", "2"), order(0, 10, "ability", "2"),
+                order(0, 24, "ability", "2")), 30);
+        List<ArenaModel.Toggle> glacial = new java.util.ArrayList<>();
+        r.fighters.get(0).toggles.stream().filter(x -> x.source.equals("Suserano do Gelo")).forEach(glacial::add);
+        assertTrue(glacial.size() >= 3, String.valueOf(r.fighters.get(0).toggles.size()));
+        assertTrue(glacial.get(0).on && !glacial.get(1).on);
+        assertEquals(2.5, glacial.get(1).t - glacial.get(0).t, 0.11);   // frames every 0.1s
+        assertTrue(glacial.get(2).on && glacial.get(2).t >= glacial.get(0).t + 20 - 1e-9,
+                "back at " + glacial.get(2).t + " after " + glacial.get(0).t);
+        assertEquals(80.0, trackedAt(r.fighters.get(0), Stats.ARMOR, glacial.get(0).t), 1e-6);
     }
 }

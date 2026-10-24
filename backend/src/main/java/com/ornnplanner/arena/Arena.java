@@ -317,6 +317,9 @@ public class Arena {
         double dummyTurnAt = 1.5;
         int dummyDir = 1;
         double dummyHitAt;
+        /** Stats over the fight (frames only): the last values written, and which conditional effects were on. */
+        Map<String, Double> tracked;
+        final Map<String, Boolean> trackedOn = new LinkedHashMap<>();
 
         U(int idx, Input in) {
             this.idx = idx;
@@ -687,6 +690,10 @@ public class Arena {
             u.r.startShields.put("fisico", sum(u.shieldPhysical));
             if (describeEffects) {
                 describeEffects(u);
+            }
+            if (recordFrames && u.f.sheetAllOn != null) {
+                u.r.sheetOn.putAll(sheetStats(u, u.f.sheetAllOn));
+                u.r.sheetOff.putAll(sheetStats(u, u.f.sheetAllOff));
             }
         }
         List<Action> sorted = new ArrayList<>(actions);
@@ -5618,6 +5625,13 @@ public class Arena {
                 return true;
             case "reage":
                 return false;   // its policy (Flash away / Cleanse only) decides
+            case "ataca": {
+                U t = target(u);
+                if (t != null) {
+                    chase(u, t);
+                }
+                return true;
+            }
             default:
                 return true;
         }
@@ -6183,6 +6197,69 @@ public class Arena {
 
     // ------------------------------------------------------------------ frames and helpers
 
+    /** The planner's sheet in the keys of the stats followed over the fight (attacks per second, move speed...). */
+    private static Map<String, Double> sheetStats(U u, Map<String, Double> sheet) {
+        Map<String, Double> out = new LinkedHashMap<>();
+        for (String k : List.of(Stats.MAX_HEALTH, Stats.ARMOR, Stats.MAGIC_RESIST, Stats.ATTACK_DAMAGE, Stats.ABILITY_POWER)) {
+            out.put(k, sheet.getOrDefault(k, 0.0));
+        }
+        out.put("attackSpeed", u.in.baseAttackSpeed * (1 + sheet.getOrDefault("% Attack Speed", 0.0) / 100));
+        out.put("moveSpeed", sheet.getOrDefault(Stats.MOVE_SPEED, 0.0) * (1 + sheet.getOrDefault("% Move Speed", 0.0) / 100));
+        out.put("shield", sheet.getOrDefault("Shield", 0.0) + sheet.getOrDefault("Magic Shield", 0.0)
+                + sheet.getOrDefault("Physical Shield", 0.0));
+        return out;
+    }
+
+    /** The unit's effective stats now, the same the fight uses (see {@link ArenaModel#TRACKED}). */
+    private Map<String, Double> trackedStats(U u) {
+        Map<String, Double> v = new LinkedHashMap<>();
+        v.put(Stats.MAX_HEALTH, u.maxHp);
+        v.put(Stats.ARMOR, u.stat(Stats.ARMOR));
+        v.put(Stats.MAGIC_RESIST, u.stat(Stats.MAGIC_RESIST));
+        v.put(Stats.ATTACK_DAMAGE, u.stat(Stats.ATTACK_DAMAGE));
+        v.put(Stats.ABILITY_POWER, u.stat(Stats.ABILITY_POWER));
+        v.put("attackSpeed", u.attackSpeed());
+        v.put("moveSpeed", u.moveSpeed());
+        v.put("shield", u.shieldLeft());
+        v.put("damageReduction", now < u.damageReductionUntil ? u.damageReduction : 0.0);
+        return v;
+    }
+
+    /** Writes what changed in the unit's stats and conditional effects since the last frame (frames only). */
+    private void track(U u, double t) {
+        Map<String, Double> now = trackedStats(u);
+        ArenaModel.StatPoint p = new ArenaModel.StatPoint();
+        p.t = t;
+        for (Map.Entry<String, Double> e : now.entrySet()) {
+            Double before = u.tracked == null ? null : u.tracked.get(e.getKey());
+            if (before == null || Math.abs(before - e.getValue()) > 1e-6) {
+                p.v.put(e.getKey(), Math.round(e.getValue() * 1000) / 1000.0);
+            }
+        }
+        if (!p.v.isEmpty()) {
+            u.r.statTrack.add(p);
+        }
+        u.tracked = now;
+        for (T tr : u.trigs) {
+            if (tr.hasStats()) {
+                noteToggle(u, t, tr.d.effect.equals(tr.d.source) ? tr.d.source : tr.d.source + " · " + tr.d.effect, tr.on());
+            }
+        }
+        for (int i = 0; i < u.delayOn.length; i++) {
+            noteToggle(u, t, u.f.delays.get(i).source, u.delayOn[i]);
+        }
+        for (Map.Entry<String, Double> e : u.formUntil.entrySet()) {
+            noteToggle(u, t, e.getKey(), this.now < e.getValue());
+        }
+    }
+
+    private void noteToggle(U u, double t, String source, boolean on) {
+        Boolean before = u.trackedOn.put(source, on);
+        if (before == null ? on : before != on) {
+            u.r.toggles.add(new ArenaModel.Toggle(t, source, on));
+        }
+    }
+
     private void frame() {
         if (!recordFrames) {
             flashes.clear();
@@ -6191,6 +6268,7 @@ public class Arena {
         Frame f = new Frame();
         f.t = Math.round(now * 1000) / 1000.0;
         for (U u : units) {
+            track(u, f.t);
             UnitFrame uf = new UnitFrame();
             uf.x = round(u.x);
             uf.y = round(u.y);

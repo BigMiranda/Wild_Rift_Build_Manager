@@ -6,6 +6,7 @@ import { n0, n1, statValue } from '../format.js';
 import ItemIcon from './ItemIcon.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
 import { findRune, findSpell, runeCatalog, runeIcon, setRuneCatalog, spellIcon } from '../runes.js';
+import FightStats from './FightStats.jsx';
 
 /**
  * The report of one fight of the arena (a scenario or the lab's combo against the ragdoll): result with the health
@@ -76,19 +77,28 @@ function BuildIcons({ f }) {
   );
 }
 
-export default function FightReport({ result, names, onItemValues }) {
+export default function FightReport({ result, names, onItemValues, time = 0 }) {
   useRuneCatalog();
   const fr = result.fighters;
-  const label = (i) => names?.[i] ?? fr[i].champion;
+  const nameKey = (names ?? []).join('|');
+  const label = useMemo(() => (i) => names?.[i] ?? fr[i].champion, [nameKey, fr]);
   const colors = useMemo(() => colorsOf(fr), [fr]);
-  return (
+  // Only "stats over the fight" follows the playback; the rest is drawn once per result.
+  const sections = useMemo(() => (
     <>
       <ResultSection result={result} label={label} colors={colors} />
       <ChampionsSection result={result} label={label} colors={colors} />
       <DamageSection result={result} label={label} colors={colors} />
       <LedgerSection result={result} label={label} colors={colors} onItemValues={onItemValues} />
       <TriggerSection result={result} label={label} colors={colors} />
-      <MoreSection result={result} label={label} colors={colors} />
+    </>
+  ), [result, label, colors, onItemValues]);
+  const more = useMemo(() => <MoreSection result={result} label={label} colors={colors} />, [result, label, colors]);
+  return (
+    <>
+      {sections}
+      <FightStats result={result} label={label} colors={colors} time={time} />
+      {more}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { Fragment, Profiler, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { n0, n1 } from '../format.js';
@@ -7,6 +7,10 @@ import { ChampionAvatar } from '../components/ChampionPicker.jsx';
 import ArenaLab from '../components/ArenaLab.jsx';
 import FightReport from '../components/FightReport.jsx';
 import CooldownCard, { CooldownTag, cooldownName } from '../components/CooldownCard.jsx';
+import { ATTACKING_DUMMY } from '../components/TestInArena.jsx';
+import ItemIcon from '../components/ItemIcon.jsx';
+import { pointAt } from '../components/MomentPanels.jsx';
+import { mmss } from '../format.js';
 
 /**
  * Orchestrated matchup: a scenario (champions from saved builds at a minute, where they start, and a timeline of
@@ -122,7 +126,7 @@ export default function Arena() {
   }, [sc]);
 
   // Runs the scenario on every change (the engine is fast): debounced.
-  const ready = sc.fighters.length > 1 && sc.fighters.every((f) => f.buildId != null)
+  const ready = sc.fighters.length > 1 && sc.fighters.every((f) => f.buildId != null || f.dummy)
     && sc.fighters.some((f) => f.team === 0) && sc.fighters.some((f) => f.team === 1);
   const seq = useRef(0);
   const ranWith = useRef(null);   // the scenario of the result shown (item values run it again)
@@ -149,6 +153,25 @@ export default function Arena() {
     }, 350);
     return () => clearTimeout(timer);
   }, [sc, ready]);
+
+  // "Testar na Arena" from the planner: play the new scenario as soon as it has run.
+  const autoplay = useRef(false);
+  useEffect(() => {
+    try {
+      // (set only: StrictMode runs this twice in development, and the second run finds the flag gone)
+      if (localStorage.getItem(`${STORE}-autoplay`) === '1') autoplay.current = true;
+      localStorage.removeItem(`${STORE}-autoplay`);
+    } catch {
+      /* session only */
+    }
+  }, []);
+  useEffect(() => {
+    if (result && autoplay.current) {
+      autoplay.current = false;
+      setTime(0);
+      setPlaying(true);
+    }
+  }, [result]);
 
   // Playback.
   useEffect(() => {
@@ -237,9 +260,12 @@ export default function Arena() {
   };
 
   const frame = frameAt(result, time);
+  const itemValues = useCallback(() => api.post('/api/arena/item-values', ranWith.current), []);
   const cardBars = useMemo(() => cooldownBars(result), [result]);
   useEffect(() => setCard(null), [result]);
-  const names = sc.fighters.map((f, i) => result?.fighters?.[i]?.champion ?? builds.find((b) => b.id === f.buildId)?.unitCode ?? `#${i + 1}`);
+  const nameList = sc.fighters.map((f, i) => result?.fighters?.[i]?.champion ?? (f.dummy ? f.dummy.name ?? 'Boneco de pano'
+    : builds.find((b) => b.id === f.buildId)?.unitCode) ?? `#${i + 1}`);
+  const names = useMemo(() => nameList, [nameList.join('|')]);
 
   const tabs = (
     <div className="row arena-tabs" role="tablist">
@@ -365,8 +391,7 @@ export default function Arena() {
             setMessage(t('arena.chain.used', { n: Object.keys(latest ?? {}).length }));
           }} />
       )}
-      {result && <FightReport result={result} names={names}
-        onItemValues={() => api.post('/api/arena/item-values', ranWith.current)} />}
+      {result && <FightReport result={result} names={names} time={time} onItemValues={itemValues} />}
     </div>
   );
 }
@@ -1077,6 +1102,8 @@ function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onC
   const enemies = fighters.map((f, i) => ({ f, i })).filter(({ f }) => f.team !== slot.team);
   const mine = policies.filter((p) => champKey(p.champion) === champKey(names[index]));
   const brain = slot.brain ?? 'script';
+  if (slot.dummy) return <DummySlot index={index} slot={slot} onChange={onChange} onRemove={onRemove} />;
+  const build = builds.find((b) => b.id === slot.buildId);
   return (
     <div className="arena-slot" style={{ borderLeftColor: TEAM[slot.team] }}>
       <div className="row">
@@ -1085,11 +1112,12 @@ function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onC
           <option value="">{t('report.pickBuild')}</option>
           {builds.map((b) => <option key={b.id} value={b.id}>{b.name} · {b.unitCode}</option>)}
         </select>
-        <label className="inline">{t('report.minute')}
+        <label className="inline slot-minute" title={t('arena.slotMinuteTitle')}>{t('arena.slotMinute')}
           <MinuteInput value={slot.minute} placeholder={t('report.minuteAuto')} onChange={(minute) => onChange({ minute })} />
         </label>
         <button className="icon danger" onClick={onRemove} aria-label={t('arena.removeFighter')}>✕</button>
       </div>
+      {build && <BuildAtMinute build={build} minute={slot.minute} onMinute={(minute) => onChange({ minute })} />}
       <div className="row">
         <label className="inline" title={t('arena.positionTitle')}>{t('arena.position')}
           <input type="number" value={slot.x ?? ''} placeholder="Nexus" onChange={(e) => onChange({ x: e.target.value === '' ? null : Number(e.target.value) })} aria-label="x" />
@@ -1134,6 +1162,99 @@ function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onC
           {stats.notes.length > 0 && ` — ${stats.notes.join(' · ')}`}
         </small>
       )}
+    </div>
+  );
+}
+
+/** A ragdoll slot (from "Testar na Arena"): its health, resistances, how it moves and the damage of its hits. */
+function DummySlot({ index, slot, onChange, onRemove }) {
+  const d = { ...ATTACKING_DUMMY, ...slot.dummy };
+  const set = (patch) => onChange({ dummy: { ...d, ...patch } });
+  const num = (k) => (e) => set({ [k]: Number(e.target.value) || 0 });
+  return (
+    <div className="arena-slot" style={{ borderLeftColor: TEAM[slot.team] }}>
+      <div className="row">
+        <strong className="arena-idx">{index + 1}</strong>
+        <strong>{d.name}</strong>
+        <button className="icon danger" onClick={onRemove} aria-label={t('arena.removeFighter')}>✕</button>
+      </div>
+      <div className="row">
+        <label className="inline">{t('arena.dummy.health')}<input type="number" min={1} value={d.health} onChange={num('health')} style={{ width: 80 }} /></label>
+        <label className="inline">{t('arena.dummy.res')}
+          <input type="number" min={0} value={d.armor} onChange={num('armor')} style={{ width: 60 }} aria-label="Armor" />
+          <input type="number" min={0} value={d.magicResist} onChange={num('magicResist')} style={{ width: 60 }} aria-label="MR" />
+        </label>
+        <label className="inline">{t('arena.dummy.behavior')}
+          <select value={d.behavior} onChange={(e) => set({ behavior: e.target.value })}>
+            {['ataca', 'parado', 'anda', 'foge', 'reage'].map((b) => <option key={b} value={b}>{t(`arena.dummy.b.${b}`)}</option>)}
+          </select>
+        </label>
+        {d.behavior === 'ataca' && (
+          <label className="inline" title={t('arena.dummy.adTitle')}>{t('arena.dummy.ad')}
+            <input type="number" min={0} value={d.attackDamage} onChange={num('attackDamage')} style={{ width: 60 }} />
+          </label>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const timelines = new Map();
+/** The planner's timeline of a saved build (cached by its last save). */
+function useTimeline(build) {
+  const [tl, setTl] = useState(null);
+  const key = build ? `${build.id}|${build.updatedAt}` : null;
+  useEffect(() => {
+    if (!key) return undefined;
+    let live = true;
+    if (!timelines.has(key)) {
+      const p = api.get(`/api/builds/${build.id}/timeline`);
+      p.catch(() => timelines.delete(key));
+      timelines.set(key, p);
+    }
+    timelines.get(key).then((r) => { if (live) setTl(r); }).catch(() => {});
+    return () => { live = false; };
+  }, [key]);
+  return tl;
+}
+
+/**
+ * What the slot's build has at its minute (level, items, gold spent) and its health over the match, where a click picks
+ * the minute (like the planner's chart). An empty minute is the build's end.
+ */
+function BuildAtMinute({ build, minute, onMinute }) {
+  const tl = useTimeline(build);
+  if (!tl?.series?.length) return null;
+  const last = tl.series.at(-1).minute;
+  const at = minute ?? (tl.matchEnd ?? tl.steps.at(-1)?.minute ?? last);
+  const p = pointAt(tl.series, at);
+  const spent = tl.steps.filter((s) => s.minute <= at + 1e-9).reduce((sum, s) => sum + s.paidCost, 0);
+  const ids = (p?.contributions ?? []).filter((c) => !c.rune).map((c) => c.itemId);
+  const hp = tl.series.map((s) => s.total['Max Health'] ?? 0);
+  const lo = Math.min(...hp);
+  const hi = Math.max(...hp);
+  const W = 180;
+  const H = 30;
+  const x = (m) => (m / Math.max(1e-9, last)) * W;
+  const y = (v) => H - 2 - ((v - lo) / Math.max(1, hi - lo)) * (H - 4);
+  const path = tl.series.map((s, i) => `${i ? 'L' : 'M'}${x(s.minute).toFixed(1)},${y(s.total['Max Health'] ?? 0).toFixed(1)}`).join(' ');
+  const pick = (e) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    const m = Math.max(0, Math.min(last, ((e.clientX - box.left) / box.width) * last));
+    onMinute(Math.round(m * 60) / 60);
+  };
+  return (
+    <div className="slot-build-at">
+      <span className="slot-summary">
+        <small>{t('arena.slotAt', { time: mmss(at), level: p?.level ?? '—', gold: n0(spent) })}</small>
+        <span className="slot-items">{ids.map((id, k) => <ItemIcon key={k} id={id} size={20} />)}</span>
+      </span>
+      <svg className="slot-spark" viewBox={`0 0 ${W} ${H}`} width={W} height={H} onClick={pick} role="img"
+        aria-label={t('arena.slotSparkTitle')}>
+        <title>{t('arena.slotSparkTitle')}</title>
+        <path d={path} fill="none" stroke="var(--stat-hp, #6fd486)" strokeWidth={1.5} />
+        <line x1={x(at)} x2={x(at)} y1={0} y2={H} stroke="var(--gold-bright)" strokeWidth={1.5} />
+      </svg>
     </div>
   );
 }

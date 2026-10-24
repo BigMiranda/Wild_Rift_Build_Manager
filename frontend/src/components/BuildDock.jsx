@@ -63,7 +63,7 @@ function PendingSale({ point, sales }) {
   );
 }
 
-export default function BuildDock({ point, itemsById, selected, readerId, onRead, onShop, draft, sales = [] }) {
+export default function BuildDock({ point, itemsById, selected, readerId, onRead, onShop, draft, sales = [], testInArena }) {
   const [statsOpen, setStatsOpen] = useState(loadOpen);
   const [passivesOpen, setPassivesOpen] = useState(() => {
     try {
@@ -110,6 +110,7 @@ export default function BuildDock({ point, itemsById, selected, readerId, onRead
         <InventorySlots ids={ids} itemsById={itemsById} size={34} picked={readerId}
           onPick={(id) => onRead(readerId === id ? null : id)} />
         <button className="link dock-shop" onClick={onShop}>{t('dock.shop')}</button>
+        {testInArena}
         {point && (
           <button className={`opt dock-toggle${passivesOpen ? ' on' : ''}`} aria-expanded={passivesOpen} onClick={togglePassives}
             title={t('passives.valuesTitle')}>

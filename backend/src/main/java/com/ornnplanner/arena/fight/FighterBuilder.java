@@ -133,6 +133,19 @@ public class FighterBuilder {
         MinutePoint p0 = planner.snapshot(base, r.items, r.level, r.minute);
         ArenaBuild out = new ArenaBuild();
         out.fighter = fighter(r, base, p0);
+        // The planner's sheet with every effect the fight decides off (the fighter's start) and all of them on at once.
+        out.fighter.sheetAllOff = new LinkedHashMap<>(p0.total);
+        if (all.stream().anyMatch(Triggered::fightTriggered)) {
+            Build on = variant(r.build, all, null, formsOff);
+            for (Triggered t : all) {
+                if (t.fightTriggered()) {
+                    setSwitch(on, t, true);
+                }
+            }
+            out.fighter.sheetAllOn = new LinkedHashMap<>(planner.snapshot(on, r.items, r.level, r.minute).total);
+        } else {
+            out.fighter.sheetAllOn = new LinkedHashMap<>(p0.total);
+        }
         for (Triggered t : all) {
             if (!t.fightTriggered()) {
                 continue;
@@ -256,27 +269,7 @@ public class FighterBuilder {
             b.runePage.options = b.runePage.options == null ? new LinkedHashMap<>() : b.runePage.options;
         }
         for (Triggered t : all) {
-            boolean on = t == onlyOn || t.followsBuild() && t.buildOn;
-            switch (t.kind) {
-                case "item":
-                    b.itemSetup.conditional.put(t.key, on);
-                    break;
-                case "loja":
-                    for (BuildRepository.Step s : b.steps == null ? List.<BuildRepository.Step>of() : b.steps) {
-                        if (!s.moment() && t.itemId.equals(s.itemId)) {
-                            s.includeConditional = on;
-                        }
-                    }
-                    break;
-                case "runa":
-                    if (b.runePage != null) {
-                        b.runePage.conditional.put(t.key, on);
-                    }
-                    break;
-                default:
-                    b.championSetup.conditional.put(t.key, on);
-                    break;
-            }
+            setSwitch(b, t, t == onlyOn || t.followsBuild() && t.buildOn);
         }
         if (onlyOn != null && onlyOn.spec != null && Boolean.TRUE.equals(onlyOn.spec.get("por_acionamento"))) {
             switch (onlyOn.kind) {
@@ -299,6 +292,30 @@ public class FighterBuilder {
             b.championSetup.conditional.put(form, false);
         }
         return b;
+    }
+
+    /** Sets the build's own switch of a conditional effect (a variant's maps already exist). */
+    private static void setSwitch(Build b, Triggered t, boolean on) {
+        switch (t.kind) {
+            case "item":
+                b.itemSetup.conditional.put(t.key, on);
+                break;
+            case "loja":
+                for (BuildRepository.Step s : b.steps == null ? List.<BuildRepository.Step>of() : b.steps) {
+                    if (!s.moment() && t.itemId.equals(s.itemId)) {
+                        s.includeConditional = on;
+                    }
+                }
+                break;
+            case "runa":
+                if (b.runePage != null) {
+                    b.runePage.conditional.put(t.key, on);
+                }
+                break;
+            default:
+                b.championSetup.conditional.put(t.key, on);
+                break;
+        }
     }
 
     /**

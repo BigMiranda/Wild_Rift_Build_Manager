@@ -1086,6 +1086,25 @@ table.heat tr.heat-total td { border-top: 1px solid var(--border-strong); }
 .lane-item.sold .item-icon { filter: grayscale(.7); border-color: var(--stat-hp); }
 .dock-sale { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; padding: 2px 0; color: var(--text-2); }
 .dock-sale strong { color: var(--gold-bright); }
+.test-arena { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.test-arena select { max-width: 220px; }
+.test-arena.compact select { max-width: 150px; font-size: 12px; }
+.test-arena.compact button { font-size: 12px; padding: 3px 8px; }
+.test-arena-row { gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.slot-minute { font-weight: 600; color: var(--gold-bright); }
+.slot-build-at { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 2px 0 4px; }
+.slot-summary { display: inline-flex; flex-direction: column; gap: 2px; }
+.slot-items { display: inline-flex; gap: 2px; }
+.slot-spark { cursor: crosshair; background: var(--surface-3, rgba(255,255,255,.04)); border-radius: 4px; max-width: 100%; }
+.fight-stats .fstats-fighter { border-top: 1px solid var(--border); padding: 6px 0; }
+.fight-stats summary { cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.fstats-photo { margin: 6px 0; }
+.fstats-val { display: inline-flex; align-items: center; gap: 2px; margin-right: 10px; font-variant-numeric: tabular-nums; }
+.fstats-spans { list-style: none; padding: 0; margin: 4px 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; }
+.fstats-spans .swatch { margin-right: 4px; }
+.fstats-charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 8px; }
+.fstats-chart { margin: 0; }
+.fstats-chart figcaption { font-size: 11px; display: flex; align-items: center; gap: 4px; }
 .pass-sources { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
 .pass-sources .chips button small { margin-left: 4px; }
 .table-wrap.stale { opacity: .6; }

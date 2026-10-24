@@ -347,13 +347,14 @@ A aba "Confronto" (luta rápida sem posições) saiu na Rodada 4: a Arena e o pl
 
 ## Testar a build no planejador
 
-Nos detalhes de um momento da linha do tempo, a aba **Testar** tem dois painéis para a build aberta (a versão salva):
+Na barra fixa da build e na aba **Testar** dos detalhes de um momento, para a build aberta (a versão salva):
 
-- **Testar esta build num cenário ou combo:** um cenário salvo da Arena que tenha o campeão (a build entra no slot
-  dele, no minuto escolhido) ou um combo da biblioteca contra o boneco. Mostra o vencedor (ou o dano do combo), o dano
-  causado e recebido e, em barras, o peso de cada item: a mesma luta sem ele. No cenário, o peso é a vida que o lado
-  mantém com o item quando vence, e os segundos a mais viva quando perde (na derrota, todas as variantes terminam com
-  0 de vida). "Abrir na Arena" leva ao cenário (uma cópia com esta build) ou ao laboratório, com o relatório completo.
+- **Testar na Arena** (com o oponente num seletor ao lado): abre a Arena num cenário novo, sem salvar, com a build no
+  minuto escolhido no gráfico e o cérebro **Tático**, contra o **boneco de pano** (padrão: 10000 de vida, 100/100,
+  comportamento "ataca": um ataque básico de 100 a cada 1 s, para os efeitos "em combate" e "ao sofrer dano"
+  dispararem), **outra build salva no mesmo minuto** ou **um cenário salvo** (a build entra no slot do seu campeão).
+  A luta roda e toca sozinha ao abrir; o rascunho pode ser salvo como cenário. (Antes era o painel "Testar esta build
+  num cenário ou combo"; o resultado compacto e o peso de cada item continuam no relatório da Arena.)
 - **Visão sob efeitos:** os status desta build no início de uma luta sob os efeitos que você escolher, de itens
   (Cutelo Negro, Maldição Sanguinária, Feridas Dolorosas, Presa da Serpente, Tridente da Oceânide, itens de
   penetração) e de passivas e habilidades de campeões (penetração de Ambessa, Darius, Mordekaiser, Nilah e Pantheon;
@@ -437,6 +438,15 @@ Nexus (ou onde você os colocar).
   Fortalecimento, Ritmo Fatal, Primeiro Ataque, Cometa, Brutal, Tirano, Golpe de Misericórdia, Zelo de Combate e as
   demais. A regeneração de Vida corre o tempo todo, e os ataques do Ornn num alvo Frágil o empurram e quebram o
   Frágil. O relatório lista cada efeito: quando conta, quantas vezes ativou, quanto tempo ficou ligado e o que deu.
+- **Status ao longo da luta** (relatório da luta): cada quadro guarda os status efetivos de cada campeão (Vida máx.,
+  Armadura, RM, DdA, PdH, ataques por segundo, velocidade de movimento com lentidões, escudo e redução de dano), só
+  quando mudam, e quando cada efeito condicional liga e desliga. A seção mostra, por campeão, a "foto" no segundo do
+  cursor da reprodução (os status e os efeitos ligados), um gráfico por status que muda com as faixas de cada efeito
+  ("Suserano do Gelo: 2,5–5 s", "Duplaguarda: liga aos 5,9 s") e a comparação com a ficha do planejador: tudo ligado,
+  tudo desligado, a média na luta e o pico real (o segundo em que os status estão mais altos juntos). Sem quadros
+  (treino, busca) nada disso é calculado.
+- **Minuto da build no slot**: "aos mm:ss" ao lado da build e, embaixo, o que ela tem nesse minuto (nível, itens, ouro
+  gasto) e a vida ao longo da partida, em que clicar escolhe o minuto.
 - O motor anda em passos de 0,02s para movimento e colisões, com cada efeito no seu segundo exato; é determinístico
   (o mesmo cenário dá sempre o mesmo resultado), o que permite comparar linhas do tempo automaticamente. Uma luta de
   40s roda em menos de um segundo.

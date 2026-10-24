@@ -25,6 +25,7 @@ import SpellEditor from '../components/SpellEditor.jsx';
 import PrepExport from '../components/PrepExport.jsx';
 import SkillExport from '../components/SkillExport.jsx';
 import BuildTestPanels from '../components/BuildTestPanels.jsx';
+import TestInArena from '../components/TestInArena.jsx';
 import ItemSetupExport, { configurableItems, explicitItemSetup } from '../components/ItemSetupExport.jsx';
 
 const emptyBuild = (folderId) => ({
@@ -392,6 +393,7 @@ export default function Planner({ meta, items }) {
         <ItemReaderContext.Provider value={setReaderId}>
         <BuildDock point={point} itemsById={itemsById} selected={selectedMinute != null} readerId={readerId} draft={payload}
           sales={[...(result?.steps ?? []), ...(result?.ignored ?? [])].filter((x) => x.saleTiming)}
+          testInArena={<TestInArena compact buildId={draft.id} buildName={draft.name} minute={point?.minute ?? null} builds={builds} />}
           onRead={setReaderId} onShop={() => shopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
         {message && (
           <div className="notice spread">
@@ -585,6 +587,10 @@ export default function Planner({ meta, items }) {
               {momentTab === 'lab' && (
                 <section className="panel">
                   <h3>{t('ptest.panelTitle', { time: mmss(point.minute) })}</h3>
+                  <div className="row test-arena-row">
+                    <TestInArena buildId={draft.id} buildName={draft.name} minute={point.minute} builds={builds} />
+                    <small className="muted">{t('arenaTest.help')}</small>
+                  </div>
                   <BuildTestPanels buildId={draft.id} minute={Math.round(point.minute * 100) / 100} items={items} />
                 </section>
               )}

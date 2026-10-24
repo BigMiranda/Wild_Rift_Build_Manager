@@ -188,3 +188,65 @@ de teste, as 66 versões do Ornn ficam marcadas; as de Rumble e Darius não.
 **Teste novo (`ArenaTest`):** um boneco parado 300 atrás do ponto onde o elemental surge é atingido (o círculo antigo,
 170 + 80, não chegava; o corpo, 240 + 80, chega) e o desenho tem 480 × 340. Testes: 210 → 211 (os mesmos 8 opcionais
 pulados).
+
+## Parte 5 — "Fotos de luta": status realistas da build, do planejador para a Arena ✅
+
+### 5.1 "Testar na Arena"
+- O painel "Testar esta build num cenário ou combo" saiu; no lugar, o botão **"Testar na Arena"** com o seletor do
+  oponente (`TestInArena`), na barra fixa da build e no topo da aba Testar do momento. Usa a build salva, no minuto
+  selecionado no gráfico, com o cérebro **Tático**; abre a Arena num cenário novo (sem `id`, "Teste: Big Carry v1
+  aos 23:30"), que roda e toca sozinho. Oponentes:
+  - **boneco de pano** (padrão): 10000 de vida, 100/100, comportamento novo **"ataca"** (anda até o campeão e acerta
+    um ataque básico de 100 de dano físico a cada 1 s; `Dummy.attackDamage`, velocidade de ataque 1,0). Os dois começam
+    a 800 um do outro, no meio do mapa, e a luta dura 30 s;
+  - **outra build salva** no mesmo minuto (também Tático), 40 s;
+  - **um cenário salvo**: a build entra no slot do seu campeão (as opções vêm de `/api/lab/test-options`, como antes).
+- A Arena aceita slots de boneco nos cenários (antes todo slot precisava de build): o slot mostra vida, resistências,
+  comportamento e o dano do ataque, editáveis.
+- **Decisão:** sai também o "combo da biblioteca contra o boneco" que o painel antigo tinha; o laboratório da Arena
+  continua com ele. O `POST /api/lab/test` fica (o Ranking usa).
+- A "Visão sob efeitos" continua como estava.
+
+### 5.2 Status ao longo da luta
+- **Backend:** em cada quadro (`frame()`), `track(u)` grava os status efetivos que a luta usa
+  (`ArenaModel.TRACKED`: Vida máx., Armadura, RM, DdA, PdH, ataques por segundo, velocidade de movimento com lentidões
+  e acelerações, escudo restante, redução de dano ativa), **só o que mudou** desde o quadro anterior
+  (`FighterStats.statTrack`), e quando cada efeito condicional liga e desliga (`toggles`: gatilhos do planejador,
+  status atrasados e formas). Sem quadros, nada é calculado. `FighterBuilder.arenaBuild` agora guarda a ficha do
+  planejador com todos os efeitos que a luta decide desligados (`sheetAllOff`, o ponto de partida da luta) e todos
+  ligados ao mesmo tempo (`sheetAllOn`, uma consulta a mais ao planejador por lutador), convertidas para as mesmas
+  chaves (`sheetOn` / `sheetOff`). Os quatro campos são descritivos e ficam fora da impressão digital do golden.
+- **Tela (`FightStats`, no relatório):** por campeão, a "foto" no segundo do cursor (status e efeitos ligados), as
+  faixas de cada efeito ("Suserano do Gelo: 2,5–5 s", "Duplaguarda de Amaranto · Tolerância: liga aos 5,9s"), um
+  gráfico por status que muda (com as faixas coloridas e o cursor), os que não mudam numa linha, e a tabela ficha tudo
+  ligado / tudo desligado / média na luta (ponderada pelo tempo) / pico real com o segundo.
+- **Decisão (pico):** o pico simultâneo real é o segundo em que os status estão mais altos juntos (soma de Vida com
+  escudo, Armadura, RM, DdA e PdH, cada um sobre o valor do início). Contar só quantos efeitos estão ligados escolhia o
+  segundo errado: na Big Carry, o Suserano sozinho dá mais Armadura que as duas linhas da Duplaguarda.
+- O relatório da luta passou a ser desenhado uma vez por resultado; só esta seção acompanha a reprodução.
+
+**Big Carry v1 (23:30, nível 15) contra o boneco que ataca** (Tático, vitória aos 16,1 s):
+
+| | ficha, tudo ligado | ficha, tudo desligado | média na luta | pico real (2,5 s) |
+|---|---|---|---|---|
+| Vida | 7.326 | 7.326 | 7.326 | 7.326 |
+| Armadura | 826 | 366 | 472 | 677 |
+| RM | 541 | 214 | 282 | 430 |
+| Escudo | 1.131 | 0 | 22 | 118 |
+
+No pico estão as defesas do Suserano do Gelo (2,5–5 s, depois de imobilizar); a Duplaguarda liga aos 5,9 s (5 s depois
+de entrar em combate) e fica até o fim. Os dois nunca valem juntos nessa luta: o Suserano volta só 20 s depois, e a luta
+acaba antes. A ficha "tudo ligado" (826 de Armadura) nunca acontece; a média fica perto da ficha desligada.
+
+### 5.3 Minuto da build no slot
+- "aos" (com o `MinuteInput`) ao lado do seletor de build; embaixo, "aos 23:30: nível 15 · 16.950 de ouro gasto" e os
+  ícones dos itens nesse minuto, e um mini-gráfico da Vida máxima ao longo da partida, em que clicar escolhe o minuto
+  (a linha dourada marca o escolhido). A linha do tempo de cada build vem do planejador, em cache pela data da última
+  gravação. Vale para todos os slots, inclusive os dos cenários do "Testar na Arena".
+
+**Testes novos (`ArenaTest`):**
+- a Armadura da Duplaguarda sobe só depois de 5 s em combate, e cada golpe do boneco (100 físico) tira
+  `100 × 100 / (100 + Armadura do quadro)` — os status do quadro são os que o dano usa naquele instante; sem quadros,
+  nada é gravado;
+- as defesas do Suserano duram 2,5 s e não voltam antes de 20 s (o segundo atordoamento, aos ~10 s, não liga nada).
+Testes: 211 → 213. Golden sem mudança nesta parte.
