@@ -65,6 +65,11 @@ import java.util.Set;
 public class Arena {
 
     public static final double DT = 0.02;
+    /**
+     * Version of the fight rules learned policies are trained with (saved with each version): 2 = Ornn's elemental with
+     * its real length (Rodada 5); versions before it have none.
+     */
+    public static final int RULES = 2;
     public static final double FRAME_EVERY = 0.1;
     private static final int ATTACK = 0;
     private static final int ABILITY = 1;
@@ -566,6 +571,11 @@ public class Arena {
         double maxSpeed;
         double left;
         double width;
+        /**
+         * Length of the body along its way; (x, y) is the middle of the body, so the way out and the way back use the
+         * same rectangle (the headbutt turns it around its middle).
+         */
+        double length;
         boolean redirected;
         int champsHit;
         Set<U> hit = new HashSet<>();
@@ -1161,7 +1171,9 @@ public class Arena {
         }
         for (Elemental e : elementals) {
             if (e.owner.team() != u.team()) {
-                best = sooner(best, u, e.x, e.y, e.dx, e.dy, e.width, e.left, Math.max(e.speed, 300));
+                // from its front; a unit the body already covers counts as hit now
+                best = sooner(best, u, e.x + e.dx * e.length / 2, e.y + e.dy * e.length / 2, e.dx, e.dy, e.width, e.left,
+                        Math.max(e.speed, 300), e.length);
             }
         }
         return best;
@@ -1169,17 +1181,23 @@ public class Arena {
 
     private double[] sooner(double[] best, U u, double x, double y, double dx, double dy, double width, double left,
                             double speed) {
+        return sooner(best, u, x, y, dx, dy, width, left, speed, 0);
+    }
+
+    /** As above; a unit up to {@code behind} back from (x, y) (a long body) is reached at once. */
+    private double[] sooner(double[] best, U u, double x, double y, double dx, double dy, double width, double left,
+                            double speed, double behind) {
         double wx = u.x - x;
         double wy = u.y - y;
         double along = wx * dx + wy * dy;
-        if (along < 0 || along > left + u.radius() || speed <= 0) {
+        if (along < -behind || along > left + u.radius() || speed <= 0) {
             return best;
         }
         double across = Math.abs(wx * dy - wy * dx);
         if (across > width / 2 + u.radius() + 30) {
             return best;
         }
-        double seconds = along / speed;
+        double seconds = Math.max(0, along) / speed;
         return best == null || seconds < best[4] ? new double[] {dx, dy, x, y, seconds} : best;
     }
 
@@ -1783,8 +1801,9 @@ public class Arena {
             }
             case "elemental": {
                 double far = num(ab.get("distancia"), 2550);
-                double time = cast + accelTime(far - d, num(ab.get("velocidade"), 450), num(ab.get("aceleracao"), 400),
-                        num(ab.get("velocidade_final"), 1250));
+                // the front of the body (half its length ahead of the middle) reaches the target first
+                double time = cast + accelTime(far - d - elementalLength(ab) / 2, num(ab.get("velocidade"), 450),
+                        num(ab.get("aceleracao"), 400), num(ab.get("velocidade_final"), 1250));
                 return new double[] {d > far ? 0 : hitChance(t, time, num(ab.get("largura"), 340) / 2 + r), time};
             }
             case "ataque":
@@ -1811,8 +1830,7 @@ public class Arena {
             if (e == null || e.redirected) {
                 return new double[] {0, 0};
             }
-            double reach = e.width / 2 + u.radius() + num(rec.get("cabecada"), 200) + 60;
-            if (dist(u.x, u.y, e.x, e.y) > reach) {
+            if (elementalGap(e, u.x, u.y) > u.radius() + num(rec.get("cabecada"), 200) + 60) {
                 return new double[] {0, 0};   // not within the headbutt's reach yet
             }
             double a = Math.atan2(e.y - u.y, e.x - u.x);
@@ -1822,7 +1840,7 @@ public class Arena {
             double across = Math.abs((t.x - e.x) * dy - (t.y - e.y) * dx);
             double far = num(rec.get("distancia"), 1500);
             double time = num(rec.get("cabecada"), 200) / 1600 + Math.max(0, along) / Math.max(1, num(rec.get("velocidade"), 1250));
-            if (along < -t.radius() - e.width / 2 || along > far + t.radius()) {
+            if (along < -t.radius() - e.length / 2 || along > far + e.length / 2 + t.radius()) {
                 return new double[] {0, time};
             }
             return new double[] {hitChance(t, time, e.width / 2 + t.radius() - across), time};
@@ -3000,6 +3018,7 @@ public class Arena {
         e.accel = num(ab.get("aceleracao"), 400);
         e.left = dist + 200;
         e.width = num(ab.get("largura"), 340);
+        e.length = elementalLength(ab);
         e.spec = ab;
         e.rank = rank;
         Map<String, Object> rec = map(ab.get("reconjurar"));
@@ -3029,9 +3048,8 @@ public class Arena {
                 return "drop";
             }
             Map<String, Object> rec = map(ab.get("reconjurar"));
-            // Like a player: the headbutt waits for the elemental to come within reach.
-            double reach = e.width / 2 + u.radius() + num(rec.get("cabecada"), 200) + 60;
-            if (dist(u.x, u.y, e.x, e.y) > reach) {
+            // Like a player: the headbutt waits for the elemental (its nearest part) to come within reach.
+            if (elementalGap(e, u.x, u.y) > u.radius() + num(rec.get("cabecada"), 200) + 60) {
                 u.recast.put(slot, w);
                 u.recastTry.put(slot, "fora de alcance");
                 return "wait";
@@ -3055,7 +3073,7 @@ public class Arena {
                 if (near != null && dist(u.x, u.y, near.x, near.y) > before + 50) {
                     count(u, "reconjuracao_fuga:" + slot);   // the headbutt took it away from its nearest enemy
                 }
-                if (dist(u.x, u.y, e.x, e.y) <= e.width / 2 + u.radius() + 150 && elementals.contains(e)) {
+                if (elementalGap(e, u.x, u.y) <= u.radius() + 150 && elementals.contains(e)) {
                     e.redirected = true;
                     e.dx = Math.cos(a);
                     e.dy = Math.sin(a);
@@ -3727,6 +3745,33 @@ public class Arena {
         }
     }
 
+    /** Length of the elemental's body (kits: "comprimento"; 120, the old drawing, when the sheet has none). */
+    private static double elementalLength(Map<String, Object> ab) {
+        return num(ab.get("comprimento"), 120);
+    }
+
+    /** Distance from a point to the elemental's body (a rectangle: length along its way, width across); 0 inside. */
+    private static double elementalGap(Elemental e, double x, double y) {
+        double wx = x - e.x;
+        double wy = y - e.y;
+        double along = Math.max(0, Math.abs(wx * e.dx + wy * e.dy) - e.length / 2);
+        double across = Math.max(0, Math.abs(wx * e.dy - wy * e.dx) - e.width / 2);
+        return Math.hypot(along, across);
+    }
+
+    /**
+     * Whether the body, moving its middle to (nx, ny) by {@code step}, sweeps over the unit: the rectangle from the back
+     * of the body before the step to its front after it, widened by the unit's radius.
+     */
+    private static boolean elementalSweeps(Elemental e, double nx, double ny, double step, U v) {
+        double wx = v.x - nx;
+        double wy = v.y - ny;
+        double along = wx * e.dx + wy * e.dy;
+        double across = Math.abs(wx * e.dy - wy * e.dx);
+        double r = v.radius();
+        return along <= e.length / 2 + r && along >= -e.length / 2 - step - r && across <= e.width / 2 + r;
+    }
+
     private void moveElementals() {
         for (Elemental e : new ArrayList<>(elementals)) {
             e.speed = Math.min(e.maxSpeed, e.speed + e.accel * DT);
@@ -3735,7 +3780,7 @@ public class Arena {
             double ny = e.y + e.dy * s;
             Map<String, Object> rec = map(e.spec.get("reconjurar"));
             for (U v : enemies(e.owner)) {
-                if (!e.hit.contains(v) && segDist(e.x, e.y, nx, ny, v.x, v.y) <= e.width / 2 + v.radius()) {
+                if (!e.hit.contains(v) && elementalSweeps(e, nx, ny, s, v)) {
                     e.hit.add(v);
                     String source = "R · " + e.spec.get("nome");
                     if (e.redirected) {
@@ -6224,7 +6269,7 @@ public class Arena {
         }
         for (Elemental e : elementals) {
             Shape s = rect("elemental-" + e.id, "Elemental de lava (Ornn)" + (e.redirected ? ", devolvido" : ""),
-                    e.owner.team(), e.x, e.y, 120, e.width, Math.atan2(e.dy, e.dx));
+                    e.owner.team(), e.x, e.y, e.length, e.width, Math.atan2(e.dy, e.dx));
             f.shapes.add(s);
         }
         f.shapes.addAll(flashes);

@@ -138,3 +138,53 @@ Build de desenvolvimento do React (a de produção é mais rápida nos dois caso
 
 **Teste novo (`ArenaRulesTest`):** sem quadros nada é registrado; com quadros, a soma do dano dos usos de cada slot é
 o dano por fonte daquele slot. Testes: 209 → 210. Golden sem mudança.
+
+## Parte 4 — Elemental de lava do Ornn: comprimento real ✅
+
+**Antes:** desenho de 120 de comprimento por 340 de largura; acerto por um círculo de raio 170 varrido pelo caminho.
+
+**Agora:**
+- `comprimento: 480` na R do Ornn (`kits_7_3b.yml`), com `comprimento: usuário (≈ 4× o desenho anterior)` nas
+  `fontes`. Sem o campo, 120 (o desenho de antes).
+- **Decisão:** o ponto que anda (x, y) passa a ser o **meio do corpo**. Assim a ida e a volta usam o mesmo retângulo
+  sem mudar de lugar: a cabeçada só o vira em torno do meio. (Com a frente no ponto de hoje, a volta teria de
+  reposicionar o corpo inteiro.) A frente fica 240 à frente do ponto, contra 170 do círculo antigo.
+- O mesmo retângulo no desenho e no acerto: comprimento ao longo do caminho, largura atravessada, varrido a cada passo
+  (do fundo do corpo antes do passo à frente depois dele, alargado pelo raio do alvo; `elementalSweeps`).
+- Também usam o comprimento: a previsão da conjuração (a frente chega meio corpo antes), a reconjuração —
+  `reconjuracao_acertaria` (o alvo atrás do meio vale até meio corpo), o alcance da cabeçada (distância do Ornn ao
+  retângulo, `elementalGap`, nos dois testes: esperar e devolver) — e o desvio (`threat`: medido da frente; quem o
+  corpo já cobre conta como atingido agora).
+
+**Golden:** mudaram os 13 cenários com a R do Ornn — os 10 duelos com o Ornn (Ornn × Darius, Renekton, Rumble,
+Vayne, K'Sante e as voltas), "3v3", "orders + autopilot" e "long Ornn x K'Sante". Nos duelos o resumo (vencedor,
+tempo, vida, dano) é igual, salvo Ornn × K'Sante (dano do Ornn 3.339 → 3.306); a diferença está nos quadros (o
+desenho do corpo). No 3v3 a luta mudou: vitória do lado vermelho aos 19,9 s em vez de 16,5 s. Regravado com
+`-Darena.golden.write=true`. O `golden-ai-v2.txt` (`ArenaPolicyMigrationTest`) mudou em "duel Ornn x Darius" e "3v3":
+o teste ganhou o mesmo `-Darena.golden.write=true` (antes não tinha caminho para regravar) e o Javadoc diz que só se
+regrava quando as regras mudam de propósito, nunca pela migração.
+
+**Prova do Ornn** (`OrnnProofTest`, `-Darena.proof=true`; boneco de pano nos 4 comportamentos):
+
+| | antes | depois |
+|---|---|---|
+| combo manual (calibrado): nota | 4.411 | 5.630 |
+| manual, parado: dano / Frágeis / controle | 4.217 / 3 / 2,62 s | 4.217 / 3 / 2,56 s |
+| manual, anda | 150 / 0 / 1,26 s — "passo impossível: reconjurar:R" | 4.064 / 3 / 2,72 s, feito |
+| manual, foge | 4.217 / 3 / 2,24 s | 4.217 / 3 / 2,18 s |
+| melhor achado: nota | 5.631 | 5.641 |
+| melhor achado, parado: dano / Frágeis / controle | 4.370 / 3 / 2,06 s | 4.370 / 3 / 2,06 s |
+| melhor / manual | 1,276 | 1,002 |
+
+O ganho grande é o boneco que anda: antes o elemental de 120 não chegava perto o bastante para a cabeçada, e o combo
+manual parava na reconjuração. A busca acha o mesmo combo (R → 1 → R² → 3 → 2 → ataques), agora praticamente
+empatado com o manual. O teste do combo manual com 3 Frágeis segue passando.
+
+**IAs salvas:** continuam abrindo e lutando. Migração v22: `arena_policy.arena_rules` (`Arena.RULES = 2`, gravado em
+cada versão nova). Uma versão do Ornn sem a marca mostra "⚠ elemental antigo" na lista e no seletor de cérebro,
+com o título "Treinada quando o elemental de lava do Ornn tinha 120 de comprimento (agora 480, Rodada 5)…". No banco
+de teste, as 66 versões do Ornn ficam marcadas; as de Rumble e Darius não.
+
+**Teste novo (`ArenaTest`):** um boneco parado 300 atrás do ponto onde o elemental surge é atingido (o círculo antigo,
+170 + 80, não chegava; o corpo, 240 + 80, chega) e o desenho tem 480 × 340. Testes: 210 → 211 (os mesmos 8 opcionais
+pulados).

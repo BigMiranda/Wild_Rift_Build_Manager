@@ -19,6 +19,7 @@
 -- Version 18: help levels of arena policies (arena_policy.level, guidelines) and the user's guidelines (arena_guideline).
 -- Version 19: arena_policy.wins_scenario (the version wins its training scenario's own fight).
 -- Version 20: arena_policy.game_patch (the game data patch a version was trained on).
+-- Version 22: arena_policy.arena_rules (the fight rules a version was trained with).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -200,7 +201,8 @@ CREATE TABLE IF NOT EXISTS arena_policy (
     level              TEXT,          -- help level of its training (sozinha | descobertos | dicas)
     guidelines         TEXT,          -- the guidelines it was trained with (JSON)
     wins_scenario      INTEGER,       -- 1 = its side wins the training scenario's fight with it (NULL = not measured)
-    game_patch         TEXT           -- game data patch it was trained on (campeoes_<patch>.yml); '7.3' before v20
+    game_patch         TEXT,          -- game data patch it was trained on (campeoes_<patch>.yml); '7.3' before v20
+    arena_rules        INTEGER        -- Arena.RULES it was trained with (v22; NULL = before Ornn's elemental length)
 );
 CREATE INDEX IF NOT EXISTS idx_arena_policy_champion ON arena_policy (champion);
 

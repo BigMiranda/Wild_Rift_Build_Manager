@@ -376,7 +376,8 @@ const champKey = (s) => (s ?? '').normalize('NFD').replace(/[^a-z]/gi, '').toLow
 const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`);
 const policyLabel = (p) => t('arena.brain.ai', { v: p.version, obj: t(`arena.obj.${p.objective}`), pct: pct(p.betterVsScript) })
   + (p.accepted ? '' : ` ${t('arena.train.notAccepted')}`) + (p.migratedFrom ? ` ${t('arena.brain.migrated', { v: p.migratedFrom })}` : '')
-  + (p.otherPatch ? ` ${t('arena.brain.otherPatch', { patch: p.gamePatch })}` : '');
+  + (p.otherPatch ? ` ${t('arena.brain.otherPatch', { patch: p.gamePatch })}` : '')
+  + (p.oldElemental ? ` ${t('arena.brain.oldElemental')}` : '');
 
 const OBJECTIVES = ['win_fast', 'damage', 'survive', 'team', 'escapar'];
 const RUNNING = ['queued', 'running', 'stopping'];
@@ -712,6 +713,7 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
                       {` · ${t(`arena.level.${p.level ?? 'sozinha'}`)}`}</small>
                       {p.level === 'dicas' && !sameRules(p) && <small className="warn" title={t('arena.levels.otherRulesTitle')}> ⚠ {t('arena.levels.otherRules')}</small>}
                       {p.otherPatch && <small className="warn" title={t('arena.brain.otherPatchTitle')}> {t('arena.brain.otherPatch', { patch: p.gamePatch })}</small>}
+                      {p.oldElemental && <small className="warn" title={t('arena.brain.oldElementalTitle')}> {t('arena.brain.oldElemental')}</small>}
                     </td>
                     <td>{t(`arena.obj.${p.objective}`)}</td>
                     <td>{pct(p.betterVsScript)}</td><td>{pct(p.betterVsTactical)}</td><td>{pct(p.betterVsPrevious)}</td>

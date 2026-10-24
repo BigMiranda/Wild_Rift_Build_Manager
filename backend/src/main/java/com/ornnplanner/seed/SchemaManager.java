@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 21;
+    static final int VERSION = 22;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -124,6 +124,10 @@ public class SchemaManager {
             // assumption of a range of the sequence (null = the build's)
             jdbc.execute("ALTER TABLE build_step ADD COLUMN sell_when TEXT");
             jdbc.execute("ALTER TABLE build_step ADD COLUMN assume TEXT");
+        }
+        if (version < 22 && tableExists("arena_policy") && !columnExists("arena_policy", "arena_rules")) {
+            // v22: the arena rules a version was trained with (null = before Ornn's elemental got its real length)
+            jdbc.execute("ALTER TABLE arena_policy ADD COLUMN arena_rules INTEGER");
         }
         // v16 / v17 / v18: arena_combo, arena_dummy and arena_guideline are new tables, created by schema.sql
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);

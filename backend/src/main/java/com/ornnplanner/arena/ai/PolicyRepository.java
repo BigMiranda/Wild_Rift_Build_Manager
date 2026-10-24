@@ -90,6 +90,8 @@ public class PolicyRepository {
             r.winsScenario = winsScenario;
             r.gamePatch = gamePatch;
             r.otherPatch = otherPatch;
+            r.arenaRules = arenaRules;
+            r.oldElemental = oldElemental;
             return r;
         }
 
@@ -105,6 +107,10 @@ public class PolicyRepository {
         public String gamePatch;
         /** Trained on another patch than the current game data (it still loads; the screen warns). */
         public boolean otherPatch;
+        /** Version of the arena's rules it was trained with ({@link com.ornnplanner.arena.Arena#RULES}; null = before v22). */
+        public Integer arenaRules;
+        /** An Ornn version trained with the elemental before its real length (Rodada 5): it loads, the screen warns. */
+        public boolean oldElemental;
 
         /**
          * Weights of the current observation and action layout, or of an older one they migrate from when read
@@ -187,7 +193,7 @@ public class PolicyRepository {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String COLUMNS = "id, champion, objective, version, fitness, better_vs_script, winrate, winrate_script, "
             + "better_vs_tactical, better_vs_previous, accepted, generations, population, seed, scenario, obs_schema, actions, created_at, "
-            + "chain_id, chain_round, team_plan, parent_id, level, guidelines, wins_scenario, game_patch";
+            + "chain_id, chain_round, team_plan, parent_id, level, guidelines, wins_scenario, game_patch, arena_rules";
 
     private final JdbcTemplate jdbc;
     /** Patch of the game data new versions are trained on (null in tests that build the repository by hand). */
@@ -272,12 +278,14 @@ public class PolicyRepository {
         if (r.gamePatch == null) {
             r.gamePatch = gamePatch;
         }
+        r.arenaRules = com.ornnplanner.arena.Arena.RULES;
         KeyHolder key = new GeneratedKeyHolder();
         jdbc.update(c -> {
             PreparedStatement ps = c.prepareStatement("INSERT INTO arena_policy (champion, objective, version, fitness, "
                     + "better_vs_script, winrate, winrate_script, better_vs_tactical, better_vs_previous, accepted, generations, "
                     + "population, seed, scenario, weights_json, obs_schema, actions, created_at, chain_id, chain_round, team_plan, "
-                    + "parent_id, level, guidelines, wins_scenario, game_patch) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    + "parent_id, level, guidelines, wins_scenario, game_patch, arena_rules) "
+                    + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     Statement.RETURN_GENERATED_KEYS);
             int i = 1;
             ps.setString(i++, r.champion);
@@ -305,7 +313,8 @@ public class PolicyRepository {
             ps.setString(i++, r.level);
             ps.setString(i++, guidelines);
             ps.setObject(i++, r.winsScenario == null ? null : r.winsScenario ? 1 : 0);
-            ps.setString(i, r.gamePatch);
+            ps.setString(i++, r.gamePatch);
+            ps.setObject(i, r.arenaRules);
             return ps;
         }, key);
         r.id = key.getKey() == null ? null : key.getKey().longValue();
@@ -348,6 +357,9 @@ public class PolicyRepository {
         r.winsScenario = rs.wasNull() ? null : wins != 0;
         r.gamePatch = rs.getString("game_patch");
         r.otherPatch = gamePatch != null && r.gamePatch != null && !gamePatch.equals(r.gamePatch);
+        int rules = rs.getInt("arena_rules");
+        r.arenaRules = rs.wasNull() ? null : rules;
+        r.oldElemental = "Ornn".equalsIgnoreCase(r.champion) && (r.arenaRules == null || r.arenaRules < 2);
         String gl = rs.getString("guidelines");
         if (gl != null) {
             try {

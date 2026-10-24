@@ -107,6 +107,7 @@ campeoes:
         conjuracao: 0.5
         distancia: 2550          # o elemental surge a esta distância, na direção mirada, e corre até o Ornn
         largura: 340
+        comprimento: 480         # corpo ao longo do caminho; o meio dele é o ponto que anda (ida e volta)
         velocidade: 450
         velocidade_final: 1250   # acelera até esta velocidade
         aceleracao: 400          # EST
@@ -123,7 +124,7 @@ campeoes:
           # e um atordoamento nesse tempo cai no fim dela
           imune_deslocamento: true
           cc_durante_avanco: continua_depois
-        fontes: "recarga, conjuração, dano, lentidão, Frágil, janela da reconjuração, arremesso: WR; distância, largura, velocidades: PC; aceleração, cabeçada, distância da volta: EST"
+        fontes: "recarga, conjuração, dano, lentidão, Frágil, janela da reconjuração, arremesso: WR; distância, largura, velocidades: PC; aceleração, cabeçada, distância da volta: EST; comprimento: usuário (≈ 4× o desenho anterior)"
 
   Darius:
     raio: 80                 # PC

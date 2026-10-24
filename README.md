@@ -402,7 +402,9 @@ Nexus (ou onde você os colocar).
   status calculada pela build. Campeões sem ficha usam o dano lido do texto do jogo numa habilidade com alvo.
 - **Ordens**: uma ordem em recarga espera ficar pronta (e o registro mostra quanto esperou); fora de alcance, o
   campeão anda até o alvo. Sem ordens, ele persegue e ataca, e (com "auto") usa as habilidades prontas na prioridade.
-  A reconjuração da ultimate do Ornn espera o elemental chegar perto para a cabeçada.
+  A reconjuração da ultimate do Ornn espera o elemental chegar perto para a cabeçada. O elemental é um retângulo de
+  480 de comprimento (`comprimento` da ficha; o ponto que anda é o meio do corpo) por 340 de largura, o mesmo no
+  desenho, no acerto, nas previsões, no alcance da cabeçada e no desvio.
 - **Cérebro** de cada campeão (o que ele faz quando a linha do tempo não dá ordem): **Roteiro** (padrão, o descrito
   acima) ou **Tático**, que também desvia de projéteis, recua quando perde a troca com pouca vida (Flash e Fantasma
   para fugir), faz kite se ataca à distância, reconjura e usa ativos de dano e feitiços (Barreira/Curar com pouca vida,

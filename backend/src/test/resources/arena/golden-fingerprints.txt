@@ -1,35 +1,35 @@
-333e91474c2e49f7835e0b30c5ceb7abf8db65621a8803739d5f9de8d3df5198	duel Ornn x Darius	winner=0 t=16.739999999999732 | Ornn hp=271 dealt=3100 | Darius hp=0 dealt=2529
-303f7bbfbd0140ba8438d1bbc51a6921428eca185c66b774f01009cc2f13ec6d	duel Ornn x Renekton	winner=1 t=16.43999999999974 | Ornn hp=0 dealt=3395 | Renekton hp=180 dealt=2816
-4163b0d6f68e4eaee26f6cd83fa0718c3b9b23970683a027f022b63ccecb233b	duel Ornn x Rumble	winner=1 t=19.939999999999664 | Ornn hp=0 dealt=3094 | Rumble hp=478 dealt=2839
-8c688a5cfe9c24f67496453c477278e81769b5074ede3bbf881639f96716abb8	duel Ornn x Vayne	winner=1 t=14.799999999999773 | Ornn hp=0 dealt=1631 | Vayne hp=1317 dealt=2941
-4f76dd892556281d44918d91237e07ab0ce18e3bb62cea2d0df426cbc22deea8	duel Ornn x K'Sante	winner=0 t=20.699999999999648 | Ornn hp=900 dealt=3339 | K'Sante hp=0 dealt=1900
-5162582c330dc5032ce20b44a3349ca3542d43170f266b590f3948f3e08e21ae	duel Darius x Ornn	winner=1 t=15.479999999999759 | Darius hp=0 dealt=2339 | Ornn hp=461 dealt=3100
+58170b4a16f5ead11036586eacd66da8110fd307a0d3bbeed42a90283585d1fa	duel Ornn x Darius	winner=0 t=16.739999999999732 | Ornn hp=271 dealt=3100 | Darius hp=0 dealt=2529
+b9cbf3e9971314733ea1f0b754a304fd0908b50bc460a43a7e9a60efc5d8b9e2	duel Ornn x Renekton	winner=1 t=16.43999999999974 | Ornn hp=0 dealt=3395 | Renekton hp=180 dealt=2816
+f286393178acc686d2b6c785055fd981868980ded02b459b2c7b6d7250818356	duel Ornn x Rumble	winner=1 t=19.939999999999664 | Ornn hp=0 dealt=3094 | Rumble hp=478 dealt=2839
+eb9dc5e4d399b0ad6438df0e35f1a015cf3aeeff5c97fff9c1bcd44f1e2ccfdb	duel Ornn x Vayne	winner=1 t=14.799999999999773 | Ornn hp=0 dealt=1631 | Vayne hp=1317 dealt=2941
+622ac076eea1ea0828205159a992b4c35d8afd8d53e9f0580ff3d54be69aa1f1	duel Ornn x K'Sante	winner=0 t=20.699999999999648 | Ornn hp=900 dealt=3306 | K'Sante hp=0 dealt=1900
+6c35367e0d942c4321197367e84ee57a3007f673eaff5e0db9ffdf85b8a85c18	duel Darius x Ornn	winner=1 t=15.479999999999759 | Darius hp=0 dealt=2339 | Ornn hp=461 dealt=3100
 6228ce6737e479491b3a67d282de37cdfdcaf7553574503bcc47f111cd44f57e	duel Darius x Renekton	winner=1 t=14.219999999999786 | Darius hp=0 dealt=1783 | Renekton hp=1752 dealt=2802
 09454139487eb5c55cd4f2e003c9c181036a9afa97fa3d8cad5907bfb449ebee	duel Darius x Rumble	winner=1 t=19.09999999999968 | Darius hp=0 dealt=3127 | Rumble hp=631 dealt=2820
 cf12a7817817c8599a16eee4fcd4eb6bdc35aef60f2f99047350b8c431c94bfe	duel Darius x Vayne	winner=1 t=14.93999999999977 | Darius hp=0 dealt=1877 | Vayne hp=988 dealt=2927
 c5d62bb15c4c737015458fcd770998f0edbc541c18acac312216b8ef533d5a63	duel Darius x K'Sante	winner=0 t=24.139999999999574 | Darius hp=305 dealt=3187 | K'Sante hp=0 dealt=2670
-9c4511477f37f157466a9d0545f7a0da4c2be3761db5b1467744d035671775c4	duel Renekton x Ornn	winner=0 t=16.43999999999974 | Renekton hp=180 dealt=2816 | Ornn hp=0 dealt=3395
+d041a986d017ca0cf5bb1ee63eca45c9061e9126ca9170d83fec337c31c8cf14	duel Renekton x Ornn	winner=0 t=16.43999999999974 | Renekton hp=180 dealt=2816 | Ornn hp=0 dealt=3395
 43af8a0068b09e41945474b44ef6bef3748672c94de06a50422aab375eb579cc	duel Renekton x Darius	winner=0 t=14.219999999999786 | Renekton hp=1798 dealt=2802 | Darius hp=0 dealt=1777
 5d7508dfe5c61147319c61dba5c337f9f7dd9484201d450c618797ad8c8199be	duel Renekton x Rumble	winner=0 t=20.799999999999645 | Renekton hp=874 dealt=3605 | Rumble hp=0 dealt=2741
 9f9d3c34b092a66ba480e2602b4c18a8616a3375c8f360cb0c193c014ba3c6f7	duel Renekton x Vayne	winner=1 t=16.039999999999747 | Renekton hp=0 dealt=2495 | Vayne hp=505 dealt=3614
 368682a7e9b27de54398fcc7b5c4ff5aa877da80b98a228de993eb305f7f637e	duel Renekton x K'Sante	winner=0 t=21.319999999999634 | Renekton hp=1750 dealt=3196 | K'Sante hp=0 dealt=1825
-9e1adf1c537b5188009d79843d2edd40ee19e6422e911f24b50f7ea64938c50f	duel Rumble x Ornn	winner=0 t=19.939999999999664 | Rumble hp=478 dealt=2839 | Ornn hp=0 dealt=3094
+c28e21231c6ea37a52755e8615bd47affa035f30209453172050790c64170b77	duel Rumble x Ornn	winner=0 t=19.939999999999664 | Rumble hp=478 dealt=2839 | Ornn hp=0 dealt=3094
 b23f9047d0d32111bc4b77905bb036becb9e3e324c81001dbc664bc10210c164	duel Rumble x Darius	winner=0 t=19.09999999999968 | Rumble hp=631 dealt=2820 | Darius hp=0 dealt=3127
 7239255f1226dc7d3bb22b78582955eb35947d376ad07ec2600dc24decaa0a0d	duel Rumble x Renekton	winner=1 t=20.799999999999645 | Rumble hp=0 dealt=2741 | Renekton hp=874 dealt=3605
 fa808580b336f3648a41b7cc412397d02546dca5c9f302fde926b9d3c00cbd3e	duel Rumble x Vayne	winner=0 t=16.139999999999745 | Rumble hp=474 dealt=2951 | Vayne hp=0 dealt=2876
 dfe4d4683021f8c295b5451953abe8965f530a61b425120201db320c6db942c6	duel Rumble x K'Sante	winner=0 t=28.339999999999485 | Rumble hp=472 dealt=3291 | K'Sante hp=0 dealt=3042
-02b4441aa30301424a5bbfd2da17b4e52eae17dc2fe560f039dfb9bfb9ddefef	duel Vayne x Ornn	winner=0 t=14.819999999999773 | Vayne hp=1317 dealt=2941 | Ornn hp=0 dealt=1631
+4bf4b1a416d754af3a3845b35e46e897d86e5c0cbef54286575867d47fca59da	duel Vayne x Ornn	winner=0 t=14.819999999999773 | Vayne hp=1317 dealt=2941 | Ornn hp=0 dealt=1631
 ed90418f0997667f81f6bbae6c0e7f1e7c524d3e475032a84284dd7da36cc763	duel Vayne x Darius	winner=0 t=14.93999999999977 | Vayne hp=1111 dealt=2927 | Darius hp=0 dealt=1754
 75c8de68fb0aa0c6b7cbbb7c6879d99d3e45bedd1e45dfaf0c3f3dceb03c4800	duel Vayne x Renekton	winner=0 t=16.059999999999746 | Vayne hp=505 dealt=3614 | Renekton hp=0 dealt=2495
 e72a36ac99a8fe311f34425be19f571f66408572341ecccded9a22a6acf28cf5	duel Vayne x Rumble	winner=1 t=17.23999999999972 | Vayne hp=0 dealt=3323 | Rumble hp=166 dealt=2975
 89b4182928fac196bc3e96555d51e73852d1952b311abe4f49ce047e6b956f05	duel Vayne x K'Sante	winner=0 t=16.29999999999974 | Vayne hp=1708 dealt=3044 | K'Sante hp=0 dealt=1207
-f54680c094df4cea58eb09fa9ae64f57a297cd7b7c0ac4b1b0e767c45e231d72	duel K'Sante x Ornn	winner=1 t=20.699999999999648 | K'Sante hp=0 dealt=1900 | Ornn hp=900 dealt=3339
+9fafbffacdc8a67075b337b5667365f1399ebfa733b54303419d797d4d5b85d3	duel K'Sante x Ornn	winner=1 t=20.699999999999648 | K'Sante hp=0 dealt=1900 | Ornn hp=900 dealt=3306
 aef07b9b2dd46c72357ffc44d3da44f708b9cc288651362ffd63a7079496a3e9	duel K'Sante x Darius	winner=1 t=24.139999999999574 | K'Sante hp=0 dealt=2670 | Darius hp=305 dealt=3187
 bfd97a93e5ea9a28b1092301297ae7304517bdac50ddbd3752ffa65212446612	duel K'Sante x Renekton	winner=1 t=23.639999999999585 | K'Sante hp=0 dealt=2202 | Renekton hp=1373 dealt=3180
 67e0a8bd8ddf657353700b3becfae2b1ab1be45f6acd38fc9e369912be4b0bc5	duel K'Sante x Rumble	winner=1 t=28.379999999999484 | K'Sante hp=0 dealt=3042 | Rumble hp=472 dealt=3303
 03f969ae91a9999e6cab121d0322b4e26980bd26419d12f1058b157109145114	duel K'Sante x Vayne	winner=1 t=16.279999999999742 | K'Sante hp=0 dealt=1207 | Vayne hp=1708 dealt=3044
-949ee9aa2706f05c2435deda1beb19a2e74f104fe7739b78c33b309f5fb288f9	3v3	winner=1 t=16.539999999999736 | Ornn hp=0 dealt=1850 | Darius hp=0 dealt=3400 | Vayne hp=0 dealt=1992 | Renekton hp=2388 dealt=4379 | Rumble hp=1448 dealt=4514 | K'Sante hp=0 dealt=1755
-bbb532264bc1d319b1cd4038cae91f704ea75f3191bc81c20218c85b967b5ed4	orders + autopilot	winner=0 t=12.659999999999819 | Ornn hp=811 dealt=2744 | Vayne hp=0 dealt=2689
+b4cdc51ffbecd1569539a7a99796d1cc576edeb6b8dde34b62d6553ed257ef6d	3v3	winner=1 t=19.899999999999665 | Ornn hp=0 dealt=1779 | Darius hp=0 dealt=5053 | Vayne hp=0 dealt=1643 | Renekton hp=1558 dealt=4549 | Rumble hp=1246 dealt=4979 | K'Sante hp=0 dealt=1593
+60b62d5bed02d35f72b842c9f8d8c7ec66b949350724efbbf42d799eb76ba824	orders + autopilot	winner=0 t=12.659999999999819 | Ornn hp=811 dealt=2744 | Vayne hp=0 dealt=2689
 237243b67117f67ec410d45ed69e38a1b5bf4f3b8af1c8c8cc161f14f2afab58	fixed target, no abilities	winner=1 t=21.53999999999963 | Darius hp=0 dealt=2769 | Rumble hp=2408 dealt=1074 | K'Sante hp=1504 dealt=2214
 227492a5b96818b06846bcd47d15ab91d8874efc18cc032e11ecf9a1c8f2d5ac	long Darius x Vayne	winner=1 t=35.21999999999991 | Darius hp=0 dealt=5583 | Vayne hp=399152 dealt=420316
-df349e43056f7d0f144c9a0702bbbd1a063ec5034e903b057bebbf5e1ce941b1	long Ornn x K'Sante	winner=0 t=56.320000000003205 | Ornn hp=312719 dealt=445594 | K'Sante hp=0 dealt=87281
+d96f36a5185990cbc8aa500a2c6ae5fdbc88d68f383aee13b4c52cf034bf84ef	long Ornn x K'Sante	winner=0 t=56.320000000003205 | Ornn hp=312719 dealt=445594 | K'Sante hp=0 dealt=87281

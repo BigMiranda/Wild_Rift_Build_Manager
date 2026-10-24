@@ -20,7 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * A learned policy of an older layout (observation schema 2, 85 inputs, 32 actions) keeps playing exactly as it did:
  * fights with a fixed random v2 network as the brain must match the fingerprints recorded with that layout
- * ({@code arena/golden-ai-v2.txt}). Record again (only with the v2 code) with -Darena.golden.write=true.
+ * ({@code arena/golden-ai-v2.txt}). Recorded with the schema 2 code (commit 8a9f24b); recorded again with
+ * -Darena.golden.write=true only when the fight rules change on purpose (Rodada 5: the length of Ornn's elemental), never
+ * because of the migration itself.
  */
 class ArenaPolicyMigrationTest {
 
@@ -65,7 +67,11 @@ class ArenaPolicyMigrationTest {
 
     @Test
     void aV2PolicyMigratedPlaysAsItDid() throws Exception {
-        // the golden file was recorded with the schema 2 code (commit 8a9f24b), where the network ran as it was
+        if (Boolean.getBoolean("arena.golden.write")) {
+            Files.write(GOLDEN, fingerprints(ArenaPolicyMigrationTest::loaded), StandardCharsets.UTF_8);
+            return;
+        }
+        // first recorded with the schema 2 code (commit 8a9f24b), where the network ran as it was
         List<String> golden = Files.readAllLines(GOLDEN, StandardCharsets.UTF_8);
         assertEquals(golden, fingerprints(ArenaPolicyMigrationTest::loaded));
     }

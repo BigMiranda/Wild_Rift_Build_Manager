@@ -277,4 +277,27 @@ class ArenaTest {
         // 1000 health dies at the 3rd attack (~2.6s), comes back 4s later: not dead before ~6.6s
         assertFalse(r.fighters.get(1).deathTime != null && r.fighters.get(1).deathTime < 6.5, texts.toString());
     }
+
+    @Test
+    void ornnsElementalIsARectangleOfItsLength() {
+        // A ragdoll standing 300 behind the point where the elemental rises (2550 ahead of Ornn): the old hit, a
+        // 340-wide circle (170 + 80 of radius), missed it; the 480-long body (240 + 80) covers it as it starts.
+        Arena.Input ornn = champion("Ornn", 0, 1000, 0, 5000, 0, 0);
+        com.ornnplanner.arena.ArenaModel.Dummy d = new com.ornnplanner.arena.ArenaModel.Dummy();
+        d.spells = new java.util.ArrayList<>();
+        Arena.Input dummy = com.ornnplanner.arena.ComboBench.dummyInput(d);
+        dummy.x = 1000 + 2550 + 300;
+        dummy.y = 0;
+        Action r = order(0, 0, "ability", "R");
+        r.x = 3550.0;
+        r.y = 0.0;
+        Result res = run(List.of(ornn, dummy), List.of(r), 3);
+        assertTrue(res.fighters.get(0).damageBySource.getOrDefault("R · Chamado do Deus da Forja", 0.0) > 0,
+                String.valueOf(res.fighters.get(0).damageBySource));
+        // drawn as it hits: 480 along its way, 340 across
+        ArenaModel.Shape body = res.frames.stream().flatMap(f -> f.shapes.stream())
+                .filter(s -> s.id.startsWith("elemental-")).findFirst().get();
+        assertEquals(480.0, body.length, 1e-9);
+        assertEquals(340.0, body.width, 1e-9);
+    }
 }
