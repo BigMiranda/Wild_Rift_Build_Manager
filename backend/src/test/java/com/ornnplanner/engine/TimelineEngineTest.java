@@ -748,4 +748,136 @@ class TimelineEngineTest {
         TimelineResult none = new TimelineEngine(ref).run(input(List.of(2L), List.of(true)));
         assertEquals("notOwned", none.ignored.get(0).violations.get(0).code);
     }
+
+    // ------------------------------------------------------------------ sale timed to the next item, ranges
+
+    /** Suporte (400) to sell; Final (1000) = Meio (600 = 2x Pequeno 200 + 200) + Pequeno (200) + 200. */
+    private ItemDef[] saleRecipe() {
+        ItemDef support = shopItem(110, "Suporte", "aprimorado", "Suporte");
+        support.cost = 400;
+        ItemDef small = shopItem(111, "Pequeno", "basico");
+        small.cost = 200;
+        ItemDef half = shopItem(112, "Meio", "tier_medio");
+        half.cost = 600;
+        half.components.add(new ComponentRef(small.id, 2));
+        ItemDef fin = shopItem(113, "Final", "aprimorado");
+        fin.cost = 1000;
+        fin.components.add(new ComponentRef(half.id, 1));
+        fin.components.add(new ComponentRef(small.id, 1));
+        return new ItemDef[] {support, small, half, fin};
+    }
+
+    private EngineInput saleInput(List<Long> items, List<Boolean> sells, List<String> when) {
+        EngineInput in = input(items, sells);
+        in.assumeHalfItems = true;
+        in.assumeSmallItems = true;
+        in.sellWhen = when;
+        return in;
+    }
+
+    @Test
+    void saleWhenTheNextItemCanBeBoughtWholeKeepsTheGold() {
+        ItemDef[] r = saleRecipe();
+        TimelineResult res = new TimelineEngine(ref).run(saleInput(List.of(r[0].id, r[0].id, r[3].id),
+                List.of(false, true, false), java.util.Arrays.asList(null, "afford", null)));
+        // Suporte at 0:00 (400 of the 500). Sale gives 280; Final whole needs 1000 - 280 = 720 in hand:
+        // 100 in hand + 100/min -> 6.2 minutes. No component is assumed in between, and Final lands at that minute.
+        assertEquals(3, res.steps.size());
+        TimelineStep sale = res.steps.get(1);
+        assertTrue(sale.sold);
+        assertEquals(6.2, sale.minute, EPS);
+        assertEquals(720, sale.saleTiming.goldNeeded);
+        assertEquals(0, sale.saleTiming.nextDiscount);
+        assertEquals(100, sale.saleTiming.goldAfterPrevious, EPS);
+        assertEquals("Final", sale.saleTiming.nextItemName);
+        TimelineStep fin = res.steps.get(2);
+        assertEquals("Final", fin.itemName);
+        assertEquals(6.2, fin.minute, EPS);
+        assertEquals(1000, fin.paidCost);
+        assertEquals("sale", fin.assumption);
+        assertTrue(res.steps.stream().noneMatch(st -> st.implied));
+        // The gold in hand right before the sale minute is short of 720.
+        Model.MinutePoint six = res.series.stream().filter(p -> Math.abs(p.minute - 6) < EPS).findFirst().get();
+        assertEquals(100 + 600, six.goldInHand, EPS);
+    }
+
+    @Test
+    void saleTimedToTheNextItemCountsTheComponentsHeld() {
+        ItemDef[] r = saleRecipe();
+        TimelineResult res = new TimelineEngine(ref).run(saleInput(List.of(r[0].id, r[1].id, r[0].id, r[3].id),
+                List.of(false, false, true, false), java.util.Arrays.asList(null, null, "afford", null)));
+        TimelineStep sale = res.steps.get(2);
+        assertEquals(200, sale.saleTiming.nextDiscount);      // Pequeno held: the purchase discounts it
+        assertEquals(1000 - 200 - 280, sale.saleTiming.goldNeeded);
+        // 600 paid by 1:00 (Pequeno), 520 more needed in hand: earned 1120 -> 6.2 minutes.
+        assertEquals(6.2, sale.minute, EPS);
+        assertEquals(800, res.steps.get(3).paidCost);
+        assertEquals(6.2, res.steps.get(3).minute, EPS);
+    }
+
+    @Test
+    void saleRightAfterThePreviousPurchaseIsUnchanged() {
+        ItemDef[] r = saleRecipe();
+        TimelineResult res = new TimelineEngine(ref).run(saleInput(List.of(r[0].id, r[0].id, r[3].id),
+                List.of(false, true, false), java.util.Arrays.asList(null, "after", null)));
+        TimelineStep sale = res.steps.get(1);
+        assertEquals(0.0, sale.minute, EPS);
+        assertEquals(null, sale.saleTiming);
+        assertTrue(res.steps.stream().anyMatch(st -> st.implied));   // the components are assumed as before
+        // No choice saved (builds before v21) = the same result.
+        TimelineResult old = new TimelineEngine(ref).run(saleInput(List.of(r[0].id, r[0].id, r[3].id),
+                List.of(false, true, false), new java.util.ArrayList<>()));
+        assertEquals(json(res), json(old));
+    }
+
+    @Test
+    void wholeItemsRangeInABuildWithHalfItems() {
+        ItemDef[] r = saleRecipe();
+        ItemDef other = shopItem(114, "Outro", "aprimorado");
+        other.cost = 1000;
+        other.components.add(new ComponentRef(r[2].id, 1));
+        ItemDef third = shopItem(115, "Terceiro", "aprimorado");
+        third.cost = 1000;
+        third.components.add(new ComponentRef(r[1].id, 1));
+        EngineInput in = input(List.of(r[3].id, other.id, third.id), List.of(false, false, false));
+        in.assumeHalfItems = true;
+        in.assume = java.util.Arrays.asList(null, "whole", null);
+        TimelineResult res = new TimelineEngine(ref).run(in);
+        assertEquals(1, res.steps.stream().filter(st -> st.buildIndex == 0 && st.implied).count());   // Meio
+        assertEquals(0, res.steps.stream().filter(st -> st.buildIndex == 1 && st.implied).count());   // whole
+        assertEquals("whole", res.steps.stream().filter(st -> st.buildIndex == 1).findFirst().get().assumption);
+        // "small" in the range: the third item's Pequeno is assumed, which the build's half items alone would not.
+        in.assume = java.util.Arrays.asList(null, null, "small");
+        TimelineResult small = new TimelineEngine(ref).run(in);
+        assertEquals(1, small.steps.stream().filter(st -> st.buildIndex == 2 && st.implied).count());
+        // A manual range over the item after a timed sale prevails over the automatic "whole".
+        EngineInput sale = saleInput(List.of(r[0].id, r[0].id, r[3].id), List.of(false, true, false),
+                java.util.Arrays.asList(null, "afford", null));
+        sale.assume = java.util.Arrays.asList(null, null, "half");
+        TimelineResult manual = new TimelineEngine(ref).run(sale);
+        assertEquals("half", manual.steps.get(1).saleTiming.manualAssume);
+        assertTrue(manual.steps.stream().anyMatch(st -> st.implied && st.itemName.equals("Meio")));
+    }
+
+    @Test
+    void saleWhoseGoldNeverArrivesDoesNotHappen() {
+        ItemDef[] r = saleRecipe();
+        EngineInput in = saleInput(List.of(r[0].id, r[0].id, r[3].id), List.of(false, true, false),
+                java.util.Arrays.asList(null, "afford", null));
+        in.matchEnd = 5.0;
+        TimelineResult res = new TimelineEngine(ref).run(in);
+        assertEquals(1, res.steps.size());                       // only Suporte
+        assertEquals(2, res.ignored.size());
+        assertEquals("saleNeverAffords", res.ignored.get(0).violations.get(0).code);
+        assertEquals("saleNeverAffords", res.ignored.get(1).violations.get(0).code);
+        assertEquals(List.of("Suporte"), res.ignored.get(1).inventory);   // still held
+    }
+
+    private static String json(TimelineResult r) {
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(r);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 }

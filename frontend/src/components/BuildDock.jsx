@@ -7,6 +7,7 @@ import { useEffectValues, valuesOf } from '../effectValues.js';
 import { findRune, runeIcon } from '../runes.js';
 import InventorySlots from './InventorySlots.jsx';
 import RichText from './RichText.jsx';
+import { saleAccount } from './BuildBar.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
 
 /** Opens an item in the dock's reader from anywhere on the page (reports, chart tooltips...): `open(itemId)`. */
@@ -43,7 +44,26 @@ function DockValue({ v }) {
 
 const PASSIVES_KEY = 'ornn-planner-dock-passives';
 
-export default function BuildDock({ point, itemsById, selected, readerId, onRead, onShop, draft }) {
+/**
+ * The sale timed to the next item that the moment inspected waits for (between the previous purchase and the sale),
+ * with the gold in hand at that moment and what is still missing.
+ */
+function PendingSale({ point, sales }) {
+  const m = point.minute;
+  const s = sales.find((x) => m + 1e-6 >= x.saleTiming.previousMinute && (x.saleTiming.reachedAt == null || m <= x.minute + 1e-6));
+  if (!s) return null;
+  const missing = s.saleTiming.goldNeeded - (point.goldInHand ?? 0);
+  return (
+    <div className="dock-sale" title={saleAccount(s)}>
+      <ItemIcon id={s.itemId} size={18} />→<ItemIcon id={s.saleTiming.nextItemId} size={18} />
+      <span>{t('sell.dockLine', { gold: n0(point.goldInHand ?? 0), need: n0(s.saleTiming.goldNeeded) })}</span>
+      <strong>{missing > 0.5 ? t('sell.dockMissing', { missing: n0(missing) }) : t('sell.dockReady')}</strong>
+      <small className="muted">{s.saleTiming.reachedAt != null ? t('sell.reachedAt', { time: mmss(s.saleTiming.reachedAt) }) : t('sell.never')}</small>
+    </div>
+  );
+}
+
+export default function BuildDock({ point, itemsById, selected, readerId, onRead, onShop, draft, sales = [] }) {
   const [statsOpen, setStatsOpen] = useState(loadOpen);
   const [passivesOpen, setPassivesOpen] = useState(() => {
     try {
@@ -102,6 +122,7 @@ export default function BuildDock({ point, itemsById, selected, readerId, onRead
           </button>
         )}
       </div>
+      {point && sales.length > 0 && <PendingSale point={point} sales={sales} />}
       {point && statsOpen && (
         <div className="dock-stats">
           {DOCK_STATS.map((s) => {

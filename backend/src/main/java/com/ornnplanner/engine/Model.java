@@ -318,6 +318,12 @@ public final class Model {
     }
 
     public static class EngineInput {
+        public static final String SELL_AFTER = "after";
+        public static final String SELL_AFFORD = "afford";
+        public static final String ASSUME_WHOLE = "whole";
+        public static final String ASSUME_HALF = "half";
+        public static final String ASSUME_SMALL = "small";
+
         public UnitProfile unit;
         /** Default for purchases without their own choice: count conditional effects (stacks, in combat...). */
         public boolean includeConditional = true;
@@ -347,6 +353,16 @@ public final class Model {
         public List<Boolean> runeConditional = new ArrayList<>();
         /** Per entry of itemIds (same order): true = the build sells one held copy of that item there. */
         public List<Boolean> sells = new ArrayList<>();
+        /**
+         * Per entry of itemIds (sales only): when the sale happens. Null or {@link #SELL_AFTER} = right after the previous
+         * purchase; {@link #SELL_AFFORD} = when the gold in hand plus the refund buys the next item whole.
+         */
+        public List<String> sellWhen = new ArrayList<>();
+        /**
+         * Per entry of itemIds: the purchase assumption for that item, overriding the build's one. Null = the build's
+         * (assumeHalfItems / assumeSmallItems); {@link #ASSUME_WHOLE}, {@link #ASSUME_HALF} or {@link #ASSUME_SMALL}.
+         */
+        public List<String> assume = new ArrayList<>();
         /** Shop rules (regras_loja.yml): share of the cost given back when selling an item. */
         public double sellRate = 0.7;
         /** Boot swap: share of the old boots' cost taken off the new ones, and whether a cheaper swap gives gold back. */
@@ -527,13 +543,44 @@ public final class Model {
         /** Boot swap: the boots that left the inventory and what they were worth towards the new ones. */
         public String swappedOut;
         public Integer tradeIn;
+        /** Purchase assumption that applied to this item: "build", "whole", "half", "small", or "sale" (whole, auto). */
+        public String assumption;
+        /** Sales: "after" (right after the previous purchase) or "afford" (when the next item can be bought whole). */
+        public String sellWhen;
+        /** A sale timed to buy the next item whole (null for other steps): the account of the gold needed. */
+        public SaleTiming saleTiming;
         public StatSnapshot stats;
         public Efficiency efficiency;
         public List<String> warnings = new ArrayList<>();
     }
 
+    /**
+     * Sale "when the next item can be bought whole": selling {@code refund}, the next item ({@code nextCost}, minus
+     * {@code nextDiscount} of components held and {@code nextTradeIn} of boots swapped) needs {@code goldNeeded} =
+     * cost - discount - trade-in - refund of gold in hand, reached at {@code reachedAt}.
+     */
+    public static class SaleTiming {
+        public long nextItemId;
+        public String nextItemName;
+        public int nextBuildIndex;
+        public int nextCost;
+        public int nextDiscount;
+        public int nextTradeIn;
+        public int refund;
+        public int goldNeeded;
+        /** Gold in hand right after the previous purchase (the sale cannot be earlier) and what is missing then. */
+        public double goldAfterPrevious;
+        public double previousMinute;
+        /** Minute the gold in hand reaches goldNeeded (null = never before the end of the match). */
+        public Double reachedAt;
+        /** A manual purchase-assumption range covers the next item and was kept (its components may be bought). */
+        public String manualAssume;
+    }
+
     public static class MinutePoint {
         public double minute;
+        /** Gold in hand at this minute: earned until then minus everything paid by purchases (and sales) done. */
+        public double goldInHand;
         public int level;
         /** Index of the last purchase completed at this minute (-1 = none yet). */
         public int stepIndex;

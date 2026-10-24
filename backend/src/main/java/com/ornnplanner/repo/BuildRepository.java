@@ -47,6 +47,10 @@ public class BuildRepository {
         /** Moment: exact game minute, or minutes after the previous purchase (one of the two). */
         public Double atMinute;
         public Double afterMinutes;
+        /** Sale: "after" (right after the previous purchase; null too, as saved before v21) or "afford" (v21). */
+        public String sellWhen;
+        /** Purchase assumption over this item (a range of the sequence): null = the build's, "whole", "half", "small". */
+        public String assume;
 
         public Step() {
         }
@@ -258,11 +262,13 @@ public class BuildRepository {
         }
         Build b = list.get(0);
         java.util.TreeMap<Integer, Step> bySeq = new java.util.TreeMap<>();
-        jdbc.query("SELECT seq, item_id, include_conditional, sell FROM build_step WHERE build_id = ?", rs -> {
+        jdbc.query("SELECT seq, item_id, include_conditional, sell, sell_when, assume FROM build_step WHERE build_id = ?", rs -> {
             Step s = new Step(rs.getLong("item_id"), rs.getInt("include_conditional") == 1);
             if (rs.getInt("sell") == 1) {
                 s.kind = Step.SELL;
+                s.sellWhen = rs.getString("sell_when");
             }
+            s.assume = rs.getString("assume");
             bySeq.put(rs.getInt("seq"), s);
         }, id);
         jdbc.query("SELECT seq, at_minute, after_minutes FROM build_moment WHERE build_id = ?", rs -> {
@@ -417,8 +423,9 @@ public class BuildRepository {
                 jdbc.update("INSERT INTO build_moment (build_id, seq, at_minute, after_minutes) VALUES (?,?,?,?)",
                         id, i, s.atMinute, s.afterMinutes);
             } else {
-                jdbc.update("INSERT INTO build_step (build_id, seq, item_id, include_conditional, sell) VALUES (?,?,?,?,?)",
-                        id, i, s.itemId, s.includeConditional ? 1 : 0, s.sell() ? 1 : 0);
+                jdbc.update("INSERT INTO build_step (build_id, seq, item_id, include_conditional, sell, sell_when, assume) "
+                                + "VALUES (?,?,?,?,?,?,?)",
+                        id, i, s.itemId, s.includeConditional ? 1 : 0, s.sell() ? 1 : 0, s.sell() ? s.sellWhen : null, s.assume);
             }
         }
         jdbc.update("DELETE FROM build_ragdoll_stat WHERE build_id = ?", id);

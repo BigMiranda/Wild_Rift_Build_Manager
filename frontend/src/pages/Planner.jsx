@@ -391,6 +391,7 @@ export default function Planner({ meta, items }) {
       <main className="main">
         <ItemReaderContext.Provider value={setReaderId}>
         <BuildDock point={point} itemsById={itemsById} selected={selectedMinute != null} readerId={readerId} draft={payload}
+          sales={[...(result?.steps ?? []), ...(result?.ignored ?? [])].filter((x) => x.saleTiming)}
           onRead={setReaderId} onShop={() => shopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
         {message && (
           <div className="notice spread">
@@ -500,9 +501,13 @@ export default function Planner({ meta, items }) {
             onToggleCond={(idx) => updateStep(idx, (s) => ({ ...s, includeConditional: !s.includeConditional }))}
             onSell={(idx) => {
               const at = draft.steps.length;
-              update((d) => ({ steps: [...d.steps, { kind: 'sell', itemId: d.steps[idx].itemId, includeConditional: true }] }));
+              update((d) => ({ steps: [...d.steps, { kind: 'sell', itemId: d.steps[idx].itemId, includeConditional: true, sellWhen: 'afford' }] }));
               setSelectedIdx(at);
             }}
+            onSellWhen={(idx, sellWhen) => updateStep(idx, (s) => ({ ...s, sellWhen }))}
+            onAssumeRange={(from, to, assume) => update((d) => ({
+              steps: d.steps.map((s, k) => (k >= from && k <= to && !s.kind ? { ...s, assume } : s)),
+            }))}
             onToggleEvolved={(idx) => updateStep(idx, (s) => ({ ...s, itemId: evoPairs.get(s.itemId)?.id ?? s.itemId }))}
           />
           <ItemEffectsPanel steps={draft.steps} itemsById={itemsById} setup={draft.itemSetup} matchEnd={draft.matchEnd}

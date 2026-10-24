@@ -10,6 +10,7 @@
 -- Version 10: no table change; re-imports the stat prices (magic / physical shields).
 -- Version 11: no table change; re-imports the catalog (Maldição Sanguinária in the % magic penetration group).
 -- Version 12: a purchase step can be a sale of a held item (build_step.sell).
+-- Version 21: when a sale happens (build_step.sell_when) and per-range purchase assumptions (build_step.assume).
 -- Version 13: orchestrated matchup scenarios (arena_scenario).
 -- Version 14: learned arena policies (arena_policy).
 -- Version 15: chain training of arena policies (arena_policy.chain_id, chain_round, team_plan, parent_id).
@@ -135,6 +136,8 @@ CREATE TABLE IF NOT EXISTS build_step (
     item_id  INTEGER NOT NULL REFERENCES item (id),
     include_conditional INTEGER NOT NULL DEFAULT 1, -- count this purchase's conditional effects
     sell     INTEGER NOT NULL DEFAULT 0,            -- 1 = sells one held copy of the item instead of buying it (v12)
+    sell_when TEXT,                                 -- sale: NULL / 'after' = right after the previous purchase, 'afford' (v21)
+    assume   TEXT,                                  -- purchase assumption over this item: NULL = build's, whole/half/small (v21)
     PRIMARY KEY (build_id, seq)
 );
 

@@ -152,6 +152,9 @@ public class TimelineEngine {
         double lastBuildMinute = 0;  // minute of the previous purchase of the build (for "x minutes after")
         double gate = 0;             // earliest minute of the build's items: the last purchase moment passed
         int nextMoment = 0;
+        // Purchases right after a sale timed to them: bought whole; or not bought at all (the gold never gets there).
+        Set<Integer> wholeAfterSale = new java.util.HashSet<>();
+        Map<Integer, String> neverBought = new java.util.HashMap<>();
         List<Model.Moment> moments = new ArrayList<>(in.moments);
         moments.sort(java.util.Comparator.comparingInt(m -> m.position));
 
@@ -170,8 +173,30 @@ public class TimelineEngine {
                 inventoryAfterStep.add(new ArrayList<>(inventory));
                 continue;
             }
+            if (neverBought.containsKey(i)) {
+                // The sale timed for this item never gets the gold before the end of the match: neither happens.
+                TimelineStep step = new TimelineStep();
+                step.index = inventoryAfterStep.size();
+                step.buildIndex = position;
+                step.number = i + 1;
+                step.itemId = item.id;
+                step.itemName = item.name;
+                step.category = item.category;
+                step.itemCost = item.cost;
+                step.ignored = true;
+                step.violations.add(new Model.Violation("saleNeverAffords", null, List.of(neverBought.get(i), item.name)));
+                step.cumulativeGold = cumulative;
+                for (Owned o : inventory) {
+                    step.inventory.add(o.item.name);
+                    step.inventoryIds.add(o.item.id);
+                }
+                inventoryAfterStep.add(new ArrayList<>(inventory));
+                result.ignored.add(step);
+                continue;
+            }
             if (i < in.sells.size() && Boolean.TRUE.equals(in.sells.get(i))) {
-                // Sale: right after the previous purchase (or the last purchase moment), the gold comes back.
+                // Sale: right after the previous purchase (or the last purchase moment), the gold comes back; or, timed
+                // to the next item, when the gold in hand plus the refund buys it whole.
                 int pos = inventoryAfterStep.size();
                 TimelineStep step = new TimelineStep();
                 step.index = pos;
@@ -203,8 +228,58 @@ public class TimelineEngine {
                     result.ignored.add(step);
                     continue;
                 }
-                inventory.remove(held);
                 int refund = (int) Math.round(item.cost * in.sellRate);
+                String when = i < in.sellWhen.size() ? in.sellWhen.get(i) : null;
+                step.sellWhen = when == null ? EngineInput.SELL_AFTER : when;
+                int next = EngineInput.SELL_AFFORD.equals(when) ? nextPurchase(in, i) : -1;
+                if (EngineInput.SELL_AFFORD.equals(when) && next < 0) {
+                    step.warnings.add("Venda para o próximo item inteiro, mas não há compra depois dela: vendida logo depois"
+                            + " da compra anterior.");
+                }
+                if (next >= 0) {
+                    ItemDef nextItem = ref.items.get(in.itemIds.get(next));
+                    List<Owned> after = new ArrayList<>(inventory);
+                    after.remove(held);
+                    Model.SaleTiming st = saleTiming(nextItem, after, in);
+                    st.nextBuildIndex = next < in.positions.size() ? in.positions.get(next) : next;
+                    st.refund = refund;
+                    st.goldNeeded = st.nextCost - st.nextDiscount - st.nextTradeIn - refund;
+                    st.previousMinute = Math.max(lastMinute, gate);
+                    st.goldAfterPrevious = goldAt(st.previousMinute, in.goldPerMin) - cumulative;
+                    double reached = Math.max(st.previousMinute, minuteFor(cumulative + st.goldNeeded, in.goldPerMin));
+                    String manual = next < in.assume.size() ? in.assume.get(next) : null;
+                    step.saleTiming = st;
+                    if (in.matchEnd != null && in.matchEnd > 0 && reached > in.matchEnd + 1e-9) {
+                        // Never before the end of the match: the sale and the purchase it waits for do not happen.
+                        step.ignored = true;
+                        step.violations.add(new Model.Violation("saleNeverAffords", null, List.of(item.name, nextItem.name)));
+                        step.cumulativeGold = cumulative;
+                        inventoryAfterStep.add(new ArrayList<>(inventory));
+                        for (Owned o : inventory) {
+                            step.inventory.add(o.item.name);
+                            step.inventoryIds.add(o.item.id);
+                        }
+                        result.ignored.add(step);
+                        neverBought.put(next, item.name);
+                        continue;
+                    }
+                    st.reachedAt = reached;
+                    step.minute = reached;
+                    step.xp = in.xpPerMin * step.minute;
+                    step.level = levelForXp(step.xp);
+                    if (manual != null) {
+                        st.manualAssume = manual;
+                    } else {
+                        wholeAfterSale.add(next);
+                    }
+                    step.warnings.add("Para comprar " + nextItem.name + " (custo " + st.nextCost
+                            + (st.nextDiscount > 0 ? ", já tem " + st.nextDiscount + " em componentes" : "")
+                            + (st.nextTradeIn > 0 ? ", troca de bota " + st.nextTradeIn : "") + "), precisa de "
+                            + st.goldNeeded + " de ouro em mãos. Chega a isso aos " + mmss(reached) + "."
+                            + (manual != null ? " Um trecho manual cobre " + nextItem.name + " e prevalece (" + manual + ")."
+                                    : " Até lá, nenhum componente dele é suposto."));
+                }
+                inventory.remove(held);
                 step.paidCost = -refund;
                 cumulative -= refund;
                 step.cumulativeGold = cumulative;
@@ -229,8 +304,22 @@ public class TimelineEngine {
             // Other boots held that are not in the recipe: a boot swap (same tier) or a purchase the shop does not allow;
             // either way no components are assumed (the old boots pay for a swap).
             boolean swap = item.boots() && inventory.stream().anyMatch(o -> o.item.boots() && !inRecipe(item, o.item.id));
-            List<ItemDef> queue = swap ? new ArrayList<>()
-                    : impliedComponents(item, inventory, in.assumeHalfItems, in.assumeSmallItems);
+            // Purchase assumption: a manual range over the item, else whole after a sale timed to it, else the build's.
+            String manual = i < in.assume.size() ? in.assume.get(i) : null;
+            boolean half = in.assumeHalfItems;
+            boolean small = in.assumeSmallItems;
+            String assumption = "build";
+            if (EngineInput.ASSUME_WHOLE.equals(manual) || EngineInput.ASSUME_HALF.equals(manual)
+                    || EngineInput.ASSUME_SMALL.equals(manual)) {
+                half = EngineInput.ASSUME_HALF.equals(manual);
+                small = EngineInput.ASSUME_SMALL.equals(manual);
+                assumption = manual;
+            } else if (wholeAfterSale.contains(i)) {
+                half = false;
+                small = false;
+                assumption = "sale";
+            }
+            List<ItemDef> queue = swap ? new ArrayList<>() : impliedComponents(item, inventory, half, small);
             queue.add(item);
             for (int q = 0; q < queue.size(); q++) {
                 ItemDef buy = queue.get(q);
@@ -241,6 +330,7 @@ public class TimelineEngine {
                 step.buildIndex = position;
                 step.number = i + 1;
                 step.implied = implied;
+                step.assumption = assumption;
                 step.itemId = buy.id;
                 step.itemName = buy.name;
                 step.category = buy.category;
@@ -370,6 +460,48 @@ public class TimelineEngine {
 
         buildSeries(in, result, inventoryAfterStep);
         return result;
+    }
+
+    /** Index (in itemIds) of the first purchase after the sale at {@code i}, sales skipped; -1 = none. */
+    private int nextPurchase(EngineInput in, int i) {
+        for (int j = i + 1; j < in.itemIds.size(); j++) {
+            boolean sale = j < in.sells.size() && Boolean.TRUE.equals(in.sells.get(j));
+            if (!sale && ref.items.containsKey(in.itemIds.get(j))) {
+                return j;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * What buying {@code next} whole costs on {@code inventory} (the sold item already out): its cost, the components
+     * held that the recipe consumes (the same discount the purchase applies) and, for a boot swap, the old boots' credit.
+     */
+    private Model.SaleTiming saleTiming(ItemDef next, List<Owned> inventory, EngineInput in) {
+        Model.SaleTiming st = new Model.SaleTiming();
+        st.nextItemId = next.id;
+        st.nextItemName = next.name;
+        st.nextCost = next.cost;
+        List<Owned> copy = new ArrayList<>(inventory);
+        List<Owned> consumed = new ArrayList<>();
+        for (ComponentRef c : next.components) {
+            for (int k = 0; k < c.quantity; k++) {
+                st.nextDiscount += consume(c.itemId, copy, consumed);
+            }
+        }
+        if (next.boots()) {
+            for (Owned o : copy) {
+                if (o.item.boots() && bootTier(o.item) == bootTier(next)) {
+                    st.nextTradeIn = (int) Math.round(o.item.cost * in.bootSwapCredit);
+                }
+            }
+        }
+        return st;
+    }
+
+    private static String mmss(double minute) {
+        long sec = Math.round(minute * 60);
+        return (sec / 60) + ":" + String.format("%02d", sec % 60);
     }
 
     /**
@@ -1020,6 +1152,13 @@ public class TimelineEngine {
             StatSnapshot snap = snapshot(in.unit, inv, level, t);
             MinutePoint p = new MinutePoint();
             p.minute = t;
+            double paid = 0;
+            for (TimelineStep s : result.steps) {
+                if (s.minute <= t + 1e-9) {
+                    paid += s.paidCost;
+                }
+            }
+            p.goldInHand = goldAt(t, in.goldPerMin) - paid;
             p.level = level;
             p.stepIndex = stepIdx;
             for (String k : Stats.DISPLAY_STATS) {

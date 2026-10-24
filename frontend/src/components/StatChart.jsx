@@ -109,6 +109,10 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
               />
               {lines.length + extra.length >= 2 && <Legend wrapperStyle={{ color: 'var(--text-2)' }} />}
               {selectedMinute != null && <ReferenceLine x={selectedMinute} stroke="var(--gold)" strokeWidth={1.5} />}
+              {lines[0]?.result.steps.filter((s) => s.sold).map((s) => (
+                <ReferenceLine key={`sale${s.index}`} x={s.minute} stroke="var(--stat-hp)" strokeDasharray="4 3"
+                  label={{ value: `$ ${s.itemName}`, position: 'insideTopLeft', fill: 'var(--stat-hp)', fontSize: 11 }} />
+              ))}
               {lines.map((s) => (
                 <Line
                   key={s.key}
@@ -480,8 +484,9 @@ function EventLane({ build, x, plotLeft, plotWidth, levels, onSelectMinute, sele
       ))}
       {build.result.steps.map((s) => (
         <button
-          key={`buy${s.index}`} className={`lane-item${s.implied ? ' implied' : ''}`} style={{ left: x(s.minute) }}
-          title={t('chart.lanePurchase', { time: mmss(s.minute), name: s.itemName, paid: n0(s.paidCost) })}
+          key={`buy${s.index}`} className={`lane-item${s.implied ? ' implied' : ''}${s.sold ? ' sold' : ''}`} style={{ left: x(s.minute) }}
+          title={s.sold ? t('chart.laneSale', { time: mmss(s.minute), name: s.itemName, gold: n0(-s.paidCost) })
+            : t('chart.lanePurchase', { time: mmss(s.minute), name: s.itemName, paid: n0(s.paidCost) })}
           onClick={() => onSelectMinute(s.minute)}
         >
           <ItemIcon id={s.itemId} size={24} />

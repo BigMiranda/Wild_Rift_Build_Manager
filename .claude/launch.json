@@ -4,14 +4,38 @@
     {
       "name": "backend",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "cd backend && .\\mvnw.cmd spring-boot:run"],
+      "runtimeArgs": [
+        "/c",
+        "cd backend && .\\mvnw.cmd spring-boot:run"
+      ],
       "port": 8080
     },
     {
       "name": "frontend",
       "runtimeExecutable": "C:/Users/Matheus/AppData/Local/nvm/v24.15.0/node.exe",
-      "runtimeArgs": ["frontend/node_modules/vite/bin/vite.js", "frontend"],
+      "runtimeArgs": [
+        "frontend/node_modules/vite/bin/vite.js",
+        "frontend"
+      ],
       "port": 5173
+    },
+    {
+      "name": "backend-dev",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set SERVER_PORT=8090&& set PLANNER_DB_PATH=./data/dev/ornn-planner.db&& cd backend && .\\mvnw.cmd spring-boot:run"
+      ],
+      "port": 8090
+    },
+    {
+      "name": "frontend-dev",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set API_TARGET=http://localhost:8090&& C:/Users/Matheus/AppData/Local/nvm/v24.15.0/node.exe frontend/node_modules/vite/bin/vite.js frontend --port 5174"
+      ],
+      "port": 5174
     }
   ]
 }

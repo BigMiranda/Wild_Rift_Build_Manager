@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react';
 import { statAbbr, statLabel, t, violationText } from '../i18n.js';
 import { TABLE_STATS, damageReduction, mmss, n0, n1, pct } from '../format.js';
 import ItemIcon from './ItemIcon.jsx';
+import { saleAccount, saleInHand } from './BuildBar.jsx';
 import InventorySlots from './InventorySlots.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
 
@@ -124,7 +125,11 @@ export default function TimelineTable({ result, itemsById, compact = false }) {
                       <ItemIcon id={s.itemId} size={22} />
                       {s.itemName}
                       {s.implied && <small className="implied-tag">{t('timeline.implied')}</small>}
-                      {s.sold && <small className="sale-tag">{t('sell.tag')}</small>}
+                      {s.sold && <small className="sale-tag" title={saleAccount(s) ?? undefined}>{t('sell.tag')}</small>}
+                      {s.saleTiming && <small className="sale-need" title={saleAccount(s)}>{t('sell.needShort', { gold: n0(s.saleTiming.goldNeeded) })}</small>}
+                      {!s.implied && s.assumption && s.assumption !== 'build' && (
+                        <small className={`tile-assume-tag assume-${s.assumption}`} title={t(`range.stepTitle.${s.assumption}`)}>{t(`range.short.${s.assumption}`)}</small>
+                      )}
                       {s.swappedOut && (
                         <small className="swap-tag" title={t('swap.title', { old: s.swappedOut, credit: n0(s.tradeIn), paid: n0(s.paidCost) })}>
                           ⇄ {t('swap.tag')}
@@ -185,6 +190,7 @@ function StepDetail({ step }) {
         {step.consumedComponents.length > 0 && <div>{t('detail.components', { list: step.consumedComponents.join(', ') })}</div>}
         <div>{t('detail.when', { time: mmss(step.minute), xp: n0(step.xp), level: step.level })}</div>
         <div>{t('detail.inventory', { list: step.inventory.join(', ') })}</div>
+        {step.saleTiming && <p className="sale-account">{saleAccount(step)}<br /><small>{saleInHand(step)}</small></p>}
         {step.warnings.length > 0 && (
           <ul className="error">
             {step.warnings.map((w) => <li key={w}>{w}</li>)}

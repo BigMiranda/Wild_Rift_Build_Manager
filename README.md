@@ -244,8 +244,22 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
   componentes comprados antes.
 - **Vender um item** (botão $ no item da sequência): adiciona uma venda no fim da sequência, que se arrasta para o
   momento dela (Chamado do Carrasco, Mejai, item de suporte, Anjo Guardião, itens de Salva-Vidas, ativos...). A venda
-  acontece logo depois da compra anterior (ou do último momento de compra), tira o item do inventário e devolve 70%
-  do custo; vender um item que não está no inventário naquele ponto fica de fora (⊘).
+  tira o item do inventário e devolve 70% do custo; vender um item que não está no inventário naquele ponto fica de
+  fora (⊘). **Quando vender** (botão na venda):
+  - **próximo item inteiro** (padrão das vendas novas): a venda acontece no primeiro minuto em que `ouro em mãos +
+    reembolso ≥ custo do próximo item − componentes dele já no inventário` (o mesmo desconto da compra; numa troca de
+    bota, também o crédito da bota antiga), e o próximo item é comprado inteiro no mesmo instante. Até lá nenhum
+    componente dele é suposto: o ouro fica guardado. O "próximo item" é a primeira compra depois da venda (vendas
+    puladas). Se o ouro não chega antes do fim da partida, a venda e a compra ficam de fora (⊘), com o motivo. A
+    venda, a linha do tempo e a barra fixa mostram a conta ("Vender X devolve R. Para comprar Y (custo C, já tem D em
+    componentes), precisa de C − D − R de ouro em mãos. Chega a isso aos mm:ss"), o ouro em mãos no momento
+    inspecionado e quanto falta; o gráfico marca o minuto da venda;
+  - **logo depois da compra anterior** (ou do último momento de compra): o comportamento antigo, e o de toda venda
+    salva antes da Rodada 5.
+- **Trechos de suposição** ("+ trecho de suposição" na sequência): da compra *a* até a *b*, vale "só itens inteiros",
+  "meios itens" ou "itens pequenos" no lugar do padrão da build (fora dos trechos, o padrão). A escolha fica em cada
+  compra (`build_step.assume`), então acompanha o item ao reordenar. A venda "próximo item inteiro" funciona como um
+  trecho "só itens inteiros" para aquele item; um trecho manual que o cubra prevalece, e a venda diz isso.
   Venda conferida no jogo: Passos de Mercúrio 1.200 → 840, Anjo Guardião 3.200 → 2.240. As taxas ficam em
   [`seed/regras_loja.yml`](backend/src/main/resources/seed/regras_loja.yml).
 - **Sequência de compras**: arraste os itens para reordenar; clique num item para selecioná-lo, e o painel da loja

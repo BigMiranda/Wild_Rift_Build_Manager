@@ -104,6 +104,8 @@ public class PlannerService {
         }
         in.positions = new ArrayList<>();
         in.sells = new ArrayList<>();
+        in.sellWhen = new ArrayList<>();
+        in.assume = new ArrayList<>();
         in.moments = new ArrayList<>();
         in.extraGold = new ArrayList<>();
         in.assumeHalfItems = false;
@@ -145,6 +147,8 @@ public class PlannerService {
                     in.conditional.add(s.includeConditional);
                     in.positions.add(p);
                     in.sells.add(s.sell());
+                    in.sellWhen.add(s.sell() ? s.sellWhen : null);
+                    in.assume.add(s.assume);
                 }
             }
         }

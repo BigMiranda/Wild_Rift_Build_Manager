@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 20;
+    static final int VERSION = 21;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -118,6 +118,12 @@ public class SchemaManager {
             // v20: the game data patch a version was trained on; every version before it was trained on 7.3
             jdbc.execute("ALTER TABLE arena_policy ADD COLUMN game_patch TEXT");
             jdbc.execute("UPDATE arena_policy SET game_patch = '7.3'");
+        }
+        if (version < 21 && tableExists("build_step") && !columnExists("build_step", "sell_when")) {
+            // v21: when a sale happens (null = right after the previous purchase, as before) and the purchase
+            // assumption of a range of the sequence (null = the build's)
+            jdbc.execute("ALTER TABLE build_step ADD COLUMN sell_when TEXT");
+            jdbc.execute("ALTER TABLE build_step ADD COLUMN assume TEXT");
         }
         // v16 / v17 / v18: arena_combo, arena_dummy and arena_guideline are new tables, created by schema.sql
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);

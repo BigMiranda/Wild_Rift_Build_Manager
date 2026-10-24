@@ -1049,3 +1049,17 @@ table.heat tr.heat-total td { border-top: 1px solid var(--border-strong); }
 .rank-chip { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--border); border-radius: 12px; padding: 1px 6px 1px 2px; font-variant-numeric: tabular-nums; }
 .rank-chip.best { border-color: var(--ok); }
 @media (max-width: 600px) { .rank-items-row { grid-template-columns: 1fr; } }
+
+/* sale timed to the next item, purchase-assumption ranges (Rodada 5) */
+.range-anchor { position: relative; }
+.range-editor { left: 0; transform: none; width: 260px; }
+.range-list { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; padding: 0; font-size: 11px; }
+.range-list li { display: inline-flex; align-items: center; gap: 4px; padding: 0 0 0 6px; border: 1px solid var(--border-strong); border-radius: 10px; color: var(--text-2); }
+.range-list li .icon { font-size: 10px; padding: 0 4px; }
+.tile-assume { position: absolute; bottom: 2px; left: 2px; font-size: 10px; font-weight: 700; padding: 0 3px; border-radius: 3px; background: var(--surface-2); color: var(--gold-bright); }
+.tile-assume-tag { font-size: 10px; padding: 0 4px; border-radius: 3px; border: 1px solid var(--gold); color: var(--gold-bright); }
+.sale-need { font-size: 10px; color: var(--gold); }
+.sale-account { margin: 6px 0; color: var(--text); }
+.lane-item.sold .item-icon { filter: grayscale(.7); border-color: var(--stat-hp); }
+.dock-sale { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; padding: 2px 0; color: var(--text-2); }
+.dock-sale strong { color: var(--gold-bright); }
