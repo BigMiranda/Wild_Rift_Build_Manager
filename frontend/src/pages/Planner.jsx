@@ -588,7 +588,7 @@ export default function Planner({ meta, items }) {
                   <BuildTestPanels buildId={draft.id} minute={Math.round(point.minute * 100) / 100} items={items} />
                 </section>
               )}
-              {momentTab === 'relevance' && <RelevanceReport point={point} prices={result.statPrices} itemsById={itemsById} />}
+              {momentTab === 'relevance' && <RelevanceReport point={point} prices={result.statPrices} itemsById={itemsById} draft={payload} />}
               {momentTab === 'effective' && (
                 <section className="panel">
                   <h3>{t('eff.title', { time: mmss(point.minute), level: point.level })}</h3>

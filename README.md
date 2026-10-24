@@ -307,6 +307,13 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
 - No gráfico, a faixa de eventos mostra cada compra (ícone do item) e cada subida de nível. Clicar no gráfico ou num
   evento escolhe o momento exibido no **painel de status do campeão** (total com base + adicional, como na aba de
   status do jogo) e no **relatório de relevância** (valor em ouro de cada item e de cada passiva, mais a Forja Viva).
+- **Repassar as passivas que escalam com outros status** (no relatório de relevância): uma ficha por fonte (Forja
+  Viva e cada passiva com `ref`). Uma fonte ligada é dividida entre os itens (e o campeão) que dão o status que ela lê,
+  na proporção do que cada um dá: a Forja de cada item é a Forja sobre os status dele; uma passiva de "x% da Armadura
+  adicional" dá a cada item `valor × (Armadura adicional dele ÷ total)`, a base e o nível vão para "Campeão (base e
+  nível)" e a parte de outra passiva vai para ela (ou através dela, se também estiver ligada; um ciclo é seguido até
+  não sobrar nada). A conta é a do motor (`TimelineEngine.relevance`), a fonte perde o que repassa e o total geral
+  não muda.
 - Interface em português ou inglês, com siglas de status em qualquer dos dois (DdA/AD, PdH/AP, RM/MR…), escolhidas
   no cabeçalho. Nomes e textos dos itens continuam em português, como na loja.
 

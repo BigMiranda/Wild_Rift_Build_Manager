@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { api } from '../api.js';
 import { useEffectValues } from '../effectValues.js';
 import { statLabel, t } from '../i18n.js';
 import { DERIVED_STATS, EFFECTIVE_STATS, PERCENT_STATS, SHEET_STATS, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
@@ -88,9 +90,14 @@ function EffectiveSheet({ total }) {
  * How much each item (and each of its passives) adds to the build at a moment, in gold value, plus Ornn's Living
  * Forge on top. Share = part of the build's whole bonus value.
  */
-export function RelevanceReport({ point, prices, itemsById }) {
+export function RelevanceReport({ point, prices, itemsById, draft }) {
   const read = useItemReader();
+  const [passOpen, setPassOpen] = useState(false);
+  const [enabled, setEnabled] = useState([]);
+  const passed = usePassedRelevance(passOpen ? draft : null, point?.minute, enabled);
   if (!point) return null;
+  const toggle = (key) => setEnabled((e) => (e.includes(key) ? e.filter((k) => k !== key) : [...e, key]));
+  const passing = passOpen && enabled.length > 0 && passed.rel;
   const forgeGold = Object.entries(point.forge ?? {}).reduce((sum, [k, v]) => sum + v * (prices[k] ?? 0), 0);
   const rows = (point.contributions ?? []).map((c) => ({ ...c, gold: c.flatGold + c.passiveGold }));
   const grand = rows.reduce((s, r) => s + r.gold, 0) + forgeGold;
@@ -101,8 +108,29 @@ export function RelevanceReport({ point, prices, itemsById }) {
     <section className="panel">
       <h3>{t('report.title', { time: mmss(point.minute) })}</h3>
       <p className="muted" style={{ marginTop: 0 }}>{t('report.help')}</p>
+      {draft && rows.length > 0 && (
+        <div className="pass-sources">
+          <label className="check" title={t('report.passHelp')}>
+            <input type="checkbox" checked={passOpen} onChange={(e) => setPassOpen(e.target.checked)} />
+            {t('report.pass')}
+          </label>
+          {passOpen && (
+            <div className="chips" role="group" aria-label={t('report.pass')}>
+              {(passed.rel?.sources ?? []).map((s) => (
+                <button key={s.key} className={enabled.includes(s.key) ? 'active' : ''} aria-pressed={enabled.includes(s.key)}
+                  onClick={() => toggle(s.key)} title={t('report.sourceTitle', { gold: n0(s.gold) })}>
+                  {sourceLabel(s)} <small className="muted">{n0(s.gold)}</small>
+                </button>
+              ))}
+              {!passed.rel && <small className="muted">{t('compare.calculating')}</small>}
+              {passed.rel && passed.rel.sources.length === 0 && <small className="muted">{t('report.noSources')}</small>}
+            </div>
+          )}
+        </div>
+      )}
       {rows.length === 0 && <p className="muted">{t('report.empty')}</p>}
-      {rows.length > 0 && (
+      {passing && <PassedTable rel={passed.rel} stale={passed.stale} itemsById={itemsById} read={read} />}
+      {rows.length > 0 && !passing && (
         <div className="table-wrap">
           <table className="data report">
             <thead>
@@ -175,6 +203,129 @@ export function RelevanceReport({ point, prices, itemsById }) {
         </div>
       )}
     </section>
+  );
+}
+
+/** The relevance report from the backend with `enabled` sources passed on; the last one stays (stale) while loading. */
+function usePassedRelevance(draft, minute, enabled) {
+  const [loaded, setLoaded] = useState({ key: null, rel: null });
+  const key = draft && minute != null ? JSON.stringify([draft, minute, enabled]) : null;
+  useEffect(() => {
+    if (!key) return undefined;
+    let live = true;
+    const timer = setTimeout(() => {
+      api.post('/api/relevance', { build: draft, minute, sources: enabled })
+        .then((rel) => { if (live) setLoaded({ key, rel }); })
+        .catch(() => { if (live) setLoaded({ key, rel: null }); });
+    }, 200);
+    return () => { live = false; clearTimeout(timer); };
+  }, [key]);
+  return { rel: loaded.rel, stale: loaded.key !== key };
+}
+
+const sourceLabel = (s) => (s.forge ? t('report.forge') : `${s.owner}: ${s.passive}`);
+const shareGold = (m) => Object.values(m ?? {}).reduce((a, sh) => a + sh.gold, 0);
+const shareStats = (m) => {
+  const out = {};
+  for (const sh of Object.values(m ?? {})) for (const [k, v] of Object.entries(sh.stats)) out[k] = (out[k] ?? 0) + v;
+  return out;
+};
+
+/** "includes 312 from the Living Forge, 46 from Colete Espinhoso" (by source, largest first). */
+function receivedText(inherited, sources) {
+  const byKey = new Map(sources.map((s) => [s.key, s]));
+  const parts = Object.entries(inherited ?? {}).filter(([, sh]) => Math.abs(sh.gold) >= 0.5).sort((a, b) => b[1].gold - a[1].gold)
+    .map(([k, sh]) => t('report.fromSource', { gold: n0(sh.gold), source: byKey.has(k) ? sourceLabel(byKey.get(k)) : k }));
+  return parts.length ? t('report.includes', { list: parts.join(', ') }) : null;
+}
+
+/** Relevance with sources passed on: own value, what is received from passives, total (and efficiency on it). */
+function PassedTable({ rel, stale, itemsById, read }) {
+  const [open, setOpen] = useState(() => new Set());
+  const flip = (k) => setOpen((o) => { const n = new Set(o); if (n.has(k)) n.delete(k); else n.add(k); return n; });
+  const rows = rel.contributions.map((c) => {
+    const own = c.flatGold + c.passiveGold - shareGold(c.repassed);
+    const recv = shareGold(c.inherited);
+    return { key: `i${c.purchaseIndex}`, c, own, recv, total: own + recv };
+  });
+  const forgeOwn = rel.forgeGold - (rel.forgeRepassed?.gold ?? 0);
+  const forgeRecv = shareGold(rel.forgeInherited);
+  if (rel.forgeGold > 0) rows.push({ key: 'forge', forge: true, own: forgeOwn, recv: forgeRecv, total: forgeOwn + forgeRecv });
+  const champRecv = shareGold(rel.champion);
+  if (Math.abs(champRecv) >= 0.5) rows.push({ key: 'champ', champ: true, own: 0, recv: champRecv, total: champRecv });
+  rows.sort((a, b) => b.total - a.total);
+  const share = (g) => (rel.grand > 0 ? (g / rel.grand) * 100 : 0);
+  return (
+    <div className={`table-wrap${stale ? ' stale' : ''}`}>
+      <table className="data report">
+        <thead>
+          <tr>
+            <th className="l">{t('report.item')}</th>
+            <th>{t('report.own')}</th>
+            <th>{t('report.received')}</th>
+            <th>{t('report.total')}</th>
+            <th className="l share-col">{t('report.share')}</th>
+            <th>{t('report.eff')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => {
+            const cost = r.c ? itemsById.get(r.c.itemId)?.cost : null;
+            const text = r.c ? receivedText(r.c.inherited, rel.sources) : r.forge ? receivedText(rel.forgeInherited, rel.sources)
+              : receivedText(rel.champion, rel.sources);
+            const passedOn = r.c ? Object.keys(r.c.repassed ?? {}) : r.forge && rel.forgeRepassed ? ['forge'] : [];
+            const stats = r.c ? shareStats(r.c.inherited) : r.forge ? shareStats(rel.forgeInherited) : shareStats(rel.champion);
+            return [
+              <tr key={r.key} className="report-item clickable" onClick={() => flip(r.key)} aria-expanded={open.has(r.key)}>
+                <td className="l">
+                  <span className="with-icon">
+                    {r.forge ? <span className="passive-name">{t('report.forge')} · {pct(rel.forgePct * 100)}</span>
+                      : r.champ ? <span className="passive-name"><span className="champ-tag">◆</span>{t('report.championBase')}</span>
+                      : r.c.champion ? <><span className="champ-tag">◆</span>{t('champ.effect')} {r.c.itemName}</>
+                      : r.c.rune ? <><img src={runeIcon(findRune(r.c.itemName))} alt="" width={24} height={24} className="rune-img on" />{t('runes.rune')} {r.c.itemName}</>
+                      : (
+                        <button className="link item-link" onClick={(e) => { e.stopPropagation(); read(r.c.itemId); }} title={t('dock.read', { name: r.c.itemName })}>
+                          <ItemIcon id={r.c.itemId} size={24} />#{r.c.number}{r.c.implied ? '↳' : ''} {r.c.itemName}
+                        </button>
+                      )}
+                    {passedOn.length > 0 && <small className="cond">{t('report.passedOn')}</small>}
+                  </span>
+                </td>
+                <td>{n0(r.own)}</td>
+                <td>{Math.abs(r.recv) >= 0.5 ? `+${n0(r.recv)}` : '—'}</td>
+                <td><strong>{n0(r.total)}</strong></td>
+                <td className="l share-col"><ShareBar value={share(r.total)} /></td>
+                <td>{cost ? pct((r.total / cost) * 100) : '—'}</td>
+              </tr>,
+              open.has(r.key) && (
+                <tr key={`${r.key}d`} className="report-passive">
+                  <td className="l" colSpan={6}>
+                    {text ?? <span className="muted">{t('report.nothingReceived')}</span>}
+                    {Object.keys(stats).length > 0 && <> · <StatList stats={stats} /></>}
+                    {passedOn.length > 0 && (
+                      <div className="muted">
+                        {t('report.passedOnDetail', {
+                          list: passedOn.map((k) => {
+                            const s = rel.sources.find((x) => x.key === k);
+                            const g = r.c ? r.c.repassed[k].gold : rel.forgeRepassed.gold;
+                            return `${s ? sourceLabel(s) : k} (${n0(g)})`;
+                          }).join(', '),
+                        })}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ),
+            ];
+          })}
+          <tr className="report-total">
+            <td className="l"><strong>{t('report.grand')}</strong></td>
+            <td /><td /><td><strong>{n0(rel.grand)}</strong></td><td /><td />
+          </tr>
+        </tbody>
+      </table>
+      <small className="muted">{t('report.passNote')}</small>
+    </div>
   );
 }
 

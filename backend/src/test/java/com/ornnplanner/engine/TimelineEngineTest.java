@@ -873,7 +873,108 @@ class TimelineEngineTest {
         assertEquals(List.of("Suporte"), res.ignored.get(1).inventory);   // still held
     }
 
-    private static String json(TimelineResult r) {
+
+    // ------------------------------------------------------------------ relevance with passed-on passives
+
+    private static Model.MinutePoint lastPoint(TimelineResult r) {
+        return r.series.get(r.series.size() - 1);
+    }
+
+    private static double inherited(Model.Relevance rel, String item, String source) {
+        return rel.contributions.stream().filter(c -> c.itemName.equals(item))
+                .mapToDouble(c -> c.inherited.containsKey(source) ? c.inherited.get(source).gold : 0).sum();
+    }
+
+    private static double plainGrand(Model.MinutePoint p, Model.Relevance rel) {
+        return p.contributions.stream().mapToDouble(c -> c.flatGold + c.passiveGold).sum() + rel.forgeGold;
+    }
+
+    @Test
+    void livingForgeOfAnItemIsTheForgeOverItsOwnStats() {
+        TimelineResult r = run(ornn(), 400, 0, clothArmor.id, ruby.id);
+        Model.MinutePoint p = lastPoint(r);
+        Model.Relevance rel = TimelineEngine.relevance(p, List.of(TimelineEngine.FORGE_SOURCE), ref.statPrices);
+        ItemContributionView cloth = view(rel, "Cloth Armor");
+        assertEquals(20 * 0.07, cloth.stat(ARMOR), EPS);
+        assertEquals(20 * 0.07 * 25.0, cloth.gold, EPS);
+        assertEquals(150 * 0.07, view(rel, "Ruby Crystal").stat(MAX_HEALTH), EPS);
+        // The Forge passes on all it has and the grand total does not change.
+        double passed = rel.contributions.stream().flatMap(c -> c.inherited.values().stream()).mapToDouble(sh -> sh.gold).sum();
+        assertEquals(rel.forgeGold, passed, EPS);
+        assertEquals(rel.forgeGold, rel.forgeRepassed.gold, EPS);
+        assertEquals(plainGrand(p, rel), rel.grand, EPS);
+    }
+
+    @Test
+    void passiveWithRefIsSplitByWhoGivesTheStat() {
+        ItemDef vest = item(120, "Colete", 1000, StatLine.flat(ARMOR, 30),
+                StatLine.percent(ARMOR, "Espinhos", 0.06, ARMOR, RefScope.BONUS));
+        TimelineResult r = run(ragdoll(50), 1000, 0, vest.id, clothArmor.id, ruby.id);
+        Model.MinutePoint p = lastPoint(r);
+        String key = view(TimelineEngine.relevance(p, List.of(), ref.statPrices), "Colete").index + "|Espinhos";
+        Model.Relevance rel = TimelineEngine.relevance(p, List.of(key), ref.statPrices);
+        // 6% of the 50 bonus Armor = 3: 1.8 from Colete's 30, 1.2 from Cloth Armor's 20, nothing to Ruby (no Armor).
+        assertEquals(1.8 * 25, inherited(rel, "Colete", key), EPS);
+        assertEquals(1.2 * 25, inherited(rel, "Cloth Armor", key), EPS);
+        assertEquals(0.0, inherited(rel, "Ruby Crystal", key), EPS);
+        assertEquals(3 * 25, view(rel, "Colete").repassed(key), EPS);
+        assertEquals(plainGrand(p, rel), rel.grand, EPS);
+        // Of the total (base included), the champion's base and level go to the champion row.
+        TimelineResult total = run(ragdoll(50), 1000, 0, amaranth.id, clothArmor.id);
+        Model.MinutePoint tp = lastPoint(total);
+        String endurance = view(TimelineEngine.relevance(tp, List.of(), ref.statPrices), amaranth.name).index + "|Endurance";
+        Model.Relevance trel = TimelineEngine.relevance(tp, List.of(endurance), ref.statPrices);
+        assertEquals(0.3 * 50 * 25, trel.champion.get(endurance).gold, EPS);
+        assertEquals(0.3 * 20 * 25, inherited(trel, "Cloth Armor", endurance), EPS);
+        assertEquals(plainGrand(tp, trel), trel.grand, EPS);
+    }
+
+    @Test
+    void chainedSourcesKeepTheGrandTotalAndNothingPassedIsTheSameReport() {
+        ItemDef twin = item(121, "Duplaguarda", 3000, StatLine.flat(ARMOR, 40),
+                StatLine.percent(ARMOR, "Resistência", 0.2, ARMOR, RefScope.BONUS));
+        TimelineResult r = run(ornn(), 1000, 1000, twin.id, clothArmor.id, amaranth.id, ruby.id);
+        Model.MinutePoint p = lastPoint(r);
+        Model.Relevance none = TimelineEngine.relevance(p, List.of(), ref.statPrices);
+        assertEquals(json(p.contributions), json(none.contributions));
+        assertEquals(plainGrand(p, none), none.grand, EPS);
+        List<String> all = new java.util.ArrayList<>();
+        none.sources.forEach(src -> all.add(src.key));
+        assertEquals(3, all.size());   // the Forge, Resistência and Endurance (its Armor and MR lines: one source)
+        Model.Relevance every = TimelineEngine.relevance(p, all, ref.statPrices);
+        assertEquals(none.grand, every.grand, EPS);
+        // Everything passed on: nothing is left on the passives' owners beyond their flat stats and what they receive.
+        double kept = every.contributions.stream().mapToDouble(c -> c.passiveGold
+                - c.repassed.values().stream().mapToDouble(sh -> sh.gold).sum()).sum();
+        assertEquals(0.0, kept, 1e-6);
+        // The Forge amplifies Resistência's gain and Resistência reads the Forge: followed until nothing is left.
+        assertEquals(0.0, every.forgeInherited.values().stream().mapToDouble(sh -> sh.gold).sum(), 1e-3);
+    }
+
+    /** One contribution of a relevance report, with what it receives in total. */
+    private static final class ItemContributionView {
+        int index;
+        double gold;
+        Model.ItemContribution c;
+
+        double stat(String s) {
+            return c.inherited.values().stream().mapToDouble(sh -> sh.stats.getOrDefault(s, 0.0)).sum();
+        }
+
+        double repassed(String key) {
+            return c.repassed.containsKey(key) ? c.repassed.get(key).gold : 0;
+        }
+    }
+
+    private static ItemContributionView view(Model.Relevance rel, String item) {
+        ItemContributionView v = new ItemContributionView();
+        v.c = rel.contributions.stream().filter(c -> c.itemName.equals(item)).findFirst().get();
+        v.index = v.c.purchaseIndex;
+        v.gold = v.c.inherited.values().stream().mapToDouble(sh -> sh.gold).sum();
+        return v;
+    }
+
+    private static String json(Object r) {
         try {
             return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(r);
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {

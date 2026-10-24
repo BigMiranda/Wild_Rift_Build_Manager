@@ -5,6 +5,7 @@ import com.ornnplanner.engine.Model.Efficiency;
 import com.ornnplanner.engine.Model.EngineInput;
 import com.ornnplanner.engine.Model.ForgeDetail;
 import com.ornnplanner.engine.Model.ForgeTier;
+import com.ornnplanner.engine.Model.ItemContribution;
 import com.ornnplanner.engine.Model.ItemDef;
 import com.ornnplanner.engine.Model.MinutePoint;
 import com.ornnplanner.engine.Model.PassiveDetail;
@@ -748,11 +749,13 @@ public class TimelineEngine {
     private static final class RatioLine {
         final Owned owner;
         final StatLine line;
+        final int id;
         PassiveDetail detail;
 
-        RatioLine(Owned owner, StatLine line) {
+        RatioLine(Owned owner, StatLine line, int id) {
             this.owner = owner;
             this.line = line;
+            this.id = id;
         }
 
         boolean conversion() {
@@ -775,6 +778,8 @@ public class TimelineEngine {
         private final List<RatioLine> lines = new ArrayList<>();
         private final Map<String, Double> finalTotal = new LinkedHashMap<>();
         private final Set<String> resolving = new LinkedHashSet<>();
+        /** Composition of each resolved stat's total (see {@link Model.Attribution} for the keys). */
+        private final Map<String, Map<String, Double>> composition = new LinkedHashMap<>();
 
         Resolver(StatSnapshot s, List<Owned> inventory, int level, double minute, double forgePct, boolean forge) {
             this.s = s;
@@ -790,7 +795,7 @@ public class TimelineEngine {
             for (Owned o : inventory) {
                 for (StatLine l : o.item.stats) {
                     if (l.hasRatio() && !l.marker() && o.counts(l) && (l.minMinute == null || minute >= l.minMinute - 1e-9)) {
-                        lines.add(new RatioLine(o, l));
+                        lines.add(new RatioLine(o, l, lines.size()));
                     }
                 }
             }
@@ -846,6 +851,8 @@ public class TimelineEngine {
                 return base + s.itemFlat.getOrDefault(stat, 0.0);
             }
             double pre = s.itemFlat.getOrDefault(stat, 0.0);
+            Map<String, Double> preComp = flatComposition(stat, false);
+            Map<String, Double> preOutsideComp = flatComposition(stat, true);
             // the part of pre from runes and the champion's effects (owners before the first purchase)
             double preOutsideItems = 0;
             for (Owned o : inventory) {
@@ -866,6 +873,17 @@ public class TimelineEngine {
                             : resolve(r.line.refType);
                     double ref = r.line.refPre || r.line.refScope == RefScope.BONUS ? source - sourceBase
                             : r.line.refScope == RefScope.BASE ? sourceBase : source;
+                    Map<String, Double> refComp = new LinkedHashMap<>();
+                    if (r.line.refScope == RefScope.BASE && !r.line.refPre) {
+                        add(refComp, BASE_KEY, sourceBase);
+                    } else {
+                        Map<String, Double> src = r.line.refPre ? flatComposition(r.line.refType, false)
+                                : compositionOf(r.line.refType);
+                        addAll(refComp, src, 1);
+                        if (r.line.refPre || r.line.refScope == RefScope.BONUS) {
+                            refComp.remove(BASE_KEY);
+                        }
+                    }
                     PassiveDetail d = detail(r);
                     d.refBase = r.line.refScope == RefScope.BONUS ? 0 : sourceBase;
                     d.refItems = r.line.refScope == RefScope.BASE ? 0 : source - sourceBase;
@@ -875,9 +893,12 @@ public class TimelineEngine {
                             + scopeLabel(r.line.refScope) + ", valor final) = " + fmt(d.value) + " " + stat
                             + (r.line.conditional ? " (condicional)" : "");
                     pre += d.value;
+                    add(preComp, lineKey(r), d.value);
                     if (r.owner.purchaseIndex < 0) {
                         preOutsideItems += d.value;
+                        add(preOutsideComp, lineKey(r), d.value);
                     }
+                    share(r, d.value, refComp);
                     s.itemPassives.merge(stat, d.value, Double::sum);
                 }
             }
@@ -897,6 +918,17 @@ public class TimelineEngine {
                 bonusFirst += r.line.ratioAt(level, minute) * forged;
             }
             double totalBeforeBuffs = base + forged + bonusFirst * (1 + f);
+            String forgeKey = FORGE_KEY + stat;
+            Map<String, Double> beforeBuffsComp = new LinkedHashMap<>();
+            add(beforeBuffsComp, BASE_KEY, base);
+            addAll(beforeBuffsComp, preComp, 1);
+            add(beforeBuffsComp, forgeKey, pre * f);
+            for (RatioLine r : multiplierLines(stat, RefScope.BONUS)) {
+                double first = r.line.ratioAt(level, minute) * forged;
+                add(beforeBuffsComp, lineKey(r), first);
+                add(beforeBuffsComp, forgeKey, first * f);
+            }
+            Map<String, Double> multComp = new LinkedHashMap<>();
             double totalGains = 0;
             for (RatioLine r : multiplierLines(stat, RefScope.TOTAL)) {
                 PassiveDetail d = detail(r);
@@ -910,6 +942,11 @@ public class TimelineEngine {
                     d.formula = fmt(r.line.ratioAt(level, minute)) + " × " + fmt(outside) + " " + stat
                             + " (sem o que vem de itens: runas e campeão) = " + fmt(d.value)
                             + (r.line.conditional ? " (condicional)" : "");
+                    Map<String, Double> outsideComp = new LinkedHashMap<>();
+                    add(outsideComp, BASE_KEY, base);
+                    addAll(outsideComp, preOutsideComp, 1);
+                    share(r, d.value, outsideComp);
+                    add(multComp, lineKey(r), d.value);
                     totalGains += d.value;
                     s.itemPassives.merge(stat, d.value, Double::sum);
                     continue;
@@ -920,10 +957,16 @@ public class TimelineEngine {
                 d.formula = fmt(r.line.ratioAt(level, minute)) + " × " + fmt(totalBeforeBuffs) + " " + stat
                         + " (total" + (f > 0 ? ", com Forja; não é amplificado por ela" : "") + ") = "
                         + fmt(d.value) + (r.line.conditional ? " (condicional)" : "");
+                share(r, d.value, beforeBuffsComp);
+                add(multComp, lineKey(r), d.value);
                 totalGains += d.value;
                 s.itemPassives.merge(stat, d.value, Double::sum);
             }
             double bonusGains = 0;
+            Map<String, Double> bonusRefComp = new LinkedHashMap<>(preComp);
+            add(bonusRefComp, forgeKey, pre * f);
+            addAll(bonusRefComp, multComp, 1);
+            Map<String, Double> bonusComp = new LinkedHashMap<>();
             for (RatioLine r : multiplierLines(stat, RefScope.BONUS)) {
                 double ref = forged + totalGains;
                 PassiveDetail d = detail(r);
@@ -935,6 +978,8 @@ public class TimelineEngine {
                         + (totalGains > 0 ? " + " + fmt(totalGains) + " de bônus de % do total" : "") + ") = "
                         + fmt(d.value) + " " + stat + (f > 0 ? " (+" + fmt(d.value * f) + " da Forja Viva)" : "")
                         + (r.line.conditional ? " (condicional)" : "");
+                share(r, d.value, bonusRefComp);
+                add(bonusComp, lineKey(r), d.value);
                 bonusGains += d.value;
                 s.itemPassives.merge(stat, d.value, Double::sum);
             }
@@ -946,6 +991,10 @@ public class TimelineEngine {
                 d.value = r.line.ratioAt(level, minute) * base;
                 d.formula = fmt(r.line.ratioAt(level, minute)) + " × " + fmt(base) + " base = " + fmt(d.value) + " " + stat
                         + (r.line.conditional ? " (condicional)" : "");
+                Map<String, Double> baseComp = new LinkedHashMap<>();
+                add(baseComp, BASE_KEY, base);
+                share(r, d.value, baseComp);
+                add(multComp, lineKey(r), d.value);
                 baseGains += d.value;
                 s.itemPassives.merge(stat, d.value, Double::sum);
             }
@@ -961,11 +1010,65 @@ public class TimelineEngine {
                 forgeValue = fd.value;
                 s.forge.put(stat, fd.value);
                 s.forgeDetails.add(fd);
+                Map<String, Double> forgeComp = new LinkedHashMap<>();
+                addAll(forgeComp, preComp, f);
+                addAll(forgeComp, bonusComp, f);
+                s.attribution.forge.put(stat, forgeComp);
             }
             double total = base + pre + multipliers + forgeValue;
+            Map<String, Double> comp = new LinkedHashMap<>();
+            add(comp, BASE_KEY, base);
+            addAll(comp, preComp, 1);
+            addAll(comp, multComp, 1);
+            addAll(comp, bonusComp, 1);
+            add(comp, forgeKey, forgeValue);
+            composition.put(stat, comp);
             resolving.remove(stat);
             finalTotal.put(stat, total);
             return total;
+        }
+
+        /** Owner flats of a stat ("flat:i"), only those of runes and champion effects when {@code outside}. */
+        private Map<String, Double> flatComposition(String stat, boolean outside) {
+            Map<String, Double> out = new LinkedHashMap<>();
+            for (Owned o : inventory) {
+                if (outside && o.purchaseIndex >= 0) {
+                    continue;
+                }
+                for (StatLine l : o.item.stats) {
+                    if (l.type.equals(stat) && countsAsFlat(o, l, level, minute)) {
+                        add(out, FLAT_KEY + o.purchaseIndex, l.valueAt(level, minute));
+                    }
+                }
+            }
+            return out;
+        }
+
+        /** Composition of a stat's final total; in a conversion cycle (none in the catalog), base and flats. */
+        private Map<String, Double> compositionOf(String stat) {
+            Map<String, Double> done = composition.get(stat);
+            if (done != null) {
+                return done;
+            }
+            Map<String, Double> out = flatComposition(stat, false);
+            add(out, BASE_KEY, s.base.getOrDefault(stat, 0.0));
+            return out;
+        }
+
+        /** Records where a passive line's ref comes from (the line's value is ratio x the sum of refComp). */
+        private void share(RatioLine r, double value, Map<String, Double> refComp) {
+            Model.LineShare sh = new Model.LineShare();
+            sh.id = r.id;
+            sh.ownerIndex = r.owner.purchaseIndex;
+            sh.owner = r.owner.item.name;
+            sh.passive = r.line.passive != null ? r.line.passive : r.owner.item.name;
+            sh.stat = r.line.type;
+            sh.value = value;
+            sh.ref.putAll(refComp);
+            for (double v : refComp.values()) {
+                sh.refTotal += v;
+            }
+            s.attribution.lines.add(sh);
         }
 
         private List<RatioLine> multiplierLines(String stat, RefScope scope) {
@@ -995,6 +1098,231 @@ public class TimelineEngine {
             d.conditional = r.line.conditional;
             r.detail = d;
             return d;
+        }
+    }
+
+    static final String BASE_KEY = "base";
+    static final String FLAT_KEY = "flat:";
+    static final String LINE_KEY = "line:";
+    static final String FORGE_KEY = "forge:";
+    /** Source key of the Living Forge in the relevance report. */
+    public static final String FORGE_SOURCE = "forge";
+
+    private static String lineKey(RatioLine r) {
+        return LINE_KEY + r.id;
+    }
+
+    private static void add(Map<String, Double> m, String key, double v) {
+        if (v != 0) {
+            m.merge(key, v, Double::sum);
+        }
+    }
+
+    private static void addAll(Map<String, Double> to, Map<String, Double> from, double scale) {
+        for (Map.Entry<String, Double> e : from.entrySet()) {
+            add(to, e.getKey(), e.getValue() * scale);
+        }
+    }
+
+    /**
+     * Relevance report of a series point with some sources passed on to what they scale with. The Living Forge goes to
+     * each item as the Forge over its own stats; a passive with a ref goes to whoever gives its ref stat, in proportion
+     * (the champion's base and level to the champion row, another passive's part to that passive's owner, or through it
+     * when that one is passed on too, in the engine's resolution order; a cycle is followed until the rest is
+     * negligible). A passed-on source loses exactly what it passes on, so the grand total does not change.
+     */
+    public static Model.Relevance relevance(MinutePoint p, java.util.Collection<String> keys, Map<String, Double> prices) {
+        Model.Relevance out = new Model.Relevance();
+        out.minute = p.minute;
+        out.level = p.level;
+        out.forgePct = p.forgePct;
+        out.forge.putAll(p.forge);
+        Set<String> enabled = new LinkedHashSet<>(keys);
+        Model.Attribution a = p.attribution != null ? p.attribution : new Model.Attribution();
+        Map<Integer, Model.LineShare> lines = new LinkedHashMap<>();
+        for (Model.LineShare l : a.lines) {
+            lines.put(l.id, l);
+        }
+        // Sources: the Forge, then the passives with a ref, one per owner and passive name.
+        for (Map.Entry<String, Double> e : p.forge.entrySet()) {
+            out.forgeGold += e.getValue() * prices.getOrDefault(e.getKey(), 0.0);
+        }
+        if (!p.forge.isEmpty()) {
+            Model.RelevanceSource src = new Model.RelevanceSource();
+            src.key = FORGE_SOURCE;
+            src.forge = true;
+            src.stats.addAll(p.forge.keySet());
+            src.gold = out.forgeGold;
+            src.enabled = enabled.contains(FORGE_SOURCE);
+            out.sources.add(src);
+        }
+        Map<String, Model.RelevanceSource> bySource = new LinkedHashMap<>();
+        for (Model.LineShare l : a.lines) {
+            Model.RelevanceSource src = bySource.computeIfAbsent(l.source(), k -> {
+                Model.RelevanceSource r = new Model.RelevanceSource();
+                r.key = k;
+                r.owner = l.owner;
+                r.ownerIndex = l.ownerIndex;
+                r.passive = l.passive;
+                r.enabled = enabled.contains(k);
+                return r;
+            });
+            if (!src.stats.contains(l.stat)) {
+                src.stats.add(l.stat);
+            }
+            src.gold += l.value * prices.getOrDefault(l.stat, 0.0);
+        }
+        out.sources.addAll(bySource.values());
+
+        Map<Integer, ItemContribution> byIndex = new LinkedHashMap<>();
+        for (ItemContribution c : p.contributions) {
+            ItemContribution copy = copyOf(c);
+            out.contributions.add(copy);
+            byIndex.put(c.purchaseIndex, copy);
+        }
+        Passing pass = new Passing(out, a, lines, byIndex, enabled, prices);
+        for (String key : enabled) {
+            if (FORGE_SOURCE.equals(key)) {
+                if (p.forge.isEmpty()) {
+                    continue;
+                }
+                out.forgeRepassed = new Model.Share();
+                for (Map.Entry<String, Map<String, Double>> e : a.forge.entrySet()) {
+                    double price = prices.getOrDefault(e.getKey(), 0.0);
+                    out.forgeRepassed.add(e.getKey(), sum(e.getValue()), price);
+                    for (Map.Entry<String, Double> k : e.getValue().entrySet()) {
+                        pass.give(k.getKey(), k.getValue(), e.getKey(), key, 0);
+                    }
+                }
+                continue;
+            }
+            for (Model.LineShare l : a.lines) {
+                if (!l.source().equals(key)) {
+                    continue;
+                }
+                ItemContribution owner = byIndex.get(l.ownerIndex);
+                if (owner == null || Math.abs(l.refTotal) < 1e-12) {
+                    continue;
+                }
+                owner.repassed.computeIfAbsent(key, k -> new Model.Share())
+                        .add(l.stat, l.value, prices.getOrDefault(l.stat, 0.0));
+                for (Map.Entry<String, Double> k : l.ref.entrySet()) {
+                    pass.give(k.getKey(), l.value * k.getValue() / l.refTotal, l.stat, key, 0);
+                }
+            }
+        }
+        double grand = 0;
+        for (ItemContribution c : out.contributions) {
+            grand += c.flatGold + c.passiveGold;
+            for (Model.Share sh : c.inherited.values()) {
+                grand += sh.gold;
+            }
+            for (Model.Share sh : c.repassed.values()) {
+                grand -= sh.gold;
+            }
+        }
+        grand += out.forgeGold - (out.forgeRepassed == null ? 0 : out.forgeRepassed.gold);
+        for (Model.Share sh : out.forgeInherited.values()) {
+            grand += sh.gold;
+        }
+        for (Model.Share sh : out.champion.values()) {
+            grand += sh.gold;
+        }
+        out.grand = grand;
+        return out;
+    }
+
+    private static double sum(Map<String, Double> m) {
+        double t = 0;
+        for (double v : m.values()) {
+            t += v;
+        }
+        return t;
+    }
+
+    private static ItemContribution copyOf(ItemContribution c) {
+        ItemContribution x = new ItemContribution();
+        x.purchaseIndex = c.purchaseIndex;
+        x.buildIndex = c.buildIndex;
+        x.number = c.number;
+        x.implied = c.implied;
+        x.rune = c.rune;
+        x.champion = c.champion;
+        x.itemId = c.itemId;
+        x.itemName = c.itemName;
+        x.conditionalIncluded = c.conditionalIncluded;
+        x.flat.putAll(c.flat);
+        x.passives.putAll(c.passives);
+        x.passiveParts.addAll(c.passiveParts);
+        x.flatGold = c.flatGold;
+        x.passiveGold = c.passiveGold;
+        return x;
+    }
+
+    /** How many times a passed-on amount may go through another passed-on source (cycles shrink fast). */
+    private static final int MAX_PASS_DEPTH = 40;
+
+    /** Passes amounts of a source down the composition keys to whoever receives them. */
+    private static final class Passing {
+        final Model.Relevance out;
+        final Model.Attribution a;
+        final Map<Integer, Model.LineShare> lines;
+        final Map<Integer, ItemContribution> byIndex;
+        final Set<String> enabled;
+        final Map<String, Double> prices;
+
+        Passing(Model.Relevance out, Model.Attribution a, Map<Integer, Model.LineShare> lines,
+                Map<Integer, ItemContribution> byIndex, Set<String> enabled, Map<String, Double> prices) {
+            this.out = out;
+            this.a = a;
+            this.lines = lines;
+            this.byIndex = byIndex;
+            this.enabled = enabled;
+            this.prices = prices;
+        }
+
+        /**
+         * {@code amount} of {@code stat} (the root source's stat) from source {@code root}, reached through {@code key}.
+         * A cycle (the Forge amplifies a % of bonus passive that reads the Forge) is followed round after round until
+         * what is left is negligible; that rest stays with the passive's owner (or the Forge row).
+         */
+        void give(String key, double amount, String stat, String root, int depth) {
+            boolean deeper = depth < MAX_PASS_DEPTH && Math.abs(amount) > 1e-9;
+            double price = prices.getOrDefault(stat, 0.0);
+            if (key.startsWith(LINE_KEY)) {
+                Model.LineShare l = lines.get(Integer.parseInt(key.substring(LINE_KEY.length())));
+                if (l == null) {
+                    return;
+                }
+                String src = l.source();
+                if (enabled.contains(src) && deeper && Math.abs(l.refTotal) > 1e-12) {
+                    for (Map.Entry<String, Double> e : l.ref.entrySet()) {
+                        give(e.getKey(), amount * e.getValue() / l.refTotal, stat, root, depth + 1);
+                    }
+                    return;
+                }
+                receiver(l.ownerIndex).computeIfAbsent(root, k -> new Model.Share()).add(stat, amount, price);
+            } else if (key.startsWith(FORGE_KEY)) {
+                Map<String, Double> fc = a.forge.get(key.substring(FORGE_KEY.length()));
+                double total = fc == null ? 0 : sum(fc);
+                if (enabled.contains(FORGE_SOURCE) && deeper && Math.abs(total) > 1e-12) {
+                    for (Map.Entry<String, Double> e : fc.entrySet()) {
+                        give(e.getKey(), amount * e.getValue() / total, stat, root, depth + 1);
+                    }
+                    return;
+                }
+                out.forgeInherited.computeIfAbsent(root, k -> new Model.Share()).add(stat, amount, price);
+            } else if (key.startsWith(FLAT_KEY)) {
+                receiver(Integer.parseInt(key.substring(FLAT_KEY.length())))
+                        .computeIfAbsent(root, k -> new Model.Share()).add(stat, amount, price);
+            } else {
+                out.champion.computeIfAbsent(root, k -> new Model.Share()).add(stat, amount, price);
+            }
+        }
+
+        private Map<String, Model.Share> receiver(int purchaseIndex) {
+            ItemContribution c = byIndex.get(purchaseIndex);
+            return c != null ? c.inherited : out.champion;
         }
     }
 
@@ -1169,6 +1497,7 @@ public class TimelineEngine {
             p.forge.putAll(snap.forge);
             p.forgePct = snap.forgePct;
             p.contributions = snap.contributions;
+            p.attribution = snap.attribution;
             result.series.add(p);
         }
     }

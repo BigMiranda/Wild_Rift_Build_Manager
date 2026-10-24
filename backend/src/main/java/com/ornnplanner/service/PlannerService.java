@@ -83,6 +83,24 @@ public class PlannerService {
     }
 
     /**
+     * Relevance report of a build at a game minute (the series point at or right before it), with the sources in
+     * {@code sources} passed on to the items they scale with (see {@link TimelineEngine#relevance}).
+     */
+    public com.ornnplanner.engine.Model.Relevance relevance(Build build, double minute, List<String> sources) {
+        TimelineResult r = calculate(build);
+        if (r.series.isEmpty()) {
+            return new com.ornnplanner.engine.Model.Relevance();
+        }
+        com.ornnplanner.engine.Model.MinutePoint best = r.series.get(0);
+        for (com.ornnplanner.engine.Model.MinutePoint p : r.series) {
+            if (p.minute <= minute + 1e-9) {
+                best = p;
+            }
+        }
+        return TimelineEngine.relevance(best, sources == null ? List.of() : sources, r.statPrices);
+    }
+
+    /**
      * Stats of the build's champion holding {@code items} at a level and game minute, whatever the purchases and the
      * gold (same runes, champion effects and choices): every item is bought at once and the XP gives the level.
      */

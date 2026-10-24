@@ -82,6 +82,19 @@ public class PlannerController {
         return planner.calculate(build);
     }
 
+    /** Body of {@code POST /api/relevance}: the build (as edited), the game minute and the sources passed on. */
+    public static class RelevanceRequest {
+        public Build build;
+        public double minute;
+        public List<String> sources;
+    }
+
+    /** Relevance report at a minute with the Living Forge and / or passives with a ref passed on to the items. */
+    @PostMapping("/relevance")
+    public com.ornnplanner.engine.Model.Relevance relevance(@RequestBody RelevanceRequest body) {
+        return planner.relevance(body.build, body.minute, body.sources);
+    }
+
     @GetMapping("/builds/{id}/timeline")
     public TimelineResult timeline(@PathVariable long id) {
         return planner.calculate(getBuild(id));

@@ -1,5 +1,8 @@
 package com.ornnplanner.engine;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -477,6 +480,85 @@ public final class Model {
         public List<PassivePart> passiveParts = new ArrayList<>();
         public double flatGold;
         public double passiveGold;
+        /** Relevance with passed-on passives: what this contribution receives from each source (by source key). */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, Share> inherited = new LinkedHashMap<>();
+        /** ...and what its own passives passed on to the others (the whole value of each passed-on passive). */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, Share> repassed = new LinkedHashMap<>();
+    }
+
+    /** Stats and their gold value passed from one source (the Living Forge, a passive with a ref) to a receiver. */
+    public static class Share {
+        public Map<String, Double> stats = new LinkedHashMap<>();
+        public double gold;
+
+        void add(String stat, double amount, double price) {
+            stats.merge(stat, amount, Double::sum);
+            gold += amount * price;
+        }
+    }
+
+    /**
+     * How a snapshot's values are made, kept by the resolver for the relevance report (never sent as is): for every
+     * stat, where its Living Forge comes from; for every passive line with a ref, where its ref comes from. Keys:
+     * "base" (champion base and level), "flat:i" (flat stats of the owner with purchase index i), "line:n" (the value
+     * of passive line n) and "forge:stat" (the Living Forge of a stat).
+     */
+    public static class Attribution {
+        public final Map<String, Map<String, Double>> forge = new LinkedHashMap<>();
+        public final List<LineShare> lines = new ArrayList<>();
+    }
+
+    /** A passive line with a ref: its value in its stat, and its ref split by where it comes from (sums to refTotal). */
+    public static class LineShare {
+        public int id;
+        public int ownerIndex;
+        public String owner;
+        public String passive;
+        public String stat;
+        public double value;
+        public double refTotal;
+        public final Map<String, Double> ref = new LinkedHashMap<>();
+
+        /** Source key of the passive (one per owner and passive name). */
+        public String source() {
+            return ownerIndex + "|" + passive;
+        }
+    }
+
+    /** A source that can be passed on to the items: the Living Forge, or a passive with a ref. */
+    public static class RelevanceSource {
+        public String key;
+        public boolean forge;
+        public String owner;
+        public Integer ownerIndex;
+        public String passive;
+        public List<String> stats = new ArrayList<>();
+        /** Gold value of the source at this point. */
+        public double gold;
+        public boolean enabled;
+    }
+
+    /**
+     * Relevance report at a point with some sources passed on: the contributions with what each receives and passes
+     * on, the Living Forge row and the champion row ("base and level"), both with what they keep and receive.
+     */
+    public static class Relevance {
+        public double minute;
+        public int level;
+        public double forgePct;
+        public List<RelevanceSource> sources = new ArrayList<>();
+        public List<ItemContribution> contributions = new ArrayList<>();
+        public Map<String, Double> forge = new LinkedHashMap<>();
+        public double forgeGold;
+        /** What the Forge row receives (passives reading Forge stats while the Forge itself is not passed on). */
+        public Map<String, Share> forgeInherited = new LinkedHashMap<>();
+        public Share forgeRepassed;
+        /** What the champion's base stats (base and level) receive. */
+        public Map<String, Share> champion = new LinkedHashMap<>();
+        /** Sum of every row's total: the same with or without sources passed on. */
+        public double grand;
     }
 
     public static class StatSnapshot {
@@ -490,6 +572,8 @@ public final class Model {
         public List<PassiveDetail> passives = new ArrayList<>();
         public List<ForgeDetail> forgeDetails = new ArrayList<>();
         public List<ItemContribution> contributions = new ArrayList<>();
+        @JsonIgnore
+        public Attribution attribution = new Attribution();
     }
 
     /** A shop rule broken by a purchase. `code` is translated by the UI; `items` are the items involved. */
@@ -590,6 +674,9 @@ public final class Model {
         public Map<String, Double> forge = new LinkedHashMap<>();
         public double forgePct;
         public List<ItemContribution> contributions = new ArrayList<>();
+        /** Where the values of this point come from (relevance report with passed-on passives). */
+        @JsonIgnore
+        public Attribution attribution;
     }
 
     public static class TimelineResult {

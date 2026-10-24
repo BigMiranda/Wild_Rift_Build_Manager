@@ -55,3 +55,46 @@ Testes: 201 → 206. Golden sem mudança.
 
 **Para testar sem mexer no backend em execução:** `.claude/launch.json` ganhou `backend-dev` (porta 8090, banco em
 `backend/data/dev/`) e `frontend-dev` (5174, `API_TARGET` no `vite.config.js`).
+
+## Parte 2 — Relevância com o valor das passivas repassado aos itens ✅
+
+**Conta no backend (`TimelineEngine`):**
+- O `Resolver`, ao somar cada status, guarda de onde vem cada parte (`Model.Attribution`, fora do JSON): a composição do
+  total de cada status ("base" do campeão, os status planos de cada dono, o valor de cada passiva, a Forja do
+  status), a composição da Forja de cada status e, para cada passiva com `ref`, a composição do `ref` que ela leu. São
+  os mesmos termos que já somam o valor; não há fórmula paralela.
+- `TimelineEngine.relevance(ponto, fontes, preços)` reparte cada fonte ligada pelos termos do que ela lê:
+  - **Forja Viva:** cada item recebe a Forja sobre os seus próprios status; a parte da Forja que amplifica o ganho de
+    uma passiva de % do adicional (Duplaguarda) vai para essa passiva;
+  - **passiva com `ref`:** `valor × (o que cada um dá do status ÷ o ref total)`; a base e o nível vão para a linha
+    "Campeão (base e nível)", a parte de outra passiva vai para o dono dela, ou passa por ela quando ela também está
+    ligada;
+  - **ciclo** (a Forja amplifica a Duplaguarda, e a Duplaguarda lê a Forja): decisão — em vez de parar e deixar o
+    resto com a fonte, a conta segue o ciclo rodada após rodada até a parte ficar desprezível (< 1e-9, ou 40 voltas).
+    O que sobra é menos de 0,001 de ouro.
+- Cada `contribution` ganha `inherited: {fonte: {stats, gold}}` e o dono de uma fonte repassada, `repassed` (o valor
+  inteiro dela). `forgeRepassed`, `forgeInherited` e `champion` cobrem as linhas da Forja e do campeão; `grand` é a
+  soma de tudo, igual com ou sem repasse.
+- `POST /api/relevance {build, minute, sources}`: o rascunho da build, o minuto e as fontes; responde as fontes
+  disponíveis (com o valor de cada uma) e o relatório.
+
+**Tela (aba Relevância do momento):** a caixa "Repassar as passivas que escalam com outros status" mostra uma ficha
+por fonte (Forja Viva e cada passiva com `ref`, com o valor). Desligada, ou sem ficha ligada, é o relatório de antes.
+Com fichas ligadas: colunas Próprio, Recebido de passivas, Total, Fatia e Valor / custo (sobre o total), a linha
+"repassado aos itens" na fonte, "Campeão (base e nível)" quando recebe algo e o "Total geral". Clicar numa linha
+abre "inclui 2.373 de Forja Viva (Ornn), 862 de Duplaguarda de Amaranto: Tolerância" e os status recebidos.
+A barra fixa não mostra o relatório de relevância (só o valor de cada item na leitura), então a opção fica só na aba.
+
+**Big Carry v1 aos 23:30 (nível 15), Forja Viva repassada** (22%, 6.421 de ouro):
+- Suserano do Gelo (runa, defesas condicionais ligadas) +2.373 (56 de Armadura, 38,9 de RM);
+- Duplaguarda de Amaranto +1.565 (66 de Vida, 30,3 de Armadura, 23,5 de RM: a Forja sobre os status dela e sobre o
+  ganho da Tolerância);
+- Desespero Eterno +660; Armadura de Espinhos +559; Coração de Aço +513; Égide de Fogo Solar +476; Esmagadores
+  Acorrentados +275. Soma: 6.421. O total geral fica em 44.956 com e sem repasse.
+- Com a Tolerância também repassada (3.614): a Duplaguarda fica com 847 dela; Suserano 862, Desespero 677, Armadura
+  de Espinhos 635, Égide 339, Esmagadores 254.
+
+**Testes novos (`TimelineEngineTest`):** a Forja de um item é a Forja sobre os status dele e a soma repassada é o valor
+da Forja; a passiva de 6% da Armadura adicional dividida entre os itens (o item sem Armadura recebe 0) e a base indo
+para o campeão; fontes encadeadas mantêm o total geral, sem nada ligado as contribuições são idênticas às de antes.
+Testes: 206 → 209. Golden sem mudança.
