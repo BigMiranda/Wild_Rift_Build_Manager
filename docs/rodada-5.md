@@ -250,3 +250,8 @@ acaba antes. A ficha "tudo ligado" (826 de Armadura) nunca acontece; a média fi
   nada é gravado;
 - as defesas do Suserano duram 2,5 s e não voltam antes de 20 s (o segundo atordoamento, aos ~10 s, não liga nada).
 Testes: 211 → 213. Golden sem mudança nesta parte.
+
+## Fechamento
+- Testes: 201 antes da rodada → 213 depois (os mesmos 8 opcionais pulados); `npm run build` limpo em todas as partes.
+- Golden: mudou só na Parte 4 (elemental), regravado; as Partes 3 e 5 acrescentaram campos descritivos fora do hash.
+- Migrações: v21 (`build_step.sell_when`, `build_step.assume`) e v22 (`arena_policy.arena_rules`).

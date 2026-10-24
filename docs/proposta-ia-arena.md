@@ -1252,3 +1252,13 @@ sem redução de resistência. Agora é mágico.
     - 14 s para as 4 builds.
   - Cenário "Darius ganha de Ornn": as 4 perdem. O Coração de Aço mantém a Big Carry viva 4,7 s a mais.
 - **Teste novo:** `SeenByTest.mixedEffectiveHealthFollowsThePhysicalPart`.
+
+### Rodada 5 — registro em docs/rodada-5.md
+O andamento da Rodada 5 (venda para o próximo item inteiro, relevância com passivas repassadas, cartão das recargas,
+elemental do Ornn com 480 de comprimento, "fotos de luta") está em [rodada-5.md](rodada-5.md). Para a IA da Arena:
+- o elemental do Ornn mudou de geometria (golden regravado em 13 cenários com o Ornn e no `golden-ai-v2.txt`); as
+  versões salvas do Ornn continuam abrindo, marcadas "⚠ elemental antigo" (`arena_policy.arena_rules`, v22,
+  `Arena.RULES = 2`);
+- os resultados com quadros ganharam campos descritivos (`uses`, `statTrack`, `toggles`, `sheetOn`, `sheetOff`), fora
+  da impressão digital; sem quadros (treino e busca) nada disso é calculado;
+- boneco de pano com o comportamento "ataca" (`Dummy.attackDamage`, 1 golpe/s).
