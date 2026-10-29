@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 22;
+    static final int VERSION = 23;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -128,6 +128,12 @@ public class SchemaManager {
         if (version < 22 && tableExists("arena_policy") && !columnExists("arena_policy", "arena_rules")) {
             // v22: the arena rules a version was trained with (null = before Ornn's elemental got its real length)
             jdbc.execute("ALTER TABLE arena_policy ADD COLUMN arena_rules INTEGER");
+        }
+        if (version < 23 && !tableExists("effect_test")) {
+            // v23: the user's effectiveness tests and report settings (schema.sql creates it on a new database)
+            jdbc.execute("CREATE TABLE IF NOT EXISTS effect_test (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + "kind TEXT NOT NULL DEFAULT 'cenario', name TEXT NOT NULL, data TEXT NOT NULL, "
+                    + "created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
         }
         // v16 / v17 / v18: arena_combo, arena_dummy and arena_guideline are new tables, created by schema.sql
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);

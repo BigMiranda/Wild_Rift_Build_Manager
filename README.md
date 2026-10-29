@@ -262,6 +262,12 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
   trecho "só itens inteiros" para aquele item; um trecho manual que o cubra prevalece, e a venda diz isso.
   Venda conferida no jogo: Passos de Mercúrio 1.200 → 840, Anjo Guardião 3.200 → 2.240. As taxas ficam em
   [`seed/regras_loja.yml`](backend/src/main/resources/seed/regras_loja.yml).
+- **Botas aprimoradas só a partir dos 10:00** (`regras_loja.yml`, `botas_aprimoradas.a_partir_do_minuto`; informado
+  pelo usuário em 28/10/2026): uma bota de tier 3 (seção "aprimorado" da aba Botas) que teria ouro antes espera os
+  10:00; o ouro fica guardado e a compra sai no primeiro minuto permitido, com o aviso "Esperou os 10:00 (regra da
+  loja)". As compras seguintes (e os meios itens supostos delas) vêm depois dela; os componentes da própria bota saem
+  quando houver ouro. A loja mostra o selo "10:00" nessas botas. Uma checagem única (`ShopRuleCheck`) serve a todo
+  lugar que monta builds (planejador, Efetividade); o inventário hipotético do "snapshot" não a aplica.
 - **Sequência de compras**: arraste os itens para reordenar; clique num item para selecioná-lo, e o painel da loja
   mostra o que aquela compra traz à build (minuto, ouro pago, valor em ouro somado e eficiências).
 - Clique numa linha da linha do tempo para ver o **detalhamento**: base/itens/passivas/forja por status, fórmula de
@@ -385,6 +391,37 @@ tirar as que não devem entrar. Dois modos:
 As builds rodam uma a uma e as linhas aparecem conforme ficam prontas; "Parar" interrompe. A escolha fica salva no
 navegador. Os status base de cada build e minuto ficam em cache no backend, então refazer o ranking com outros efeitos
 é rápido; o modo cenário roda uma luta por item de cada build e demora mais.
+
+## Efetividade por cenários de teste
+
+A aba **Efetividade** (e a aba "Efetividade" do momento, no planejador) mede a build em **cenários de teste**: lutas
+padrão na Arena, pelas mesmas regras de uma luta, em que a build (cérebro Tático, condicionais disparando de verdade)
+enfrenta de 1 a 5 **bonecos de pano atacantes**, com até 4 bonecos aliados. Os presets ficam em
+[`seed/efetividade_7_3d.yml`](backend/src/main/resources/seed/efetividade_7_3d.yml) (o cabeçalho documenta cada campo);
+os cenários do usuário, na tabela `effect_test`.
+
+- **Boneco**: status (DdA, PdH, velocidade de ataque, crítico, penetrações, letalidade, Vida, Armadura, RM, roubo de
+  vida), itens reais da loja (status, passivas e efeitos de `combate_7_3d.yml`, como na luta), ataques básicos e
+  **pulsos** de habilidade genéricos (base + razões, tipo, a cada N s: dano no inimigo, ou escudo / cura no aliado com
+  menos Vida). A **função** (atirador, mago, lutador, assassino, tanque, suporte) decide só o padrão e a posição.
+  Os atacantes **não morrem** (ficam em 1 de Vida: a Vida deles serve ao que lê a Vida do alvo); os aliados morrem. A
+  luta acaba quando a build morre.
+- **Medidas**: tempo até morrer; vida efetiva (o dano bruto recebido até morrer); dano mitigado %; escudo absorvido;
+  cura e a perdida para Feridas; dano devolvido aos atacantes; controle aplicado neles; com aliados, a % do dano
+  inimigo que a build absorveu e o tempo vivo deles. Se a build sobrevive à luta toda (180 s nos 1×1), o tempo até
+  morrer é estimado pela Vida perdida (no máximo 5× a duração) e aparece com *.
+- **Índice**: tempo até morrer ÷ o da referência × 100. Referência padrão: o mesmo campeão, no mesmo nível, sem itens,
+  com as runas da build (ou uma build escolhida, ou a média de uma pasta).
+- **Relatórios**: Básico (os cenários 1×1 com pesos: tabela, barras e pontos fracos) e Completo (mais os de equipe e as
+  varreduras: 5 estágios de um atributo do atacante de referência, com o ponto de quebra, o estágio em que o índice cai
+  mais de 25% em relação ao anterior). Configuráveis e salvos, com "Restaurar o padrão".
+- **Por item**: com × sem o item; com × só os status planos dele (passivas e ativos desligados: o valor da passiva);
+  com × o mesmo ouro em status puros (Vida, Armadura e RM em terços, pelos preços de `precos_status.yml`, a mistura que
+  mais rende). **Comparar candidatos** troca uma compra da build por outro item, com o ouro e as regras da loja.
+- O **Ranking** ganhou o modo "Efetividade": ordena pelo índice ponderado, com o mapa de calor cenário × build.
+
+Lutas sem quadros, com cache por (build, minuto, cenário, estágio, variante), em paralelo. O Básico de uma build leva
+2 a 6 s; o Completo, uns 4 a 7 s a mais; a leitura por item, cerca de 1 min (657 lutas na Big Carry).
 
 ## Arena
 

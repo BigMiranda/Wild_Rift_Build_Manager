@@ -110,7 +110,19 @@ public class PlannerService {
      * gold (same runes, champion effects and choices): every item is bought at once and the XP gives the level.
      */
     public com.ornnplanner.engine.Model.MinutePoint snapshot(Build build, List<Long> items, int level, double minute) {
+        return snapshot(build, items, level, minute, Map.of());
+    }
+
+    /**
+     * The same, with synthetic items that are not in the shop ({@code extra}, by their own ids: an item with only its
+     * flat stats, or the same gold in pure stats), held like any item (the Living Forge and the % passives read them).
+     */
+    public com.ornnplanner.engine.Model.MinutePoint snapshot(Build build, List<Long> items, int level, double minute,
+                                                             Map<Long, ItemDef> extra) {
         ReferenceData ref = referenceData();
+        if (extra != null) {
+            ref.items.putAll(extra);
+        }
         applyItemEffects(build, ref);
         EngineInput in = input(build);
         double t = Math.max(minute, 0.01);

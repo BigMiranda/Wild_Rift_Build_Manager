@@ -123,6 +123,11 @@ public class ArenaService {
         return new Arena(catalog, map).withoutFrames().withEffectValues().run(inputs, List.of(), 0).fighters.get(0).effectValues;
     }
 
+    /** A fight of prepared champions without frames (numbers only): the effectiveness tests reuse their inputs. */
+    public ArenaModel.Result runInputs(List<Arena.Input> inputs, double duration) {
+        return new Arena(catalog, map).withoutFrames().stopWhenDead(0).run(inputs, List.of(), duration);
+    }
+
     /** The same fight without frames (numbers only). */
     public ArenaModel.Result runQuiet(Scenario sc) {
         List<Arena.Input> inputs = prepare(sc);
@@ -259,6 +264,7 @@ public class ArenaService {
             c.minute = slot.minute;
             c.activations = slot.activations;
             c.excludeItems = slot.excludeItems;
+            c.replaceItems = slot.replaceItems;
             // The champion's name decides its sheet; the sheet's form effects are switched by the arena itself.
             Map<String, Object> kit = (Map<String, Object>) kits.get(combat.championName(c));
             Set<String> forms = new LinkedHashSet<>();
@@ -393,8 +399,11 @@ public class ArenaService {
      * the planner's "Boneco de pano" unit, with the ragdoll's stats as its base).
      */
     public Arena.Input dummyInput(ArenaModel.Dummy d) {
-        if (d.wearBuildId == null) {
+        if (d.wearBuildId == null && (d.items == null || d.items.isEmpty())) {
             return ComboBench.dummyInput(d);
+        }
+        if (d.wearBuildId == null) {
+            return itemsDummy(d);
         }
         BuildRepository.Build worn = builds.findBuild(d.wearBuildId).orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.BAD_REQUEST, "Build " + d.wearBuildId + " não existe."));
@@ -426,6 +435,62 @@ public class ArenaService {
             f.total.put(com.ornnplanner.engine.Stats.ATTACK_DAMAGE, f.total.getOrDefault(com.ornnplanner.engine.Stats.ATTACK_DAMAGE, 0.0)
                     + d.attackDamage);
         }
+        in.kit = ComboBench.dummyKit(d);
+        ComboBench.withSpells(in, d);
+        in.dummy = d;
+        return in;
+    }
+
+    /** Game minute at which a test ragdoll holds its items (every item bought, the shop's 10:00 rule passed). */
+    static final double DUMMY_ITEMS_MINUTE = 30;
+
+    /**
+     * A ragdoll wearing shop items (the effectiveness tests' attackers and allies): the planner's ragdoll unit at level
+     * 15 with its stats as base and the items bought at once, so their stats, passives and fight effects count as for a
+     * champion; then its other stats on top.
+     */
+    private Arena.Input itemsDummy(ArenaModel.Dummy d) {
+        BuildRepository.Build b = new BuildRepository.Build();
+        b.name = d.name == null ? "Boneco de pano" : d.name;
+        b.unitCode = com.ornnplanner.seed.ReferenceSeeder.RAGDOLL;
+        b.goldPerMin = 1e6;
+        b.xpPerMin = 13100 / DUMMY_ITEMS_MINUTE;   // level 15 well before the minute
+        b.matchEnd = DUMMY_ITEMS_MINUTE;
+        b.steps = new ArrayList<>();
+        for (Long id : d.items) {
+            if (id != null) {
+                b.steps.add(new BuildRepository.Step(id, true));
+            }
+        }
+        b.ragdollStats = new LinkedHashMap<>();
+        b.ragdollStats.put(com.ornnplanner.engine.Stats.MAX_HEALTH, ragdoll(d.health));
+        b.ragdollStats.put(com.ornnplanner.engine.Stats.ARMOR, ragdoll(d.armor));
+        b.ragdollStats.put(com.ornnplanner.engine.Stats.MAGIC_RESIST, ragdoll(d.magicResist));
+        b.ragdollStats.put(com.ornnplanner.engine.Stats.MOVE_SPEED, ragdoll(d.moveSpeed));
+        Map<String, Double> extra = d.stats == null ? Map.of() : d.stats;
+        b.ragdollStats.put(com.ornnplanner.engine.Stats.ATTACK_DAMAGE,
+                ragdoll(d.attackDamage + extra.getOrDefault(com.ornnplanner.engine.Stats.ATTACK_DAMAGE, 0.0)));
+        for (String stat : com.ornnplanner.engine.Stats.UNIT_STATS) {
+            if (!b.ragdollStats.containsKey(stat) && extra.containsKey(stat)) {
+                b.ragdollStats.put(stat, ragdoll(extra.get(stat)));
+            }
+        }
+        FighterBuilder.Combatant c = new FighterBuilder.Combatant();
+        c.build = b;
+        c.minute = DUMMY_ITEMS_MINUTE;
+        FighterBuilder.ArenaBuild ab = combat.arenaBuild(c, java.util.Set.of());
+        Fighter f = ab.fighter;
+        f.name = b.name;
+        f.champion = "Boneco de pano";
+        f.team = 1;
+        f.ranks = new int[4];
+        f.abilities = new ArrayList<>();
+        ComboBench.withStats(f, d, false);
+        Arena.Input in = new Arena.Input();
+        in.f = f;
+        in.triggers = ab.triggers;
+        in.build = b.name;
+        in.baseAttackSpeed = ComboBench.dummyAttackSpeed(d);
         in.kit = ComboBench.dummyKit(d);
         ComboBench.withSpells(in, d);
         in.dummy = d;

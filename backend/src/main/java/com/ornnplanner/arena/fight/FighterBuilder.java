@@ -40,6 +40,12 @@ public class FighterBuilder {
         public Double minute;
         /** Seconds of the fight at which a conditional effect turns on (key or source -> s), instead of its trigger. */
         public Map<String, Double> activations;
+        /**
+         * Items held as other items (original id -> a synthetic item with its own negative id): the item with only its
+         * flat stats, or its gold in pure stats. The synthetic item has no passive, active or fight effect of its own.
+         */
+        @com.fasterxml.jackson.annotation.JsonIgnore
+        public Map<Long, com.ornnplanner.engine.Model.ItemDef> replaceItems;
     }
 
     /** A combatant resolved: its build, inventory, level and minute. */
@@ -51,6 +57,8 @@ public class FighterBuilder {
         int level;
         double minute;
         Combatant c;
+        /** The synthetic items of {@link Combatant#replaceItems} held, by their id. */
+        Map<Long, com.ornnplanner.engine.Model.ItemDef> extra = new LinkedHashMap<>();
     }
 
     private final BuildRepository builds;
@@ -130,7 +138,7 @@ public class FighterBuilder {
         Resolved r = resolve(c);
         List<Triggered> all = discover(r, formsOff);
         Build base = variant(r.build, all, null, formsOff);
-        MinutePoint p0 = planner.snapshot(base, r.items, r.level, r.minute);
+        MinutePoint p0 = planner.snapshot(base, r.items, r.level, r.minute, r.extra);
         ArenaBuild out = new ArenaBuild();
         out.fighter = fighter(r, base, p0);
         // The planner's sheet with every effect the fight decides off (the fighter's start) and all of them on at once.
@@ -142,7 +150,7 @@ public class FighterBuilder {
                     setSwitch(on, t, true);
                 }
             }
-            out.fighter.sheetAllOn = new LinkedHashMap<>(planner.snapshot(on, r.items, r.level, r.minute).total);
+            out.fighter.sheetAllOn = new LinkedHashMap<>(planner.snapshot(on, r.items, r.level, r.minute, r.extra).total);
         } else {
             out.fighter.sheetAllOn = new LinkedHashMap<>(p0.total);
         }
@@ -150,7 +158,7 @@ public class FighterBuilder {
             if (!t.fightTriggered()) {
                 continue;
             }
-            MinutePoint p1 = planner.snapshot(variant(r.build, all, t, formsOff), r.items, r.level, r.minute);
+            MinutePoint p1 = planner.snapshot(variant(r.build, all, t, formsOff), r.items, r.level, r.minute, r.extra);
             p1.total.forEach((stat, v) -> {
                 double d = v - p0.total.getOrDefault(stat, 0.0);
                 if (Math.abs(d) > 1e-9) {
@@ -174,7 +182,7 @@ public class FighterBuilder {
         List<Triggered> out = new ArrayList<>();
         Set<Long> seen = new LinkedHashSet<>();
         for (Long id : r.items) {
-            String name = seen.add(id) ? itemName(id) : null;
+            String name = !seen.add(id) ? null : r.extra.containsKey(id) ? r.extra.get(id).name : itemName(id);
             if (name == null) {
                 continue;
             }
@@ -327,12 +335,12 @@ public class FighterBuilder {
         Map<String, Map<String, Double>> out = new LinkedHashMap<>();
         Map<String, Boolean> allOff = new LinkedHashMap<>();
         forms.forEach(f -> allOff.put(f, false));
-        Map<String, Double> off = planner.snapshot(withDelayedOn(r.build, forms, allOff), r.items, r.level, r.minute).total;
+        Map<String, Double> off = planner.snapshot(withDelayedOn(r.build, forms, allOff), r.items, r.level, r.minute, r.extra).total;
         for (String form : forms) {
             Map<String, Boolean> one = new LinkedHashMap<>(allOff);
             one.put(form, true);
             Map<String, Double> on = planner.snapshot(withDelayedOn(r.build, java.util.Set.of(), one), r.items, r.level,
-                    r.minute).total;
+                    r.minute, r.extra).total;
             Map<String, Double> delta = new LinkedHashMap<>();
             on.forEach((k, v) -> {
                 double d = v - off.getOrDefault(k, 0.0);
@@ -373,7 +381,13 @@ public class FighterBuilder {
         r.items = new ArrayList<>();
         for (ItemContribution ic : p.contributions) {
             if (!ic.rune && (c.excludeItems == null || !c.excludeItems.contains(ic.itemId))) {
-                r.items.add(ic.itemId);
+                com.ornnplanner.engine.Model.ItemDef as = c.replaceItems == null ? null : c.replaceItems.get(ic.itemId);
+                if (as != null) {
+                    r.items.add(as.id);
+                    r.extra.put(as.id, as);
+                } else {
+                    r.items.add(ic.itemId);
+                }
             }
         }
         return r;

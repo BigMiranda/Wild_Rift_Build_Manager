@@ -109,6 +109,7 @@ public final class ComboBench {
             m.put(Stats.ATTACK_DAMAGE, d.attackDamage);
         }
         f.ranks = new int[4];
+        withStats(f, d, true);
         Arena.Input in = new Arena.Input();
         in.f = f;
         in.build = f.name;
@@ -117,6 +118,26 @@ public final class ComboBench {
         withSpells(in, d);
         in.dummy = d;
         return in;
+    }
+
+    /**
+     * The ragdoll's other stats ({@link Dummy#stats}) on top of what it has. {@code base}: they count as its own base
+     * too (a ragdoll without items); with items they were already its base in the planner, but for the ones the
+     * planner's ragdoll unit has no base of (critical rate, penetrations, life steal...).
+     */
+    static void withStats(Fighter f, Dummy d, boolean base) {
+        if (d.stats == null) {
+            return;
+        }
+        d.stats.forEach((stat, v) -> {
+            if (v == null || !base && Stats.UNIT_STATS.contains(stat)) {
+                return;
+            }
+            f.total.merge(stat, v, Double::sum);
+            if (base) {
+                f.base.merge(stat, v, Double::sum);
+            }
+        });
     }
 
     /** The ragdoll's own spells (to react), with their cooldowns. */
@@ -131,6 +152,9 @@ public final class ComboBench {
 
     /** A ragdoll that attacks hits once a second; the others keep the old 0.6 (they never attack). */
     static double dummyAttackSpeed(Dummy d) {
+        if (d.attackSpeed != null && d.attackSpeed > 0) {
+            return d.attackSpeed;
+        }
         return "ataca".equals(d.behavior) ? 1.0 : 0.6;
     }
 
@@ -138,7 +162,7 @@ public final class ComboBench {
     static Map<String, Object> dummyKit(Dummy d) {
         Map<String, Object> kit = new LinkedHashMap<>();
         kit.put("raio", d.radius);
-        kit.put("alcance", 0.0);
+        kit.put("alcance", d.attackRange == null ? 0.0 : Math.max(0, d.attackRange));
         kit.put("habilidades", Map.of());
         return kit;
     }

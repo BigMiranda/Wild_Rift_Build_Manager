@@ -50,6 +50,46 @@ public final class ArenaModel {
         /** A build that is not saved (the planner's draft), used instead of {@link #buildId}; never stored. */
         @JsonIgnore
         public com.ornnplanner.repo.BuildRepository.Build build;
+        /**
+         * Items of the build held as other items (original id -> a synthetic item: only its flat stats, or the same gold
+         * in pure stats), for the effectiveness reports; never stored.
+         */
+        @JsonIgnore
+        public Map<Long, com.ornnplanner.engine.Model.ItemDef> replaceItems;
+    }
+
+    /**
+     * A generic ability pulse of a ragdoll (the attackers and allies of the effectiveness tests): every {@code every}
+     * seconds, once its target is within {@code range}, it deals {@code base + ad x AD + ap x AP} of {@code type} to the
+     * enemy it faces, or gives that much shield / heal to the ally with the lowest health (itself included).
+     */
+    public static class Pulse {
+        public String name = "Habilidade";
+        /** dano | escudo | cura */
+        public String kind = "dano";
+        /** fisico | magico | verdadeiro */
+        public String type = "magico";
+        public double base;
+        public double ad;
+        public double ap;
+        public double every = 6;
+        public double range = 600;
+        /** Seconds a shield lasts. */
+        public double duration = 2.5;
+
+        public Pulse copy() {
+            Pulse p = new Pulse();
+            p.name = name;
+            p.kind = kind;
+            p.type = type;
+            p.base = base;
+            p.ad = ad;
+            p.ap = ap;
+            p.every = every;
+            p.range = range;
+            p.duration = duration;
+            return p;
+        }
     }
 
     /**
@@ -82,6 +122,26 @@ public final class ArenaModel {
         public boolean atMax;
         /** Attack Damage of its basic attacks (behavior "ataca": one attack per second, so "in combat" effects start). */
         public double attackDamage;
+        /**
+         * Role of an effectiveness test ragdoll (atirador, mago, lutador, assassino, tanque, suporte): it decides only its
+         * damage pattern and position, never a champion. Null = the lab's ragdoll.
+         */
+        public String role;
+        /** Other stats it holds on top (Ability Power, % Critical Rate, penetrations, % Lifesteal...): stat -> value. */
+        public Map<String, Double> stats = new LinkedHashMap<>();
+        /** Shop items it wears (catalog ids), with their stats and fight effects, as a champion would. */
+        public List<Long> items = new ArrayList<>();
+        /** Its attacks per second before the items' attack speed (null = 1 for "ataca", as before). */
+        public Double attackSpeed;
+        /** Its attack range (null = 0: melee, as before). */
+        public Double attackRange;
+        /** Its generic ability pulses (damage to the enemy, or shield / heal to an ally). */
+        public List<Pulse> pulses = new ArrayList<>();
+        /**
+         * Never dies (holds at 1 health): the attackers of the effectiveness tests, so the fight lasts until the build
+         * tested dies; its health still counts for whatever reads the target's health.
+         */
+        public boolean immortal;
 
         /** Presets: the ragdolls of the lab's first screen. */
         public static List<Dummy> presets() {
@@ -118,6 +178,16 @@ public final class ArenaModel {
             d.hitEvery = hitEvery;
             d.atMax = atMax;
             d.attackDamage = attackDamage;
+            d.role = role;
+            d.stats = new LinkedHashMap<>(stats == null ? Map.of() : stats);
+            d.items = new ArrayList<>(items == null ? List.of() : items);
+            d.attackSpeed = attackSpeed;
+            d.attackRange = attackRange;
+            d.immortal = immortal;
+            d.pulses = new ArrayList<>();
+            for (Pulse p : pulses == null ? List.<Pulse>of() : pulses) {
+                d.pulses.add(p.copy());
+            }
             return d;
         }
     }
@@ -399,6 +469,8 @@ public final class ArenaModel {
         public double health;
         public double dealt;
         public double taken;
+        /** Damage that reached it before resistances and damage reduction (amplified, before shields): the raw hits. */
+        public double rawTaken;
         public double mitigated;
         public double shieldAbsorbed;
         public double healed;

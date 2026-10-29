@@ -1,0 +1,232 @@
+# Efetividade por cenários de teste (patch 7.3d): os presets dos cenários, as funções dos bonecos, as varreduras e os
+# relatórios padrão. Tudo roda na Arena, pelas mesmas regras da luta (sem fórmula paralela); a build testada usa o
+# cérebro Tático e os efeitos condicionais dela disparam de verdade.
+#
+# Um cenário de teste é a build testada, num minuto, contra 1 a 5 bonecos atacantes, com 0 a 4 bonecos aliados, por
+# uma duração. Nenhum boneco é um campeão: a função decide só o padrão de dano e a posição. Os atacantes não morrem
+# (ficam com 1 de Vida): a luta dura até a build morrer ou acabar o tempo; a Vida deles conta só para o que lê a Vida
+# do alvo (Coração de Aço, Ruptor...). Os aliados morrem normalmente.
+#
+# Por boneco (atacantes e aliados):
+#   nome        como aparece nos relatórios
+#   funcao      atirador | mago | lutador | assassino | tanque | suporte (ver `funcoes`)
+#   vida, armadura, rm, dda (dano de ataque), velocidade_ataque (ataques por segundo, antes dos itens), vdm
+#   status      outros status somados por cima, com os nomes do motor: Ability Power, % Critical Rate,
+#               % Armor Penetration, Armor Penetration (letalidade), % Magic Penetration, Magic Penetration,
+#               % Lifesteal, % Omnivamp, % Attack Speed...
+#   itens       itens da loja (nomes da loja pt-BR), com os status, passivas e efeitos de combate_7_3d.yml, como na luta
+#   alcance     alcance de ataque; sem o campo, o da função
+#               (os magos dos presets têm dda 0: só as habilidades, todas de Dano Mágico)
+#   pulsos      padrão de habilidades genéricas; sem o campo, o da função. Cada pulso:
+#                 {nome, tipo: dano | escudo | cura, dano_tipo: fisico | magico | verdadeiro, base, dda, pdh,
+#                  a_cada (s), alcance, duracao (s, escudo)}
+#               dano = base + dda x Dano de Ataque + pdh x Poder de Habilidade; o dano vai ao inimigo que o boneco
+#               enfrenta (pelas resistências, penetrações e efeitos de habilidade dos itens dele, como Liandry); escudo
+#               e cura vão ao aliado com menos Vida (proporcional) no alcance, ele mesmo incluído.
+#
+# Por cenário: nome, grupo (1x1 | equipe), atacantes, aliados, duracao (s), nota.
+#
+# Medidas (as mesmas para todo cenário): tempo até morrer; vida efetiva contra aquele atacante (o dano bruto recebido
+# até morrer); dano mitigado %; escudo absorvido; cura (e a perdida para Feridas Dolorosas); dano devolvido (o que a
+# build causou aos atacantes) e tempo de controle aplicado neles; com aliados, a % do dano inimigo que a build absorveu
+# e o tempo vivo dos aliados. As lutas são longas (180 s nos 1x1, o máximo da Arena) para a build morrer de verdade;
+# se ela ainda sobrevive, o tempo até morrer é estimado pela Vida que ela perdeu: duração x Vida máxima / Vida perdida
+# (no máximo 5x a duração), e o relatório marca "estimado".
+#
+# Índice de efetividade: tempo até morrer ÷ tempo até morrer da referência × 100. A referência padrão é o mesmo
+# campeão, no mesmo nível, sem itens, com as runas da build.
+patch: "7.3d"
+
+funcoes:
+  atirador:
+    alcance: 525
+    posicao: tras
+    pulsos:
+    - {nome: Habilidade de atirador, tipo: dano, dano_tipo: fisico, base: 80, dda: 0.6, a_cada: 8, alcance: 700}
+  mago:
+    alcance: 500
+    posicao: tras
+    pulsos:
+    - {nome: Combo de mago, tipo: dano, dano_tipo: magico, base: 350, pdh: 0.9, a_cada: 5, alcance: 650}
+    - {nome: Toque de mago, tipo: dano, dano_tipo: magico, base: 120, pdh: 0.4, a_cada: 2, alcance: 650}
+  lutador:
+    alcance: 150
+    posicao: frente
+    pulsos:
+    - {nome: Golpe de lutador, tipo: dano, dano_tipo: fisico, base: 120, dda: 0.8, a_cada: 6, alcance: 300}
+  assassino:
+    alcance: 125
+    posicao: frente
+    pulsos:
+    - {nome: Explosão de assassino, tipo: dano, dano_tipo: fisico, base: 200, dda: 1.0, a_cada: 7, alcance: 400}
+  tanque:
+    alcance: 150
+    posicao: frente
+    pulsos:
+    - {nome: Golpe de tanque, tipo: dano, dano_tipo: magico, base: 120, pdh: 0.5, a_cada: 8, alcance: 350}
+  suporte:
+    alcance: 500
+    posicao: tras
+    pulsos:
+    - {nome: Escudo de suporte, tipo: escudo, base: 150, pdh: 0.5, a_cada: 6, alcance: 600, duracao: 2.5}
+    - {nome: Toque de suporte, tipo: dano, dano_tipo: magico, base: 60, pdh: 0.3, a_cada: 5, alcance: 600}
+
+# Os presets só se duplicam (a cópia vira um cenário do usuário).
+cenarios:
+  critico:
+    nome: Crítico
+    grupo: 1x1
+    duracao: 180
+    nota: 100% de crítico e 300 de DdA, só ataques básicos
+    atacantes:
+    - {nome: Atirador crítico, funcao: atirador, vida: 8000, armadura: 60, rm: 60, dda: 300, velocidade_ataque: 2.5,
+       status: {"% Critical Rate": 100}, pulsos: []}
+  anti_tanque_fisico:
+    nome: Anti-tanque físico
+    grupo: 1x1
+    duracao: 180
+    atacantes:
+    - {nome: Lutador anti-tanque, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 250, velocidade_ataque: 1.5,
+       itens: [Espada do Rei Destruído, Ruptor Divino, Lembranças do Lorde Dominik]}
+  liandry:
+    nome: Tormento de Liandry
+    grupo: 1x1
+    duracao: 180
+    atacantes:
+    - {nome: Mago de Liandry, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
+       status: {Ability Power: 600}, itens: [Tormento de Liandry]}
+  liandry_maldicao:
+    nome: Liandry + Maldição Sanguinária
+    grupo: 1x1
+    duracao: 180
+    atacantes:
+    - {nome: Mago de Liandry e Maldição, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
+       status: {Ability Power: 600}, itens: [Tormento de Liandry, Maldição Sanguinária]}
+  cajado_vazio:
+    nome: Cajado do Vazio
+    grupo: 1x1
+    duracao: 180
+    atacantes:
+    - {nome: Mago do Cajado, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
+       status: {Ability Power: 600}, itens: [Cajado do Vazio]}
+  pdh_1000_cajado:
+    nome: 1000 de PdH + Cajado do Vazio
+    grupo: 1x1
+    duracao: 180
+    atacantes:
+    - {nome: Mago de 1000 PdH, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
+       status: {Ability Power: 1000}, itens: [Cajado do Vazio]}
+  misto:
+    nome: Misto
+    grupo: 1x1
+    duracao: 180
+    nota: ataques físicos e habilidades mágicas
+    atacantes:
+    - {nome: Lutador misto, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 300, velocidade_ataque: 1.5,
+       status: {Ability Power: 500},
+       pulsos: [{nome: Golpe mágico, tipo: dano, dano_tipo: magico, base: 150, pdh: 0.7, a_cada: 5, alcance: 350}]}
+  verdadeiro:
+    nome: Verdadeiro
+    grupo: 1x1
+    duracao: 180
+    nota: ataques físicos fracos e habilidades de Dano Verdadeiro
+    atacantes:
+    - {nome: Lutador verdadeiro, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 200, velocidade_ataque: 1.2,
+       pulsos: [{nome: Golpe verdadeiro, tipo: dano, dano_tipo: verdadeiro, base: 400, dda: 0.5, a_cada: 3, alcance: 300}]}
+  atirador_alimentado:
+    nome: Atirador alimentado
+    grupo: 1x1
+    duracao: 180
+    nota: muito DdA e crítico, com Lembranças do Lorde Dominik
+    atacantes:
+    - {nome: Atirador alimentado, funcao: atirador, vida: 8000, armadura: 60, rm: 60, dda: 250, velocidade_ataque: 1.5,
+       status: {"% Critical Rate": 25},
+       itens: [Gume do Infinito, Lembranças do Lorde Dominik, Canhão Fumegante, Dança da Morte]}
+  cinco_contra_um:
+    nome: 5 contra 1
+    grupo: equipe
+    duracao: 120
+    atacantes:
+    - {nome: Atirador, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 300, velocidade_ataque: 1.5,
+       status: {"% Critical Rate": 50}}
+    - {nome: Mago, funcao: mago, vida: 6000, armadura: 50, rm: 50, dda: 60, velocidade_ataque: 0.7,
+       status: {Ability Power: 600, "% Magic Penetration": 20}}
+    - {nome: Lutador, funcao: lutador, vida: 6000, armadura: 60, rm: 60, dda: 250, velocidade_ataque: 1.2,
+       status: {"% Armor Penetration": 20}}
+    - {nome: Assassino, funcao: assassino, vida: 6000, armadura: 50, rm: 50, dda: 280, velocidade_ataque: 1.2,
+       status: {Armor Penetration: 18}}
+    - {nome: Tanque, funcao: tanque, vida: 8000, armadura: 120, rm: 80, dda: 100, velocidade_ataque: 0.7,
+       status: {Ability Power: 100}}
+  luta_de_equipe:
+    nome: Luta de equipe genérica
+    grupo: equipe
+    duracao: 120
+    nota: os mesmos 5 atacantes do "5 contra 1", com 4 aliados bonecos
+    atacantes:
+    - {nome: Atirador, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 300, velocidade_ataque: 1.5,
+       status: {"% Critical Rate": 50}}
+    - {nome: Mago, funcao: mago, vida: 6000, armadura: 50, rm: 50, dda: 60, velocidade_ataque: 0.7,
+       status: {Ability Power: 600, "% Magic Penetration": 20}}
+    - {nome: Lutador, funcao: lutador, vida: 6000, armadura: 60, rm: 60, dda: 250, velocidade_ataque: 1.2,
+       status: {"% Armor Penetration": 20}}
+    - {nome: Assassino, funcao: assassino, vida: 6000, armadura: 50, rm: 50, dda: 280, velocidade_ataque: 1.2,
+       status: {Armor Penetration: 18}}
+    - {nome: Tanque, funcao: tanque, vida: 8000, armadura: 120, rm: 80, dda: 100, velocidade_ataque: 0.7,
+       status: {Ability Power: 100}}
+    aliados:
+    - {nome: Suporte de proteção, funcao: suporte, vida: 4000, armadura: 60, rm: 60, dda: 50, velocidade_ataque: 0.7,
+       status: {Ability Power: 200}}
+    - {nome: Atirador aliado, funcao: atirador, vida: 4000, armadura: 40, rm: 40, dda: 200, velocidade_ataque: 1.0,
+       status: {"% Critical Rate": 50}}
+    - {nome: Mago aliado, funcao: mago, vida: 4000, armadura: 40, rm: 40, dda: 60, velocidade_ataque: 0.7,
+       status: {Ability Power: 400}}
+    - {nome: Lutador de flanco, funcao: lutador, vida: 5500, armadura: 80, rm: 60, dda: 180, velocidade_ataque: 0.9}
+
+# Varreduras do relatório Completo: cada estágio muda um atributo do atacante de referência e mantém os outros.
+# Os 5 estágios de cada dimensão são editáveis na tela (e voltam a estes com "Restaurar o padrão").
+varredura:
+  duracao: 180
+  atacante:
+    {nome: Atacante de referência, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 300, velocidade_ataque: 1.5,
+     status: {Ability Power: 400},
+     pulsos: [{nome: Golpe mágico, tipo: dano, dano_tipo: magico, base: 100, pdh: 0.6, a_cada: 5, alcance: 350}]}
+  dimensoes:
+  - {chave: pen_pct, nome: Penetração % física e mágica, estagios: [0, 25, 50, 75, 95]}
+  - {chave: pen_pct_fisica, nome: Penetração % física, estagios: [0, 25, 50, 75, 95]}
+  - {chave: pen_pct_magica, nome: Penetração % mágica, estagios: [0, 25, 50, 75, 95]}
+  - {chave: pen_fixa, nome: Penetração fixa / letalidade, estagios: [0, 10, 20, 30, 40]}
+  - {chave: critico, nome: Taxa de Crítico, estagios: [0, 25, 50, 75, 100]}
+  - {chave: dda, nome: DdA, estagios: [0, 250, 500, 750, 1000]}
+  - {chave: pdh, nome: PdH, estagios: [0, 500, 1000, 1500, 2000]}
+  - {chave: resistencias, nome: Armadura e RM do atacante, estagios: [0, 500, 1000, 1500, 2000]}
+  - {chave: vida, nome: Vida máx. do atacante, estagios: [0, 5000, 10000, 15000, 20000]}
+  - {chave: inimigos, nome: Número de inimigos, estagios: [1, 2, 3, 4, 5]}
+
+relatorios:
+  basico:
+    nome: Básico
+    cenarios:
+    - {cenario: critico, peso: 1}
+    - {cenario: anti_tanque_fisico, peso: 1}
+    - {cenario: liandry, peso: 1}
+    - {cenario: liandry_maldicao, peso: 1}
+    - {cenario: cajado_vazio, peso: 1}
+    - {cenario: pdh_1000_cajado, peso: 1}
+    - {cenario: misto, peso: 1}
+    - {cenario: verdadeiro, peso: 1}
+    - {cenario: atirador_alimentado, peso: 1}
+  completo:
+    nome: Completo
+    cenarios:
+    - {cenario: critico, peso: 1}
+    - {cenario: anti_tanque_fisico, peso: 1}
+    - {cenario: liandry, peso: 1}
+    - {cenario: liandry_maldicao, peso: 1}
+    - {cenario: cajado_vazio, peso: 1}
+    - {cenario: pdh_1000_cajado, peso: 1}
+    - {cenario: misto, peso: 1}
+    - {cenario: verdadeiro, peso: 1}
+    - {cenario: atirador_alimentado, peso: 1}
+    - {cenario: cinco_contra_um, peso: 1}
+    - {cenario: luta_de_equipe, peso: 1}
+    varreduras: [pen_pct, pen_pct_fisica, pen_pct_magica, pen_fixa, critico, dda, pdh, resistencias, vida, inimigos]

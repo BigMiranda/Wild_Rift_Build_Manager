@@ -6,6 +6,8 @@ import EffectPicker, { applied } from '../components/EffectPicker.jsx';
 import ItemIcon from '../components/ItemIcon.jsx';
 import MinuteInput from '../components/MinuteInput.jsx';
 import SeenByReport, { Bars, MetricControls, ehp } from '../components/SeenByReport.jsx';
+import { reportJobs, runJobs, weightedIndex } from '../effectiveness.js';
+import { ReferencePicker, ttd, useTestNames } from '../components/EffectivenessReport.jsx';
 
 /**
  * Ranking of builds: the builds of a folder (or picked by hand) at the same minute, either under chosen effects (the
@@ -40,6 +42,8 @@ export default function Ranking({ items }) {
   const [busy, setBusy] = useState(null);
   const [open, setOpen] = useState(null);
   const [error, setError] = useState(null);
+  const [effKind, setEffKind] = useState(saved.effKind ?? 'basico');
+  const [effRef, setEffRef] = useState({ kind: 'proprio' });
   const stop = useRef(false);
   const idOf = useMemo(() => new Map((items ?? []).map((i) => [i.name, i.id])), [items]);
 
@@ -53,11 +57,11 @@ export default function Ranking({ items }) {
   }, []);
   useEffect(() => {
     try {
-      localStorage.setItem(STORE, JSON.stringify({ mode, chosen, share, metric, minute, scenarioId, folder, excluded }));
+      localStorage.setItem(STORE, JSON.stringify({ mode, chosen, share, metric, minute, scenarioId, folder, excluded, effKind }));
     } catch {
       /* storage unavailable */
     }
-  }, [mode, chosen, share, metric, minute, scenarioId, folder, excluded]);
+  }, [mode, chosen, share, metric, minute, scenarioId, folder, excluded, effKind]);
 
   const inFolder = builds.filter((b) => folder === 'all' || String(b.folderId) === String(folder));
   const picked = inFolder.filter((b) => !excluded.includes(b.id));
@@ -71,13 +75,17 @@ export default function Ranking({ items }) {
     setRows([]);
     setOpen(null);
     const fx = applied(chosen);
-    setRan({ mode, metric, sources: [...new Set(fx.map((e) => e.source))], scenario: scenarios.find((s) => String(s.id) === String(scenarioId)) });
+    const report = mode === 'effectiveness' ? await api.get(`/api/effect/reports/${effKind}`).catch(() => null) : null;
+    setRan({ mode, metric, report, sources: [...new Set(fx.map((e) => e.source))], scenario: scenarios.find((s) => String(s.id) === String(scenarioId)) });
     for (let k = 0; k < picked.length && !stop.current; k++) {
       const b = picked[k];
       setBusy({ done: k, total: picked.length, name: b.name });
       let row = { build: b };
       try {
-        if (mode === 'effects') {
+        if (mode === 'effectiveness') {
+          row.outcomes = await runJobs({ buildId: b.id, minute, reference: effRef }, reportJobs(report, false), { size: 12, stop: () => stop.current });
+          row.index = weightedIndex(report, row.outcomes);
+        } else if (mode === 'effects') {
           row.seen = await api.post('/api/lab/seen-by', { buildId: b.id, minute, effects: fx, physicalShare: share / 100, series: false, items: true });
         } else {
           row.test = await api.post('/api/lab/test', { buildId: b.id, minute, scenarioId: Number(scenarioId) });
@@ -90,21 +98,31 @@ export default function Ranking({ items }) {
     setBusy(null);
   };
 
-  const ready = mode === 'effects' ? true : scenarioId !== '';
+  const ready = mode === 'effects' || mode === 'effectiveness' ? true : scenarioId !== '';
   return (
     <div className="main ranking">
       <section className="panel">
         <h2>{t('rank.title')}</h2>
         <p className="muted small" style={{ marginTop: 0 }}>{t('rank.help')}</p>
         <div className="chips" role="tablist">
-          {['effects', 'scenario'].map((m) => (
+          {['effects', 'scenario', 'effectiveness'].map((m) => (
             <button key={m} role="tab" aria-selected={mode === m} className={mode === m ? 'active' : ''} onClick={() => setMode(m)}>{t(`rank.mode.${m}`)}</button>
           ))}
         </div>
         <div className="rank-setup">
           <div>
-            <h4>{mode === 'effects' ? t('rank.effects') : t('rank.scenario')}</h4>
-            {mode === 'effects' ? (
+            <h4>{mode === 'effects' ? t('rank.effects') : mode === 'effectiveness' ? t('rank.effectiveness') : t('rank.scenario')}</h4>
+            {mode === 'effectiveness' ? (
+              <>
+                <div className="chips" role="tablist">
+                  {['basico', 'completo'].map((k) => (
+                    <button key={k} role="tab" aria-selected={effKind === k} className={effKind === k ? 'active' : ''} onClick={() => setEffKind(k)}>{t(`efx.kind.${k}`)}</button>
+                  ))}
+                </div>
+                <ReferencePicker value={effRef} onChange={setEffRef} builds={builds} folders={folders} />
+                <p className="muted small">{t('rank.effectivenessHelp')}</p>
+              </>
+            ) : mode === 'effects' ? (
               <>
                 <EffectPicker chosen={chosen} onChange={setChosen} />
                 <MetricControls metric={metric} onMetric={setMetric} share={share} onShare={setShare} />
@@ -154,6 +172,7 @@ export default function Ranking({ items }) {
       {ran?.mode === 'effects' && rows.length > 0 && (
         <EffectsResult rows={rows} sources={ran.sources} metric={metric} idOf={idOf} open={open} setOpen={setOpen} />
       )}
+      {ran?.mode === 'effectiveness' && ran.report && rows.length > 0 && <EffectivenessResult rows={rows} report={ran.report} />}
       {ran?.mode === 'scenario' && rows.length > 0 && (
         <ScenarioResult rows={rows} scenario={ran.scenario} open={open} setOpen={setOpen} />
       )}
@@ -387,3 +406,49 @@ const flips = (x, w) => (w.winnerWithout != null && w.winnerWithout !== x.winner
 const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 const pctOf = (v, of) => (of > 0 ? `${Math.round((v / of) * 100)}%` : '—');
 const signed = (v, digits = 0) => (v == null ? '—' : `${v > 0 ? '+' : ''}${digits ? n1(v) : n0(v)}`);
+
+/** Builds by their weighted effectiveness index, and the heat map scenario × build (green above the reference). */
+function EffectivenessResult({ rows, report }) {
+  const names = useTestNames();
+  const sorted = [...rows].sort((a, b) => (b.index ?? -1) - (a.index ?? -1));
+  const ok = sorted.filter((r) => r.outcomes);
+  const max = Math.max(100, ...ok.flatMap((r) => r.outcomes.map((o) => (o?.index != null && Number.isFinite(o.index) ? o.index : 0))));
+  const cell = (v) => {
+    if (v == null) return {};
+    const s = Math.log(Math.max(1, v) / 100) / Math.log(Math.max(1.01, max / 100));
+    return v >= 100 ? heat(GREEN, s * 0.45) : heat(RED, Math.min(1, (100 - v) / 100) * 0.45);
+  };
+  return (
+    <section className="panel">
+      <h3>{t('rank.effectivenessTitle', { kind: t(`efx.kind.${report.kind}`) })}</h3>
+      <div className="table-wrap">
+        <table className="data heatmap">
+          <thead>
+            <tr>
+              <th>#</th><th>{t('rank.build')}</th><th>{t('efx.weightedShort')}</th>
+              {report.tests.map((e) => <th key={e.key} title={names[e.key] ?? e.key}>{names[e.key] ?? e.key}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((r, i) => (
+              <tr key={r.build.id}>
+                <td>{i + 1}</td>
+                <td>{r.build.name}</td>
+                <td><strong>{r.index == null ? '—' : n0(r.index)}</strong></td>
+                {r.error ? <td colSpan={report.tests.length} className="error">{r.error}</td> : report.tests.map((e, k) => {
+                  const o = r.outcomes?.[k];
+                  return (
+                    <td key={e.key} style={cell(o?.index)} title={o?.build ? `${t('efx.col.ttd')} ${ttd(o.build)} · ${t('efx.col.ref')} ${ttd(o.reference)}` : o?.error}>
+                      {o?.index == null ? '—' : n0(o.index)}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <small className="muted">{t('efx.estimatedNote')}</small>
+    </section>
+  );
+}

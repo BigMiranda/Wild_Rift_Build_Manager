@@ -317,6 +317,8 @@ public class Arena {
         double dummyTurnAt = 1.5;
         int dummyDir = 1;
         double dummyHitAt;
+        /** Next second each ability pulse of a ragdoll may fire (index of the pulse; absent = as soon as in range). */
+        final double[] pulseAt;
         /** Stats over the fight (frames only): the last values written, and which conditional effects were on. */
         Map<String, Double> tracked;
         final Map<String, Boolean> trackedOn = new LinkedHashMap<>();
@@ -332,6 +334,7 @@ public class Arena {
                 }
             }
             delayOn = new boolean[f.delays.size()];
+            pulseAt = new double[in.dummy == null || in.dummy.pulses == null ? 0 : in.dummy.pulses.size()];
         }
 
         int team() {
@@ -644,6 +647,14 @@ public class Arena {
     }
 
     private boolean describeEffects;
+    /** The fight ends when this fighter dies (null = when a side is down): the effectiveness tests stop at the build. */
+    private Integer stopWhenDead;
+
+    /** Ends the fight as soon as fighter {@code index} dies. */
+    public Arena stopWhenDead(int index) {
+        stopWhenDead = index;
+        return this;
+    }
 
     /** With a side's safe zone (null = none): see {@link ArenaModel.SafeZone}. */
     public Arena withSafeZone(ArenaModel.SafeZone zone) {
@@ -741,6 +752,11 @@ public class Arena {
             }
             int a = alive(0);
             int b = alive(1);
+            if (stopWhenDead != null && stopWhenDead < units.size() && units.get(stopWhenDead).dead) {
+                result.winner = units.get(stopWhenDead).team() == 0 ? 1 : 0;
+                frame();
+                break;
+            }
             if (a == 0 || b == 0) {
                 result.winner = a == 0 && b == 0 ? -1 : a == 0 ? 1 : 0;
                 frame();
@@ -3853,6 +3869,7 @@ public class Arena {
                 continue;
             }
             dummyEffects(s);
+            dummyPulses(s);
             tickStacks(s);
             if (s.combatSince < 0) {
                 continue;
@@ -4037,6 +4054,7 @@ public class Arena {
         }
         a.r.dealt += dmg;
         t.r.taken += dmg;
+        t.r.rawTaken += amped;
         t.r.mitigated += amped - amped * mult;
         a.r.damageBySource.merge(source, dmg, Double::sum);
         if (dmg > 0) {
@@ -4084,6 +4102,9 @@ public class Arena {
             }
         }
         t.hp -= left;
+        if (t.hp < 1 && t.in.dummy != null && t.in.dummy.immortal) {
+            t.hp = 1;   // a test attacker: the fight goes on until the build tested dies
+        }
         if (t.hp <= 0 && !revive(t)) {
             t.dead = true;
             t.r.deathTime = now;
@@ -5658,6 +5679,55 @@ public class Arena {
         }
         // at their most: refreshed before anything can fall off
         u.dummyHitAt = now + (d.atMax ? 0.5 : Math.max(0.1, d.hitEvery));
+    }
+
+    /**
+     * The generic ability pulses of a ragdoll (effectiveness tests): each fires every {@code every} seconds once its
+     * target is in range. Damage goes to the enemy it faces through the same hit as an ability (resistances,
+     * penetration, its items' ability effects: burns, shred, spellblade); a shield or heal goes to the ally with the
+     * lowest share of health in range, itself included.
+     */
+    private void dummyPulses(U u) {
+        ArenaModel.Dummy d = u.in.dummy;
+        if (d == null || d.pulses == null || d.pulses.isEmpty() || !u.canAct()) {
+            return;
+        }
+        for (int k = 0; k < d.pulses.size() && k < u.pulseAt.length; k++) {
+            ArenaModel.Pulse p = d.pulses.get(k);
+            if (now < u.pulseAt[k] - 1e-9) {
+                continue;
+            }
+            double amount = p.base + p.ad * u.stat(Stats.ATTACK_DAMAGE) + p.ap * u.stat(Stats.ABILITY_POWER);
+            String src = p.name == null ? "Habilidade" : p.name;
+            if ("dano".equals(p.kind)) {
+                U t = target(u);
+                if (t == null || t.dead || dist(u.x, u.y, t.x, t.y) > p.range + u.radius() + t.radius()) {
+                    continue;
+                }
+                fireAll(u, "ao_conjurar", null);
+                deal(u, t, amount, p.type == null ? "magico" : p.type, src, ABILITY, 0);
+                onAbilityItems(u, t);
+            } else {
+                U best = null;
+                for (U a : units) {
+                    if (a.team() != u.team() || a.dead || dist(u.x, u.y, a.x, a.y) > p.range + u.radius() + a.radius()) {
+                        continue;
+                    }
+                    if (best == null || a.hp / Math.max(1, a.maxHp) < best.hp / Math.max(1, best.maxHp) - 1e-12) {
+                        best = a;
+                    }
+                }
+                if (best == null || best.combatSince < 0 && u.combatSince < 0) {
+                    continue;   // nobody in the fight yet
+                }
+                if ("escudo".equals(p.kind)) {
+                    addShield(best, amount, key(u, src), now + Math.max(0.1, p.duration), "");
+                } else {
+                    heal(best, amount, Map.of(key(u, src), amount));
+                }
+            }
+            u.pulseAt[k] = now + Math.max(0.5, p.every);
+        }
     }
 
     // ------------------------------------------------------------------ combos

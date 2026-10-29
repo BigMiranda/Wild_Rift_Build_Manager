@@ -20,6 +20,7 @@
 -- Version 19: arena_policy.wins_scenario (the version wins its training scenario's own fight).
 -- Version 20: arena_policy.game_patch (the game data patch a version was trained on).
 -- Version 22: arena_policy.arena_rules (the fight rules a version was trained with).
+-- Version 23: effectiveness tests and report settings saved by the user (effect_test).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -227,6 +228,15 @@ CREATE TABLE IF NOT EXISTS arena_dummy (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT NOT NULL,
     data        TEXT NOT NULL,                    -- stats, behavior, build worn, effects, as JSON
+    updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS effect_test (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind        TEXT NOT NULL DEFAULT 'cenario',  -- cenario | relatorio_basico | relatorio_completo
+    name        TEXT NOT NULL,
+    data        TEXT NOT NULL,                    -- the test (attackers, allies, duration, measure) or the report, as JSON
+    created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL
 );
 
