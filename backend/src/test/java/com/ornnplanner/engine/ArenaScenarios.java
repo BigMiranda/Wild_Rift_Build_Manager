@@ -34,8 +34,8 @@ final class ArenaScenarios {
 
     static {
         try {
-            CATALOG = new CombatCatalog(new ClassPathResource("seed/combate_7_3b.yml"));
-            try (InputStream in = new ClassPathResource("seed/kits_7_3b.yml").getInputStream()) {
+            CATALOG = new CombatCatalog(new ClassPathResource("seed/combate_7_3d.yml"));
+            try (InputStream in = new ClassPathResource("seed/kits_7_3d.yml").getInputStream()) {
                 Map<String, Object> root = new Yaml().load(in);
                 @SuppressWarnings("unchecked")
                 Map<String, Object> k = (Map<String, Object>) root.get("campeoes");

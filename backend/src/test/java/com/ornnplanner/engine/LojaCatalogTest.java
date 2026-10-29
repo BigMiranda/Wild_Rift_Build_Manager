@@ -13,7 +13,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Consistency of the catalog transcribed from the shop screenshots (seed/loja_7_3b.yml). */
+/** Consistency of the catalog transcribed from the shop screenshots (seed/loja_7_3d.yml). */
 class LojaCatalogTest {
 
     @SuppressWarnings("unchecked")
@@ -26,7 +26,7 @@ class LojaCatalogTest {
     @Test
     @SuppressWarnings("unchecked")
     void recipesStatsAndEffectsAreConsistent() throws Exception {
-        Map<String, Object> root = load("/seed/loja_7_3b.yml");
+        Map<String, Object> root = load("/seed/loja_7_3d.yml");
         Map<String, Map<String, Object>> itens = (Map<String, Map<String, Object>>) root.get("itens");
         Map<String, Map<String, Object>> prices = load("/seed/precos_status.yml");
         Set<String> shopStats = new HashSet<>();

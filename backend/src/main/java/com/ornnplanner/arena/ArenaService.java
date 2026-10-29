@@ -68,7 +68,7 @@ public class ArenaService {
     @SuppressWarnings("unchecked")
     public ArenaService(FighterBuilder combat, CombatCatalog catalog, BuildRepository builds, RuneCatalog runes,
                         JdbcTemplate jdbc, PolicyRepository policies, ComboRepository combos,
-                        @Value("${planner.seed.kits:classpath:seed/kits_7_3b.yml}") Resource kitsFile) {
+                        @Value("${planner.seed.kits:classpath:seed/kits_7_3d.yml}") Resource kitsFile) {
         this.combat = combat;
         this.catalog = catalog;
         this.builds = builds;

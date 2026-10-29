@@ -74,7 +74,7 @@ public class ChampionCatalog {
     private final Map<String, String> statShopNames = new HashMap<>();
 
     @SuppressWarnings("unchecked")
-    public ChampionCatalog(@Value("${planner.seed.champions:classpath:seed/campeoes_7_3b.yml}") Resource file,
+    public ChampionCatalog(@Value("${planner.seed.champions:classpath:seed/campeoes_7_3d.yml}") Resource file,
                            @Value("${planner.seed.prices}") Resource pricesFile) {
         Map<String, Map<String, Object>> prices = read(pricesFile);
         prices.forEach((code, v) -> {

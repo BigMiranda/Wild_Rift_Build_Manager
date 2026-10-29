@@ -533,8 +533,8 @@ class TimelineEngineTest {
 
     private com.ornnplanner.seed.RuneCatalog runeCatalog() {
         return new com.ornnplanner.seed.RuneCatalog(
-                new org.springframework.core.io.ClassPathResource("seed/runas_7_3b.yml"),
-                new org.springframework.core.io.ClassPathResource("seed/feiticos_7_3b.yml"),
+                new org.springframework.core.io.ClassPathResource("seed/runas_7_3d.yml"),
+                new org.springframework.core.io.ClassPathResource("seed/feiticos_7_3d.yml"),
                 new org.springframework.core.io.ClassPathResource("seed/precos_status.yml"));
     }
 
@@ -663,8 +663,8 @@ class TimelineEngineTest {
                 StatLine.flat(MAGIC_RESIST, 85));
         double[][] armorBoots = {{415, 270}, {525, 343}, {666, 436}, {498, 324}};
         com.ornnplanner.seed.RuneCatalog runes = new com.ornnplanner.seed.RuneCatalog(
-                new org.springframework.core.io.ClassPathResource("seed/runas_7_3b.yml"),
-                new org.springframework.core.io.ClassPathResource("seed/feiticos_7_3b.yml"),
+                new org.springframework.core.io.ClassPathResource("seed/runas_7_3d.yml"),
+                new org.springframework.core.io.ClassPathResource("seed/feiticos_7_3d.yml"),
                 new org.springframework.core.io.ClassPathResource("seed/precos_status.yml"));
         for (int c = 0; c <= armorBoots.length; c++) {
             boolean withRune = c == armorBoots.length;

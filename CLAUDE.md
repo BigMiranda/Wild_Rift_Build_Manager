@@ -34,6 +34,9 @@ Opt-in tests, gated by system properties (skipped by default):
 - `-Darena.bench=true` — `ArenaBenchmarkTest` (simulated seconds per second, 1 vs N threads).
 - `-Darena.report=true` — report-style tests in `ArenaEscapeTest`, `ArenaLevelsTest`, `ArenaTrainerTest`.
 - `-Darena.proof=true` — `OrnnProofTest` long proofs.
+- `-Dplanner.builds.copy=data/ornn-planner.db` (+ `-Dplanner.builds.patch=7_3d`, `-Dplanner.builds.out=…`) —
+  `SavedBuildsReportTest`: runs the planner on every build of a copy of the database and writes purchases and stats,
+  to diff two patches or rule changes.
 - `-Darena.golden.write=true` — **re-records** the golden files in `src/test/resources/arena/`
   (`ArenaRegressionTest`: SHA-256 fingerprints of full fight results for ~35 scenarios; `ArenaPolicyMigrationTest`:
   `golden-ai-v2.txt`). Only re-record when a behavior change is intended, and say so; a golden mismatch otherwise
@@ -68,15 +71,15 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
 - `repo/` — JdbcTemplate data access. `service/PlannerService` assembles reference data and runs the engine.
 - `api/` — REST controllers under `/api/...` (planner, admin, champions, runes, arena, planner lab, item icons).
 
-**Data lives in YAML seeds, not code** (`backend/src/main/resources/seed/`, patch-suffixed; current patch **7.3b**,
-suffix `_7_3b`): `loja_7_3b.yml` (171 shop items; header documents each field), `precos_status.yml`,
-`efeitos_itens_7_3b.yml`, `campeoes_7_3b.yml`, `runas_7_3b.yml` (+ `runas/` icons), `feiticos_7_3b.yml`,
-`combate_7_3b.yml`, `kits_7_3b.yml`, `regras_loja.yml`. `application.properties` and the `@Value` defaults point at
-the current patch; older `_7_3` files stay as history. New game data or modeled effects usually mean editing these
+**Data lives in YAML seeds, not code** (`backend/src/main/resources/seed/`, patch-suffixed; current patch **7.3d**,
+suffix `_7_3d`): `loja_7_3d.yml` (171 shop items; header documents each field), `precos_status.yml`,
+`efeitos_itens_7_3d.yml`, `campeoes_7_3d.yml`, `runas_7_3d.yml` (+ `runas/` icons), `feiticos_7_3d.yml`,
+`combate_7_3d.yml`, `kits_7_3d.yml`, `regras_loja.yml`. `application.properties` and the `@Value` defaults point at
+the current patch; older `_7_3` and `_7_3b` files stay as history. New game data or modeled effects usually mean editing these
 files plus a test, not Java. `LojaCatalogTest` enforces catalog consistency (components exist and cost less, every
 stat has a price).
 
-**Patch updates**: 7.3 was transcribed from screenshots; 7.3b is 7.3 plus the official 7.3a/7.3b patch notes. Each
+**Patch updates**: 7.3 was transcribed from screenshots; 7.3b is 7.3 plus the official 7.3a/7.3b patch notes; 7.3d adds the 7.3c/7.3d notes. Each
 update from patch notes is logged in `docs/patches/` (one table per category: before → after, base key, status
 aplicar | já estava | divergente | fora do modelo, source link), and `/atualizar-patch <from> <to>`
 (`.claude/commands/atualizar-patch.md`) is the procedure. Lines changed from notes carry `fonte_<patch>: nota de patch`;

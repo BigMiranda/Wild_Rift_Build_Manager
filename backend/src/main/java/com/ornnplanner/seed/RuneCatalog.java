@@ -103,8 +103,8 @@ public class RuneCatalog {
     private final Map<String, String> statCodes = new HashMap<>();
 
     @SuppressWarnings("unchecked")
-    public RuneCatalog(@Value("${planner.seed.runes:classpath:seed/runas_7_3b.yml}") Resource runesFile,
-                       @Value("${planner.seed.spells:classpath:seed/feiticos_7_3b.yml}") Resource spellsFile,
+    public RuneCatalog(@Value("${planner.seed.runes:classpath:seed/runas_7_3d.yml}") Resource runesFile,
+                       @Value("${planner.seed.spells:classpath:seed/feiticos_7_3d.yml}") Resource spellsFile,
                        @Value("${planner.seed.prices}") Resource pricesFile) {
         Map<String, Map<String, Object>> prices = read(pricesFile);
         prices.forEach((code, v) -> {

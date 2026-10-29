@@ -35,8 +35,8 @@ class ArenaTest {
     @BeforeAll
     @SuppressWarnings("unchecked")
     static void load() throws Exception {
-        catalog = new CombatCatalog(new ClassPathResource("seed/combate_7_3b.yml"));
-        try (InputStream in = new ClassPathResource("seed/kits_7_3b.yml").getInputStream()) {
+        catalog = new CombatCatalog(new ClassPathResource("seed/combate_7_3d.yml"));
+        try (InputStream in = new ClassPathResource("seed/kits_7_3d.yml").getInputStream()) {
             Map<String, Object> root = new Yaml().load(in);
             kits = (Map<String, Object>) root.get("campeoes");
             map = (Map<String, Object>) root.get("mapa");
