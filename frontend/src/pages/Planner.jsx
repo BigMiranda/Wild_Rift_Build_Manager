@@ -472,6 +472,7 @@ export default function Planner({ meta, items }) {
         <section className="panel shop-panel" ref={shopRef}>
           <Shop
             items={items}
+            shopRules={meta.shopRules}
             buildPayload={canCalculate ? payload : null}
             ownedIds={draft.steps.filter((s) => !s.kind).map((s) => s.itemId)}
             purchase={selectedIdx != null && draft.steps[selectedIdx] && !draft.steps[selectedIdx].kind ? {

@@ -247,7 +247,8 @@ public class TimelineEngine {
                     st.goldNeeded = st.nextCost - st.nextDiscount - st.nextTradeIn - refund;
                     st.previousMinute = Math.max(lastMinute, gate);
                     st.goldAfterPrevious = goldAt(st.previousMinute, in.goldPerMin) - cumulative;
-                    double reached = Math.max(st.previousMinute, minuteFor(cumulative + st.goldNeeded, in.goldPerMin));
+                    double reached = Math.max(Math.max(st.previousMinute, minuteFor(cumulative + st.goldNeeded, in.goldPerMin)),
+                            in.shopRules.earliestMinute(nextItem));
                     String manual = next < in.assume.size() ? in.assume.get(next) : null;
                     step.saleTiming = st;
                     if (in.matchEnd != null && in.matchEnd > 0 && reached > in.matchEnd + 1e-9) {
@@ -382,6 +383,14 @@ public class TimelineEngine {
                 step.minute = Math.max(minuteFor(cumulative, in.goldPerMin), lastMinute);
                 if (!implied) {
                     step.minute = Math.max(step.minute, gate);
+                    // Shop rule (upgraded boots from 10:00): the gold waits in the bag, the purchase happens at the
+                    // first minute it allows; later purchases (and their assumed components) come after it.
+                    double earliest = in.shopRules.earliestMinute(buy);
+                    if (step.minute < earliest - 1e-9) {
+                        step.minute = earliest;
+                        step.waitedUntil = earliest;
+                        step.warnings.add("Esperou os " + mmss(earliest) + " (regra da loja: " + in.shopRules.rule(buy) + ").");
+                    }
                 }
                 step.goldLeft = goldAt(step.minute, in.goldPerMin) - cumulative;
                 step.xp = in.xpPerMin * step.minute;

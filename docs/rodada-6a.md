@@ -54,6 +54,43 @@ Big Carry v1 aos 23:30 (banco de desenvolvimento): a barra ganhou RegV +51 (85; 
 
 Testes: sem mudança (213). `npm run build` limpo.
 
+## Parte 3 — Loja: botas aprimoradas só a partir dos 10:00 ✅
+
+- **Regra:** `regras_loja.yml` ganhou `botas_aprimoradas: {a_partir_do_minuto: 10}`, com o comentário no padrão do
+  arquivo ("informado pelo usuário em 28/10/2026").
+- **Uma checagem só:** `engine/ShopRuleCheck` (puro, sem Spring) diz o primeiro minuto em que a loja vende um item
+  (`earliestMinute`), se vende num minuto (`allowedAt`) e o texto da regra. Nenhum item é citado: "bota aprimorada" é
+  bota (aba Botas) da seção `aprimorado`. O `ShopRules` monta a checagem a partir do YAML; o `PlannerService` a põe
+  no `EngineInput.shopRules` de toda build calculada, e a Efetividade da Parte 4 usa o mesmo caminho. O `/api/meta`
+  manda `shopRules.upgradedBootsMinute` para a tela (`shopModel.earliestMinute`, o espelho no cliente).
+- **Planejador (`TimelineEngine`):** uma compra da build que a regra segura sai em
+  `max(minuto em que o ouro cobre, compra anterior, momento, 10:00)`. O ouro fica guardado (o `goldLeft` mostra) e o
+  passo ganha `waitedUntil` e o aviso "Esperou os 10:00 (regra da loja: botas aprimoradas só a partir dos 10:00).".
+  Como as compras seguem a ordem, nada depois dela (nem os meios itens assumidos das próximas) passa na frente; os
+  componentes da própria bota (botas de tier 2) saem quando houver ouro, como antes. Uma venda "quando der para comprar
+  o próximo inteiro" cujo próximo é uma bota aprimorada também espera os 10:00.
+- **Decisão:** o `snapshot` (inventário hipotético num nível e minuto, usado pela Arena e pela Efetividade para montar
+  um lutador com itens dados) não aplica a regra: os itens vêm de uma linha do tempo que já a respeita, ou são uma
+  hipótese explícita.
+- **Loja do planejador:** as botas aprimoradas mostram um selo "10:00" no ícone, "Só a partir dos 10:00 (regra da
+  loja)" no detalhe (com a explicação no `title`) e no `title` do ícone.
+
+**Testes novos (`TimelineEngineTest`):** bota aprimorada com ouro aos 5:40 espera os 10:00 (o ouro fica na bolsa; o
+item seguinte, com ouro aos 7:20, sai aos 10:00; com meios itens supostos, a bota de tier 2 sai aos 2:20 e nada da
+compra seguinte vem antes dos 10:00); depois dos 10:00 a compra é normal; builds sem bota aprimorada antes dos 10:00
+dão o mesmo JSON com e sem a regra; a venda cronometrada para uma bota aprimorada espera também.
+Testes: 213 → 218 (9 opcionais pulados). Golden sem mudança.
+
+**Builds do usuário que mudaram** (cópia do banco, 7.3d, `SavedBuildsReportTest` antes e depois):
+
+| build | campeão | bota | antes | depois | efeito |
+|---|---|---|---|---|---|
+| Kalista off tank feedada, 2 e 3 | Kalista | Grevas Bélicas | 7:36 | 10:00 | o resto da build já vinha depois dos 10:00: sem mudança |
+| Rumble Carry | Rumble | Sapatos Enfeitiçados | 8:34 | 10:00 | Tomo Amplificador 9:07 → 10:00 e Orbe do Oblívio 9:34 → 10:00 (o ouro guardado compra os dois no mesmo minuto); daí em diante igual |
+| Rumble Redutor Off Tank | Rumble | Esmagadores Acorrentados | 9:30 | 10:00 | o resto igual |
+
+As outras 25 builds não mudam (nenhuma bota aprimorada antes dos 10:00; as do Ornn compram as botas de tier 3 depois).
+
 ## Para o usuário
 
 - **Selos da loja no 7.3d:** um print da loja diz se os selos `alterado` do 7.3b sumiram e se os 5 itens do 7.3d

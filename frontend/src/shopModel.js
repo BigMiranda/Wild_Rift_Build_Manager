@@ -80,6 +80,13 @@ export function sectionsFor(tiles, tab, query) {
 
 export const variantLabel = (item) => (item.section === 'evolucao' ? t('shop.evolved', { name: item.name }) : t('shop.onBuy'));
 
+/**
+ * Earliest game minute the shop sells an item (regras_loja.yml through /api/meta `shopRules`): upgraded boots (tier 3)
+ * from `upgradedBootsMinute` on. Mirrors the backend's ShopRuleCheck; 0 = any time.
+ */
+export const earliestMinute = (item, rules) => (item && rules?.upgradedBootsMinute > 0 && item.section === 'aprimorado'
+  && (item.tabs ?? []).includes('Botas') ? rules.upgradedBootsMinute : 0);
+
 export const hasConditional = (item) => item?.stats.some((s) => s.conditional) ?? false;
 
 const pctOf = (r) => `${Math.round(r * 10000) / 100}%`;

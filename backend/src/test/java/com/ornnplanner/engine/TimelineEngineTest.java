@@ -974,6 +974,97 @@ class TimelineEngineTest {
         return v;
     }
 
+    /** Boots line of the shop rule tests: basic (400) -> mid tier (1200) -> upgraded (2200, the mid tier inside). */
+    private void bootsLine() {
+        ItemDef speed = boots(20, "Botas da Velocidade", 400, null, StatLine.flat("Move Speed", 25));
+        ItemDef steel = boots(22, "Botas Galvanizadas de Aço", 1200, speed, StatLine.flat(ARMOR, 25));
+        boots(23, "Mobilização Blindada", 2200, steel, StatLine.flat(ARMOR, 30));
+    }
+
+    private TimelineResult withRule(double gpm, boolean half, ShopRuleCheck rule, Long... ids) {
+        EngineInput in = new EngineInput();
+        in.unit = ragdoll(0);
+        in.goldPerMin = gpm;
+        in.xpPerMin = 0;
+        in.itemIds = List.of(ids);
+        in.assumeHalfItems = half;
+        in.assumeSmallItems = half;
+        in.shopRules = rule;
+        return new TimelineEngine(ref).run(in);
+    }
+
+    @Test
+    void upgradedBootsBeforeTenWaitForTheShopRule() {
+        bootsLine();
+        ShopRuleCheck rule = new ShopRuleCheck(10);
+        // 300 gold/min: the steel boots at (1200 - 500) / 300 = 2:20; the upgrade (1000 more) has the gold at 5:40 and
+        // waits for 10:00; the cloth armor after it has its gold at 7:20, so it comes right at 10:00 too.
+        TimelineResult r = withRule(300, false, rule, 22L, 23L, clothArmor.id);
+        TimelineStep up = r.steps.get(1);
+        assertEquals("Mobilização Blindada", up.itemName);
+        assertEquals(10.0, up.minute, EPS);
+        assertEquals(10.0, up.waitedUntil, EPS);
+        assertTrue(up.warnings.contains("Esperou os 10:00 (regra da loja: botas aprimoradas só a partir dos 10:00)."), up.warnings.toString());
+        assertEquals(1000, up.paidCost);
+        assertEquals(3500 - 2200, up.goldLeft, EPS);           // the gold was kept in the bag: 500 + 300 x 10 - 2200
+        assertEquals(10.0, r.steps.get(2).minute, EPS);
+        assertEquals(null, r.steps.get(2).waitedUntil);
+        // Assumed half items of the next purchases do not jump ahead of it: chain vest's cloth armor at 10:00 or later.
+        TimelineResult half = withRule(300, true, rule, 23L, chainVest.id);
+        List<TimelineStep> s = half.steps;
+        assertEquals("Botas da Velocidade", s.get(0).itemName);  // its own components are bought as the gold comes
+        assertEquals(0.0, s.get(0).minute, EPS);
+        assertEquals("Botas Galvanizadas de Aço", s.get(1).itemName);
+        assertEquals(7.0 / 3, s.get(1).minute, EPS);
+        assertEquals("Mobilização Blindada", s.get(2).itemName);
+        assertEquals(10.0, s.get(2).minute, EPS);
+        for (TimelineStep later : s.subList(3, s.size())) {
+            assertTrue(later.minute >= 10.0 - EPS, later.itemName + " at " + later.minute);
+        }
+        assertTrue(rule.allowedAt(ref.items.get(23L), 10.0));
+        assertTrue(!rule.allowedAt(ref.items.get(23L), 9.99));
+        assertTrue(rule.allowedAt(ref.items.get(22L), 0));
+    }
+
+    @Test
+    void upgradedBootsAfterTenAreBoughtAsUsual() {
+        bootsLine();
+        // 100 gold/min: the upgrade has its gold at (2200 - 500) / 100 = 17:00, well past the rule.
+        TimelineResult r = withRule(100, false, new ShopRuleCheck(10), 22L, 23L);
+        assertEquals(17.0, r.steps.get(1).minute, EPS);
+        assertEquals(null, r.steps.get(1).waitedUntil);
+        assertTrue(r.steps.get(1).warnings.stream().noneMatch(w -> w.startsWith("Esperou")));
+    }
+
+    @Test
+    void buildsWithoutUpgradedBootsBeforeTenAreTheSameAsWithoutTheRule() {
+        bootsLine();
+        for (boolean half : new boolean[] {false, true}) {
+            Long[][] builds = {{22L, chainVest.id, amaranth.id}, {clothArmor.id, ruby.id, amaranth.id, 23L}};
+            for (Long[] b : builds) {
+                // the second build reaches the upgraded boots after 10:00 at 300 gold/min: nothing waits
+                assertEquals(json(withRule(300, half, ShopRuleCheck.NONE, b)), json(withRule(300, half, new ShopRuleCheck(10), b)));
+            }
+        }
+    }
+
+    @Test
+    void saleTimedToUpgradedBootsWaitsForTheRuleToo() {
+        bootsLine();
+        EngineInput in = new EngineInput();
+        in.unit = ragdoll(0);
+        in.goldPerMin = 300;
+        in.itemIds = List.of(22L, clothArmor.id, clothArmor.id, 23L);
+        in.sells = List.of(false, false, true, false);
+        in.sellWhen = java.util.Arrays.asList(null, null, EngineInput.SELL_AFFORD, null);
+        in.shopRules = new ShopRuleCheck(10);
+        TimelineResult r = new TimelineEngine(ref).run(in);
+        TimelineStep sale = r.steps.get(2);
+        assertTrue(sale.sold);
+        assertEquals(10.0, sale.minute, EPS);                   // the gold is there at 5:00; the boots only at 10:00
+        assertEquals(10.0, r.steps.get(3).minute, EPS);
+    }
+
     private static String json(Object r) {
         try {
             return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(r);

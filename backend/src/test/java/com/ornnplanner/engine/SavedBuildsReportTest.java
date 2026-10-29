@@ -61,7 +61,7 @@ class SavedBuildsReportTest {
             for (TimelineStep s : r.steps) {
                 out.append(String.format(Locale.ROOT, "  %s%-34s %6.2f min  pago %5d%s%n", s.implied ? "  · " : "",
                         (s.sold ? "vende " : "") + s.itemName, s.minute, s.paidCost,
-                        ""));
+                        s.waitedUntil == null ? "" : String.format(Locale.ROOT, "  (esperou os %.2f: regra da loja)", s.waitedUntil)));
             }
             for (TimelineStep s : r.ignored) {
                 out.append("  ignorada: ").append(s.itemName).append('\n');

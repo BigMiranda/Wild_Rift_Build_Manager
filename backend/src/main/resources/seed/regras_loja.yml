@@ -3,13 +3,19 @@
 #   troca de bota: com Passos de Mercúrio no inventário, a loja mostra 160 para Grevas Vorazes e Botas Ionianas da
 #     Lucidez (1.000) e 360 para as demais botas de tier médio (1.200): as botas antigas são vendidas (840) e as novas
 #     compradas pelo preço cheio. As botas aprimoradas da mesma linha seguem sendo o aprimoramento (Esmagadores: 1.000).
+#   botas aprimoradas: as botas de tier 3 (seção "aprimorado" da aba Botas) só são vendidas a partir dos 10:00 de
+#     partida (informado pelo usuário em 28/10/2026).
 #
 # venda          fração do custo devolvida ao vender um item da build.
 # troca_de_botas comprar botas com outras botas no inventário (que não são componente das novas) troca as botas: as
 #                antigas valem `credito` x o custo delas como abatimento; com `devolve_diferenca`, trocar por botas que
 #                custam menos que esse abatimento devolve o resto em ouro (é uma venda + compra).
+# botas_aprimoradas  a_partir_do_minuto: minuto de partida a partir do qual a loja vende botas aprimoradas; antes dele
+#                o ouro fica guardado e a compra sai no primeiro minuto permitido em que houver ouro.
 venda:
   reembolso: 0.7
 troca_de_botas:
   credito: 0.7
   devolve_diferenca: true
+botas_aprimoradas:
+  a_partir_do_minuto: 10

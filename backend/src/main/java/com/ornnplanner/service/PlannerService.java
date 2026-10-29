@@ -52,6 +52,11 @@ public class PlannerService {
         this.itemEffects = itemEffects;
     }
 
+    /** The shop's rules on when items can be bought (one check for every build assembly). */
+    public com.ornnplanner.engine.ShopRuleCheck shopRuleCheck() {
+        return shopRules.check;
+    }
+
     public ReferenceData referenceData() {
         ReferenceData r = new ReferenceData();
         r.items = catalog.findAllItems();
@@ -129,6 +134,7 @@ public class PlannerService {
         in.assumeHalfItems = false;
         in.assumeSmallItems = false;
         in.goldPerMin = 1e9;
+        in.shopRules = com.ornnplanner.engine.ShopRuleCheck.NONE;   // a hypothetical inventory: held as given
         double from = ref.xpTable.getOrDefault(level, 0.0);
         Double to = ref.xpTable.get(level + 1);
         in.xpPerMin = (to == null ? from + 1 : (from + to) / 2) / t;
@@ -149,6 +155,7 @@ public class PlannerService {
         in.sellRate = shopRules.sellRate;
         in.bootSwapCredit = shopRules.bootSwapCredit;
         in.bootSwapGivesBack = shopRules.bootSwapGivesBack;
+        in.shopRules = shopRules.check;
         in.unit = resolveUnit(build);
         in.goldPerMin = build.goldPerMin;
         in.xpPerMin = build.xpPerMin;

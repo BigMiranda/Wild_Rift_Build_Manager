@@ -71,6 +71,7 @@ public class PlannerController {
         m.put("forgeTiers", reference.findForgeTiers());
         m.put("xpTable", reference.findXpTable());
         m.put("base", importer.seedInfo());
+        m.put("shopRules", Map.of("upgradedBootsMinute", planner.shopRuleCheck().upgradedBootsMinute));
         return m;
     }
 

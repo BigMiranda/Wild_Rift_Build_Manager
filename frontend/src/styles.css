@@ -268,6 +268,11 @@ table.data td input, table.data td select { width: 100%; }
 .tile-marker.alterado { background: #d64545; color: #fff; }
 .tile-active { left: -6px; top: -6px; background: #3a2a0c; color: var(--gold-bright); border: 1px solid var(--gold); font-size: 10px; line-height: 18px; }
 .marker-text { display: block; }
+.rule-text { display: block; color: #e0b45a; }
+.tile-rule {
+  position: absolute; left: -6px; bottom: 18px; padding: 0 4px; border-radius: 3px; font-size: 10px; line-height: 16px;
+  font-weight: 700; background: #3a2a0c; color: #e0b45a; border: 1px solid #8a6a2a; box-shadow: 0 1px 3px #000;
+}
 .marker-text.novo { color: var(--gold-bright); }
 .marker-text.reformulado { color: #6cb8f0; }
 .marker-text.alterado { color: #f08080; }

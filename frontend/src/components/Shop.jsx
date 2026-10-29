@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { statLabel, t, violationText } from '../i18n.js';
 import { mmss, n0, pct, statValue } from '../format.js';
-import { DEFAULT_TAB, MARKERS, TABS, buildTiles, describeStats, markerLabel, sectionsFor, variantLabel } from '../shopModel.js';
+import { DEFAULT_TAB, MARKERS, TABS, buildTiles, describeStats, earliestMinute, markerLabel, sectionsFor, variantLabel } from '../shopModel.js';
 import ItemIcon from './ItemIcon.jsx';
 import RichText from './RichText.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
@@ -14,7 +14,7 @@ import { StatIcon, statColor } from './StatIcon.jsx';
  * `purchase` is the purchase selected in the sequence ({ index, itemId, step, ignored }): the shop opens its item and
  * shows what that purchase adds to the build instead of the preview. Picking another item clears it (`onPurchaseClear`).
  */
-export default function Shop({ items, buildPayload, ownedIds, purchase, onPurchaseClear, onAdd }) {
+export default function Shop({ items, buildPayload, ownedIds, purchase, onPurchaseClear, onAdd, shopRules }) {
   const [tab, setTab] = useState(DEFAULT_TAB);
   const [query, setQuery] = useState('');
   const [selectedKey, setSelectedKey] = useState(null);
@@ -78,19 +78,21 @@ export default function Shop({ items, buildPayload, ownedIds, purchase, onPurcha
               <div className="shop-grid">
                 {s.tiles.map((x) => {
                   const marker = MARKERS[x.base.marker];
+                  const from = earliestMinute(x.base, shopRules);
                   return (
                     <button
                       key={x.key}
                       className={`tile${x.key === selectedKey ? ' selected' : ''}`}
                       onClick={() => { onPurchaseClear(); setSelectedKey(x.key); setVariantId(x.preferredId); }}
                       onDoubleClick={() => onAdd(x.key === selectedKey && variant ? variant.id : x.preferredId)}
-                      title={t('shop.dblclick', { name: x.name })}
+                      title={`${t('shop.dblclick', { name: x.name })}${from > 0 ? ` · ${t('shop.ruleFrom', { time: mmss(from) })}` : ''}`}
                     >
                       <span className="tile-icon">
                         <ItemIcon id={x.iconId} size={64} />
                         <span className="tile-cost">{x.cost}</span>
                         {ownedByTile.has(x.key) && <span className="tile-owned" aria-label={t('shop.owned')}>×{ownedByTile.get(x.key)}</span>}
                         {x.base.active && <span className="tile-active" title={t('shop.activeItem')} aria-label={t('shop.activeItem')}>◆</span>}
+                        {from > 0 && <span className="tile-rule" aria-label={t('shop.ruleFrom', { time: mmss(from) })}>{mmss(from)}</span>}
                         {marker && <span className={`tile-marker ${x.base.marker}`} title={markerLabel(x.base.marker)} aria-label={markerLabel(x.base.marker)}>{marker.badge}</span>}
                       </span>
                       <span className="tile-name">{x.name}</span>
@@ -110,6 +112,7 @@ export default function Shop({ items, buildPayload, ownedIds, purchase, onPurcha
             tile={selected} variant={variant} items={items} itemsById={itemsById} buildPayload={buildPayload}
             purchase={purchase && purchase.itemId === variant.id ? purchase : null}
             onVariant={(id) => { onPurchaseClear(); setVariantId(id); }} onAdd={() => onAdd(variant.id)} onOpen={open}
+            shopRules={shopRules}
           />
         )}
       </aside>
@@ -117,7 +120,8 @@ export default function Shop({ items, buildPayload, ownedIds, purchase, onPurcha
   );
 }
 
-function ItemDetail({ tile, variant, items, itemsById, buildPayload, purchase, onVariant, onAdd, onOpen }) {
+function ItemDetail({ tile, variant, items, itemsById, buildPayload, purchase, onVariant, onAdd, onOpen, shopRules }) {
+  const from = earliestMinute(variant, shopRules);
   const { flat, modeled } = describeStats(variant);
   const components = variant.components.map((c) => ({ item: itemsById.get(c.itemId), quantity: c.quantity })).filter((c) => c.item);
   const buildsInto = items.filter((i) => i.section !== 'evolucao' && i.components.some((c) => c.itemId === tile.base.id));
@@ -134,6 +138,7 @@ function ItemDetail({ tile, variant, items, itemsById, buildPayload, purchase, o
           <h3>{variant.name}</h3>
           <div className="gold">{t('shop.gold', { n: n0(variant.cost) })}{tile.base.active ? ` · ${t('shop.active')}` : ''}</div>
           {MARKERS[tile.base.marker] && <small className={`marker-text ${tile.base.marker}`}>{markerLabel(tile.base.marker)}</small>}
+          {from > 0 && <small className="rule-text" title={t('shop.ruleHelp')}>{t('shop.ruleFrom', { time: mmss(from) })}</small>}
         </div>
       </header>
 

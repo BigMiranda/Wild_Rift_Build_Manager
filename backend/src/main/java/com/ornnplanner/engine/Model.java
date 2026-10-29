@@ -371,6 +371,8 @@ public final class Model {
         /** Boot swap: share of the old boots' cost taken off the new ones, and whether a cheaper swap gives gold back. */
         public double bootSwapCredit = 0.7;
         public boolean bootSwapGivesBack = true;
+        /** When the shop sells each item (upgraded boots from 10:00...): purchases wait for it. */
+        public ShopRuleCheck shopRules = ShopRuleCheck.NONE;
     }
 
     /**
@@ -633,6 +635,8 @@ public final class Model {
         public String sellWhen;
         /** A sale timed to buy the next item whole (null for other steps): the account of the gold needed. */
         public SaleTiming saleTiming;
+        /** Minute a shop rule held this purchase back to (it had the gold earlier); null = it did not wait. */
+        public Double waitedUntil;
         public StatSnapshot stats;
         public Efficiency efficiency;
         public List<String> warnings = new ArrayList<>();
