@@ -37,6 +37,23 @@ Pelo `/atualizar-patch 7.3b 7.3d`. O levantamento completo, linha a linha e com 
 
 Testes: 213 → 213 (o `SavedBuildsReportTest` é opcional e fica entre os pulados: 9).
 
+## Parte 2 — Barra fixa: os status que saíram do padrão ✅
+
+- `format.js`: `extraStats(point, mostrados)` devolve os status de um ponto da série que saíram do valor do campeão
+  naquele nível sem itens nem runas (`point.base`), fora os já mostrados, na ordem de `TABLE_STATS` e depois na da
+  ficha (`SHEET_STATS`), e então qualquer outro que o motor devolva. As quatro penetrações (`PENETRATION_STATS`: fixa e %,
+  física e mágica; a fixa física é a letalidade do jogo) contam sempre que forem diferentes de 0. Status efetivos
+  (escudos, curas) e derivados (reduções de dano) nunca são extras: já têm o lugar deles.
+- **Barra fixa (`BuildDock.jsx`):** os 10 de `DOCK_STATS` continuam sempre visíveis; os extras vêm depois deles, como
+  "+x" (ou "−x") sobre a base, com o total e a base no `title` ("Tenacidade: 60% (campeão sem itens nem runas neste
+  nível: 0%)"). Os efetivos e a vida efetiva seguem no fim.
+- **Leitura do momento (`StatSheet`):** já mostrava todos os de `SHEET_STATS`, mesmo zerados; agora acrescenta os que
+  ficavam de fora quando saem da base (ex.: "% Regeneração de Vida", "% Regeneração de Mana").
+
+Big Carry v1 aos 23:30 (banco de desenvolvimento): a barra ganhou RegV +51 (85; base 34), Ten +60% e RegV% +150%.
+
+Testes: sem mudança (213). `npm run build` limpo.
+
 ## Para o usuário
 
 - **Selos da loja no 7.3d:** um print da loja diz se os selos `alterado` do 7.3b sumiram e se os 5 itens do 7.3d

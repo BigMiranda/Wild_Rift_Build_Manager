@@ -40,6 +40,29 @@ export const SHEET_STATS = [
  */
 export const EFFECTIVE_STATS = ['Shield', 'Magic Shield', 'Physical Shield', 'Heal', 'Ally Shield', 'Ally Heal', 'Ultimate Haste', 'Basic Ability Haste', 'Stasis'];
 
+/** Penetration stats (flat armor penetration is the game's lethality): shown in the dock whenever they are not 0. */
+export const PENETRATION_STATS = ['Armor Penetration', '% Armor Penetration', 'Magic Penetration', '% Magic Penetration'];
+
+/**
+ * Stats of a series point that left the champion's own value at that level (no items or runes: `point.base`), other
+ * than the ones in `shown`, in TABLE_STATS order and then the sheet's: [{stat, total, base, bonus}]. Penetrations count
+ * whenever they are not 0. Effective and derived stats are never extras.
+ */
+export function extraStats(point, shown = []) {
+  if (!point?.total) return [];
+  const skip = new Set([...shown, ...EFFECTIVE_STATS, ...Object.keys(DERIVED_STATS)]);
+  const order = [...new Set([...TABLE_STATS, ...SHEET_STATS, ...Object.keys(point.total)])];
+  const out = [];
+  for (const stat of order) {
+    if (skip.has(stat)) continue;
+    const total = point.total[stat] ?? 0;
+    const base = point.base?.[stat] ?? 0;
+    const pen = PENETRATION_STATS.includes(stat);
+    if (pen ? Math.abs(total) > 0.05 : Math.abs(total - base) > 0.05) out.push({ stat, total, base, bonus: total - base });
+  }
+  return out;
+}
+
 /** Stats whose value is a percentage. */
 export const PERCENT_STATS = new Set(['Physical Reduction', 'Magic Reduction', '% Attack Speed', '% Critical Rate', '% Armor Penetration', '% Magic Penetration',
   '% Lifesteal', '% Omnivamp', '% Tenacity', '% Heal and shield strength', '% Move Speed', '% Health Regen', '% Mana Regeneration']);

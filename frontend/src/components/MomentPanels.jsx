@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useEffectValues } from '../effectValues.js';
 import { statLabel, t } from '../i18n.js';
-import { DERIVED_STATS, EFFECTIVE_STATS, PERCENT_STATS, SHEET_STATS, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
+import { DERIVED_STATS, EFFECTIVE_STATS, PERCENT_STATS, SHEET_STATS, extraStats, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
 import ItemIcon from './ItemIcon.jsx';
 import { useItemReader } from './BuildDock.jsx';
 import RichText from './RichText.jsx';
@@ -51,6 +51,12 @@ export function StatSheet({ point, itemsById }) {
             </div>
           );
         })}
+        {extraStats(point, SHEET_STATS).map((x) => (
+          <div key={x.stat} className="sheet-row">
+            <span className="sheet-label" style={{ color: statColor(x.stat) }}><StatIcon stat={x.stat} />{statLabel(x.stat)}</span>
+            <span className="sheet-value">{statValue(x.stat, x.total)}</span>
+          </div>
+        ))}
       </div>
       <EffectiveSheet total={point.total} />
     </section>

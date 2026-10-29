@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { statAbbr, statLabel, t } from '../i18n.js';
-import { DERIVED_STATS, EFFECTIVE_STATS, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
+import { DERIVED_STATS, EFFECTIVE_STATS, extraStats, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
 import { describeStats } from '../shopModel.js';
 import ItemIcon from './ItemIcon.jsx';
 import { useEffectValues, valuesOf } from '../effectValues.js';
@@ -14,7 +14,10 @@ import { StatIcon, statColor } from './StatIcon.jsx';
 export const ItemReaderContext = createContext(() => {});
 export const useItemReader = () => useContext(ItemReaderContext);
 
-/** Stats of the dock's collapsible row, then the effective ones held and the effective health. */
+/**
+ * Stats of the dock's collapsible row, always shown; then every other stat that left the champion's own value at that
+ * level (penetrations whenever not 0: `extraStats`), the effective ones held and the effective health.
+ */
 const DOCK_STATS = ['Max Health', 'Armor', 'Magic Resistance', 'Physical Reduction', 'Magic Reduction', 'Ability Haste',
   'Attack Damage', 'Ability Power', '% Attack Speed', 'Move Speed'];
 
@@ -136,6 +139,12 @@ export default function BuildDock({ point, itemsById, selected, readerId, onRead
               </span>
             );
           })}
+          {extraStats(point, DOCK_STATS).map((x) => (
+            <span key={x.stat} className="dock-stat extra" style={{ color: statColor(x.stat) }}
+              title={t('dock.extraTitle', { stat: statLabel(x.stat), total: statValue(x.stat, x.total), base: statValue(x.stat, x.base) })}>
+              <StatIcon stat={x.stat} size={13} />{statAbbr(x.stat)} <strong>{x.bonus >= 0 ? '+' : '−'}{statValue(x.stat, Math.abs(x.bonus))}</strong>
+            </span>
+          ))}
           {EFFECTIVE_STATS.filter((s) => (total[s] ?? 0) > 0.05).map((s) => (
             <span key={s} className="dock-stat effective" style={{ color: statColor(s) }} title={statLabel(s)}>
               <StatIcon stat={s} size={13} />{statAbbr(s)} <strong>{statValue(s, total[s])}</strong>
