@@ -116,6 +116,13 @@ final class ArenaScenarios {
         return a;
     }
 
+    /** An order of a named active or spell. */
+    static Action named(int fighter, double time, String type, String name) {
+        Action a = order(fighter, time, type, null, null);
+        a.name = name;
+        return a;
+    }
+
     static List<Scenario> all() {
         List<Scenario> out = new ArrayList<>();
         // Every pair, both orders of side, on autopilot; the y offsets bring the walls into play.

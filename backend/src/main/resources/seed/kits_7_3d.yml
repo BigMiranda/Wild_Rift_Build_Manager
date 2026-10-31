@@ -54,7 +54,45 @@
 #                 arena lê das fichas: forma avanco e alvo com salta.
 #   fragil.ataques  o ataque do Ornn num alvo Frágil: efeito empurra (padrão; distância em empurra) ou arremessa
 #                 (duracao em s, encadeando com um arremesso em curso pelo maior fim)
+# Campos das outras mecânicas (a ficha sintética de cada uma está em backend/src/test/resources/arena/fichas-sinteticas.yml):
+#   efeitos       enraiza: s (move não; ataca e lança sim) | silencia: s (move e ataca; não lança) | cega: s (ataques erram) |
+#                 provoca: s (anda até quem lançou e o ataca) | amedronta: s (foge de quem lançou) | encanta: s (anda até quem
+#                 lançou, sem atacar) | adormece: s (acaba ao sofrer dano) | suprime: s (sem Tenacidade) | polimorfa: s
+#                 (sem ataques e habilidades, com lentidao_polimorfo) | afasta: distância, com afasta_velocidade e afasta_parede
+#                 (efeitos ao bater na parede) | rouba: {status, valor, duracao} | executa_abaixo: fração da Vida
+#   proprio       alvo: proprio | aliado (o de menos Vida, até alcance) | aliados (todos até alcance); escudo, cura (fórmulas);
+#                 invisivel: {duracao, revela_dano, revela_proximidade}; invulneravel: s; nao_selecionavel: s; imparavel_por: s
+#   forma         piscar (instantâneo até alcance, atravessa parede) | teleporte (canaliza s e aparece no ponto; interrompido por
+#                 controle) | invocacao | parede (a primeira zona vira terreno por duracao; perpendicular: atravessada na mira) |
+#                 anexar (fica num aliado, sem ser alvo) | volta_no_tempo (segundos: posição e Vida de x s atrás)
+#   avanco        ate_ponto: true (vai só até o ponto mirado) | ate_alvo: true (persegue o alvo) | atravessa_parede: true (salto)
+#   alcance       global: sem limite no mapa
+#   canal         interrompivel: true (controle ou silêncio acabam com o canal, salvo imparavel)
+#   carregar      {min, max, alcance_de, alcance_ate, dano_de, dano_ate}: cresce com o tempo segurado (a ordem diz quanto)
+#   reconjurar    versoes: [ficha, ficha]: cada reconjuração usa a próxima, com janela e apos
+#   formas        por campeão: {nome: {habilidades: {...}, status: {"Attack Damage": 40}}}, com forma_inicial; muda com
+#                 troca_forma: nome numa habilidade, ou recurso.forma_acima: {limiar, forma}
+#   invoca        na forma invocacao: {nome, comportamento: segue | ataca | parada | explode | mina | clone, vida, dda, armadura, rm,
+#                 velocidade, velocidade_ataque, alcance, raio, duracao, quantidade, fracao (clone), raio_disparo, raio_explosao,
+#                 arma_em, dano, efeitos, morre_com_dono}; vida e dda podem ser fórmulas do dono
+#   recurso       tipo: mana | energia (começa cheio, paga `custo` por rank; max, por_s) | furia | calor | sem_custo. Mana sem `max`
+#                 usa o status de Mana Máxima
+#
+# As fichas passam pelo validador (arena/fight/SheetValidator): campo desconhecido, unidade estranha ou habilidade que não faz nada.
 mapa:
+  # regras por tipo de controle: tenacidade (a Tenacidade encurta) e purificar (a Purificar remove)
+  controles:
+    atordoamento: {tenacidade: true, purificar: true}
+    enraizar: {tenacidade: true, purificar: true}
+    silencio: {tenacidade: true, purificar: true}
+    cegueira: {tenacidade: true, purificar: true}
+    provocar: {tenacidade: true, purificar: true}
+    medo: {tenacidade: true, purificar: true}
+    encanto: {tenacidade: true, purificar: true}
+    sono: {tenacidade: true, purificar: true}
+    polimorfo: {tenacidade: true, purificar: true}
+    supressao: {tenacidade: false, purificar: false}
+    arremesso: {tenacidade: false, purificar: false}
   # Howling Abyss simplificado: uma rota reta entre os dois Nexus, com paredes dos dois lados. EST: a wiki não traz as
   # medidas do mapa do Wild Rift; ajuste aqui quando medir.
   comprimento: 10000

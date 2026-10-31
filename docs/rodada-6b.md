@@ -87,6 +87,41 @@ que viaja e que cresce; determinismo.
 
 Testes: 236 → 253 (11 opcionais pulados). `npm run build` limpo.
 
+## Parte 2 — Motor pronto para os outros campeões ✅
+
+Cada mecânica é campo de ficha, sem citar campeão. As fichas sintéticas, uma por mecânica, ficam em
+`backend/src/test/resources/arena/fichas-sinteticas.yml`, e o formato está no cabeçalho de `kits_7_3d.yml`.
+
+| grupo | campos | comportamento |
+|---|---|---|
+| Controles | `enraiza`, `silencia`, `cega`, `provoca`, `amedronta`, `encanta`, `adormece`, `suprime`, `polimorfa` | enraizar impede andar e avançar; silêncio impede lançar; cegueira faz os ataques errarem; provocar faz andar até quem lançou e atacar; medo, fugir; encanto, andar até quem lançou sem atacar; sono acaba com dano; polimorfo tira ataques e habilidades, com lentidão |
+| Regras dos controles | `mapa.controles` | tabela por tipo: `tenacidade` e `purificar`. Supressão e arremesso ficam de fora dos dois |
+| Empurrão | `afasta`, `afasta_velocidade`, `afasta_parede` | em qualquer forma, com efeitos ao bater na parede |
+| Estados | `invisivel`, `invulneravel`, `nao_selecionavel`, `imparavel_por` | invisibilidade revelada por dano ou proximidade, pelos dados; invulnerável segue mirável e anula o dano; não selecionável sai das listas de alvo |
+| Movimento | formas `piscar` e `teleporte`; `ate_ponto`, `ate_alvo`, `atravessa_parede` | piscar é instantâneo e cruza parede; teleporte canaliza e é cancelado por controle; avanço persegue o alvo ou para no ponto; salto cruza parede |
+| Conjuração | `interrompivel`, `carregar`, `reconjurar.versoes` | canal interrompido por controle ou silêncio, salvo `imparavel`; carga aumenta alcance e dano; cada reconjuração usa a próxima versão |
+| Formas | `formas`, `forma_inicial`, `troca_forma`, `recurso.forma_acima` | habilidades e status próprios; muda por habilidade ou por recurso |
+| Invocações | forma `invocacao`, com `invoca` | `segue`, `ataca`, `parada`, `explode`, `mina` (arma, invisível, dispara por proximidade) e `clone` (fração do dono). São unidades reais da luta, fora do placar; o dano entra na conta do dono como `Invocação · nome` |
+| Terreno | forma `parede` | a primeira zona vira terreno por `duracao`, no mesmo teste de bloqueio do pilar |
+| Outras | formas `anexar` e `volta_no_tempo`; `alcance: global`; `rouba`; `executa_abaixo`; `alvo: aliado \| aliados` com `escudo` e `cura` | |
+| Recursos | `recurso.tipo` | `mana` e `energia` começam cheias e pagam `custo`; `furia` e `calor` seguem como estavam; `sem_custo` |
+
+**Mana:** não existia na Arena. Sem `max`, usa o status de Mana Máxima.
+
+**Provocar e o golpe em curso:** um ataque já em andamento aplica mesmo com o alvo provocado, senão ele nunca conseguiria bater em quem o provocou. No polimorfo, o golpe em andamento é cancelado.
+
+**Canais antigos não mudam:** `interrompivel` é opcional, porque o canal do Rumble hoje só pula os pulsos durante o controle. A Etapa 7 deve pôr o campo nas fichas novas.
+
+**Sem IA para isso ainda:** o Tático usa o que a máscara deixa (silêncio tira as habilidades, por exemplo), mas não sabe aproveitar invisibilidade, mina, parede ou forma. Para a Etapa 7, as observações da IA não mudaram (`obs_schema` igual).
+
+**Validador (`arena/fight/SheetValidator`):** aponta campo desconhecido, unidade estranha (recarga, lentidão, ângulo, segundos), forma ou dano desconhecido e habilidade sem efeito. O teste passa nas 6 fichas reais e nas sintéticas, e `everySheetDoesSomethingInAFight` confere numa luta real que cada ficha muda alguma coisa.
+
+🎯 **Golden sem mudança**, como o prompt pede: as 6 fichas não usam nada além da Parte 1.
+
+**Desempenho, 1 thread, duelos até a morte:** 11.445 s simulados por s depois da parte. A comparação com o `main` fica na Parte 4.
+
+Testes: 253 → 294 (`MecanicasTest`, 41, com tenacidade e Purificar por tipo e determinismo em todas as fichas; 11 opcionais pulados). `npm run build` limpo.
+
 ## Para o usuário
 
 **Vale conferir:**

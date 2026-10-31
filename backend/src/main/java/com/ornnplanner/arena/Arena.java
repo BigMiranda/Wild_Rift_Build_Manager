@@ -309,6 +309,38 @@ public class Arena {
         double nextHpSample;
         /** Cleanse: stuns and slows are void until then. */
         double cleanseUntil = -1;
+        // crowd control of the sheets (see Arena#softControl)
+        double rootUntil = -1;
+        double silenceUntil = -1;
+        double blindUntil = -1;
+        double sleepUntil = -1;
+        double suppressUntil = -1;
+        double polyUntil = -1;
+        /** Taunt, fear or charm: it walks by force, relative to {@link #walkFrom}. */
+        double walkUntil = -1;
+        String walkKind;
+        U walkFrom;
+        // states of the sheets
+        double invulnerableUntil = -1;
+        double untargetableUntil = -1;
+        /** The invisibility on, with what reveals it (null = none, or Vayne's own). */
+        Map<String, Object> stealth;
+        /** The form of the sheet it is in (formas); null = its base sheet. */
+        String kitForm;
+        /** Stats taken or given for a while: {stat, amount, until}. */
+        final List<Object[]> statMods = new ArrayList<>();
+        /** A summon: who summoned it, its sheet and when it goes (null owner = a champion). */
+        U owner;
+        Map<String, Object> summon;
+        double summonUntil = -1;
+        /** Attached to an ally: it stays with it, and nobody can target it. */
+        U attachedTo;
+        double attachedUntil = -1;
+        /** Where it was over the last seconds ({t, x, y, hp}, every 0.1s): only with an ability that goes back in time. */
+        java.util.ArrayDeque<double[]> past;
+        double nextPast;
+        /** How many versions of a recast were used, by slot. */
+        final Map<String, Integer> recastStep = new LinkedHashMap<>();
         /** It reached its side's safe zone alive: out of the fight. */
         boolean escaped;
         /** Its dashes and leaps (slot -> kind), read once from the sheet. */
@@ -345,7 +377,7 @@ public class Arena {
         }
 
         boolean targetable() {
-            return !dead && !escaped && now >= stasisUntil;
+            return !dead && !escaped && now >= stasisUntil && now >= untargetableUntil && attachedTo == null;
         }
 
         boolean visible() {
@@ -353,7 +385,12 @@ public class Arena {
         }
 
         boolean canAct() {
-            return !dead && now >= stunUntil && now >= airUntil && now >= stasisUntil && forced == null;
+            return !dead && now >= stunUntil && now >= airUntil && now >= stasisUntil && forced == null
+                    && now >= sleepUntil && now >= suppressUntil && now >= walkUntil;
+        }
+
+        boolean taunted() {
+            return now < walkUntil && CC_TAUNT.equals(walkKind);
         }
 
         double stat(String s) {
@@ -371,6 +408,20 @@ public class Arena {
             for (T t : trigs) {
                 if (t.on()) {
                     v += t.d.delta.getOrDefault(s, 0.0) * t.factor;
+                }
+            }
+            if (!statMods.isEmpty()) {
+                for (Object[] m : statMods) {
+                    if (s.equals(m[0]) && now < (double) m[2]) {
+                        v += (double) m[1];
+                    }
+                }
+            }
+            if (kitForm != null) {
+                Map<String, Object> form = map(map(kit("formas")).get(kitForm));
+                Map<String, Object> status = form == null ? null : map(form.get("status"));
+                if (status != null) {
+                    v += num(status.get(s), 0);
                 }
             }
             if (Stats.ATTACK_DAMAGE.equals(s)) {
@@ -500,6 +551,10 @@ public class Arena {
     private static final class Dash {
         /** The second dash of a recast (Renekton's Dice): its hits count for the recast. */
         boolean recast;
+        /** A leap: walls do not stop it. */
+        boolean through;
+        /** A dash that goes after its target and stops on reaching it. */
+        U follow;
         /** {@code imune_deslocamento}: pulls, pushes and knock-ups on the champion are void while it lasts. */
         boolean immune;
         /** What a stun does meanwhile ({@code cc_durante_avanco}): continua_depois (default) or interrompe. */
@@ -660,6 +715,8 @@ public class Arena {
     private final List<Projectile> projectiles = new ArrayList<>();
     private final List<Field> fields = new ArrayList<>();
     private final List<ZoneCast> zoneCasts = new ArrayList<>();
+    /** Summons of this step: they join the units when the next one starts. */
+    private final List<U> newSummons = new ArrayList<>();
     private final List<Elemental> elementals = new ArrayList<>();
     private final List<Shape> flashes = new ArrayList<>();
     private final PriorityQueue<Timed> timed = new PriorityQueue<>(
@@ -795,6 +852,10 @@ public class Arena {
         }
         double nextFrame = 0;
         for (now = 0; now <= duration + 1e-9; now += DT) {
+            if (!newSummons.isEmpty()) {
+                units.addAll(newSummons);
+                newSummons.clear();
+            }
             runTimed();
             for (U u : units) {
                 if (!u.dead) {
@@ -812,6 +873,7 @@ public class Arena {
             moveElementals();
             tickFields();
             tickZones();
+            tickMechanics();
             tickPeriodic();
             tickSafeZone();
             trackEvents();
@@ -843,6 +905,12 @@ public class Arena {
                 endCombo(u, "aborted", u.combo.target.dead ? "alvo morreu" : "fim da luta");
             }
         }
+        for (U u : units) {
+            if (u.owner != null) {
+                mergeSummon(u);
+            }
+        }
+        units.removeIf(u -> u.owner != null);
         for (U u : units) {
             u.r.eventSummary = ArenaEvents.summary(u.r.events);
             for (String slot : ActionSpace.SLOTS) {
@@ -886,6 +954,13 @@ public class Arena {
         Map<String, Object> res = map(u.kit("recurso"));
         if (res != null && "furia".equals(res.get("tipo"))) {
             u.resource = 0;
+        }
+        if (res != null && POOL_RESOURCES.contains(res.get("tipo"))) {
+            u.resource = resourceMax(u);
+        }
+        u.kitForm = u.kit("forma_inicial") == null ? null : String.valueOf(u.kit("forma_inicial"));
+        if (goesBack(in.kit)) {
+            u.past = new java.util.ArrayDeque<>();
         }
         FighterStats r = u.r;
         r.index = i;
@@ -955,6 +1030,16 @@ public class Arena {
         }
         if (u.dash != null) {
             moveDash(u);
+            return;
+        }
+        if (now < u.walkUntil && u.forced == null) {
+            forcedWalk(u);
+            return;
+        }
+        if (u.owner != null) {
+            if (u.canAct() && now >= u.busyUntil) {
+                summonStep(u);
+            }
             return;
         }
         if (!u.canAct() && now < u.stunUntil && now >= u.airUntil && u.forced == null && now >= u.stasisUntil
@@ -1298,7 +1383,7 @@ public class Arena {
         double reach = u.attackRange() + u.radius() + target.radius();
         double d = dist(u.x, u.y, target.x, target.y);
         if (d <= reach && target.visible()) {
-            if (now >= u.nextAttack - 1e-9) {
+            if (now >= u.nextAttack - 1e-9 && now >= u.polyUntil) {
                 attack(u, target);
             }
             u.facing = Math.atan2(target.y - u.y, target.x - u.x);
@@ -1721,7 +1806,18 @@ public class Arena {
 
     /** Effects of a sheet entry (or of its last hit) that immobilize: what consumes a Brittle on the target. */
     private static boolean immobilizesNow(Map<String, Object> ef) {
-        return ef != null && (ef.get("atordoa") != null || ef.get("arremessa") != null || ef.get("puxa") != null);
+        if (ef == null) {
+            return false;
+        }
+        if (ef.get("atordoa") != null || ef.get("arremessa") != null || ef.get("puxa") != null) {
+            return true;
+        }
+        for (String k : IMMOBILIZE) {
+            if (ef.get(k) != null) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Effects that leave a mark on the target. */
@@ -2206,7 +2302,7 @@ public class Arena {
 
     /** Seconds left of the immobilize on a champion (stun, knock-up, a pull or push still moving it). */
     private double controlLeft(U t) {
-        double left = Math.max(t.stunUntil, t.airUntil) - now;
+        double left = Math.max(Math.max(t.stunUntil, t.airUntil), Math.max(Math.max(t.sleepUntil, t.suppressUntil), t.walkUntil)) - now;
         if (t.forced != null) {
             left = Math.max(left, dist(t.x, t.y, t.forced.tx, t.forced.ty) / Math.max(1, t.forced.speed));
         }
@@ -2223,7 +2319,7 @@ public class Arena {
             for (Map.Entry<?, ?> e : ((Map<?, ?>) o).entrySet()) {
                 Object k = e.getKey();
                 if ("atordoa".equals(k) || "arremessa".equals(k) || "puxa".equals(k) || "empurra".equals(k)
-                        || "forma".equals(k) && "empurrao".equals(e.getValue()) || immobilizes(e.getValue())) {
+                        || IMMOBILIZE.contains(k) || "forma".equals(k) && "empurrao".equals(e.getValue()) || immobilizes(e.getValue())) {
                     return true;
                 }
             }
@@ -2248,7 +2344,7 @@ public class Arena {
         u.facing = Math.atan2(t.y - u.y, t.x - u.x);
         Double missile = u.kit("velocidade_projetil") == null ? null : num(u.kit("velocidade_projetil"), 2000);
         at(now + windup, () -> {
-            if (u.dead || t.dead || !u.canAct()) {
+            if (u.dead || t.dead || !u.canAct() && !u.taunted() || now < u.polyUntil) {
                 return;
             }
             if (missile == null) {
@@ -2272,6 +2368,10 @@ public class Arena {
 
     private void attackHit(U s, U t) {
         if (t.dead || !t.targetable()) {
+            return;
+        }
+        if (now < s.blindUntil) {
+            count(s, "ataque_errou");
             return;
         }
         s.attacks++;
@@ -2444,6 +2544,13 @@ public class Arena {
     @SuppressWarnings("unchecked")
     private Map<String, Object> ability(U u, String slot) {
         Map<String, Object> abs = map(u.kit("habilidades"));
+        if (u.kitForm != null) {
+            Map<String, Object> form = map(map(u.kit("formas")).get(u.kitForm));
+            Map<String, Object> own = form == null ? null : map(form.get("habilidades"));
+            if (own != null && own.get(slot) != null) {
+                return map(own.get(slot));
+            }
+        }
         if (abs != null) {
             return map(abs.get(slot));
         }
@@ -2476,7 +2583,8 @@ public class Arena {
 
     private boolean isReady(U u, String slot) {
         Map<String, Object> ab = ability(u, slot);
-        if (ab == null || u.rank(slot) <= 0 || now < u.overheatedUntil) {
+        if (ab == null || u.rank(slot) <= 0 || now < u.overheatedUntil || now < u.silenceUntil || now < u.polyUntil
+                || !canPay(u, slot, ab)) {
             return false;
         }
         if (ab.get("cargas") != null) {
@@ -2546,6 +2654,9 @@ public class Arena {
             return "wait";
         }
         String shape = String.valueOf(ab.get("forma"));
+        if (now < u.rootUntil && "avanco".equals(shape)) {
+            return "wait";   // a root keeps it from dashing
+        }
         if (List.of("alvo", "empurrao", "tudo_ou_nada").contains(shape)) {
             if (t == null || !t.targetable() || !t.visible()) {
                 return "wait";
@@ -2588,6 +2699,11 @@ public class Arena {
                 return;
             }
             perform(u, slot, ab, rank, t, fx, fy, strong, order);
+            Map<String, Object> rec = map(ab.get("reconjurar"));
+            if (rec != null && rec.get("versoes") != null) {
+                u.recastStep.put(slot, 0);
+                u.recast.put(slot, new double[] {now + num(rec.get("apos"), 0), now + num(rec.get("janela"), 4)});
+            }
         };
         if (castTime > 0) {
             at(now + castTime, effect);
@@ -2604,7 +2720,33 @@ public class Arena {
         String source = slot + " · " + ab.get("nome");
         double dirx = Math.cos(u.facing);
         double diry = Math.sin(u.facing);
+        Map<String, Object> hold = map(ab.get("carregar"));
+        if (hold != null && !"avanco".equals(shape) && ab.get("_carregada") == null) {
+            charge(u, slot, ab, hold, rank, t, tx, ty, strong, order);
+            return;
+        }
+        if (ab.get("troca_forma") != null) {
+            changeForm(u, String.valueOf(ab.get("troca_forma")));
+        }
         switch (shape) {
+            case "piscar":
+                blink(u, ab, tx, ty);
+                break;
+            case "teleporte":
+                teleport(u, slot, ab, tx, ty);
+                break;
+            case "invocacao":
+                spawn(u, map(ab.get("invoca")), rank, ab, tx, ty);
+                break;
+            case "parede":
+                raiseWall(u, ab, tx, ty, label);
+                break;
+            case "anexar":
+                attach(u, ab);
+                break;
+            case "volta_no_tempo":
+                goBack(u, ab);
+                break;
             case "linha": {
                 double range = num(ab.get("alcance"), 800);
                 boolean secondStack = ab.get("segunda_carga") != null && u.buff("ntofo2") >= 2;
@@ -2783,7 +2925,7 @@ public class Arena {
         credit(u, source, u.dash != null && u.dash.recast);
         Map<String, Object> d = map(ab.get("dano"));
         if (d != null) {
-            deal(u, v, formula(d, u, v, rank) * mult, type(d), source, ABILITY, 0);
+            deal(u, v, formula(d, u, v, rank) * mult * num(ab.get("_mult"), 1), type(d), source, ABILITY, 0);
         }
         Map<String, Object> ef = map(ab.get("efeitos"));
         if (ef != null && !v.dead) {
@@ -2812,7 +2954,7 @@ public class Arena {
     /** Crowd control and other effects on a target hit by an ability. */
     private void effects(U s, U t, Map<String, Object> ef, int rank, String source) {
         double brittleBoost = 1;
-        boolean immobilize = ef.get("atordoa") != null || ef.get("arremessa") != null || ef.get("puxa") != null;
+        boolean immobilize = immobilizesNow(ef);
         if (immobilize && t.brittleBy != null && now < t.brittleUntil && t.brittleBy.team() == s.team()) {
             Map<String, Object> fr = map(t.brittleBy.kit("fragil"));
             brittleBoost = 1 + num(fr == null ? null : fr.get("aumento_controle"), 0.3);
@@ -2866,6 +3008,17 @@ public class Arena {
             double h = formula(map(ef.get("cura_por_campeao")), s, t, rank);
             heal(s, h, Map.of(key(s, source), h));
         }
+        softControl(s, t, ef, rank);
+        if (ef.get("afasta") != null) {
+            knockBack(s, t, ef, rank, source);
+        }
+        if (ef.get("rouba") != null) {
+            steal(s, t, map(ef.get("rouba")), rank);
+        }
+        if (ef.get("executa_abaixo") != null && !t.dead && t.hp / t.maxHp < val(ef, "executa_abaixo", rank, s.f.level, 0)) {
+            count(s, "execucao");
+            deal(s, t, (t.hp + t.shieldLeft()) * 3 + 1, "verdadeiro", source, ABILITY, 0);
+        }
     }
 
     private void shred(U t, int res, Map<String, Object> spec, int rank, String source) {
@@ -2893,11 +3046,18 @@ public class Arena {
         double start = now;
         List<Map<String, Object>> sheetZones = zones(ab);
         HitShape zone = sheetZones == null ? null : HitShape.of(sheetZones.get(0));
+        boolean[] broken = new boolean[1];
+        boolean breaks = Boolean.TRUE.equals(ab.get("interrompivel")) && !Boolean.TRUE.equals(ab.get("imparavel"));
         for (int k = 1; k <= ticks; k++) {
             boolean last = k == ticks;
             boolean first = k == 1;
             at(start + k * interval, () -> {
-                if (u.dead || !u.canAct() && !Boolean.TRUE.equals(ab.get("imparavel"))) {
+                if (breaks && !broken[0] && !u.dead && (!u.canAct() || now < u.silenceUntil)) {
+                    broken[0] = true;
+                    u.busyUntil = now;
+                    count(u, "canal_interrompido:" + slot);
+                }
+                if (u.dead || broken[0] || !u.canAct() && !Boolean.TRUE.equals(ab.get("imparavel"))) {
                     return;
                 }
                 if (advance > 0) {
@@ -2976,10 +3136,17 @@ public class Arena {
     private void startDash(U u, String slot, Map<String, Object> ab, int rank, double tx, double ty, boolean strong,
                            String label, String source) {
         double d = num(ab.get("alcance"), 400);   // the dashes of the sheets go their full distance (stop at walls)
+        if (Boolean.TRUE.equals(ab.get("ate_ponto"))) {
+            d = Math.min(d, dist(u.x, u.y, tx, ty));
+        }
         double a = Math.abs(tx - u.x) + Math.abs(ty - u.y) < 1e-6 ? u.facing : Math.atan2(ty - u.y, tx - u.x);
         Dash dash = new Dash();
         dash.tx = u.x + Math.cos(a) * d;
         dash.ty = u.y + Math.sin(a) * d;
+        dash.through = Boolean.TRUE.equals(ab.get("atravessa_parede"));
+        if (Boolean.TRUE.equals(ab.get("ate_alvo"))) {
+            dash.follow = target(u);
+        }
         dash.speed = num(ab.get("velocidade"), 1200) + (Boolean.TRUE.equals(ab.get("velocidade_mais_vdm")) ? u.moveSpeed() : 0);
         dash.hitRadius = num(ab.get("raio"), 100);
         immunity(dash, ab);
@@ -3051,9 +3218,16 @@ public class Arena {
         double danger = strong && "calor".equals(resType(u)) ? 1.5 : 1;
         double duration = val(ab, "duracao", rank, u.f.level, 0);
         String src = key(u, slot + " · " + ab.get("nome"));
-        if (ab.get("escudo") != null) {
-            addShield(u, formula(map(ab.get("escudo")), u, u, rank) * danger, src, now + duration, "any");
+        for (U who : buffTargets(u, ab)) {
+            if (ab.get("escudo") != null) {
+                addShield(who, formula(map(ab.get("escudo")), u, who, rank) * danger, src, now + duration, "any");
+            }
+            if (ab.get("cura") != null) {
+                double h = formula(map(ab.get("cura")), u, who, rank);
+                heal(who, h, Map.of(src, h));
+            }
         }
+        selfStates(u, ab, duration);
         if (ab.get("velocidade_movimento") != null) {
             u.speedUps.add(new double[] {val(ab, "velocidade_movimento", rank, u.f.level, 0) * danger,
                 now + num(ab.get("duracao_velocidade"), duration)});
@@ -3178,6 +3352,10 @@ public class Arena {
             return "drop";
         }
         u.recast.remove(slot);
+        Map<String, Object> versions = map(ab.get("reconjurar"));
+        if (versions != null && versions.get("versoes") != null) {
+            return recastVersion(u, slot, versions, w, t, tx, ty);
+        }
         if ("elemental".equals(ab.get("forma"))) {
             Elemental e = u.elemental;
             if (e == null || e.redirected) {
@@ -3324,6 +3502,10 @@ public class Arena {
     private boolean spendResource(U u, String slot) {
         Map<String, Object> res = map(u.kit("recurso"));
         if (res == null) {
+            return false;
+        }
+        if (POOL_RESOURCES.contains(res.get("tipo"))) {
+            u.resource -= val(ability(u, slot), "custo", u.rank(slot), u.f.level, 0);
             return false;
         }
         if ("furia".equals(res.get("tipo"))) {
@@ -3614,6 +3796,7 @@ public class Arena {
                 u.stunUntil = Math.min(u.stunUntil, now);
                 u.slows.clear();
                 u.exhaustUntil = Math.min(u.exhaustUntil, now);
+                cleanseControls(u);
                 u.cleanseUntil = now + num(spell == null ? null : spell.get("imunidade"), 0.25);
                 break;
             default:
@@ -3657,6 +3840,9 @@ public class Arena {
         }
         double a = Math.atan2(ty - u.y, tx - u.x);
         u.facing = a;
+        if (now < u.rootUntil || u.attachedTo != null) {
+            return false;
+        }
         double s = Math.min(step, d);
         double nx = clampX(u.x + Math.cos(a) * s);
         double ny = clampY(u.y + Math.sin(a) * s);
@@ -3676,12 +3862,18 @@ public class Arena {
 
     private void moveDash(U u) {
         Dash dash = u.dash;
+        if (dash.follow != null && !dash.follow.dead) {
+            double far = dist(u.x, u.y, dash.follow.x, dash.follow.y);
+            double stop = Math.max(0, far - u.radius() - dash.follow.radius());
+            dash.tx = u.x + (dash.follow.x - u.x) / Math.max(1e-6, far) * stop;
+            dash.ty = u.y + (dash.follow.y - u.y) / Math.max(1e-6, far) * stop;
+        }
         double d = dist(u.x, u.y, dash.tx, dash.ty);
         double s = Math.min(dash.speed * DT, d);
         double a = Math.atan2(dash.ty - u.y, dash.tx - u.x);
         double nx = u.x + Math.cos(a) * s;
         double ny = u.y + Math.sin(a) * s;
-        boolean wall = Math.abs(ny) > halfWidth - u.radius() || nx < 0 || nx > length || blocked(nx, ny, u.radius());
+        boolean wall = !dash.through && (Math.abs(ny) > halfWidth - u.radius() || nx < 0 || nx > length || blocked(nx, ny, u.radius()));
         if (!wall) {
             u.x = nx;
             u.y = ny;
@@ -4165,7 +4357,8 @@ public class Arena {
 
     private boolean blocked(double x, double y, double r) {
         for (Field f : fields) {
-            if (f.terrain && now >= f.from && dist(f.x, f.y, x, y) < f.radius + r) {
+            if (f.terrain && now >= f.from
+                    && (f.shape != null ? f.shape.hitsAt(f.x, f.y, f.angle, x, y, r) : dist(f.x, f.y, x, y) < f.radius + r)) {
                 return true;
             }
         }
@@ -4265,6 +4458,11 @@ public class Arena {
         if (raw <= 0 || t.dead || !t.targetable() || a.dead && kind != DOT) {
             return 0;
         }
+        if (now < t.invulnerableUntil) {
+            count(t, "dano_anulado");
+            return 0;
+        }
+        struck(t);
         if ("adaptativo".equals(type)) {
             type = adaptive(a);
         }
@@ -5172,6 +5370,9 @@ public class Arena {
 
     /** A champion died: its killer and whoever hit it in the last 3s get their kill triggers. */
     private void killed(U t) {
+        if (t.owner != null) {
+            return;   // a summon is no kill
+        }
         for (Map.Entry<U, Double> e : t.lastHitBy.entrySet()) {
             U a = e.getKey();
             if (a.team() != t.team() && !a.dead && now - e.getValue() <= 3 + 1e-9) {
@@ -6408,6 +6609,592 @@ public class Arena {
         return false;
     }
 
+    // ------------------------------------------------------------------ mechanics of the sheets
+
+    /** Taunt: the target walks to who cast it and attacks it. */
+    static final String CC_TAUNT = "provocar";
+    private static final String CC_FEAR = "medo";
+    private static final String CC_CHARM = "encanto";
+    /** Keys of an ability's effects that take a champion's control away (the slow-like ones do not). */
+    private static final List<String> IMMOBILIZE = List.of("enraiza", "provoca", "amedronta", "encanta", "adormece", "suprime", "polimorfa");
+    /** Resources kept as a pool that starts full and pays for casts. */
+    private static final Set<String> POOL_RESOURCES = Set.of("mana", "energia");
+    /** {@code alcance: global}: anywhere on the map. */
+    private static final String GLOBAL = "global";
+    private static final double GLOBAL_RANGE = 1e9;
+
+    /** The rule of a crowd control in the map's {@code controles} table: tenacidade | purificar. */
+    private boolean ccRuleOn(String type, String rule) {
+        Map<String, Object> table = map(map.get("controles"));
+        Map<String, Object> row = table == null ? null : map(table.get(type));
+        return row == null || !Boolean.FALSE.equals(row.get(rule));
+    }
+
+    /** Seconds a control lasts on the target, by its rule for tenacity. */
+    private double ccSeconds(U t, String type, double seconds) {
+        return ccRuleOn(type, "tenacidade") ? seconds * (1 - Math.min(0.9, t.stat("% Tenacity") / 100)) : seconds;
+    }
+
+    /** A control lands: not on the unstoppable, the invulnerable, or in Cleanse's moment of immunity. */
+    private boolean ccLands(U t) {
+        return !t.dead && t.targetable() && now >= t.invulnerableUntil && now >= t.cleanseUntil && ccRule(t) == null;
+    }
+
+    /** The controls of the sheets on a target hit by an ability. */
+    private void softControl(U s, U t, Map<String, Object> ef, int rank) {
+        int lv = s.f.level;
+        if (ef.get("enraiza") != null && ccLands(t)) {
+            t.rootUntil = Math.max(t.rootUntil, now + held(s, t, "enraizar", val(ef, "enraiza", rank, lv, 0)));
+            t.dash = null;
+        }
+        if (ef.get("silencia") != null && ccLands(t)) {
+            t.silenceUntil = Math.max(t.silenceUntil, now + held(s, t, "silencio", val(ef, "silencia", rank, lv, 0)));
+        }
+        if (ef.get("cega") != null && ccLands(t)) {
+            t.blindUntil = Math.max(t.blindUntil, now + held(s, t, "cegueira", val(ef, "cega", rank, lv, 0)));
+        }
+        if (ef.get("adormece") != null && ccLands(t)) {
+            t.sleepUntil = Math.max(t.sleepUntil, now + held(s, t, "sono", val(ef, "adormece", rank, lv, 0)));
+            interrupt(t);
+        }
+        if (ef.get("suprime") != null && ccLands(t)) {
+            t.suppressUntil = Math.max(t.suppressUntil, now + held(s, t, "supressao", val(ef, "suprime", rank, lv, 0)));
+            interrupt(t);
+        }
+        if (ef.get("polimorfa") != null && ccLands(t)) {
+            double seconds = held(s, t, "polimorfo", val(ef, "polimorfa", rank, lv, 0));
+            t.polyUntil = Math.max(t.polyUntil, now + seconds);
+            t.slows.add(new double[] {num(ef.get("lentidao_polimorfo"), 0.6), now + seconds});
+            interrupt(t);
+        }
+        walk(s, t, ef, "provoca", CC_TAUNT, rank);
+        walk(s, t, ef, "amedronta", CC_FEAR, rank);
+        walk(s, t, ef, "encanta", CC_CHARM, rank);
+    }
+
+    /** The seconds a control holds, counted as one applied. */
+    private double held(U by, U t, String type, double seconds) {
+        double s = ccSeconds(t, type, seconds);
+        count(by, "cc_aplicado:" + type);
+        ccNoted(by, t, type, controlLeft(t), s);
+        controlled(by, t, true);
+        return s;
+    }
+
+    private void walk(U s, U t, Map<String, Object> ef, String key, String kind, int rank) {
+        if (ef.get(key) == null || !ccLands(t)) {
+            return;
+        }
+        t.walkUntil = Math.max(t.walkUntil, now + held(s, t, kind, val(ef, key, rank, s.f.level, 0)));
+        t.walkKind = kind;
+        t.walkFrom = s;
+        interrupt(t);
+    }
+
+    private void interrupt(U t) {
+        t.dash = null;
+        t.busyUntil = now;
+    }
+
+    /** Taunted, feared or charmed: it walks by force. */
+    private void forcedWalk(U u) {
+        U from = u.walkFrom;
+        if (from == null || from.dead) {
+            u.walkUntil = now;
+            return;
+        }
+        double step = u.moveSpeed() * DT;
+        if (CC_FEAR.equals(u.walkKind)) {
+            double d = Math.max(1e-6, dist(u.x, u.y, from.x, from.y));
+            moveTo(u, u.x + (u.x - from.x) / d * 100, u.y + (u.y - from.y) / d * 100, step);
+        } else if (CC_TAUNT.equals(u.walkKind)) {
+            if (now >= u.busyUntil) {
+                chase(u, from);
+            }
+        } else {
+            moveTo(u, from.x, from.y, step);
+        }
+        u.busyState = "move";
+    }
+
+    /** Takes damage: it wakes up, and an invisibility that damage reveals ends. */
+    private void struck(U t) {
+        t.sleepUntil = -1;
+        if (t.stealth != null && !Boolean.FALSE.equals(t.stealth.get("revela_dano"))) {
+            reveal(t);
+        }
+    }
+
+    private void reveal(U u) {
+        u.invisibleUntil = -1;
+        u.stealth = null;
+        count(u, "revelado");
+    }
+
+    /** Cleanse: the controls whose rule says so. */
+    private void cleanseControls(U u) {
+        if (ccRuleOn("enraizar", "purificar")) {
+            u.rootUntil = Math.min(u.rootUntil, now);
+        }
+        if (ccRuleOn("silencio", "purificar")) {
+            u.silenceUntil = Math.min(u.silenceUntil, now);
+        }
+        if (ccRuleOn("cegueira", "purificar")) {
+            u.blindUntil = Math.min(u.blindUntil, now);
+        }
+        if (ccRuleOn("sono", "purificar")) {
+            u.sleepUntil = Math.min(u.sleepUntil, now);
+        }
+        if (ccRuleOn("polimorfo", "purificar")) {
+            u.polyUntil = Math.min(u.polyUntil, now);
+        }
+        if (ccRuleOn("supressao", "purificar")) {
+            u.suppressUntil = Math.min(u.suppressUntil, now);
+        }
+        if (u.walkKind != null && ccRuleOn(u.walkKind, "purificar")) {
+            u.walkUntil = Math.min(u.walkUntil, now);
+        }
+    }
+
+    private void controlMarks(U u, List<String> marks) {
+        addMark(marks, u.rootUntil, "Enraizado");
+        addMark(marks, u.silenceUntil, "Silenciado");
+        addMark(marks, u.blindUntil, "Cego");
+        addMark(marks, u.sleepUntil, "Adormecido");
+        addMark(marks, u.suppressUntil, "Suprimido");
+        addMark(marks, u.polyUntil, "Polimorfado");
+        addMark(marks, u.walkUntil, CC_TAUNT.equals(u.walkKind) ? "Provocado" : CC_FEAR.equals(u.walkKind) ? "Com medo" : "Encantado");
+        addMark(marks, u.invulnerableUntil, "Invulnerável");
+        addMark(marks, u.untargetableUntil, "Não selecionável");
+    }
+
+    private void addMark(List<String> marks, double until, String name) {
+        if (now < until) {
+            marks.add(name);
+        }
+    }
+
+    /** Pushed away from who hit it; into a wall it may be stunned ({@code afasta_parede}). */
+    private void knockBack(U s, U t, Map<String, Object> ef, int rank, String source) {
+        double a = Math.atan2(t.y - s.y, t.x - s.x);
+        double d = val(ef, "afasta", rank, s.f.level, 0);
+        Map<String, Object> wall = map(ef.get("afasta_parede"));
+        forcedMove(s, t, "empurrao", t.x + Math.cos(a) * d, t.y + Math.sin(a) * d, num(ef.get("afasta_velocidade"), 1200),
+                wall == null ? null : () -> effects(s, t, wall, rank, source), null);
+        controlled(s, t, true);
+    }
+
+    /** Stat taken from the target and given to who hit it, for a while. */
+    private void steal(U s, U t, Map<String, Object> spec, int rank) {
+        String stat = String.valueOf(spec.get("status"));
+        double amount = val(spec, "valor", rank, s.f.level, 0);
+        double until = now + val(spec, "duracao", rank, s.f.level, 5);
+        t.statMods.add(new Object[] {stat, -amount, until});
+        s.statMods.add(new Object[] {stat, amount, until});
+        count(s, "status_roubado");
+    }
+
+    /** Who a buff ability reaches: itself, the ally with the least health, or every ally in its radius. */
+    private List<U> buffTargets(U u, Map<String, Object> ab) {
+        String who = String.valueOf(ab.getOrDefault("alvo", "proprio"));
+        if ("proprio".equals(who)) {
+            return List.of(u);
+        }
+        double range = num(ab.get("alcance"), 700);
+        List<U> near = new ArrayList<>(List.of(u));
+        for (U a : allies(u)) {
+            if (a.owner == null && dist(u.x, u.y, a.x, a.y) <= range) {
+                near.add(a);
+            }
+        }
+        if ("aliados".equals(who)) {
+            return near;
+        }
+        near.sort(Comparator.<U>comparingDouble(a -> a.hp / a.maxHp).thenComparingInt(a -> a.idx));
+        return near.subList(0, 1);
+    }
+
+    /** Invisible, invulnerable, untargetable or unstoppable for a while, by the sheet. */
+    private void selfStates(U u, Map<String, Object> ab, double duration) {
+        Map<String, Object> stealth = map(ab.get("invisivel"));
+        if (stealth != null) {
+            u.stealth = stealth;
+            u.invisibleUntil = now + num(stealth.get("duracao"), duration);
+        }
+        if (ab.get("invulneravel") != null) {
+            u.invulnerableUntil = now + num(ab.get("invulneravel"), duration);
+        }
+        if (ab.get("nao_selecionavel") != null) {
+            u.untargetableUntil = now + num(ab.get("nao_selecionavel"), duration);
+        }
+        if (ab.get("imparavel_por") != null) {
+            u.immuneUntil = now + num(ab.get("imparavel_por"), duration);
+            u.immuneCc = CC_IGNORE;
+        }
+    }
+
+    /** Things with a clock of their own: pools, stealth seen up close, forms by resource, summons, attachments, the past. */
+    private void tickMechanics() {
+        for (U u : units) {
+            if (u.dead) {
+                continue;
+            }
+            Map<String, Object> res = map(u.kit("recurso"));
+            if (res != null && POOL_RESOURCES.contains(res.get("tipo"))) {
+                u.resource = Math.min(resourceMax(u), u.resource + num(res.get("por_s"), 0) * DT);
+            }
+            if (u.stealth != null) {
+                if (now >= u.invisibleUntil) {
+                    u.stealth = null;
+                } else if (u.stealth.get("revela_proximidade") != null) {
+                    double near = num(u.stealth.get("revela_proximidade"), 0);
+                    for (U e : units) {
+                        if (e.team() != u.team() && !e.dead && dist(u.x, u.y, e.x, e.y) <= near) {
+                            reveal(u);
+                            break;
+                        }
+                    }
+                }
+            }
+            Map<String, Object> byResource = res == null ? null : map(res.get("forma_acima"));
+            if (byResource != null) {
+                boolean on = u.resource >= num(byResource.get("limiar"), 0);
+                String form = String.valueOf(byResource.get("forma"));
+                if (on != form.equals(u.kitForm)) {
+                    changeForm(u, on ? form : null);
+                }
+            }
+            if (u.owner != null && (now >= u.summonUntil || u.owner.dead && !Boolean.FALSE.equals(u.summon.get("morre_com_dono")))) {
+                u.dead = true;
+            }
+            if (u.attachedTo != null) {
+                if (u.attachedTo.dead || now >= u.attachedUntil) {
+                    u.attachedTo = null;
+                } else {
+                    u.x = u.attachedTo.x;
+                    u.y = u.attachedTo.y;
+                }
+            }
+            if (u.past != null && now >= u.nextPast - 1e-9) {
+                u.nextPast = now + 0.1;
+                u.past.addLast(new double[] {now, u.x, u.y, u.hp});
+                while (u.past.size() > 100) {
+                    u.past.removeFirst();
+                }
+            }
+        }
+    }
+
+    private void changeForm(U u, String form) {
+        u.kitForm = form;
+        u.controls.clear();
+        event(u, "mudou de forma: " + (form == null ? "base" : form));
+        count(u, "forma:" + (form == null ? "base" : form));
+    }
+
+    private double resourceMax(U u) {
+        Map<String, Object> res = map(u.kit("recurso"));
+        Object max = res == null ? null : res.get("max");
+        return max != null ? num(max, 100) : u.stat(Stats.MAX_MANA);
+    }
+
+    /** A pool resource covers the ability's cost (the other resources never block a cast this way). */
+    private boolean canPay(U u, String slot, Map<String, Object> ab) {
+        Map<String, Object> res = map(u.kit("recurso"));
+        return res == null || !POOL_RESOURCES.contains(res.get("tipo"))
+                || u.resource >= val(ab, "custo", u.rank(slot), u.f.level, 0) - 1e-9;
+    }
+
+    /** Held for a while, then cast: range and damage grow with the time held, up to a maximum. */
+    private void charge(U u, String slot, Map<String, Object> ab, Map<String, Object> hold, int rank, U t, double tx, double ty,
+                        boolean strong, Action order) {
+        double max = num(hold.get("max"), 1);
+        double min = num(hold.get("min"), 0);
+        double c = Math.max(min, Math.min(max, order != null && order.charge != null ? order.charge : max));
+        double f = max > min ? (c - min) / (max - min) : 1;
+        u.busyUntil = now + c;
+        u.busyState = "channel:" + slot;
+        at(now + c, () -> {
+            if (u.dead || !u.canAct()) {
+                count(u, "canal_interrompido:" + slot);
+                return;
+            }
+            Map<String, Object> spec = new LinkedHashMap<>(ab);
+            spec.put("_carregada", true);
+            if (hold.get("alcance_ate") != null) {
+                double from = num(hold.get("alcance_de"), num(ab.get("alcance"), 800));
+                spec.put("alcance", from + (num(hold.get("alcance_ate"), from) - from) * f);
+            }
+            double from = num(hold.get("dano_de"), 1);
+            spec.put("_mult", from + (num(hold.get("dano_ate"), 1) - from) * f);
+            perform(u, slot, spec, rank, t, tx, ty, strong, order);
+        });
+    }
+
+    /** The next of the different versions of a recast; the window opens again while versions are left. */
+    @SuppressWarnings("unchecked")
+    private String recastVersion(U u, String slot, Map<String, Object> rec, double[] window, U t, double tx, double ty) {
+        List<Map<String, Object>> versions = (List<Map<String, Object>>) rec.get("versoes");
+        int step = u.recastStep.getOrDefault(slot, 0);
+        Map<String, Object> ab = versions.get(Math.min(step, versions.size() - 1));
+        u.recastUsed.add(window);
+        openCast(u, slot, true);
+        u.facing = Math.atan2(ty - u.y, tx - u.x);
+        event(u, "reconjurou " + slot + " (" + ab.get("nome") + ")");
+        int rank = u.rank(slot);
+        Runnable go = () -> {
+            if (!u.dead && u.canAct()) {
+                perform(u, slot, ab, rank, t, tx, ty, false, null);
+            }
+        };
+        double cast = num(ab.get("conjuracao"), 0);
+        u.busyUntil = now + cast;
+        if (cast > 0) {
+            at(now + cast, go);
+        } else {
+            go.run();
+        }
+        if (step + 1 < versions.size()) {
+            u.recastStep.put(slot, step + 1);
+            u.recast.put(slot, new double[] {now + num(rec.get("apos"), 0), now + num(rec.get("janela"), 4)});
+        }
+        return "done";
+    }
+
+    /** Instantly at a point within range, across walls; a point inside terrain lands short of it. */
+    private void blink(U u, Map<String, Object> ab, double tx, double ty) {
+        double a = Math.atan2(ty - u.y, tx - u.x);
+        double d = Math.min(num(ab.get("alcance"), 400), dist(u.x, u.y, tx, ty));
+        double x = clampX(u.x + Math.cos(a) * d);
+        double y = clampY(u.y + Math.sin(a) * d);
+        while (d > 0 && blocked(x, y, u.radius())) {
+            d = Math.max(0, d - 20);
+            x = clampX(u.x + Math.cos(a) * d);
+            y = clampY(u.y + Math.sin(a) * d);
+        }
+        u.x = x;
+        u.y = y;
+        u.facing = a;
+    }
+
+    /** Stands still for {@code canaliza} seconds, then appears at the point; a control on it cancels the trip. */
+    private void teleport(U u, String slot, Map<String, Object> ab, double tx, double ty) {
+        double wait = num(ab.get("canaliza"), 0);
+        u.busyUntil = now + wait;
+        u.busyState = "channel:" + slot;
+        at(now + wait, () -> {
+            if (u.dead || !u.canAct()) {
+                count(u, "canal_interrompido:" + slot);
+                return;
+            }
+            blink(u, Map.of("alcance", GLOBAL), tx, ty);
+        });
+    }
+
+    private void raiseWall(U u, Map<String, Object> ab, double tx, double ty, String label) {
+        Field f = new Field();
+        f.id = "parede-" + (ids++);
+        f.label = label;
+        f.owner = u;
+        f.kind = "rect";
+        f.terrain = true;
+        f.angle = u.facing;
+        double d = Math.min(num(ab.get("alcance"), 600), dist(u.x, u.y, tx, ty));
+        f.x = clampX(u.x + Math.cos(u.facing) * d);
+        f.y = clampY(u.y + Math.sin(u.facing) * d);
+        if (Boolean.TRUE.equals(ab.get("perpendicular"))) {
+            f.angle += Math.PI / 2;
+        }
+        f.shape = HitShape.of(zones(ab).get(0));
+        f.from = now + num(ab.get("atraso"), 0);
+        f.until = f.from + num(ab.get("duracao"), 4);
+        fields.add(f);
+    }
+
+    /** Joins the nearest ally: it stays on it and cannot be targeted. */
+    private void attach(U u, Map<String, Object> ab) {
+        U best = null;
+        for (U a : allies(u)) {
+            if (a.owner == null && (best == null || dist(u.x, u.y, a.x, a.y) < dist(u.x, u.y, best.x, best.y))) {
+                best = a;
+            }
+        }
+        if (best != null && dist(u.x, u.y, best.x, best.y) <= num(ab.get("alcance"), 600)) {
+            u.attachedTo = best;
+            u.attachedUntil = now + num(ab.get("duracao"), 1e9);
+            count(u, "anexado");
+        }
+    }
+
+    /** Back to where it was {@code segundos} ago, with the health it had then (never less than it has). */
+    private void goBack(U u, Map<String, Object> ab) {
+        double when = now - num(ab.get("segundos"), 4);
+        double[] then = null;
+        if (u.past != null) {
+            for (double[] p : u.past) {
+                if (p[0] <= when + 1e-9) {
+                    then = p;
+                }
+            }
+            if (then == null) {
+                then = u.past.peekFirst();
+            }
+        }
+        if (then != null) {
+            u.x = then[1];
+            u.y = then[2];
+            u.hp = Math.max(u.hp, then[3]);
+            count(u, "voltou_no_tempo");
+        }
+    }
+
+    /** The sheet has an ability that goes back in time, so the fight keeps where the champion has been. */
+    private static boolean goesBack(Map<String, Object> kit) {
+        Map<String, Object> abs = kit == null ? null : map(kit.get("habilidades"));
+        if (abs != null) {
+            for (Object a : abs.values()) {
+                if (a instanceof Map && "volta_no_tempo".equals(((Map<?, ?>) a).get("forma"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** The stat of a summon: a number, or a formula of its owner's stats. */
+    private static double summonStat(Map<String, Object> spec, String key, U owner, int rank, double def) {
+        Object v = spec.get(key);
+        return v instanceof Map ? formula(map(v), owner, null, rank) : num(v, def);
+    }
+
+    /**
+     * Summons: simple units with health, stats, an attack and a time on the map. {@code comportamento}: segue (follows its
+     * owner and attacks its target) | ataca (goes after the target) | parada (attacks what comes in range) | explode
+     * (runs at the target and blows up) | mina (waits, unseen, and goes off near an enemy) | clone (fights like its owner
+     * with a share of its stats).
+     */
+    private void spawn(U owner, Map<String, Object> spec, int rank, Map<String, Object> ab, double tx, double ty) {
+        int count = (int) num(spec.get("quantidade"), 1);
+        for (int k = 0; k < count; k++) {
+            boolean clone = "clone".equals(spec.get("comportamento"));
+            double share = num(spec.get("fracao"), 1);
+            Fighter f = new Fighter();
+            f.name = String.valueOf(spec.getOrDefault("nome", "Invocação"));
+            f.champion = f.name;
+            f.team = owner.team();
+            f.level = owner.f.level;
+            f.ranks = new int[4];
+            double hp = clone ? owner.maxHp * share : summonStat(spec, "vida", owner, rank, 500);
+            double ad = clone ? owner.stat(Stats.ATTACK_DAMAGE) * share : summonStat(spec, "dda", owner, rank, 0);
+            double armor = clone ? owner.stat(Stats.ARMOR) : summonStat(spec, "armadura", owner, rank, 0);
+            double resist = clone ? owner.stat(Stats.MAGIC_RESIST) : summonStat(spec, "rm", owner, rank, 0);
+            double speed = clone ? owner.stat(Stats.MOVE_SPEED) : summonStat(spec, "velocidade", owner, rank, 350);
+            for (Map<String, Double> m : List.of(f.total, f.base)) {
+                m.put(Stats.MAX_HEALTH, hp);
+                m.put(Stats.ATTACK_DAMAGE, ad);
+                m.put(Stats.ARMOR, armor);
+                m.put(Stats.MAGIC_RESIST, resist);
+                m.put(Stats.MOVE_SPEED, speed);
+            }
+            Input in = new Input();
+            in.f = f;
+            in.build = "Invocação";
+            Map<String, Object> kit = new LinkedHashMap<>();
+            kit.put("raio", num(spec.get("raio"), 50));
+            kit.put("alcance", num(spec.get("alcance"), 150));
+            if (spec.get("velocidade_projetil") != null) {
+                kit.put("velocidade_projetil", spec.get("velocidade_projetil"));
+            }
+            in.kit = kit;
+            in.policy = (o, m) -> Policy.Decision.of(ActionSpace.IDLE);
+            in.baseAttackSpeed = clone ? owner.in.baseAttackSpeed : num(spec.get("velocidade_ataque"), 0.8);
+            boolean aimed = "ponto".equals(ab.get("origem"));
+            in.x = clampX(aimed ? tx : owner.x + 120 * (k + 1) * Math.cos(owner.facing));
+            in.y = clampY(aimed ? ty : owner.y + 120 * (k + 1) * Math.sin(owner.facing));
+            U s = start(units.size() + newSummons.size(), in, Set.of());
+            s.owner = owner;
+            s.summon = spec;
+            s.summonUntil = now + val(spec, "duracao", rank, owner.f.level, 10);
+            if ("mina".equals(spec.get("comportamento"))) {
+                s.untargetableUntil = Double.MAX_VALUE;
+                s.invisibleUntil = Double.MAX_VALUE;
+                s.nextAttack = now + num(spec.get("arma_em"), 0);
+            }
+            newSummons.add(s);
+            count(owner, "invocou:" + f.name);
+        }
+    }
+
+    private void summonStep(U s) {
+        String how = String.valueOf(s.summon.getOrDefault("comportamento", "ataca"));
+        U t = s.owner.dead ? target(s) : target(s.owner) != null ? target(s.owner) : target(s);
+        switch (how) {
+            case "mina": {
+                if (now < s.nextAttack) {
+                    return;
+                }
+                double near = num(s.summon.get("raio_disparo"), 150);
+                for (U e : units) {
+                    if (e.team() != s.team() && e.targetable() && dist(s.x, s.y, e.x, e.y) <= near + e.radius()) {
+                        blowUp(s);
+                        return;
+                    }
+                }
+                return;
+            }
+            case "explode":
+                if (t != null) {
+                    if (dist(s.x, s.y, t.x, t.y) <= num(s.summon.get("raio_disparo"), 100) + t.radius()) {
+                        blowUp(s);
+                    } else {
+                        moveTo(s, t.x, t.y, s.moveSpeed() * DT);
+                    }
+                }
+                return;
+            case "parada":
+                if (t != null && dist(s.x, s.y, t.x, t.y) <= s.attackRange() + s.radius() + t.radius() && t.visible()) {
+                    chase(s, t);
+                }
+                return;
+            case "segue":
+                if (dist(s.x, s.y, s.owner.x, s.owner.y) > num(s.summon.get("distancia_dono"), 400)
+                        && (t == null || dist(s.x, s.y, t.x, t.y) > s.attackRange() + s.radius() + t.radius())) {
+                    moveTo(s, s.owner.x, s.owner.y, s.moveSpeed() * DT);
+                    return;
+                }
+                if (t != null) {
+                    chase(s, t);
+                }
+                return;
+            default:
+                if (t != null) {
+                    chase(s, t);
+                }
+        }
+    }
+
+    /** A summon's blast: its damage and effects in its radius, and it is gone. */
+    private void blowUp(U s) {
+        double r = num(s.summon.get("raio_explosao"), 200);
+        Map<String, Object> spec = new LinkedHashMap<>();
+        spec.put("dano", s.summon.get("dano"));
+        spec.put("efeitos", s.summon.get("efeitos"));
+        String source = "Invocação · " + s.f.name;
+        for (U v : enemies(s)) {
+            if (dist(s.x, s.y, v.x, v.y) <= r + v.radius()) {
+                hitAbility(s.owner, v, spec, 1, source, 1, null);
+            }
+        }
+        count(s.owner, "explodiu:" + s.f.name);
+        s.dead = true;
+    }
+
+    /** What a summon did counts for its owner. */
+    private void mergeSummon(U s) {
+        s.owner.r.dealt += s.r.dealt;
+        s.r.damageBySource.forEach((k, v) -> s.owner.r.damageBySource.merge("Invocação · " + s.f.name + " · " + k, v, Double::sum));
+    }
+
     // ------------------------------------------------------------------ the damage rules, for the lab
 
     /**
@@ -6663,6 +7450,12 @@ public class Arena {
         Frame f = new Frame();
         f.t = Math.round(now * 1000) / 1000.0;
         for (U u : units) {
+            if (u.owner != null) {
+                if (!u.dead) {
+                    f.shapes.add(circle("inv" + u.idx, u.f.name + " (" + u.owner.f.champion + ")", u.team(), u.x, u.y, u.radius()));
+                }
+                continue;
+            }
             track(u, f.t);
             UnitFrame uf = new UnitFrame();
             uf.x = round(u.x);
@@ -6700,6 +7493,7 @@ public class Arena {
             if (now < u.gwUntil) {
                 uf.marks.add("Feridas Dolorosas");
             }
+            controlMarks(u, uf.marks);
             for (Map.Entry<String, Double> e : u.formUntil.entrySet()) {
                 if (now < e.getValue()) {
                     uf.marks.add(e.getKey());
@@ -6806,7 +7600,7 @@ public class Arena {
     }
 
     private void event(U u, String text) {
-        result.events.add(new Event(Math.round(now * 1000) / 1000.0, u.idx, u.f.name + " " + text));
+        result.events.add(new Event(Math.round(now * 1000) / 1000.0, u.owner != null ? u.owner.idx : u.idx, u.f.name + " " + text));
     }
 
     private static String describe(Action a) {
@@ -6839,7 +7633,7 @@ public class Arena {
     private int fighting(int team) {
         int n = 0;
         for (U x : units) {
-            if (x.team() == team && !x.dead && !x.escaped) {
+            if (x.team() == team && !x.dead && !x.escaped && x.owner == null) {
                 n++;
             }
         }
@@ -6904,7 +7698,7 @@ public class Arena {
     private int alive(int team) {
         int n = 0;
         for (U x : units) {
-            if (x.team() == team && !x.dead) {
+            if (x.team() == team && !x.dead && x.owner == null) {
                 n++;
             }
         }
@@ -6919,7 +7713,7 @@ public class Arena {
     }
 
     private static String key(U s, String source) {
-        return s.idx + "|" + source;
+        return (s.owner != null ? s.owner.idx : s.idx) + "|" + source;
     }
 
     private Ledger led(String key) {
@@ -7003,6 +7797,9 @@ public class Arena {
         }
         if (v == null) {
             return def;
+        }
+        if (GLOBAL.equals(v)) {
+            return GLOBAL_RANGE;
         }
         try {
             return Double.parseDouble(String.valueOf(v));

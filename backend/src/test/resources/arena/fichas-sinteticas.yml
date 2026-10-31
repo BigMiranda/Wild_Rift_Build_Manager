@@ -1,0 +1,262 @@
+# Uma ficha sintética por mecânica: é o formato que a Etapa 7 vai preencher (documentado no cabeçalho de kits_7_3d.yml).
+# Nenhuma é de campeão real. Cada `habilidades."1"` é a mecânica em teste; o MecanicasTest liga cada uma a um lutador.
+base: &base
+  raio: 80
+  alcance: 175
+  espera_ataque: 0.25
+
+fichas:
+  enraizar:
+    <<: *base
+    habilidades:
+      "1": {nome: Laço, forma: zonas, recarga: 30, zonas: [{forma: circulo, raio: 900, efeitos: {enraiza: 3}}]}
+  silencio:
+    <<: *base
+    habilidades:
+      "1": {nome: Mudez, forma: zonas, recarga: 30, zonas: [{forma: circulo, raio: 900, efeitos: {silencia: 3}}]}
+  cegueira:
+    <<: *base
+    habilidades:
+      "1": {nome: Cegar, forma: zonas, recarga: 30, zonas: [{forma: circulo, raio: 900, efeitos: {cega: 3}}]}
+  provocar:
+    <<: *base
+    habilidades:
+      "1": {nome: Insulto, forma: zonas, recarga: 30, zonas: [{forma: circulo, raio: 900, efeitos: {provoca: 2}}]}
+  medo:
+    <<: *base
+    habilidades:
+      "1": {nome: Susto, forma: zonas, recarga: 30, zonas: [{forma: circulo, raio: 900, efeitos: {amedronta: 2}}]}
+  encanto:
+    <<: *base
+    habilidades:
+      "1": {nome: Beijo, forma: zonas, recarga: 30, zonas: [{forma: circulo, raio: 900, efeitos: {encanta: 2}}]}
+  sono:
+    <<: *base
+    habilidades:
+      "1": {nome: Sonífero, forma: zonas, recarga: 30, zonas: [{forma: circulo, raio: 900, efeitos: {adormece: 5}}]}
+  supressao:
+    <<: *base
+    habilidades:
+      "1": {nome: Algemas, forma: zonas, recarga: 30, zonas: [{forma: circulo, raio: 900, efeitos: {suprime: 2}}]}
+  polimorfo:
+    <<: *base
+    habilidades:
+      "1": {nome: Ovelha, forma: zonas, recarga: 30, zonas: [{forma: circulo, raio: 900, efeitos: {polimorfa: 2, lentidao_polimorfo: 0.6}}]}
+  empurrao_parede:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Soco
+        forma: zonas
+        recarga: 30
+        zonas:
+          - forma: circulo
+            raio: 900
+            efeitos: {afasta: 800, afasta_parede: {atordoa: 1.5}}
+  invisivel:
+    <<: *base
+    habilidades:
+      "1": {nome: Sombra, forma: proprio, recarga: 30, invisivel: {duracao: 6, revela_proximidade: 200}}
+  invulneravel:
+    <<: *base
+    habilidades:
+      "1": {nome: Égide, forma: proprio, recarga: 30, invulneravel: 2}
+  nao_selecionavel:
+    <<: *base
+    habilidades:
+      "1": {nome: Sumiço, forma: proprio, recarga: 30, nao_selecionavel: 2}
+  imparavel:
+    <<: *base
+    habilidades:
+      "1": {nome: Fúria, forma: proprio, recarga: 30, imparavel_por: 4}
+  piscar:
+    <<: *base
+    habilidades:
+      "1": {nome: Salto Curto, forma: piscar, recarga: 30, alcance: 400}
+  teleporte:
+    <<: *base
+    habilidades:
+      "1": {nome: Portal, forma: teleporte, recarga: 30, canaliza: 1, alcance: global}
+  avanco_alvo:
+    <<: *base
+    habilidades:
+      "1": {nome: Investida, forma: avanco, recarga: 30, alcance: 1000, velocidade: 1000, ate_alvo: true, raio: 100, dano: {tipo: verdadeiro, base: 100}}
+  avanco_ponto:
+    <<: *base
+    habilidades:
+      "1": {nome: Passo, forma: avanco, recarga: 30, alcance: 1000, velocidade: 1000, ate_ponto: true, sem_dano: true}
+  salto:
+    <<: *base
+    habilidades:
+      "1": {nome: Salto, forma: avanco, recarga: 30, alcance: 800, velocidade: 1000, atravessa_parede: true, sem_dano: true}
+  canalizar:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Rajada
+        forma: canal
+        recarga: 30
+        duracao: 2
+        intervalo: 0.5
+        alcance: 900
+        largura: 900
+        interrompivel: true
+        dano: {tipo: verdadeiro, base: 400}
+  carregar:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Arco
+        forma: linha
+        recarga: 30
+        alcance: 500
+        largura: 100
+        velocidade: 2000
+        carregar: {min: 0, max: 2, alcance_de: 500, alcance_ate: 1500, dano_de: 1, dano_ate: 2}
+        dano: {tipo: verdadeiro, base: 100}
+  reconjuracao:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Três Golpes
+        forma: zonas
+        recarga: 30
+        zonas: [{forma: circulo, raio: 900}]
+        dano: {tipo: verdadeiro, base: 10}
+        reconjurar:
+          janela: 4
+          versoes:
+            - {nome: Segundo Golpe, forma: zonas, zonas: [{forma: circulo, raio: 900}], dano: {tipo: verdadeiro, base: 20}}
+            - {nome: Terceiro Golpe, forma: zonas, zonas: [{forma: circulo, raio: 900}], dano: {tipo: verdadeiro, base: 40}}
+  formas:
+    <<: *base
+    forma_inicial: humana
+    formas:
+      humana:
+        habilidades:
+          "1": {nome: Virar Fera, forma: proprio, recarga: 1, troca_forma: fera}
+      fera:
+        status: {"Attack Damage": 100}
+        habilidades:
+          "1": {nome: Mordida, forma: zonas, recarga: 1, zonas: [{forma: circulo, raio: 900}], dano: {tipo: verdadeiro, base: 50}}
+    habilidades:
+      "1": {nome: Virar Fera, forma: proprio, recarga: 1, troca_forma: fera}
+  forma_por_recurso:
+    <<: *base
+    recurso: {tipo: energia, max: 100, por_s: 0, forma_acima: {limiar: 60, forma: cheia}}
+    formas:
+      cheia:
+        status: {"Armor": 50}
+    habilidades:
+      "1": {nome: Gasto, forma: proprio, recarga: 1, custo: 50, escudo: {base: 1}, duracao: 1}
+  invocacao_segue:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Mascote
+        forma: invocacao
+        recarga: 30
+        invoca: {nome: Mascote, comportamento: segue, vida: 500, dda: 50, velocidade: 400, duracao: 20, alcance: 200, velocidade_ataque: 1}
+  invocacao_mina:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Mina
+        forma: invocacao
+        origem: ponto
+        recarga: 30
+        invoca:
+          nome: Mina
+          comportamento: mina
+          raio_disparo: 150
+          raio_explosao: 200
+          arma_em: 0.5
+          duracao: 30
+          dano: {tipo: verdadeiro, base: 200}
+          efeitos: {enraiza: 1}
+  invocacao_explode:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Bomba
+        forma: invocacao
+        recarga: 30
+        invoca: {nome: Bomba, comportamento: explode, velocidade: 800, duracao: 10, dano: {tipo: verdadeiro, base: 300}}
+  invocacao_clone:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Espelho
+        forma: invocacao
+        recarga: 30
+        invoca: {nome: Clone, comportamento: clone, fracao: 0.5, duracao: 10}
+  parede:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Muralha
+        forma: parede
+        recarga: 30
+        alcance: 300
+        duracao: 5
+        perpendicular: true
+        zonas: [{forma: retangulo, comprimento: 1400, largura: 80, centro: true}]
+  anexar:
+    <<: *base
+    habilidades:
+      "1": {nome: Carona, forma: anexar, recarga: 30, alcance: 1000, duracao: 3}
+  volta_no_tempo:
+    <<: *base
+    habilidades:
+      "1": {nome: Rebobinar, forma: volta_no_tempo, recarga: 30, segundos: 2}
+  global:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Barragem
+        forma: alvo
+        recarga: 30
+        alcance: global
+        dano: {tipo: verdadeiro, base: 100}
+  roubo_status:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Sifão
+        forma: zonas
+        recarga: 30
+        zonas:
+          - forma: circulo
+            raio: 900
+            efeitos: {rouba: {status: "Attack Damage", valor: 30, duracao: 4}}
+  execucao:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Guilhotina
+        forma: zonas
+        recarga: 30
+        zonas:
+          - forma: circulo
+            raio: 900
+            dano: {tipo: verdadeiro, base: 1}
+            efeitos: {executa_abaixo: 0.5}
+  escudo_aliado:
+    <<: *base
+    habilidades:
+      "1": {nome: Benção, forma: proprio, recarga: 30, alvo: aliado, alcance: 900, escudo: {base: 300}, cura: {base: 200}, duracao: 5}
+  mana:
+    <<: *base
+    recurso: {tipo: mana, max: 100, por_s: 10}
+    habilidades:
+      "1": {nome: Feitiço, forma: zonas, recarga: 0.1, custo: 60, zonas: [{forma: circulo, raio: 900}], dano: {tipo: verdadeiro, base: 10}}
+  energia:
+    <<: *base
+    recurso: {tipo: energia, max: 200, por_s: 0}
+    habilidades:
+      "1": {nome: Golpe, forma: zonas, recarga: 0.1, custo: 75, zonas: [{forma: circulo, raio: 900}], dano: {tipo: verdadeiro, base: 10}}
+  sem_custo:
+    <<: *base
+    recurso: {tipo: sem_custo}
+    habilidades:
+      "1": {nome: Grátis, forma: zonas, recarga: 0.1, zonas: [{forma: circulo, raio: 900}], dano: {tipo: verdadeiro, base: 10}}
