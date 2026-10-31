@@ -13,7 +13,7 @@ import java.util.Set;
 public final class SheetValidator {
 
     private static final Set<String> CHAMPION = Set.of("raio", "alcance", "espera_ataque", "velocidade_projetil", "efeitos_de_forma",
-            "habilidades", "fragil", "mobilidade", "acumulos", "recurso", "marcas", "marcas_ksante", "formas", "forma_inicial", "fontes", "nota");
+            "habilidades", "fragil", "mobilidade", "acumulos", "recurso", "marcas", "marcas_ksante", "formas", "forma_inicial", "fontes", "nota", "qualidade");
     private static final Set<String> SHAPES = Set.of("linha", "area", "cone", "avanco", "alvo", "ataque", "proprio", "canal", "campo",
             "elemental", "empurrao", "tudo_ou_nada", "zonas", "piscar", "teleporte", "invocacao", "parede", "anexar", "volta_no_tempo");
     private static final Set<String> ABILITY = Set.of("nome", "forma", "recarga", "conjuracao", "atraso", "alcance", "largura", "raio",

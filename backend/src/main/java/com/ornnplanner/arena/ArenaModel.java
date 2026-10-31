@@ -47,6 +47,10 @@ public final class ArenaModel {
         public Dummy dummy;
         /** Items of the build left out (the lab's value of each item); null = none. */
         public java.util.Set<Long> excludeItems;
+        /** A moment of a whole match: only the first steps of the build, at this level, with this share of its health. */
+        public Integer matchSteps;
+        public Integer matchLevel;
+        public Double startHealth;
         /** A build that is not saved (the planner's draft), used instead of {@link #buildId}; never stored. */
         @JsonIgnore
         public com.ornnplanner.repo.BuildRepository.Build build;
@@ -267,6 +271,10 @@ public final class ArenaModel {
         public String dragon;
         /** The blue side goes for this objective (barao, dragao) while it lives; null = it fights the champions. */
         public String takes;
+        /** Structures that fell before this moment (their indexes on the map's list); only those near the fight are put on it. */
+        public List<Integer> fallen;
+        /** Only towers within this far of the fight's point (a match's fight), around these: {x, y, radius}. */
+        public double[] around;
     }
 
     /** Buffs of objectives: drake stacks by element, the soul, the Elder and the Hand of Baron. */
@@ -525,6 +533,9 @@ public final class ArenaModel {
         /** Healing that found the health already full: what it could still have taken. */
         public double healOver;
         public Double deathTime;
+        /** Where it ended the fight. */
+        public double endX;
+        public double endY;
         /** Gold and experience earned on the full map. */
         public double goldEarned;
         public double xpEarned;

@@ -169,6 +169,39 @@ Testes: 294 → 295 (11 opcionais pulados). `npm run build` limpo (sem mudança 
 
 **Testes:** `RiftTest`, 16 mais o benchmark opcional: lugares alcançáveis a pé, rotas livres, caminho, ondas nos tempos, último golpe, torre, selva, moita, Barão, buffs e determinismo. Golden sem mudança. Testes: 295 → 312 (12 opcionais pulados). `npm run build` limpo.
 
+## Parte 5 — Partida inteira, otimizada ✅
+
+**Duas camadas.** `arena/rift/Match` roda a partida no passo grosso de 0,25 s: campeões andam, a macro decide, ondas trocam golpes em lote, torres e acampamentos são números. Quando campeões lutam, a luta sai para a Arena no passo fino de 0,02 s, com paredes e as torres por perto, sem quadros.
+
+- **Macro:** `MacroPolicy` (trocável) e `ScriptedMacro`, por função: rota do Barão, selva, meio, dupla do Dragão e suporte. Volta à base por Vida baixa ou por ouro, faz a rota da selva, gira para os objetivos e agrupa depois de um tempo. Parâmetros em `seed/macro_7_3d.yml`. A função sai das rotas do campeão (Rodada 7) e do que falta no lado.
+- **Compras:** a sequência é a do `TimelineEngine` da build, com a mesma checagem da loja (`ShopRuleCheck`), incluindo as botas aos 10:00. O lutador do momento sai do planejador: as primeiras compras, no nível da partida (`Slot.matchSteps`, `matchLevel`).
+- **Economia:** ouro e XP vêm das tropas, abates, assistências, torres, placas, selva, objetivos e ouro passivo.
+- **Qualidade da ficha:** o campo novo `qualidade` nas 6 fichas (A). Campeão sem A ou B fica fora, e a tela diz isso.
+- **Tela:** aba "Partida", com as 10 posições, a reprodução por resumo de segundo (mapa, placar, ouro, nível), lutas e eventos. "Abrir a luta na Arena" reconstrói o momento: compras, nível, Vida, posição e objetivos.
+
+**Nível de detalhe, como foi feito:** o passo fino é só dentro das lutas; o resto é passo grosso, sem os passos intermediários de 0,1 s do prompt. Onda contra onda é sempre em lote. A grade espacial não foi necessária: são 10 campeões e poucas ondas.
+
+**Exemplos** (cópia do banco, Rumble, Ornn, Renekton, Darius, Ornn contra o mesmo, sementes 1 a 3): o Nexo cai entre 14:50 e 15:15.
+
+| campeão, semente 1 | função | nível | K/D | ouro/min (build) | XP/min (build) | tropas + monstros |
+|---|---|---|---|---|---|---|
+| Rumble | Barão | 10 | 0/1 | 548 (900) | 417 (700) | 103 + 0 |
+| Ornn | selva | 9 | 0/2 | 427 (700) | 370 (700) | 2 + 27 |
+| Renekton | meio | 9 | 4/3 | 626 (800) | 386 (700) | 89 + 0 |
+| Darius | dupla | 7 | 7/1 | 705 (800) | 227 (700) | 84 + 0 |
+| Ornn | suporte | 8 | 1/2 | 281 (700) | 304 (700) | 1 + 0 |
+
+**Leitura:** a partida rende de 15% a 40% menos ouro e cerca de metade da XP das builds. **Isso ainda não calibra o planejador**, porque as tropas, a XP e a macro são estimativas. A macro também não reparte a rota como um time real.
+
+**Desempenho 🎯:** partida de 15 min, 1 thread: de 2,7 a 6,4 s, com 0,3 a 1,3 s em 24 a 28 lutas. A meta era menos de 60 s para 20 min. O tempo restante está em montar os lutadores pelo planejador.
+
+**Limites:**
+- as lutas começam com as recargas prontas e não levam tropas: não há onda dentro da luta da partida;
+- a Mão do Barão e os dragões entram nas lutas, mas o Barão é um número no macro, sem ciclo; o elemento do dragão é sempre Infernal; o Ancião entra como dado, sem efeito na luta;
+- sem desvios, moitas ou visão no macro: a luta sai por distância e vantagem.
+
+**Testes:** `MatchTest` (7), num mundo simples: ondas nos tempos, ouro pelo último golpe, ouro e XP até 10:00 parado na rota, compras na ordem com a regra da loja, selva e dragão, fim pelo Nexo, determinismo. `MatchReportTest` (opcional, `-Dmatch.report=data/ornn-planner.db`) gera a tabela acima e confere o determinismo com as lutas reais.
+
 ## Para o usuário
 
 **Prints, por prioridade:**

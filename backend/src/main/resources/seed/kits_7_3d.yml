@@ -13,7 +13,7 @@
 #   EST estimativa, sem fonte (anotada também em `nota`).
 # Unidades: distância em unidades do jogo, tempo em segundos, velocidade em unidades/s.
 #
-# Por campeão: raio (corpo), alcance (ataque básico), espera_ataque (fração do intervalo de ataque antes do golpe sair),
+# Por campeão: qualidade (A ou B: a ficha serve para a partida inteira), raio (corpo), alcance (ataque básico), espera_ataque (fração do intervalo de ataque antes do golpe sair),
 # velocidade_projetil (ataques à distância), efeitos_de_forma (efeitos de campeão de campeoes_7_3d.yml que a arena liga e
 # desliga sozinha no momento certo, em vez da escolha da build) e habilidades "1", "2", "3", "R".
 #
@@ -102,6 +102,7 @@ mapa:
 
 campeoes:
   Ornn:
+    qualidade: A
     raio: 80                 # PC
     alcance: 175             # WR
     espera_ataque: 0.219     # PC (21,875%)
@@ -179,6 +180,7 @@ campeoes:
         fontes: "recarga, conjuração, dano, lentidão, Frágil, janela da reconjuração, arremesso: WR; distância, largura, velocidades: PC; aceleração, cabeçada, distância da volta: EST; comprimento: usuário (≈ 4× o desenho anterior)"
 
   Darius:
+    qualidade: A
     raio: 80                 # PC
     alcance: 175             # WR
     espera_ataque: 0.25      # EST
@@ -237,6 +239,7 @@ campeoes:
         fontes: "WR"
 
   Renekton:
+    qualidade: A
     raio: 80                 # PC
     alcance: 175             # WR
     espera_ataque: 0.25      # EST
@@ -298,6 +301,7 @@ campeoes:
         fontes: "WR"
 
   Rumble:
+    qualidade: A
     raio: 80                 # PC
     alcance: 175             # WR
     espera_ataque: 0.25      # EST
@@ -364,6 +368,7 @@ campeoes:
         fontes: "recarga, conjuração, dano, duração: WR; alcance, fileira de foguetes, largura: PC"
 
   Vayne:
+    qualidade: A
     raio: 65                 # PC
     alcance: 575             # WR
     espera_ataque: 0.175     # PC (17,544%)
@@ -419,6 +424,7 @@ campeoes:
         fontes: "WR"
 
   K'Sante:
+    qualidade: A
     raio: 80                 # EST
     alcance: 150             # WR
     espera_ataque: 0.25      # EST

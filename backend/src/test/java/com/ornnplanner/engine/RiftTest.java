@@ -72,6 +72,7 @@ class RiftTest {
         places.add(MAP.dragonPit);
         double[] from = MAP.fountainBlue;
         for (double[] p : places) {
+            assertFalse(MAP.solid(p[0], p[1]), "inside a wall: " + p[0] + "," + p[1]);
             assertTrue(MAP.path(from[0], from[1], p[0], p[1]).length > 0 || MAP.clear(from[0], from[1], p[0], p[1]),
                     "no way to " + p[0] + "," + p[1]);
         }
@@ -88,11 +89,11 @@ class RiftTest {
 
     @Test
     void thePathGoesAroundAWall() {
-        double[][] way = MAP.path(2750, 5300, 4400, 5200);
-        assertFalse(MAP.clear(2750, 5300, 4400, 5200), "a wall on the straight line");
+        double[][] way = MAP.path(3300, 4800, 4400, 4800);
+        assertFalse(MAP.clear(3300, 4800, 4400, 4800), "a wall on the straight line");
         assertTrue(way.length >= 1);
-        double ax = 2750;
-        double ay = 5300;
+        double ax = 3300;
+        double ay = 4800;
         for (double[] p : way) {
             assertTrue(MAP.clear(ax, ay, p[0], p[1]));
             ax = p[0];
@@ -102,11 +103,11 @@ class RiftTest {
 
     @Test
     void aChampionWalksAroundWallsAndADashStopsAtThem() {
-        Arena.Input a = champ("Ornn", 0, 2600, 5000);
+        Arena.Input a = champ("Ornn", 0, 3300, 4800);
         Arena.Input b = champ("Darius", 1, 11000, 11000);
-        Result r = fight(only(o -> { }), 6, List.of(a, b), move(0, 0.1, 3800, 5400));
+        Result r = fight(only(o -> { }), 6, List.of(a, b), move(0, 0.1, 4400, 4800));
         ArenaModel.UnitFrame end = r.frames.get(r.frames.size() - 1).units.get(0);
-        assertTrue(Math.hypot(end.x - 3800, end.y - 5400) < 60, end.x + "," + end.y);
+        assertTrue(Math.hypot(end.x - 4400, end.y - 4800) < 60, end.x + "," + end.y);
         for (Frame f : r.frames) {
             assertFalse(MAP.solid(f.units.get(0).x, f.units.get(0).y), "inside a wall");
         }

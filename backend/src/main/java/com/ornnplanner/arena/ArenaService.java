@@ -63,6 +63,7 @@ public class ArenaService {
     private final PolicyRepository policies;
     private final ComboRepository combos;
     private final AutoBrain auto;
+    private final com.ornnplanner.service.PlannerService planner;
     private final Map<String, Object> kits = new LinkedHashMap<>();
     private final Map<String, Object> map = new LinkedHashMap<>();
     private final com.ornnplanner.arena.rift.RiftMap rift;
@@ -73,6 +74,7 @@ public class ArenaService {
     @SuppressWarnings("unchecked")
     public ArenaService(FighterBuilder combat, CombatCatalog catalog, BuildRepository builds, RuneCatalog runes,
                         JdbcTemplate jdbc, PolicyRepository policies, ComboRepository combos, AutoBrain auto,
+                        com.ornnplanner.service.PlannerService planner,
                         @Value("${planner.seed.kits:classpath:seed/kits_7_3d.yml}") Resource kitsFile,
                         @Value("${planner.seed.rift:classpath:seed/mapa_7_3d.yml}") Resource riftFile,
                         @Value("${planner.seed.objectives:classpath:seed/objetivos_7_3d.yml}") Resource rulesFile) {
@@ -84,6 +86,7 @@ public class ArenaService {
         this.policies = policies;
         this.combos = combos;
         this.auto = auto;
+        this.planner = planner;
         this.rift = com.ornnplanner.arena.rift.RiftMap.load(riftFile);
         this.rules = com.ornnplanner.arena.rift.RiftRules.load(rulesFile);
         try (InputStream in = kitsFile.getInputStream()) {
@@ -118,6 +121,32 @@ public class ArenaService {
         }
         auto.record(sc, inputs, r, source);
         return r;
+    }
+
+    /**
+     * A build at a moment of a whole match: only its first purchases, all held, at the level the match says. The planner
+     * makes the fighter, with gold to spare and the experience of that level at the minute.
+     */
+    private BuildRepository.Build matchBuild(BuildRepository.Build b, Slot slot) {
+        BuildRepository.Build copy = JSON.convertValue(b, BuildRepository.Build.class);
+        copy.id = null;
+        copy.steps = new ArrayList<>(b.steps.subList(0, Math.min(b.steps.size(), slot.matchSteps)));
+        double minute = slot.minute == null ? 10 : Math.max(1, slot.minute);
+        copy.goldPerMin = 1e6;
+        Double need = planner.referenceData().xpTable.get(slot.matchLevel == null ? 1 : slot.matchLevel);
+        copy.xpPerMin = ((need == null ? 0 : need) + 1) / minute;
+        copy.matchEnd = minute;
+        return copy;
+    }
+
+    /** The champion of a combatant. */
+    public String championOf(FighterBuilder.Combatant c) {
+        return combat.championName(c);
+    }
+
+    /** A fight of a whole match: prepared champions, on the full map, ended by a few seconds of quiet. */
+    public ArenaModel.Result matchFight(List<Arena.Input> inputs, Scenario sc, double quiet) {
+        return arena(sc).withoutFrames().stopWhenQuiet(quiet).run(inputs, List.of(), sc.duration);
     }
 
     /** The arena of a scenario: its map, safe zone and objectives. */
@@ -335,11 +364,12 @@ public class ArenaService {
             if (slot.buildId == null && slot.build == null) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha uma build para cada campeão.");
             }
-            BuildRepository.Build build = slot.build != null ? slot.build : builds.findBuild(slot.buildId).orElseThrow(
+            BuildRepository.Build found = slot.build != null ? slot.build : builds.findBuild(slot.buildId).orElseThrow(
                     () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Build " + slot.buildId + " não existe."));
+            BuildRepository.Build build = slot.matchSteps != null ? matchBuild(found, slot) : found;
             FighterBuilder.Combatant c = new FighterBuilder.Combatant();
-            c.buildId = slot.buildId;
-            c.build = slot.build;
+            c.buildId = slot.matchSteps != null ? null : slot.buildId;
+            c.build = slot.matchSteps != null ? build : slot.build;
             c.minute = slot.minute;
             c.activations = slot.activations;
             c.excludeItems = slot.excludeItems;
@@ -365,6 +395,7 @@ public class ArenaService {
             in.followTeam = slot.followTeam;
             in.autoAbilities = slot.autoAbilities;
             in.objectives = build.objectives;
+            in.startHealth = slot.startHealth;
             if (slot.priority != null && !slot.priority.isEmpty()) {
                 in.priority = new ArrayList<>(slot.priority);
             }

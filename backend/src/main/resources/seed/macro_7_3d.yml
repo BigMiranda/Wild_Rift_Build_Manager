@@ -1,0 +1,25 @@
+# Macro roteirizada da partida inteira (arena/rift/ScriptedMacro): valores meus (EST), para ajustar. A macro é trocável pela
+# interface MacroPolicy; a aprendida fica para depois.
+fonte: "EST"
+ultimos_golpes:            # chance de o campeão mais próximo da função levar o último golpe da tropa
+  barao: 0.75
+  meio: 0.80
+  dupla: 0.85
+  selva: 0.30
+  suporte: 0.05
+voltar_vida: 0.30          # volta à base abaixo desta fração da Vida
+voltar_ouro: 1100          # ou com este ouro na mão, se ele paga a próxima compra
+volta_s: 8                 # segundos de canalização da volta
+objetivo_depois_de: 5      # minuto a partir do qual selva e meio giram para os objetivos
+agrupar_aos: 14            # minuto em que todos agrupam e empurram uma rota
+luta_distancia: 900        # inimigos a esta distância, com a linha livre, podem lutar
+luta_raio: 1300            # quem está neste raio entra na luta
+luta_vantagem: 2.2         # a luta sai com esta vantagem de força (Vida × dano), ou com luta_chance a cada passo
+luta_chance: 0.003
+luta_pausa: 30             # segundos sem nova luta para quem acabou de lutar
+luta_duracao: 20           # teto de uma luta no passo fino
+luta_calma: 3              # a luta acaba com este tempo sem dano
+ritmo_monstros: 2.5        # dano em monstros e objetivos: ataques mais habilidades, sobre o dano de ataque por segundo
+dano_monstros: 0.2         # fração do dano do monstro que chega, com o desvio e o escudo dos primeiros níveis
+renascer_base: 6           # tempo de renascer: base + por nível
+renascer_por_nivel: 2.5

@@ -1656,7 +1656,7 @@ function shapeOwner(s, result) {
 }
 
 /** The ground of the full map: river, walls, bushes, pits and fountains. */
-function RiftGround({ world }) {
+export function RiftGround({ world }) {
   const [a, b] = world.river;
   return (
     <>

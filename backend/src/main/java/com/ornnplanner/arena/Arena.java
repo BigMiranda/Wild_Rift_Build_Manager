@@ -833,6 +833,8 @@ public class Arena {
     }
 
     private boolean describeEffects;
+    private double quietFor;
+    private double lastChampionHit;
     /** The fight ends when this fighter dies (null = when a side is down): the effectiveness tests stop at the build. */
     private Integer stopWhenDead;
     /** Keeps what the policies did as orders also without frames (the recording of a fixed behavior). */
@@ -849,6 +851,12 @@ public class Arena {
     /** Fighter {@code index} never dies: it holds at 1 health. */
     public Arena holdAtOne(int index) {
         holdAtOne = index;
+        return this;
+    }
+
+    /** Ends the fight after this long without a hit between champions (0 = never): the fights of a match. */
+    public Arena stopWhenQuiet(double seconds) {
+        quietFor = seconds;
         return this;
     }
 
@@ -973,6 +981,10 @@ public class Arena {
             }
             int a = alive(0);
             int b = alive(1);
+            if (quietFor > 0 && now - lastChampionHit >= quietFor) {
+                frame();
+                break;
+            }
             if (nexusDown >= 0) {
                 result.winner = 1 - nexusDown;
                 frame();
@@ -1017,6 +1029,8 @@ public class Arena {
                 result.skipped.add(new Event(a.time, u.idx, describe(a) + ": não foi possível até o fim da luta"));
             }
             u.r.health = Math.max(0, u.hp);
+            u.r.endX = round(u.x);
+            u.r.endY = round(u.y);
             u.r.goldEarned = round(u.gold);
             u.r.xpEarned = round(u.xp);
             result.fighters.add(u.r);
@@ -4614,6 +4628,7 @@ public class Arena {
                 raw *= 1 - rules.num(0.5, "objetivos", "barao", "olhar", "reducao");
             }
             if (!a.npc && !t.npc) {
+                lastChampionHit = now;
                 callForHelp(a, t);
                 a.shownUntil = now + 1;
             }
@@ -6831,11 +6846,18 @@ public class Arena {
         ArenaModel.RiftOptions o = riftOptions;
         double second = clock();
         if (o.towers) {
-            for (com.ornnplanner.arena.rift.RiftMap.Spot t : rift.towers) {
-                tower(t);
+            for (int i = 0; i < rift.towers.size(); i++) {
+                com.ornnplanner.arena.rift.RiftMap.Spot t = rift.towers.get(i);
+                boolean fell = o.fallen != null && o.fallen.contains(i);
+                boolean far = o.around != null && dist(t.x, t.y, o.around[0], o.around[1]) > o.around[2];
+                if (!fell && !far) {
+                    tower(t);
+                }
             }
-            nexus(0, rift.nexusBlue);
-            nexus(1, rift.nexusRed);
+            if (o.around == null) {
+                nexus(0, rift.nexusBlue);
+                nexus(1, rift.nexusRed);
+            }
         }
         if (o.minions) {
             waves[0] = (int) Math.max(0, (second - rules.num(30, "tropas", "primeira_onda")) / 30);
