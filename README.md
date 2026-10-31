@@ -414,7 +414,9 @@ os cenários do usuário, na tabela `effect_test`.
   com as runas da build (ou uma build escolhida, ou a média de uma pasta).
 - **Relatórios**: Básico (os cenários 1×1 com pesos: tabela, barras e pontos fracos) e Completo (mais os de equipe e as
   varreduras: 5 estágios de um atributo do atacante de referência, com o ponto de quebra, o estágio em que o índice cai
-  mais de 25% em relação ao anterior). Configuráveis e salvos, com "Restaurar o padrão".
+  mais de 25% em relação ao anterior). Configuráveis e salvos, com "Restaurar o padrão". A penetração % vai de 0 a
+  75% (0, 10, 30, 50, 75); um estágio acima disso usa 75%. Com "comparar" ligado no planejador, o relatório roda também
+  nas builds comparadas, com a tabela lado a lado e uma linha por build nas varreduras.
 - **Por item**: com × sem o item; com × só os status planos dele (passivas e ativos desligados: o valor da passiva);
   com × o mesmo ouro em status puros (Vida, Armadura e RM em terços, pelos preços de `precos_status.yml`, a mistura que
   mais rende). **Comparar candidatos** troca uma compra da build por outro item, com o ouro e as regras da loja.

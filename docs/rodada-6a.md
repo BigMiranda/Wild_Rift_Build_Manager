@@ -255,3 +255,20 @@ cada consulta ao planejador); comparação de 4 candidatos num cenário, 2,3 s.
   `target/surefire-reports/` limpa. `npm run build` limpo em todas as partes.
 - **Golden:** sem mudança em toda a rodada (nenhum dos 6 kits nas notas; campos novos opcionais ou descritivos).
 - **Migração:** v23 (`effect_test`).
+
+## Ajustes depois da rodada (31/10/2026)
+
+- **Penetração % no máximo 75%:** os estágios padrão das três varreduras de penetração % passam a 0, 10, 30, 50 e 75. O
+  0 fica como base da curva e mantém os 5 estágios. Um estágio salvo ou digitado acima de 75 roda como 75, e um relatório
+  salvo com os estágios antigos (0, 25, 50, 75, 95) segue o padrão novo. Os resultados da Parte 4 foram medidos com os
+  estágios antigos. O limite vale para as varreduras; a penetração na luta (itens, status de boneco) não tem teto.
+- **Comparativo no planejador:** com builds em "comparar", "Rodar" da aba Efetividade roda o relatório da build aberta e
+  o de cada comparada (como no gráfico: salvas, ou com os condicionais da aberta): tabela lado a lado por cenário, com o
+  melhor marcado e o índice ponderado, e, no Completo, uma linha por build em cada varredura, com o ponto de quebra de
+  cada uma. A leitura por item e os candidatos seguem só na build aberta.
+- **No comparativo, todas as builds usam a referência da build aberta.** Com a referência de cada uma, quem vivia mais
+  podia ter índice menor: contra o Atirador alimentado, Big Carry v1 (20,1 s) dava 722 e Manto do Manto do Desespero de
+  Amaranto (30,4 s) dava 146, porque as referências eram 2,8 s e 20,8 s.
+
+**Em aberto:** a referência do Ornn sem itens contra o Atirador alimentado é 2,8 s na Big Carry e 20,8 s nas outras
+builds conferidas, e isso infla o índice 722 da Parte 4. A causa ainda não foi investigada.

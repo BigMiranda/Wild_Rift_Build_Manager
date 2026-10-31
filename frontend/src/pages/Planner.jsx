@@ -597,7 +597,15 @@ export default function Planner({ meta, items }) {
                 </section>
               )}
               {momentTab === 'effectiveness' && (
-                <EffectivenessPanel build={payload} buildId={draft.id} minute={point.minute} items={items} builds={builds} folders={folders} />
+                <EffectivenessPanel build={payload} buildId={draft.id} name={draft.name} minute={point.minute} items={items} builds={builds} folders={folders}
+                  compareKey={`${compareIds.join(',')}|${condKey}`}
+                  compare={compareIds.map((id, i) => ({
+                    id, name: buildName(id), color: SERIES_COLORS[(i + 1) % SERIES_COLORS.length],
+                    // as the chart: as saved, or with the open build's conditionals
+                    request: async () => (condSource
+                      ? { build: toPayload(withConditionals(fromApi(await api.get(`/api/builds/${id}`)), condSource, itemsById)) }
+                      : { buildId: id }),
+                  }))} />
               )}
               {momentTab === 'relevance' && <RelevanceReport point={point} prices={result.statPrices} itemsById={itemsById} draft={payload} />}
               {momentTab === 'effective' && (

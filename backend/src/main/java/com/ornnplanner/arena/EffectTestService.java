@@ -67,6 +67,10 @@ public class EffectTestService {
     public static final List<Map<String, Double>> MIXES = mixes();
     public static final int MAX_ATTACKERS = 5;
     public static final int MAX_ALLIES = 4;
+    /** The most % penetration a sweep stage may ask for. */
+    public static final double MAX_PEN_PCT = 75;
+    /** The % penetration stages before the 75% limit: a report saved with them follows the new default. */
+    private static final List<Double> OLD_PEN_STAGES = List.of(0.0, 25.0, 50.0, 75.0, 95.0);
     private static final double BUILD_X = 5000;
     private static final int CACHE = 6000;
     /** A build that survives the whole fight: its estimated time to die is at most this many times the duration. */
@@ -229,6 +233,11 @@ public class EffectTestService {
         Report r = read(data.get(0), Report.class);
         r.kind = kind;
         r.isDefault = false;
+        for (Sweep s : r.sweeps) {
+            if (s.key.startsWith("pen_pct") && OLD_PEN_STAGES.equals(s.stages)) {
+                defaultSweeps.stream().filter(d -> d.key.equals(s.key)).findFirst().ifPresent(d -> s.stages = new ArrayList<>(d.stages));
+            }
+        }
         return r;
     }
 
@@ -732,7 +741,7 @@ public class EffectTestService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dimensão desconhecida: " + st.dimension);
         }
         Bot b = sweepAttacker().copy();
-        double v = st.value;
+        double v = st.dimension.startsWith("pen_pct") ? Math.min(MAX_PEN_PCT, st.value) : st.value;
         switch (st.dimension) {
             case "pen_pct":
                 b.stats.put("% Armor Penetration", v);

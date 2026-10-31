@@ -184,6 +184,7 @@ cenarios:
 
 # Varreduras do relatório Completo: cada estágio muda um atributo do atacante de referência e mantém os outros.
 # Os 5 estágios de cada dimensão são editáveis na tela (e voltam a estes com "Restaurar o padrão").
+# A penetração % vai no máximo a 75% (decisão do usuário em 31/10/2026): acima disso a varredura usa 75%.
 varredura:
   duracao: 180
   atacante:
@@ -191,9 +192,9 @@ varredura:
      status: {Ability Power: 400},
      pulsos: [{nome: Golpe mágico, tipo: dano, dano_tipo: magico, base: 100, pdh: 0.6, a_cada: 5, alcance: 350}]}
   dimensoes:
-  - {chave: pen_pct, nome: Penetração % física e mágica, estagios: [0, 25, 50, 75, 95]}
-  - {chave: pen_pct_fisica, nome: Penetração % física, estagios: [0, 25, 50, 75, 95]}
-  - {chave: pen_pct_magica, nome: Penetração % mágica, estagios: [0, 25, 50, 75, 95]}
+  - {chave: pen_pct, nome: Penetração % física e mágica, estagios: [0, 10, 30, 50, 75]}
+  - {chave: pen_pct_fisica, nome: Penetração % física, estagios: [0, 10, 30, 50, 75]}
+  - {chave: pen_pct_magica, nome: Penetração % mágica, estagios: [0, 10, 30, 50, 75]}
   - {chave: pen_fixa, nome: Penetração fixa / letalidade, estagios: [0, 10, 20, 30, 40]}
   - {chave: critico, nome: Taxa de Crítico, estagios: [0, 25, 50, 75, 100]}
   - {chave: dda, nome: DdA, estagios: [0, 250, 500, 750, 1000]}

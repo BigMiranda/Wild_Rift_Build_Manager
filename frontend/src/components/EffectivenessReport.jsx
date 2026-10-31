@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CartesianGrid, Line, LineChart, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
-import { mmss, n0, n1 } from '../format.js';
+import { SERIES_COLORS, mmss, n0, n1 } from '../format.js';
 import { breakPoint, effectMeta, gain, reportJobs, runJobs, weakPoints, weightedIndex } from '../effectiveness.js';
 import ItemIcon from './ItemIcon.jsx';
 import { openInArena } from './TestInArena.jsx';
@@ -121,18 +121,66 @@ export function BasicResult({ report, outcomes, names }) {
   );
 }
 
-/** The complete report's sweeps: a line chart of the index per dimension, with the break point. */
-export function SweepResult({ report, outcomes }) {
+/** The builds compared side by side: the index and time to die per scenario, the best of each row marked. */
+export function ComparativeResult({ report, series, names }) {
+  return (
+    <div className="table-wrap">
+      <table className="data eff-table">
+        <thead>
+          <tr>
+            <th>{t('efx.col.test')}</th>
+            {series.map((s) => <th key={s.key} style={{ color: s.color }}>{s.name}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {report.tests.map((e, i) => {
+            const cells = series.map((s) => s.outcomes[i]);
+            const best = Math.max(...cells.map((o) => (o?.index != null && Number.isFinite(o.index) ? o.index : -Infinity)));
+            return (
+              <tr key={e.key}>
+                <td>{cells.find((o) => o?.testName)?.testName ?? names[e.key] ?? e.key}</td>
+                {cells.map((o, k) => (
+                  <td key={series[k].key} className={o?.index === best ? 'best' : ''}>
+                    {o?.error ? <span className="error">{o.error}</span> : <>{o?.index == null ? '—' : n0(o.index)} <small className="muted">{ttd(o?.build)}</small></>}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+          <tr>
+            <td><strong>{t('efx.weightedShort')}</strong></td>
+            {series.map((s) => {
+              const v = weightedIndex(report, s.outcomes);
+              return <td key={s.key}><strong>{v == null ? '—' : n0(v)}</strong></td>;
+            })}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * The complete report's sweeps: a line chart of the index per dimension, one line per build (`series`: {key, name, color,
+ * outcomes}), with the break points.
+ */
+export function SweepResult({ report, series }) {
   const k0 = report.tests.length;
   let k = k0;
   return (
     <div className="eff-sweeps">
       {(report.sweeps ?? []).map((s) => {
-        const pts = s.stages.map((v) => {
-          const o = outcomes[k++];
-          return { stage: Number(v), index: o?.index != null && Number.isFinite(o.index) ? Math.round(o.index) : null, est: o?.build?.estimated };
+        const from = k;
+        k += s.stages.length;
+        const pts = s.stages.map((v, i) => {
+          const p = { stage: Number(v) };
+          series.forEach((b) => {
+            const o = b.outcomes[from + i];
+            p[b.key] = o?.index != null && Number.isFinite(o.index) ? Math.round(o.index) : null;
+          });
+          return p;
         });
-        const br = breakPoint(pts.map((p) => p.stage), pts.map((p) => p.index));
+        const breaks = series.map((b) => ({ b, br: breakPoint(pts.map((p) => p.stage), pts.map((p) => p[b.key])) }));
         return (
           <div key={s.key} className="eff-sweep">
             <h5>{s.name}</h5>
@@ -142,15 +190,18 @@ export function SweepResult({ report, outcomes }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="#2a3240" />
                   <XAxis dataKey="stage" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v) => [n0(v), t('efx.col.index')]} labelFormatter={(l) => `${s.name}: ${l}`} />
-                  <Line type="monotone" dataKey="index" stroke="#c8aa6e" dot isAnimationActive={false} />
-                  {br && <ReferenceDot x={br.stage} y={br.to} r={5} fill="#d64545" stroke="none" />}
+                  <Tooltip formatter={(v, n) => [n0(v), n]} labelFormatter={(l) => `${s.name}: ${l}`} />
+                  {series.map((b) => <Line key={b.key} type="monotone" dataKey={b.key} name={b.name} stroke={b.color} dot isAnimationActive={false} connectNulls />)}
+                  {breaks.filter((x) => x.br).map((x) => <ReferenceDot key={x.b.key} x={x.br.stage} y={x.br.to} r={5} fill="#d64545" stroke="none" />)}
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <small className={br ? 'error' : 'muted'}>
-              {br ? t('efx.break', { stage: br.stage, from: n0(br.from), to: n0(br.to) }) : t('efx.noBreak')}
-            </small>
+            {breaks.map(({ b, br }) => (
+              <small key={b.key} className={`eff-break ${br ? 'error' : 'muted'}`}>
+                {series.length > 1 && <span style={{ color: b.color }}>{b.name}: </span>}
+                {br ? t('efx.break', { stage: br.stage, from: n0(br.from), to: n0(br.to) }) : t('efx.noBreak')}
+              </small>
+            ))}
           </div>
         );
       })}
@@ -179,12 +230,13 @@ const mixLabel = (mix) => Object.entries(mix ?? {}).filter(([, v]) => v > 0)
  * effectiveness of each item (with × without, × only its flat stats, × the same gold in pure stats) and the
  * comparison of candidates for one purchase.
  */
-export function EffectivenessPanel({ build, buildId, minute, items, builds, folders }) {
+export function EffectivenessPanel({ build, buildId, name, minute, items, builds, folders, compare = [], compareKey = '' }) {
   const names = useTestNames();
   const [kind, setKind] = useState('basico');
   const [report, setReport] = useState(null);
   const [ref, setRef] = useState({ kind: 'proprio' });
   const [outcomes, setOutcomes] = useState(null);
+  const [others, setOthers] = useState([]);
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
   const [perItem, setPerItem] = useState(null);
@@ -199,7 +251,7 @@ export function EffectivenessPanel({ build, buildId, minute, items, builds, fold
     api.get(`/api/effect/reports/${kind}`).then((r) => { if (live) setReport(r); }).catch((e) => setError(e.message));
     return () => { live = false; };
   }, [kind]);
-  useEffect(() => { setOutcomes(null); setPerItem(null); setCmp((c) => ({ ...c, rows: null })); }, [at, kind, ref.kind, ref.buildId, ref.folderId]);
+  useEffect(() => { setOutcomes(null); setOthers([]); setPerItem(null); setCmp((c) => ({ ...c, rows: null })); }, [at, kind, ref.kind, ref.buildId, ref.folderId, compareKey]);
 
   const go = async (jobs, done) => {
     stop.current = false;
@@ -216,7 +268,46 @@ export function EffectivenessPanel({ build, buildId, minute, items, builds, fold
     setBusy(null);
   };
 
-  const runReport = () => go(reportJobs(report, kind === 'completo'), setOutcomes);
+  /** The report of the open build, then of each build compared, with one progress bar. */
+  const runReport = async () => {
+    const jobs = reportJobs(report, kind === 'completo');
+    const total = jobs.length * (1 + compare.length);
+    let before = 0;
+    let spent = 0;
+    const one = async (b) => {
+      let last = 0;
+      const out = await runJobs({ ...b, minute: at, reference: ref }, jobs, {
+        onProgress: (d, _, ms) => { last = ms; setBusy({ done: before + d, total, ms: spent + ms }); }, stop: () => stop.current,
+      });
+      before += jobs.length;
+      spent += last;
+      return out;
+    };
+    stop.current = false;
+    setError(null);
+    setOutcomes(null);
+    setOthers([]);
+    setBusy({ done: 0, total, ms: 0 });
+    try {
+      setOutcomes(await one(build ? { build } : { buildId }));
+      const rest = [];
+      for (const c of compare) {
+        if (stop.current) break;
+        rest.push({ key: `b${c.id}`, name: c.name, color: c.color, outcomes: await one(await c.request()) });
+        setOthers([...rest]);
+      }
+    } catch (e) {
+      setError(e.message);
+    }
+    setBusy(null);
+  };
+  // Side by side, every build is measured against the open build's reference: each one's own would not compare.
+  const onOpenRef = (list) => list.map((o, i) => {
+    const r = outcomes[i]?.reference?.timeToDeath;
+    return o?.build && r > 1e-9 ? { ...o, index: (100 * o.build.timeToDeath) / r } : o;
+  });
+  const series = outcomes ? [{ key: 'open', name: name ?? '', color: SERIES_COLORS[0], outcomes },
+    ...others.map((s) => ({ ...s, outcomes: onOpenRef(s.outcomes) }))] : [];
 
   const runPerItem = async () => {
     setError(null);
@@ -302,13 +393,22 @@ export function EffectivenessPanel({ build, buildId, minute, items, builds, fold
         <Progress busy={busy} onStop={() => { stop.current = true; }} />
       </div>
       {error && <p className="error">{error}</p>}
+      {compare.length > 0 && <p className="muted small">{t('efx.comparing', { list: compare.map((c) => c.name).join(', ') })}</p>}
       {report && outcomes && (
         <>
+          {others.length > 0 && (
+            <>
+              <h4>{t('efx.comparative')}</h4>
+              <p className="muted small">{t('efx.comparativeHelp', { name: name ?? '' })}</p>
+              <ComparativeResult report={report} series={series} names={names} />
+              <h4>{t('efx.detailOf', { name: name ?? '' })}</h4>
+            </>
+          )}
           <BasicResult report={report} outcomes={outcomes} names={names} />
           {buildId && report.tests[0] && (
             <button className="link" onClick={() => openFight({ testKey: report.tests[0].key })}>{t('efx.openFirst', { name: outcomes[0]?.testName ?? '' })}</button>
           )}
-          {kind === 'completo' && <SweepResult report={report} outcomes={outcomes} />}
+          {kind === 'completo' && <SweepResult report={report} series={series} />}
         </>
       )}
 

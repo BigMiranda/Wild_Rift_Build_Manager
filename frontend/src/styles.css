@@ -1143,6 +1143,7 @@ tr.report-total td { border-top: 1px solid var(--border-strong); }
 .eff-weak { color: var(--text-2); }
 .eff-sweeps { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 10px; }
 .eff-sweep h5 { margin: 0 0 4px; }
+.eff-break { display: block; }
 .eff-measures { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 8px 0 0; }
 .eff-measures dt { color: var(--muted); }
 .eff-measures dd { margin: 0; }
