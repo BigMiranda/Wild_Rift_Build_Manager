@@ -92,6 +92,9 @@ public class QuickCompareService {
         public double goldValue;
         public double efficiency;
         public List<Map<String, Object>> passives = new ArrayList<>();
+        /** With effects chosen: the defender under them and without them, so the card can say what they changed. */
+        public SeenBy under;
+        public SeenBy plain;
         /** Suggestions: gain on the build as it is by the criterion, %, both read from the planner's sheet. */
         public Double gainPct;
     }
@@ -156,7 +159,12 @@ public class QuickCompareService {
                 Card c = card(s, items.get(s.itemId), out.minute);
                 c.reference = current != null && current == s.itemId;
                 if (!c.ignored) {
-                    SeenBy e = SeenBy.apply(base(s.build, out.minute), req.effects, share);
+                    SeenBy.Base start = base(s.build, out.minute);
+                    SeenBy e = SeenBy.apply(start, req.effects, share);
+                    if (req.effects != null && !req.effects.isEmpty()) {
+                        c.under = e;
+                        c.plain = SeenBy.apply(start, List.of(), share);
+                    }
                     c.effectivePhysical = e.effectiveHpPhysical;
                     c.effectiveMagic = e.effectiveHpMagic;
                     c.effectiveMixed = e.effectiveHpMixed;

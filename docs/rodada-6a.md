@@ -439,3 +439,17 @@ linha do tempo, lista os ativos e feitiços **daquele lutador**: são poucos e i
 
 **Achado na tela de 375 px:** a página inteira ficava com 1.004 px de largura, porque o cabeçalho não quebrava linha (a aba
 Efetividade piorou isso). Agora ele quebra até 640 px. Outras telas não foram revistas nessa largura.
+
+## Ajuste: "Sob efeitos" no comparador
+
+O usuário pôs corte de escudo no máximo e viu a Rookern "inalterada". O efeito estava funcionando: com 60%, a vida efetiva
+mágica vai de 18.008 para 16.473 e a mista de 16.041 para 14.673. Mas só essas linhas mudavam, sem mostrar o antes, e
+"+831 de escudo", valor em ouro e eficiência seguiam iguais, porque são do item, não do inimigo.
+
+Agora, com efeitos escolhidos, cada vida efetiva mostra o % de mudança, e o cartão ganha "Sob os efeitos": Armadura e RM que
+contam, escudos no começo da luta (antes → depois) e cura que chega. Uma nota explica o que os efeitos mudam ou não.
+
+**Limite que continua:** a vida efetiva só conta escudos que existem no começo da luta. O corte não alcança escudo de gatilho
+(Placa Gargolítica, Sterak), e Feridas não entram na vida efetiva. Para ver isso de verdade, o caminho é o "Índice Básico".
+
+Testes: 216 → 217.

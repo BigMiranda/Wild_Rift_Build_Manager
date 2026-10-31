@@ -95,6 +95,21 @@ class QuickCompareTest {
         assertEquals(dear.nextDelay, dear.lastDelay, 1e-9);
     }
 
+    /** A shield cut reaches the magic shield of the fight's start: the card has the health without and with the effect. */
+    @Test
+    void effectsChangeTheEffectiveHealthAndTheCardShowsBoth() {
+        QuickCompareService.Request q = ask(build(700, "Rookern Lamúrico"), 0);
+        Card plain = quick.compare(q).cards.get(0);
+        assertNull(plain.under);
+        q.effects = List.of(new com.ornnplanner.arena.SeenBy.Applied("Tridente da Oceânide", com.ornnplanner.arena.SeenBy.SHIELD_CUT, 0.6));
+        Card cut = quick.compare(q).cards.get(0);
+        assertTrue(cut.effectiveMagic < plain.effectiveMagic);
+        assertEquals(plain.effectivePhysical, cut.effectivePhysical, 1e-9, "a magic shield does nothing against physical damage");
+        assertEquals(plain.effectiveMagic, cut.plain.effectiveHpMagic, 1e-9);
+        assertEquals(cut.under.shields * 0.4, cut.under.shieldsAfterCut, 1e-9);
+        assertEquals(plain.statsAtMinute, cut.statsAtMinute, "what the item adds is the same: the effect is the enemy's");
+    }
+
     /** Upgraded boots with the gold before 10:00 wait, and say so. */
     @Test
     void upgradedBootsBeforeTenWait() {

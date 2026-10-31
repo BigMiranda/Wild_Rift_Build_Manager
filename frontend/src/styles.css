@@ -1236,3 +1236,4 @@ tr.report-total td { border-top: 1px solid var(--border-strong); }
   .app-header nav { flex-wrap: wrap; }
   .app-header .settings { flex-wrap: wrap; }
 }
+.qc-hit { color: #e0b45a; }

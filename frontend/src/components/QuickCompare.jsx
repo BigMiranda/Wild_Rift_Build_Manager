@@ -27,12 +27,38 @@ const ROWS = [
   { key: 'ready', get: (c) => c.readyAt, show: mmss, low: true },
   { key: 'next', get: (c) => c.nextDelay, show: (v) => delayText(v), low: true },
   { key: 'last', get: (c) => c.lastDelay, show: (v) => delayText(v), low: true },
-  { key: 'mixed', get: (c) => c.effectiveMixed, show: n0 },
-  { key: 'physical', get: (c) => c.effectivePhysical, show: n0 },
-  { key: 'magic', get: (c) => c.effectiveMagic, show: n0 },
+  { key: 'mixed', get: (c) => c.effectiveMixed, show: n0, was: (c) => c.plain?.effectiveHpMixed },
+  { key: 'physical', get: (c) => c.effectivePhysical, show: n0, was: (c) => c.plain?.effectiveHpPhysical },
+  { key: 'magic', get: (c) => c.effectiveMagic, show: n0, was: (c) => c.plain?.effectiveHpMagic },
   { key: 'gold', get: (c) => c.goldValue, show: n0 },
   { key: 'efficiency', get: (c) => c.efficiency, show: (v) => `${n0(v)}%` },
 ];
+
+/** "12.590 (−11%)": a value under the effects, with the change from the value without them. */
+const change = (now, was) => (was > 0 && Math.abs(now - was) >= 0.5 ? ` (${now >= was ? '+' : '−'}${n0(Math.abs(100 * (now / was - 1)))}%)` : '');
+
+/** What the effects did to this candidate: resistances, the start's shields and healing, without → under. */
+function UnderEffects({ c }) {
+  const { under: u, plain: p } = c;
+  const rows = [
+    { k: 'armor', from: p.armor, to: u.effectiveArmor, title: u.armorReasons.join(' · ') },
+    { k: 'mr', from: p.magicResist, to: u.effectiveMagicResist, title: u.magicReasons.join(' · ') },
+    { k: 'shield', from: u.shields, to: u.shieldsAfterCut, title: u.shieldCutBy },
+  ];
+  return (
+    <>
+      <h5>{t('qc.underTitle')}</h5>
+      <ul className="qc-list">
+        {rows.map((r) => (
+          <li key={r.k} title={r.title || undefined} className={Math.abs(r.from - r.to) >= 0.5 ? 'qc-hit' : ''}>
+            {t(`qc.under.${r.k}`)}: {n0(r.from)}{Math.abs(r.from - r.to) >= 0.5 ? ` → ${n0(r.to)}` : ''}
+          </li>
+        ))}
+        {u.healingKept < 1 && <li className="qc-hit" title={u.healCutBy ?? undefined}>{t('qc.under.heal', { pct: n0(100 * u.healingKept) })}</li>}
+      </ul>
+    </>
+  );
+}
 
 const delayText = (v) => (Math.abs(v) < 0.005 ? '=' : `${v > 0 ? '+' : '−'}${n1(Math.abs(v))} min`);
 
@@ -178,7 +204,12 @@ export default function QuickCompare({ build, slot, atMinute, ids, onIds, onClos
           {basicBusy ? t('qc.basicRunning', { done: basicBusy.done, total: basicBusy.total }) : t('qc.basic')}
         </button>
       </div>
-      {fxOpen && <EffectPicker chosen={chosen} onChange={setChosen} />}
+      {fxOpen && (
+        <>
+          <p className="muted small">{t('qc.underHelp')}</p>
+          <EffectPicker chosen={chosen} onChange={setChosen} />
+        </>
+      )}
       {error && <p className="error">{error}</p>}
       {line && <p className="qc-verdict">{line}</p>}
       {suggested && !suggested.loading && (
@@ -219,12 +250,13 @@ export default function QuickCompare({ build, slot, atMinute, ids, onIds, onClos
                       const b = best(r);
                       return (
                         <div key={r.key} className={b != null && Math.abs(v - b) < 1e-9 ? 'best' : ''}>
-                          <dt>{t(`qc.row.${r.key}`, r.key === 'next' ? { item: c.nextItem ?? '' } : {})}</dt><dd>{r.show(v)}</dd>
+                          <dt>{t(`qc.row.${r.key}`, r.key === 'next' ? { item: c.nextItem ?? '' } : {})}</dt><dd>{r.show(v)}{r.was?.(c) != null && <small className="qc-hit">{change(v, r.was(c))}</small>}</dd>
                         </div>
                       );
                     })}
                     {basic?.[c.itemId] != null && <div><dt>{t('qc.row.basic')}</dt><dd>{n0(basic[c.itemId])}</dd></div>}
                   </dl>
+                  {c.under && <UnderEffects c={c} />}
                   {c.waitedUntil != null && <small className="qc-rule">{t('qc.waited', { time: mmss(c.waitedUntil) })}</small>}
                   {!c.held && <small className="qc-rule">{t('qc.notHeld', { time: mmss(result.minute) })}</small>}
                   <StatList title={t('qc.statsReady', { time: mmss(c.readyAt) })} stats={c.statsAtReady} />
