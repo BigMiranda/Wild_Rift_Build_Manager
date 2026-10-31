@@ -253,6 +253,11 @@ export default function ChampionPanel({ code, setup, onChange, matchEnd, point, 
       <summary>
         <ChampionAvatar name={champ.nome} size={28} />
         <strong>{champ.nome}</strong> <span className="muted">{champ.titulo}</span>
+        {champ.classes?.length > 0 && (
+          <small className="muted" title={t('champ.classesTitle', { roles: (champ.funcoes ?? []).join(', '), lanes: (champ.rotas ?? []).join(', '), source: champ.fonte_classes ?? '' })}>
+            {' '}{champ.classes.map((c) => c.split('/').pop()).join(' · ')}
+          </small>
+        )}
         {champ.modelados?.length > 0 && <small className="champ-count">{t('champ.effectsCount', { n: champ.modelados.length })}</small>}
       </summary>
       {onChange && (

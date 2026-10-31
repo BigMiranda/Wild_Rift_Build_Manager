@@ -279,3 +279,71 @@ ali a leitura é de tempo de vida, e o valor do corta-cura está na medida acima
 **Teste novo (`PassiveValueTest`):** 🎯 o Entrelaçar vale mais de 0 contra o Atirador alimentado e é lido como dano.
 
 Testes: 225 → 226 (10 opcionais pulados). Golden sem mudança. `npm run build` limpo.
+
+## Parte 5 — Classificação de campeões e de builds ✅
+
+### 5.1 Campeões
+
+**Fontes (lidas em 31/10/2026):**
+- **Classe, subclasse e rotas:** a caixa de cada página `WR:` da wiki (`wiki.leagueoflegends.com/en-us/WR:Nome`). Ela é do próprio Wild Rift
+  e às vezes difere do LoL, então prevaleceu sobre a `Category:Champions_by_class` do prompt, que é do LoL.
+- **Funções:** a página oficial de cada campeão em `wildrift.leagueoflegends.com/en-us/champions/`.
+- **Alcance de ataque:** o módulo `ChampionData` da wiki, que é do **LoL** (a Norra veio de `WR:Norra`). A ficha da Arena prevalece quando existe.
+
+**Resultado:** os 142 campeões têm classe, função, rota e fonte; nenhum ficou sem fonte. Norra, exclusiva do Wild Rift, veio de `WR:Norra`.
+Por classe: Assassino 29, Mago 28, Atirador 25, Lutador 25, Tanque 19, Controlador 17, Especialista 11 (quem tem duas classes conta nas duas).
+Skarner aparece só com as classes (Tanque, Lutador), sem subclasse: é o que a página dele traz.
+
+Gravado em `campeoes_7_3d.yml`: `classes`, `funcoes`, `rotas`, `alcance_ataque` e `fonte_classes`.
+
+**Perfil calculado (`fight/ChampionProfiles`, `GET /api/champions/profiles`):** alcance de ataque e das habilidades (este só com ficha da
+Arena), mobilidade, controles por tipo, Vida, Armadura e RM por nível, escudos e curas próprios, dano físico, mágico e verdadeiro,
+explosão ou contínuo. As palavras e os pesos ficam em `classificacao_7_3d.yml`. Cada classe recebe uma nota pelos desvios em relação aos
+142 campeões, e a maior é a sugerida. O dano por tipo mistura o `AbilityParser` com as etiquetas do jogo, porque o parser deixa de fora o que
+não entende.
+
+**Divergências:** só avisa quando a classe sugerida ganha por mais de 1,5 e não é vizinha de uma oficial (`classes_proximas`). Um
+Escaramuçador com perfil de Lutador é a fronteira entre as classes, não um erro. A primeira versão dava 39 avisos porque contava o ataque
+básico como dano físico de todos (Janna saía 72% física). Corrigido, são **10 de 142**:
+
+| campeão | oficial | perfil | leitura |
+|---|---|---|---|
+| Blitzcrank | Controlador/Captor | Tanque | Vida e Armadura altas, muito controle |
+| Pyke | Assassino, Controlador/Captor | Tanque | Armadura de nível 15 alta (127) |
+| Sion | Tanque/Vanguarda | Controlador | Vida baixa (2.086) e muito controle: a Vida dele cresce com abates, o que o status não mostra |
+| Rakan | Controlador/Captor | Assassino | 3 mobilidades |
+| Warwick | Lutador/Mergulhador | Controlador | Muitos controles no texto |
+| Kog'Maw | Atirador | Mago | Habilidades de dano mágico |
+| Jayce | Mago/Artilharia | Lutador | Forma corpo a corpo: alcance 125 |
+| Rumble | Mago/Mago de Batalha | Tanque | Mago corpo a corpo com status de lutador |
+| Gwen | Assassino/Escaramuçador | Tanque | Corpo a corpo de dano mágico, com resistências altas |
+| Katarina | Assassino/Assassino | Tanque | Idem |
+
+Nenhuma aponta erro evidente nas fontes: mostram os limites do perfil (só vê o nível 15 sem itens). Como todo campeão tem classe oficial, o perfil
+ainda não classificou ninguém; ele alimenta o "parecidos" da Parte 6.
+
+### 5.2 Builds
+
+`fight/BuildArchetypes` lê o ouro dos status dos itens, por família, mais os tipos de efeito de `combate_7_3d.yml`. A primeira regra de
+`arquetipos` que passa vale. Nenhuma cita item ou campeão. Os limiares são meus, ajustados nas builds do usuário: com tanque a partir de 60%, a
+Armor Shredder (Renekton, 65% defesa e 30% ataque) saía Tanque; agora é 70%, e ela é Lutador.
+
+| arquétipo | builds do usuário |
+|---|---|
+| Tanque (Armadura) | 19, todas de Ornn: Soldados v0 a v7, Manopla, Build Azul vs AD v1 a v3, Desespero de Amaranto... |
+| Tanque (Vida) | 9: Big Carry v1, v3, v4 e v5, Soldado v8 e v8.1, Sup Rush Armadilha, Sup Rush Warmog, Rumble Redutor Off Tank |
+| Lutador | Darius de CdC, Armor Shredder |
+| Ao acertar | Kalista off tank feedada, 2 e 3 |
+| Crítico | Yasuo v1 |
+| Mago explosivo | Ornn Full AP |
+| Mago contínuo | Rumble Carry |
+
+**Telas:** na lista de builds, em todos os modos do Ranking, no seletor "Testar agora" e no painel de Efetividade (`/api/archetypes`).
+
+**"Tanque contra Tanque" por padrão:** o Ranking de Efetividade separa um ranking por arquétipo, com "Comparar todas juntas" para desligar. No
+planejador, comparar com outro arquétipo mostra um aviso.
+
+**Testes novos (`ClassificationTest`):** todo campeão tem classe, função, rota e fonte das listas do jogo; o perfil lê a ficha; os arquétipos saem
+dos status e dos efeitos.
+
+Testes: 226 → 229 (10 opcionais pulados). Golden sem mudança. `npm run build` limpo.

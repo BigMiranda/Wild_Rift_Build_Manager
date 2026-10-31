@@ -8,6 +8,7 @@ import ItemPicker from '../components/ShopPicker.jsx';
 import MinuteInput from '../components/MinuteInput.jsx';
 import { ReferencePicker, indexLabel, netRate, ttd } from '../components/EffectivenessReport.jsx';
 import { openInArena } from '../components/TestInArena.jsx';
+import { archetypeLabel, useArchetypes } from '../archetypes.js';
 
 /**
  * "Efetividade": the test scenarios (presets and the user's: create, duplicate, edit, save, delete; presets only
@@ -246,6 +247,7 @@ function BotEditor({ bot, onChange, items, meta, onRemove }) {
 /** "Testar agora": the scenario on a saved build at a minute, with the index and the link to the fight in the Arena. */
 function TryNow({ test }) {
   const [builds, setBuilds] = useState([]);
+  const archetypes = useArchetypes(builds);
   const [folders, setFolders] = useState([]);
   const [buildId, setBuildId] = useState('');
   const [minute, setMinute] = useState(20);
@@ -287,7 +289,7 @@ function TryNow({ test }) {
       <div className="row">
         <select value={buildId} onChange={(e) => { setBuildId(e.target.value); setOut(null); }} aria-label={t('efx.build')}>
           <option value="">{t('efx.build')}</option>
-          {builds.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          {builds.map((b) => <option key={b.id} value={b.id}>{b.name}{archetypes[b.id] ? ` · ${archetypeLabel(archetypes[b.id])}` : ''}</option>)}
         </select>
         <label className="inline">{t('ptest.minute')}<MinuteInput value={minute} onChange={(v) => { setMinute(v); setOut(null); }} placeholder="20:00" style={{ width: 70 }} /></label>
         <ReferencePicker value={ref} onChange={setRef} builds={builds} folders={folders} />

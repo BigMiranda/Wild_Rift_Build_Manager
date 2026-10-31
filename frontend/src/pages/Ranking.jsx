@@ -7,6 +7,7 @@ import ItemIcon from '../components/ItemIcon.jsx';
 import MinuteInput from '../components/MinuteInput.jsx';
 import SeenByReport, { Bars, MetricControls, ehp } from '../components/SeenByReport.jsx';
 import { reportJobs, runJobs, weightedIndex } from '../effectiveness.js';
+import { archetypeLabel, archetypeTitle, useArchetypes } from '../archetypes.js';
 import { ReferencePicker, indexLabel, ttd, useTestNames } from '../components/EffectivenessReport.jsx';
 
 /**
@@ -36,6 +37,7 @@ export default function Ranking({ items }) {
   const [excluded, setExcluded] = useState(saved.excluded ?? []);
   const [folders, setFolders] = useState([]);
   const [builds, setBuilds] = useState([]);
+  const archetypes = useArchetypes(builds);
   const [scenarios, setScenarios] = useState([]);
   const [rows, setRows] = useState([]);
   const [ran, setRan] = useState(null);
@@ -170,11 +172,11 @@ export default function Ranking({ items }) {
         {error && <p className="error">{error}</p>}
       </section>
       {ran?.mode === 'effects' && rows.length > 0 && (
-        <EffectsResult rows={rows} sources={ran.sources} metric={metric} idOf={idOf} open={open} setOpen={setOpen} />
+        <EffectsResult archetypes={archetypes} rows={rows} sources={ran.sources} metric={metric} idOf={idOf} open={open} setOpen={setOpen} />
       )}
-      {ran?.mode === 'effectiveness' && ran.report && rows.length > 0 && <EffectivenessResult rows={rows} report={ran.report} />}
+      {ran?.mode === 'effectiveness' && ran.report && rows.length > 0 && <EffectivenessResult rows={rows} report={ran.report} archetypes={archetypes} />}
       {ran?.mode === 'scenario' && rows.length > 0 && (
-        <ScenarioResult rows={rows} scenario={ran.scenario} open={open} setOpen={setOpen} />
+        <ScenarioResult archetypes={archetypes} rows={rows} scenario={ran.scenario} open={open} setOpen={setOpen} />
       )}
     </div>
   );
@@ -185,7 +187,7 @@ const heat = (rgb, share, cap = 0.75) => ({ background: `rgba(${rgb}, ${Math.min
 const RED = '255, 120, 110';
 const GREEN = '111, 207, 151';
 
-function EffectsResult({ rows, sources, metric, idOf, open, setOpen }) {
+function EffectsResult({ rows, sources, metric, idOf, open, setOpen, archetypes }) {
   const ok = rows.filter((r) => r.seen);
   const ranked = [...ok].sort((a, b) => ehp(b.seen.now, metric) - ehp(a.seen.now, metric));
   const top = Math.max(1, ...ok.map((r) => ehp(r.seen.plain, metric)));
@@ -204,7 +206,7 @@ function EffectsResult({ rows, sources, metric, idOf, open, setOpen }) {
               <li key={r.build.id} className={open === r.build.id ? 'open' : ''}>
                 <button className="rank-row" onClick={() => setOpen(open === r.build.id ? null : r.build.id)} aria-expanded={open === r.build.id}>
                   <span className="rank-pos">{k + 1}</span>
-                  <span className="rank-name"><span className="muted">{r.build.unitCode}</span> {r.build.name}</span>
+                  <span className="rank-name"><span className="muted">{r.build.unitCode}</span> {r.build.name} <small className="arch-tag" style={{ display: 'inline' }}>{archetypeLabel(archetypes[r.build.id])}</small></span>
                   <span className="rank-bar" title={t('rank.barTitle')}>
                     <span className="rank-bar-plain" style={{ width: `${(plain / top) * 100}%` }} />
                     <span className="rank-bar-now" style={{ width: `${(now / top) * 100}%` }} />
@@ -246,7 +248,7 @@ function EffectsResult({ rows, sources, metric, idOf, open, setOpen }) {
                   const lost = plain - ehp(r.seen.now, metric);
                   return (
                     <tr key={r.build.id}>
-                      <td className="l"><span className="muted">{r.build.unitCode}</span> {r.build.name}</td>
+                      <td className="l"><span className="muted">{r.build.unitCode}</span> {r.build.name} <small className="arch-tag">{archetypeLabel(archetypes[r.build.id])}</small></td>
                       {sources.map((s) => {
                         const c = r.seen.contributions.find((x) => x.source === s);
                         const v = c ? ehp(c, metric) : 0;
@@ -282,7 +284,7 @@ function EffectsResult({ rows, sources, metric, idOf, open, setOpen }) {
             const its = [...(r.seen.items ?? [])].sort((a, b) => ehp(b, metric) - ehp(a, metric));
             return (
               <div key={r.build.id} className="rank-items-row">
-                <span className="rank-name"><span className="muted">{r.build.unitCode}</span> {r.build.name}</span>
+                <span className="rank-name"><span className="muted">{r.build.unitCode}</span> {r.build.name} <small className="arch-tag" style={{ display: 'inline' }}>{archetypeLabel(archetypes[r.build.id])}</small></span>
                 <span className="rank-chips">
                   {its.map((i, k) => {
                     const v = ehp(i, metric);
@@ -303,7 +305,7 @@ function EffectsResult({ rows, sources, metric, idOf, open, setOpen }) {
   );
 }
 
-function ScenarioResult({ rows, scenario, open, setOpen }) {
+function ScenarioResult({ rows, scenario, open, setOpen, archetypes }) {
   const ok = rows.filter((r) => r.test);
   // won first, then the health left on its side, then the time alive, then the damage dealt
   const outcome = (x) => (x.winner === x.team ? 2 : x.winner < 0 ? 1 : 0);
@@ -325,7 +327,7 @@ function ScenarioResult({ rows, scenario, open, setOpen }) {
               <li key={r.build.id} className={open === r.build.id ? 'open' : ''}>
                 <button className="rank-row scenario" onClick={() => setOpen(open === r.build.id ? null : r.build.id)} aria-expanded={open === r.build.id}>
                   <span className="rank-pos">{k + 1}</span>
-                  <span className="rank-name"><span className="muted">{r.build.unitCode}</span> {r.build.name}</span>
+                  <span className="rank-name"><span className="muted">{r.build.unitCode}</span> {r.build.name} <small className="arch-tag" style={{ display: 'inline' }}>{archetypeLabel(archetypes[r.build.id])}</small></span>
                   <span className={`rank-outcome ${won ? 'good' : x.winner < 0 ? '' : 'warn'}`}>
                     {won ? t('ptest.won', { s: n1(x.duration) }) : x.winner < 0 ? t('ptest.draw', { s: n1(x.duration) }) : t('ptest.lost', { s: n1(x.duration) })}
                   </span>
@@ -366,7 +368,7 @@ function ScenarioResult({ rows, scenario, open, setOpen }) {
             const top = Math.max(1e-9, ...items.map((w) => Math.abs(holds(x, w))));
             return (
               <div key={r.build.id} className="rank-items-row">
-                <span className="rank-name"><span className="muted">{r.build.unitCode}</span> {r.build.name}</span>
+                <span className="rank-name"><span className="muted">{r.build.unitCode}</span> {r.build.name} <small className="arch-tag" style={{ display: 'inline' }}>{archetypeLabel(archetypes[r.build.id])}</small></span>
                 <span className="rank-chips">
                   {items.map((w, k) => (
                     <span key={w.itemId} className={`rank-chip${k === 0 ? ' best' : ''}`} style={heat(GREEN, holds(x, w) / top / 2, 0.35)} title={w.item}>
@@ -408,10 +410,20 @@ const pctOf = (v, of) => (of > 0 ? `${Math.round((v / of) * 100)}%` : '—');
 const signed = (v, digits = 0) => (v == null ? '—' : `${v > 0 ? '+' : ''}${digits ? n1(v) : n0(v)}`);
 
 /** Builds by their weighted effectiveness index, and the heat map scenario × build (green above the reference). */
-function EffectivenessResult({ rows, report }) {
+function EffectivenessResult({ rows, report, archetypes }) {
   const names = useTestNames();
+  const [together, setTogether] = useState(false);
   const sorted = [...rows].sort((a, b) => (b.index ?? -1) - (a.index ?? -1));
   const ok = sorted.filter((r) => r.outcomes);
+  // Tank against tank by default: each archetype is its own ranking.
+  const groups = [];
+  for (const r of sorted) {
+    const a = archetypes[r.build.id];
+    const key = together ? 'all' : a?.key ?? '?';
+    const g = groups.find((x) => x.key === key);
+    if (g) g.rows.push(r);
+    else groups.push({ key, label: together ? null : a ? t(`arch.${a.key}`) : t('arch.none'), rows: [r] });
+  }
   const max = Math.max(100, ...ok.flatMap((r) => r.outcomes.map((o) => (o?.index != null && Number.isFinite(o.index) ? o.index : 0))));
   const cell = (v) => {
     if (v == null) return {};
@@ -421,6 +433,12 @@ function EffectivenessResult({ rows, report }) {
   return (
     <section className="panel">
       <h3>{t('rank.effectivenessTitle', { kind: t(`efx.kind.${report.kind}`) })}</h3>
+      <label className="inline" title={t('arch.togetherTitle')}>
+        <input type="checkbox" checked={together} onChange={(e) => setTogether(e.target.checked)} /> {t('arch.together')}
+      </label>
+      {groups.map((g) => (
+      <div key={g.key}>
+      {g.label && <h4>{g.label}</h4>}
       <div className="table-wrap">
         <table className="data heatmap">
           <thead>
@@ -430,10 +448,10 @@ function EffectivenessResult({ rows, report }) {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r, i) => (
+            {g.rows.map((r, i) => (
               <tr key={r.build.id}>
                 <td>{i + 1}</td>
-                <td>{r.build.name}</td>
+                <td title={archetypeTitle(archetypes[r.build.id])}>{r.build.name} <small className="arch-tag">{archetypeLabel(archetypes[r.build.id])}</small></td>
                 <td><strong>{r.index == null ? '—' : n0(r.index)}</strong></td>
                 {r.error ? <td colSpan={report.tests.length} className="error">{r.error}</td> : report.tests.map((e, k) => {
                   const o = r.outcomes?.[k];
@@ -448,6 +466,8 @@ function EffectivenessResult({ rows, report }) {
           </tbody>
         </table>
       </div>
+      </div>
+      ))}
       <small className="muted">{t('efx.estimatedNote')}</small>
     </section>
   );

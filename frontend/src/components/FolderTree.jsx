@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
+import { archetypeLabel, archetypeTitle } from '../archetypes.js';
 
 /**
  * Single-level folders with their builds. A build goes to another folder with its ⇄ button (a folder list) or by
  * dragging it onto the folder.
  */
-export default function FolderTree({ folders, builds, activeId, compareIds, onOpen, onNew, onToggleCompare, onChanged, onError, onMoved }) {
+export default function FolderTree({ folders, builds, activeId, compareIds, archetypes = {}, onOpen, onNew, onToggleCompare, onChanged, onError, onMoved }) {
   const [moving, setMoving] = useState(null);
   const [dragged, setDragged] = useState(null);
   const [dropFolder, setDropFolder] = useState(null);
@@ -80,8 +81,9 @@ export default function FolderTree({ folders, builds, activeId, compareIds, onOp
                       {folders.filter((x) => x.id !== b.folderId).map((x) => <option key={x.id} value={x.id}>📁 {x.name}</option>)}
                     </select>
                   ) : (
-                    <button className="open" title={b.note || b.name} onClick={() => onOpen(b.id)}>
+                    <button className="open" title={[b.note || b.name, archetypeTitle(archetypes[b.id])].filter(Boolean).join('\n')} onClick={() => onOpen(b.id)}>
                       {b.name}
+                      {archetypes[b.id] && <small className="arch-tag">{archetypeLabel(archetypes[b.id])}</small>}
                     </button>
                   )}
                   {folders.length > 1 && moving !== b.id && (

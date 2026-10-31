@@ -27,6 +27,7 @@ import SkillExport from '../components/SkillExport.jsx';
 import BuildTestPanels from '../components/BuildTestPanels.jsx';
 import TestInArena from '../components/TestInArena.jsx';
 import { EffectivenessPanel } from '../components/EffectivenessReport.jsx';
+import { useArchetypes } from '../archetypes.js';
 import QuickCompare, { MAX_COMPARED } from '../components/QuickCompare.jsx';
 import PassiveValueBar from '../components/PassiveValueBar.jsx';
 import { usePassiveValues } from '../passiveValues.js';
@@ -128,6 +129,7 @@ function fromApi(b) {
 export default function Planner({ meta, items }) {
   const [folders, setFolders] = useState([]);
   const [builds, setBuilds] = useState([]);
+  const archetypes = useArchetypes(builds);
   const [draft, setDraft] = useState(null);
   const [dirty, setDirty] = useState(false);
   const [result, setResult] = useState(null);
@@ -385,7 +387,7 @@ export default function Planner({ meta, items }) {
           {sidebarOpen ? '«' : '»'}
         </button>
         {!sidebarOpen && <span className="sidebar-rail-label">{t('folders.title')}</span>}
-        {sidebarOpen && <FolderTree
+        {sidebarOpen && <FolderTree archetypes={archetypes}
           folders={folders}
           builds={builds}
           activeId={draft.id}

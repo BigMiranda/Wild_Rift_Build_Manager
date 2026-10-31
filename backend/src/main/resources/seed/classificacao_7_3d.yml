@@ -1,0 +1,73 @@
+# Classificação de campeões e de builds (patch 7.3d). Nenhuma regra cita campeão ou item por nome.
+#
+# Perfil calculado de um campeão: um vetor de números lido da ficha (campeoes_7_3d.yml: status, etiquetas e textos das
+# habilidades, dano pelo AbilityParser) e das fichas da Arena quando existem (kits_7_3d.yml). Ele confere a classe oficial e
+# alimenta o agrupamento por parecidos da IA automática. O alcance de ataque vem de `alcance_ataque`; a ficha da Arena prevalece.
+
+perfil:
+  # Stats de referência para ler as razões do dano: um campeão de nível 15 com alguns itens. Não é uma build real, só
+  # dá peso às razões, senão um mago teria dano 0 sem PdH.
+  referencia: {dda_bonus: 150, pdh: 300}
+  # Janela (s) que separa explosão de dano contínuo: explosão ÷ (explosão + dano por segundo × janela).
+  janela_explosao: 6
+  # Palavras no texto de uma habilidade (e da passiva). Etiquetas do jogo contam também: Mobilidade, Avanço, Cura, Bloqueio.
+  mobilidade: "avanç|salta|salto|pisca|teleporta|investe|arremete|dispara em direção|desliza"
+  controle:
+    atordoamento: "atordo"
+    arremesso: "arremess|ao ar"
+    enraizamento: "enraiz|imobiliz"
+    puxao: "puxa|arrasta"
+    lentidao: "lentid"
+    silencio: "silênc|silenc"
+    provocacao: "provoc"
+    medo: "medo|amedront|temor"
+    encanto: "encant"
+    supressao: "suprim|supressão"
+  escudo: "escudo"
+  cura: "restaura|cura"
+
+# A classe que o perfil sugere: pesos sobre o desvio de cada número em relação aos 142 campeões (z). A maior soma é a sugerida.
+# Especialista não tem perfil: quem é só Especialista nunca diverge.
+classes_por_perfil:
+  Tanque:      {vida: 1.0, armadura: 1.0, rm: 0.8, controle: 0.8, alcance: -0.6, dano_ataque: -0.6, explosao: -0.2}
+  Lutador:     {vida: 0.8, armadura: 0.4, dano_ataque: 0.6, fisico: 0.6, alcance: -1.0, mobilidade: 0.3, sustento: 0.4}
+  Assassino:   {mobilidade: 1.0, explosao: 0.8, vida: -0.6, alcance: -0.6, controle: -0.3}
+  Atirador:    {alcance: 1.2, dano_ataque: 1.2, fisico: 0.8, vida: -0.5, controle: -0.3}
+  Mago:        {alcance: 0.8, magico: 1.2, dano_habilidade: 0.6, vida: -0.5, dano_ataque: -0.8}
+  Controlador: {controle: 1.0, sustento: 0.8, alcance: 0.6, dano_habilidade: -0.8, vida: -0.3}
+# Só avisa quando a sugerida ganha da melhor classe oficial por mais que esta diferença e não é uma classe próxima de uma
+# oficial: um Escaramuçador com perfil de Lutador não é uma divergência, é a fronteira entre as duas.
+margem_divergencia: 1.5
+classes_proximas:
+  Tanque: [Lutador]
+  Lutador: [Tanque, Assassino]
+  Assassino: [Lutador]
+  Mago: [Controlador]
+  Controlador: [Mago]
+
+# Arquétipo de uma build num minuto. A conta é pelo ouro dos status dos itens, por família (a parte de cada uma no ouro de
+# todos os status), mais os tipos de efeito de combate_7_3d.yml. A primeira regra que passa é o arquétipo.
+familias:
+  defesa: ["Max Health", "Armor", "Magic Resistance", "Shield", "Magic Shield", "Physical Shield", "Heal", "% Health Regen", "% Tenacity"]
+  ataque: ["Attack Damage", "% Lifesteal", "% Omnivamp"]
+  critico: ["% Critical Rate"]
+  velocidade: ["% Attack Speed"]
+  letalidade: ["Armor Penetration", "% Armor Penetration"]
+  magia: ["Ability Power", "Magic Penetration", "% Magic Penetration", "Max Mana", "% Mana Regeneration"]
+  suporte: ["% Heal and shield strength", "Ally Shield", "Ally Heal"]
+# Grupos de efeitos: quantos itens da build têm um efeito destes tipos.
+efeitos:
+  ao_acertar: [ao_contato, a_cada_ataque]
+  continuo: [queimadura, amplifica, aura]
+  explosivo: [golpe, lamina]
+# Campos das regras: a parte de uma família (0 a 1) e a contagem de `efeito.<grupo>`. Sem `se`, passa sempre.
+arquetipos:
+- {chave: suporte, nome: Suporte de cura ou escudo, se: ["suporte >= 0.12"]}
+- {chave: tanque, nome: Tanque, se: ["defesa >= 0.7"], detalhe: [Armadura, RM, Vida]}
+- {chave: mago_continuo, nome: Mago contínuo, se: ["magia >= 0.35", "efeito.continuo >= 1"]}
+- {chave: mago_explosivo, nome: Mago explosivo, se: ["magia >= 0.35"]}
+- {chave: critico, nome: Crítico, se: ["critico >= 0.12"]}
+- {chave: ao_acertar, nome: Ao acertar, se: ["velocidade >= 0.1", "efeito.ao_acertar >= 1"]}
+- {chave: letalidade, nome: Letalidade, se: ["letalidade >= 0.08"]}
+- {chave: lutador, nome: Lutador, se: ["ataque >= 0.12", "defesa >= 0.2"]}
+- {chave: hibrido, nome: Híbrido}

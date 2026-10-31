@@ -27,6 +27,11 @@
 #   {nível}  losango branco: escala com o nível do campeão
 # forma_alternativa: habilidades que a Coleção não mostra (Jayce, Nidalee), complementadas da wiki oficial.
 #
+# classes (Classe/Subclasse, em pt-BR), rotas: da caixa de cada página `WR:` da wiki (wiki.leagueoflegends.com/en-us/WR:Nome),
+# lidas em 31/10/2026; `fonte_classes` diz a página. funcoes: as do jogo, da página de cada campeão em
+# wildrift.leagueoflegends.com/en-us/champions/, lidas em 31/10/2026. alcance_ataque: do módulo ChampionData da wiki, que é do
+# LoL (a Norra é da página WR:Norra); a ficha da Arena prevalece quando existe.
+#
 # status: lido no modo Treino (placar > 3ª aba) em 10/10/2026, sem itens, com "Atualizar estado" (vida cheia):
 #   nv1 / nv15: valores no nível 1 e no nível 15 (Redefinir nível / Subir de nível). Vida e Mana são os máximos;
 #     VdA em ataques/s; Crit, Tenacidade, Vamp*, Pen*% em %; só aparecem os status extras diferentes de zero
@@ -65,6 +70,11 @@ patch: "7.3d"
 campeoes:
   Aatrox:
     titulo: A Espada Darkin
+    classes: [Lutador/Colosso]
+    funcoes: [Lutador]
+    rotas: [Barão, Selva]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Aatrox"
     status:
       VdM: 355
       nv1: {DdA: 62, PdH: 0, Vida: 630, Armadura: 48, RM: 38, VdA: 0.74, AH: 0, RegVida: 11}
@@ -128,6 +138,11 @@ campeoes:
           VdM: [60%, 75%, 90%]
   Ahri:
     titulo: A Raposa de Nove Caudas
+    classes: [Mago/Explosivo]
+    funcoes: [Mago, Assassino]
+    rotas: [Meio]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Ahri"
     status:
       recurso: Mana
       VdM: 355
@@ -189,6 +204,11 @@ campeoes:
           Dano base: [60, 90, 120]
   Akali:
     titulo: A Assassina Renegada
+    classes: [Assassino/Assassino]
+    funcoes: [Assassino]
+    rotas: [Meio, Barão]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Akali"
     fonte_7_3d: nota de patch
     status:
       recurso: Energia  # máx. 200
@@ -244,6 +264,11 @@ campeoes:
           Segundo Dano: [70, 140, 210]
   Akshan:
     titulo: O Sentinela Rebelde
+    classes: [Assassino/Assassino, Atirador]
+    funcoes: [Atirador, Assassino]
+    rotas: [Meio]
+    alcance_ataque: 500
+    fonte_classes: "wiki WR:Akshan"
     status:
       recurso: Mana
       VdM: 350
@@ -317,6 +342,11 @@ campeoes:
           Dano Máx.: [75, 105, 135]
   Alistar:
     titulo: O Minotauro
+    classes: [Tanque/Vanguarda]
+    funcoes: [Tanque, Suporte]
+    rotas: [Suporte]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Alistar"
     status:
       recurso: Mana
       VdM: 340
@@ -379,6 +409,11 @@ campeoes:
           Redução de Dano: [55%, 65%, 75%]
   Ambessa:
     titulo: A Matriarca da Guerra
+    classes: [Lutador/Mergulhador, Assassino/Escaramuçador]
+    funcoes: [Lutador, Assassino]
+    rotas: [Selva, Barão]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Ambessa"
     status:
       recurso: Energia  # máx. 200
       VdM: 355
@@ -450,6 +485,11 @@ campeoes:
           Vampirismo de Habilidade: [12.5%, 15%, 17.5%]
   Amumu:
     titulo: A Múmia Triste
+    classes: [Tanque/Vanguarda]
+    funcoes: [Tanque]
+    rotas: [Selva, Suporte, Barão]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Amumu"
     status:
       recurso: Mana
       VdM: 345
@@ -502,6 +542,11 @@ campeoes:
           Dano base: [150, 250, 350]
   Annie:
     titulo: A Criança Sombria
+    classes: [Mago/Explosivo]
+    funcoes: [Mago, Suporte]
+    rotas: [Meio]
+    alcance_ataque: 625
+    fonte_classes: "wiki WR:Annie"
     status:
       recurso: Mana
       VdM: 355
@@ -552,6 +597,11 @@ campeoes:
           Segundo Dano: [110, 150, 190]
   Ashe:
     titulo: A Arqueira do Gelo
+    classes: [Atirador]
+    funcoes: [Atirador, Suporte]
+    rotas: [Dragão, Suporte]
+    alcance_ataque: 600
+    fonte_classes: "wiki WR:Ashe"
     status:
       recurso: Mana
       VdM: 335
@@ -612,6 +662,11 @@ campeoes:
           Dano base: [200, 350, 500]
   Aurelion Sol:
     titulo: O Forjador de Estrelas
+    classes: [Mago/Mago de Batalha]
+    funcoes: [Mago]
+    rotas: [Meio]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Aurelion Sol"
     status:
       recurso: Mana
       VdM: 345
@@ -679,6 +734,11 @@ campeoes:
           Dano base (3): [150, 250, 350]
   Aurora:
     titulo: A Bruxa Entre Mundos
+    classes: [Mago/Explosivo, Assassino/Assassino]
+    funcoes: [Mago, Assassino]
+    rotas: [Meio, Barão]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Aurora"
     status:
       recurso: Mana
       VdM: 350
@@ -736,6 +796,11 @@ campeoes:
           Duração da Lentidão da área de convergência: [1.5, 1.75, 2]
   Bardo:
     titulo: O Protetor Andarilho
+    classes: [Controlador/Captor]
+    funcoes: [Suporte, Mago]
+    rotas: [Suporte]
+    alcance_ataque: 500
+    fonte_classes: "wiki WR:Bard"
     status:
       recurso: Mana
       VdM: 355
@@ -796,6 +861,11 @@ campeoes:
           Tempo de Recarga: [75, 65, 55]
   Blitzcrank:
     titulo: O Grande Golem a Vapor
+    classes: [Controlador/Captor]
+    funcoes: [Tanque, Suporte]
+    rotas: [Suporte]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Blitzcrank"
     status:
       recurso: Mana
       VdM: 343
@@ -855,6 +925,11 @@ campeoes:
           Dano da Ativa: [275, 400, 525]
   Brand:
     titulo: A Vingança Flamejante
+    classes: [Mago/Explosivo]
+    funcoes: [Mago]
+    rotas: [Meio, Suporte]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Brand"
     status:
       recurso: Mana
       VdM: 360
@@ -911,6 +986,11 @@ campeoes:
           Redução de Velocidade: [30%, 40%, 50%]
   Braum:
     titulo: O Coração de Freljord
+    classes: [Tanque/Guardião]
+    funcoes: [Suporte, Tanque]
+    rotas: [Suporte]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Braum"
     status:
       recurso: Mana
       VdM: 345
@@ -978,6 +1058,11 @@ campeoes:
           Duração do arremesso ao ar: [1, 1.25, 1.5]
   Caitlyn:
     titulo: A Xerife de Piltover
+    classes: [Atirador]
+    funcoes: [Atirador]
+    rotas: [Dragão]
+    alcance_ataque: 650
+    fonte_classes: "wiki WR:Caitlyn"
     status:
       recurso: Mana
       VdM: 335
@@ -1035,6 +1120,11 @@ campeoes:
           Alcance: [1750, 2250, 2750]
   Camille:
     titulo: A Sombra de Aço
+    classes: [Lutador/Mergulhador]
+    funcoes: [Lutador]
+    rotas: [Barão, Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Camille"
     fonte_7_3d: nota de patch
     status:
       recurso: Mana
@@ -1105,6 +1195,11 @@ campeoes:
           Duração da Zona: [2, 2.5, 3]
   Cho'Gath:
     titulo: O Terror do Vazio
+    classes: [Especialista]
+    funcoes: [Tanque, Mago]
+    rotas: [Barão]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Cho'Gath"
     status:
       recurso: Mana
       VdM: 350
@@ -1174,6 +1269,11 @@ campeoes:
           Alcance de Ataque: [4.7, 6.2, 7.7]
   Corki:
     titulo: O Bombardeiro Ousado
+    classes: [Atirador]
+    funcoes: [Atirador]
+    rotas: [Dragão, Meio]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Corki"
     status:
       recurso: Mana
       VdM: 335
@@ -1227,6 +1327,11 @@ campeoes:
           Dano Fortalecido: [140, 210, 280]
   Darius:
     titulo: A Mão de Noxus
+    classes: [Lutador/Colosso]
+    funcoes: [Lutador]
+    rotas: [Barão, Selva]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Darius"
     status:
       recurso: Mana
       VdM: 350
@@ -1292,6 +1397,11 @@ campeoes:
           Dano base: [125, 250, 375]
   Diana:
     titulo: O Escárnio da Lua
+    classes: [Assassino/Assassino, Lutador/Mergulhador]
+    funcoes: [Lutador, Mago]
+    rotas: [Meio, Barão, Selva]
+    alcance_ataque: 150
+    fonte_classes: "wiki WR:Diana"
     status:
       recurso: Mana
       VdM: 355
@@ -1352,6 +1462,11 @@ campeoes:
           Dano base (2): [200, 320, 440]
   Dr. Mundo:
     titulo: O Louco de Zaun
+    classes: [Lutador/Colosso]
+    funcoes: [Lutador, Tanque]
+    rotas: [Barão, Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Dr. Mundo"
     status:
       VdM: 355
       nv1: {DdA: 58, PdH: 0, Vida: 680, Armadura: 42, RM: 40, VdA: 0.80, AH: 0, RegVida: 21}
@@ -1431,6 +1546,11 @@ campeoes:
           Vida: [25%, 30%, 35%]
   Draven:
     titulo: O Carrasco de Noxus
+    classes: [Atirador]
+    funcoes: [Atirador]
+    rotas: [Dragão]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Draven"
     status:
       recurso: Mana
       VdM: 340
@@ -1494,6 +1614,11 @@ campeoes:
           Dano base: [200, 300, 400]
   Ekko:
     titulo: O Rapaz que Estilhaçou o Tempo
+    classes: [Assassino/Assassino]
+    funcoes: [Assassino, Mago]
+    rotas: [Meio, Selva, Barão]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Ekko"
     fonte_7_3d: nota de patch
     status:
       recurso: Mana
@@ -1551,6 +1676,11 @@ campeoes:
           Dano base: [200, 350, 500]
   Evelynn:
     titulo: Abraço da Agonia
+    classes: [Assassino/Assassino]
+    funcoes: [Assassino]
+    rotas: [Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Evelynn"
     status:
       recurso: Mana
       VdM: 345
@@ -1607,6 +1737,11 @@ campeoes:
           Dano base: [150, 260, 370]
   Ezreal:
     titulo: O Explorador Pródigo
+    classes: [Atirador]
+    funcoes: [Atirador, Mago]
+    rotas: [Dragão]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Ezreal"
     status:
       recurso: Mana
       VdM: 340
@@ -1667,6 +1802,11 @@ campeoes:
           Dano base: [300, 500, 700]
   Fiddlesticks:
     titulo: O Terror Ancestral
+    classes: [Especialista]
+    funcoes: [Mago]
+    rotas: [Selva]
+    alcance_ataque: 480
+    fonte_classes: "wiki WR:Fiddlesticks"
     status:
       recurso: Mana
       VdM: 345
@@ -1730,6 +1870,11 @@ campeoes:
           Dano base: [30, 50, 70]
   Fiora:
     titulo: A Grande Duelista
+    classes: [Assassino/Escaramuçador]
+    funcoes: [Lutador, Assassino]
+    rotas: [Barão]
+    alcance_ataque: 150
+    fonte_classes: "wiki WR:Fiora"
     status:
       recurso: Mana
       VdM: 355
@@ -1794,6 +1939,11 @@ campeoes:
           Redução de tempo por revelar Pontos Vitais: [0.25, 0.5, 0.75]
   Fizz:
     titulo: O Trapaceiro das Marés
+    classes: [Assassino/Assassino]
+    funcoes: [Assassino, Mago]
+    rotas: [Meio, Barão, Selva]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Fizz"
     status:
       recurso: Mana
       VdM: 345
@@ -1848,6 +1998,11 @@ campeoes:
           Dano Máx.: [300, 400, 500]
   Galio:
     titulo: O Colosso
+    classes: [Tanque/Guardião]
+    funcoes: [Tanque, Mago]
+    rotas: [Meio, Suporte]
+    alcance_ataque: 150
+    fonte_classes: "wiki WR:Galio"
     status:
       recurso: Mana
       VdM: 355
@@ -1903,6 +2058,11 @@ campeoes:
           Dano base: [150, 250, 350]
   Garen:
     titulo: O Poder de Demacia
+    classes: [Lutador/Colosso]
+    funcoes: [Lutador, Tanque]
+    rotas: [Barão]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Garen"
     status:
       VdM: 350
       nv1: {DdA: 64, PdH: 0, Vida: 690, Armadura: 44, RM: 38, VdA: 0.80, AH: 0, RegVida: 8}
@@ -1962,6 +2122,11 @@ campeoes:
           Dano base: [150, 250, 350]
   Gnar:
     titulo: O Yordle Pré-Histórico
+    classes: [Especialista]
+    funcoes: [Lutador, Tanque]
+    rotas: [Barão]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Gnar"
     status:
       recurso: Fúria
       VdM: 335
@@ -2045,6 +2210,11 @@ campeoes:
           Duração de Atordoamento: [1.25, 1.5, 1.75]
   Gragas:
     titulo: O Badernista
+    classes: [Tanque/Vanguarda]
+    funcoes: [Tanque, Mago]
+    rotas: [Selva, Barão, Meio]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Gragas"
     status:
       recurso: Mana
       VdM: 340
@@ -2108,6 +2278,11 @@ campeoes:
           Dano base: [200, 300, 400]
   Graves:
     titulo: O Foragido
+    classes: [Especialista]
+    funcoes: [Atirador, Lutador]
+    rotas: [Selva, Barão]
+    alcance_ataque: 425
+    fonte_classes: "wiki WR:Graves"
     status:
       recurso: Mana
       VdM: 350
@@ -2165,6 +2340,11 @@ campeoes:
           Segundo Dano: [200, 320, 440]
   Gwen:
     titulo: A Costureira Encantada
+    classes: [Assassino/Escaramuçador]
+    funcoes: [Lutador]
+    rotas: [Barão, Selva]
+    alcance_ataque: 150
+    fonte_classes: "wiki WR:Gwen"
     status:
       recurso: Mana
       VdM: 350
@@ -2234,6 +2414,11 @@ campeoes:
           Redução de Velocidade: [35%, 40%, 45%]
   Hecarim:
     titulo: A Sombra da Guerra
+    classes: [Lutador/Mergulhador]
+    funcoes: [Lutador]
+    rotas: [Selva]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Hecarim"
     status:
       recurso: Mana
       VdM: 350
@@ -2301,6 +2486,11 @@ campeoes:
           Dano base: [150, 250, 350]
   Heimerdinger:
     titulo: O Inventor Idolatrado
+    classes: [Especialista]
+    funcoes: [Mago, Suporte]
+    rotas: [Meio]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Heimerdinger"
     status:
       recurso: Mana
       VdM: 355
@@ -2363,6 +2553,11 @@ campeoes:
           Tempo de Recarga: [80, 70, 60]
   Hwei:
     titulo: O Visionário
+    classes: [Mago/Artilharia]
+    funcoes: [Mago, Suporte]
+    rotas: [Meio, Suporte]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Hwei"
     fonte_7_3b: nota de patch
     status:
       recurso: Mana
@@ -2438,6 +2633,11 @@ campeoes:
           Dano base (2): [200, 300, 400]
   Irelia:
     titulo: A Dançarina das Lâminas
+    classes: [Lutador/Mergulhador]
+    funcoes: [Lutador, Assassino]
+    rotas: [Meio, Barão]
+    alcance_ataque: 200
+    fonte_classes: "wiki WR:Irelia"
     status:
       recurso: Mana
       VdM: 350
@@ -2504,6 +2704,11 @@ campeoes:
           Dano adicional: [100, 225, 350]
   Janna:
     titulo: A Fúria da Tormenta
+    classes: [Controlador/Encantador]
+    funcoes: [Suporte, Mago]
+    rotas: [Suporte]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Janna"
     status:
       recurso: Mana
       VdM: 357
@@ -2566,6 +2771,11 @@ campeoes:
           Cura: [50, 75, 100]
   Jarvan IV:
     titulo: O Exemplo de Demacia
+    classes: [Lutador/Mergulhador]
+    funcoes: [Tanque, Lutador]
+    rotas: [Selva, Barão]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Jarvan IV"
     status:
       recurso: Mana
       VdM: 350
@@ -2629,6 +2839,11 @@ campeoes:
           Redução de Dano: [12%, 16%, 20%]
   Jax:
     titulo: O Grão-Mestre das Armas
+    classes: [Assassino/Escaramuçador]
+    funcoes: [Lutador]
+    rotas: [Selva, Barão]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Jax"
     status:
       recurso: Mana
       VdM: 355
@@ -2702,6 +2917,11 @@ campeoes:
           Resistência Mágica (2): [9, 12, 15]
   Jayce:
     titulo: O Defensor do Amanhã
+    classes: [Mago/Artilharia]
+    funcoes: [Lutador, Atirador]
+    rotas: [Barão, Meio]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Jayce"
     status:
       recurso: Mana
       VdM: 345
@@ -2803,6 +3023,11 @@ campeoes:
             Volta à forma Martelo (corpo a corpo, 125 de alcance), recebendo 16%–30% de Velocidade de Ataque ({nível}) e 5–33 de Armadura e Resistência Mágica ({nível}) (+ 9%{DdA} adicional). O próximo ataque causa 28–140 de Dano Mágico adicional ({nível}) (+ 25%{DdA} adicional) e afeta estruturas.
   Jhin:
     titulo: O Virtuoso
+    classes: [Atirador]
+    funcoes: [Atirador, Mago]
+    rotas: [Dragão]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Jhin"
     fonte_7_3b: nota de patch
     status:
       recurso: Mana
@@ -2861,6 +3086,11 @@ campeoes:
           Dano base: [75, 150, 225]
   Jinx:
     titulo: O Gatilho Desenfreado
+    classes: [Atirador]
+    funcoes: [Atirador]
+    rotas: [Dragão]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Jinx"
     status:
       recurso: Mana
       VdM: 335
@@ -2929,6 +3159,11 @@ campeoes:
           Dano por % de Vida: [25%, 30%, 35%]
   Kai'Sa:
     titulo: A Filha do Vazio
+    classes: [Atirador]
+    funcoes: [Atirador, Assassino]
+    rotas: [Dragão]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Kai'Sa"
     status:
       recurso: Mana
       VdM: 340
@@ -2996,6 +3231,11 @@ campeoes:
           DdA: [80%, 120%, 160%]
   Kalista:
     titulo: A Lança da Vingança
+    classes: [Atirador]
+    funcoes: [Atirador]
+    rotas: [Dragão]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Kalista"
     status:
       recurso: Mana
       VdM: 335
@@ -3059,6 +3299,11 @@ campeoes:
           Duração do arremesso ao ar: [1, 1.5, 2]
   Karma:
     titulo: A Iluminada
+    classes: [Mago/Explosivo, Controlador/Encantador]
+    funcoes: [Mago, Suporte]
+    rotas: [Suporte, Meio]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Karma"
     status:
       recurso: Mana
       VdM: 360
@@ -3115,6 +3360,11 @@ campeoes:
           Dano base: [170, 280, 390]
   Kassadin:
     titulo: O Andarilho do Vazio
+    classes: [Assassino/Assassino]
+    funcoes: [Assassino, Mago]
+    rotas: [Meio, Barão]
+    alcance_ataque: 150
+    fonte_classes: "wiki WR:Kassadin"
     status:
       recurso: Mana
       VdM: 350
@@ -3174,6 +3424,11 @@ campeoes:
           Dano base: [80, 100, 120]
   Katarina:
     titulo: A Lâmina Sinistra
+    classes: [Assassino/Assassino]
+    funcoes: [Assassino, Mago]
+    rotas: [Meio]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Katarina"
     status:
       VdM: 345
       nv1: {DdA: 58, PdH: 0, Vida: 660, Armadura: 34, RM: 38, VdA: 0.80, AH: 0, RegVida: 8}
@@ -3222,6 +3477,11 @@ campeoes:
           Dano base: [400, 600, 800]
   Kayle:
     titulo: A Justa
+    classes: [Especialista]
+    funcoes: [Lutador, Suporte]
+    rotas: [Barão, Meio]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Kayle"
     status:
       recurso: Mana
       VdM: 345
@@ -3287,6 +3547,11 @@ campeoes:
           Dano base: [150, 225, 300]
   Kayn:
     titulo: O Ceifador das Sombras
+    classes: [Assassino/Escaramuçador]
+    funcoes: [Lutador]
+    rotas: [Selva]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Kayn"
     status:
       recurso: Mana
       VdM: 350
@@ -3356,6 +3621,11 @@ campeoes:
           Dano base: [200, 300, 400]
   Kennen:
     titulo: O Coração da Tempestade
+    classes: [Especialista]
+    funcoes: [Mago, Atirador]
+    rotas: [Barão, Meio]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Kennen"
     status:
       recurso: Energia  # máx. 200
       VdM: 355
@@ -3424,6 +3694,11 @@ campeoes:
           Dano base: [20, 55, 90]
   Kha'Zix:
     titulo: O Ceifador do Vazio
+    classes: [Assassino/Assassino]
+    funcoes: [Assassino, Lutador]
+    rotas: [Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Kha'Zix"
     status:
       recurso: Mana
       VdM: 355
@@ -3476,6 +3751,11 @@ campeoes:
           Tempo de Recarga: [75, 65, 55]
   Kindred:
     titulo: Os Caçadores Eternos
+    classes: [Atirador]
+    funcoes: [Atirador]
+    rotas: [Selva]
+    alcance_ataque: 500
+    fonte_classes: "wiki WR:Kindred"
     status:
       recurso: Mana
       VdM: 335
@@ -3550,6 +3830,11 @@ campeoes:
           Cura: [150, 200, 250]
   Kog'Maw:
     titulo: A Boca do Abismo
+    classes: [Atirador]
+    funcoes: [Atirador, Mago]
+    rotas: [Dragão]
+    alcance_ataque: 500
+    fonte_classes: "wiki WR:Kog'Maw"
     status:
       recurso: Mana
       VdM: 335
@@ -3608,6 +3893,11 @@ campeoes:
           VdA: [10%, 20%, 30%]
   K'Sante:
     titulo: O Orgulho de Nazumah
+    classes: [Tanque/Guardião, Assassino/Escaramuçador]
+    funcoes: [Tanque, Lutador]
+    rotas: [Barão]
+    alcance_ataque: 150
+    fonte_classes: "wiki WR:K'Sante"
     status:
       recurso: Mana
       VdM: 350
@@ -3699,6 +3989,11 @@ campeoes:
           VdA: [40%, 60%, 80%]
   Lee Sin:
     titulo: O Monge Cego
+    classes: [Lutador/Mergulhador]
+    funcoes: [Lutador, Assassino]
+    rotas: [Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Lee Sin"
     fonte_7_3d: nota de patch
     status:
       recurso: Energia  # máx. 200
@@ -3762,6 +4057,11 @@ campeoes:
           Dano por % de Vida: [12%, 15%, 18%]
   Leona:
     titulo: A Alvorada Radiante
+    classes: [Tanque/Vanguarda]
+    funcoes: [Tanque, Suporte]
+    rotas: [Suporte]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Leona"
     status:
       recurso: Mana
       VdM: 345
@@ -3820,6 +4120,11 @@ campeoes:
           Dano base: [150, 225, 300]
   Lillia:
     titulo: O Florir Receoso
+    classes: [Assassino/Escaramuçador]
+    funcoes: [Lutador]
+    rotas: [Selva]
+    alcance_ataque: 325
+    fonte_classes: "wiki WR:Lillia"
     status:
       recurso: Mana
       VdM: 350
@@ -3893,6 +4198,11 @@ campeoes:
           Dano base: [100, 150, 200]
   Lissandra:
     titulo: A Bruxa Gélida
+    classes: [Mago/Explosivo]
+    funcoes: [Mago]
+    rotas: [Meio]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Lissandra"
     status:
       recurso: Mana
       VdM: 355
@@ -3947,6 +4257,11 @@ campeoes:
           Redução de Velocidade: [30%, 45%, 60%]
   Lucian:
     titulo: O Purificador
+    classes: [Atirador]
+    funcoes: [Atirador]
+    rotas: [Dragão, Meio]
+    alcance_ataque: 500
+    fonte_classes: "wiki WR:Lucian"
     status:
       recurso: Mana
       VdM: 345
@@ -4004,6 +4319,11 @@ campeoes:
           Dano base: [20, 25, 30]
   Lulu:
     titulo: A Fada Feiticeira
+    classes: [Controlador/Encantador]
+    funcoes: [Suporte, Mago]
+    rotas: [Suporte]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Lulu"
     status:
       recurso: Mana
       VdM: 345
@@ -4066,6 +4386,11 @@ campeoes:
           Vida: [250, 400, 550]
   Lux:
     titulo: A Dama da Luz
+    classes: [Mago/Explosivo, Mago/Artilharia]
+    funcoes: [Mago, Suporte]
+    rotas: [Meio, Suporte]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Lux"
     status:
       recurso: Mana
       VdM: 360
@@ -4117,6 +4442,11 @@ campeoes:
           Dano base: [300, 400, 500]
   Malphite:
     titulo: O Fragmento do Monolito
+    classes: [Tanque/Vanguarda]
+    funcoes: [Tanque]
+    rotas: [Suporte, Barão, Meio]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Malphite"
     fonte_7_3d: nota de patch
     status:
       recurso: Mana
@@ -4173,6 +4503,11 @@ campeoes:
           Dano base: [200, 300, 400]
   Maokai:
     titulo: O Ente Sinistro
+    classes: [Tanque/Vanguarda]
+    funcoes: [Tanque]
+    rotas: [Selva, Barão, Suporte]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Maokai"
     status:
       recurso: Mana
       VdM: 345
@@ -4236,6 +4571,11 @@ campeoes:
           VdM: [40%, 50%, 60%]
   Master Yi:
     titulo: O Espadachim Wuju
+    classes: [Assassino/Escaramuçador]
+    funcoes: [Assassino, Lutador]
+    rotas: [Selva]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Master Yi"
     status:
       recurso: Mana
       VdM: 355
@@ -4303,6 +4643,11 @@ campeoes:
           VdA: [30%, 60%, 90%]
   Mel:
     titulo: O Reflexo da Alma
+    classes: [Mago/Artilharia]
+    funcoes: [Mago]
+    rotas: [Meio, Suporte]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Mel"
     status:
       recurso: Mana
       VdM: 355
@@ -4382,6 +4727,11 @@ campeoes:
           Dano de acúmulo de Eclipse Dourado: [4, 7, 10]
   Milio:
     titulo: A Chama Gentil
+    classes: [Controlador/Encantador]
+    funcoes: [Suporte, Mago]
+    rotas: [Suporte]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Milio"
     status:
       recurso: Mana
       VdM: 340
@@ -4438,6 +4788,11 @@ campeoes:
           Cura: [150, 250, 350]
   Miss Fortune:
     titulo: A Caçadora de Recompensas
+    classes: [Atirador]
+    funcoes: [Atirador, Mago]
+    rotas: [Dragão]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Miss Fortune"
     fonte_7_3d: nota de patch
     status:
       recurso: Mana
@@ -4507,6 +4862,11 @@ campeoes:
           Dano base: [20, 30, 40]
   Mordekaiser:
     titulo: O Revenã de Ferro
+    classes: [Lutador/Colosso]
+    funcoes: [Lutador, Mago]
+    rotas: [Barão, Selva]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Mordekaiser"
     status:
       recurso: Quantidade de Escudo
       VdM: 340
@@ -4571,6 +4931,11 @@ campeoes:
           Tempo de Recarga: [105, 90, 75]
   Morgana:
     titulo: O Anjo Caído
+    classes: [Controlador/Captor]
+    funcoes: [Mago, Suporte]
+    rotas: [Suporte, Meio, Selva]
+    alcance_ataque: 450
+    fonte_classes: "wiki WR:Morgana"
     status:
       recurso: Mana
       VdM: 360
@@ -4625,6 +4990,11 @@ campeoes:
           VdM: [10%, 25%, 40%]
   Nami:
     titulo: A Conjuradora das Marés
+    classes: [Controlador/Encantador]
+    funcoes: [Suporte, Mago]
+    rotas: [Suporte]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Nami"
     status:
       recurso: Mana
       VdM: 350
@@ -4677,6 +5047,11 @@ campeoes:
           Dano base: [150, 250, 350]
   Nasus:
     titulo: O Curador das Areias
+    classes: [Lutador/Colosso]
+    funcoes: [Lutador, Tanque]
+    rotas: [Barão]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Nasus"
     fonte_7_3d: nota de patch
     status:
       recurso: Mana
@@ -4742,6 +5117,11 @@ campeoes:
           Dano base: [3%, 4%, 5%]
   Nautilus:
     titulo: O Titã das Profundezas
+    classes: [Tanque/Vanguarda]
+    funcoes: [Tanque, Suporte]
+    rotas: [Suporte, Barão, Selva]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Nautilus"
     status:
       recurso: Mana
       VdM: 340
@@ -4799,6 +5179,11 @@ campeoes:
           Duração de Atordoamento: [1, 1.5, 2]
   Nidalee:
     titulo: A Caçadora Bestial
+    classes: [Especialista]
+    funcoes: [Assassino, Mago]
+    rotas: [Selva]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Nidalee"
     status:
       recurso: Mana
       VdM: 350
@@ -4887,6 +5272,11 @@ campeoes:
             Dano base: [70, 130, 190, 250]
   Nilah:
     titulo: A Alegria Irrestrita
+    classes: [Assassino/Escaramuçador]
+    funcoes: [Lutador]
+    rotas: [Dragão]
+    alcance_ataque: 225
+    fonte_classes: "wiki WR:Nilah"
     status:
       recurso: Mana
       VdM: 350
@@ -4950,6 +5340,11 @@ campeoes:
           Dano base (2): [125, 225, 325]
   Nocturne:
     titulo: O Eterno Pesadelo
+    classes: [Assassino/Assassino]
+    funcoes: [Lutador, Assassino]
+    rotas: [Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Nocturne"
     fonte_7_3b: nota de patch
     status:
       recurso: Mana
@@ -5032,6 +5427,11 @@ campeoes:
           Dano base: [150, 275, 400]
   Norra:
     titulo: A Mestra dos Portais
+    classes: [Mago/Artilharia]
+    funcoes: [Mago]
+    rotas: [Meio]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Norra"
     status:
       recurso: Mana
       VdM: 355
@@ -5101,6 +5501,11 @@ campeoes:
           Dano base: [100, 140, 180]
   Nunu e Willump:
     titulo: O Garoto e Seu Yeti
+    classes: [Tanque/Vanguarda]
+    funcoes: [Tanque, Mago]
+    rotas: [Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Nunu & Willump"
     status:
       recurso: Mana
       VdM: 350
@@ -5170,6 +5575,11 @@ campeoes:
           Dano Máx.: [915, 1245, 1575]
   Olaf:
     titulo: O Berserker
+    classes: [Lutador/Mergulhador]
+    funcoes: [Lutador]
+    rotas: [Selva, Barão]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Olaf"
     status:
       recurso: Mana
       VdM: 355
@@ -5246,6 +5656,11 @@ campeoes:
           VdM: [20%, 45%, 70%]
   Orianna:
     titulo: A Donzela Mecânica
+    classes: [Mago/Explosivo]
+    funcoes: [Mago, Suporte]
+    rotas: [Meio]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Orianna"
     status:
       recurso: Mana
       VdM: 355
@@ -5309,6 +5724,11 @@ campeoes:
           Dano base: [250, 350, 450]
   Ornn:
     titulo: O Fogo Sob a Montanha
+    classes: [Tanque/Vanguarda]
+    funcoes: [Tanque]
+    rotas: [Barão]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Ornn"
     status:
       recurso: Mana
       VdM: 345
@@ -5363,6 +5783,11 @@ campeoes:
           Redução de Velocidade: [40, 50, 60]
   Pantheon:
     titulo: A Lança Indestrutível
+    classes: [Tanque/Guardião]
+    funcoes: [Lutador, Assassino]
+    rotas: [Barão, Selva, Meio]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Pantheon"
     status:
       recurso: Mana
       VdM: 355
@@ -5430,6 +5855,11 @@ campeoes:
           Pen. de Armadura: [10%, 20%, 30%]
   Poppy:
     titulo: A Guardiã do Martelo
+    classes: [Tanque/Guardião]
+    funcoes: [Tanque, Lutador]
+    rotas: [Barão, Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Poppy"
     status:
       recurso: Mana
       VdM: 350
@@ -5504,6 +5934,11 @@ campeoes:
           Dano base (2): [100, 150, 200]
   Pyke:
     titulo: O Estripador das Águas Sangrentas
+    classes: [Assassino/Assassino, Controlador/Captor]
+    funcoes: [Assassino, Suporte]
+    rotas: [Suporte]
+    alcance_ataque: 150
+    fonte_classes: "wiki WR:Pyke"
     status:
       recurso: Mana
       VdM: 340
@@ -5566,6 +6001,11 @@ campeoes:
           Vida: [250, 400, 550]
   Rakan:
     titulo: O Charmoso
+    classes: [Controlador/Captor]
+    funcoes: [Suporte, Tanque]
+    rotas: [Suporte]
+    alcance_ataque: 300
+    fonte_classes: "wiki WR:Rakan"
     status:
       recurso: Mana
       VdM: 345
@@ -5628,6 +6068,11 @@ campeoes:
           Duração do Encanto: [1, 1.25, 1.5]
   Rammus:
     titulo: O Tatu Blindado
+    classes: [Tanque/Vanguarda]
+    funcoes: [Tanque]
+    rotas: [Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Rammus"
     status:
       recurso: Mana
       VdM: 367
@@ -5702,6 +6147,11 @@ campeoes:
           Dano: [30, 45, 60]
   Rell:
     titulo: A Dama de Ferro
+    classes: [Tanque/Vanguarda]
+    funcoes: [Tanque, Suporte]
+    rotas: [Suporte]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Rell"
     status:
       recurso: Mana
       VdM: 350
@@ -5759,6 +6209,11 @@ campeoes:
           Dano base: [120, 200, 280]
   Renekton:
     titulo: O Carniceiro das Areias
+    classes: [Lutador/Mergulhador]
+    funcoes: [Lutador]
+    rotas: [Barão]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Renekton"
     status:
       recurso: Fúria  # máx. 100
       VdM: 355
@@ -5832,6 +6287,11 @@ campeoes:
           Dano base: [70, 120, 170]
   Rengar:
     titulo: O Acossador da Alcateia
+    classes: [Assassino/Assassino, Lutador/Mergulhador]
+    funcoes: [Assassino]
+    rotas: [Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Rengar"
     status:
       recurso: Ferocidade
       VdM: 355
@@ -5892,6 +6352,11 @@ campeoes:
           Redução de Armadura: [16, 24, 32]
   Riven:
     titulo: A Exilada
+    classes: [Assassino/Escaramuçador]
+    funcoes: [Lutador, Assassino]
+    rotas: [Barão, Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Riven"
     status:
       VdM: 345
       nv1: {DdA: 64, PdH: 0, Vida: 660, Armadura: 43, RM: 38, VdA: 0.80, AH: 0, RegVida: 12}
@@ -5951,6 +6416,11 @@ campeoes:
           Dano base: [100, 150, 200]
   Rumble:
     titulo: A Ameaça Mecânica
+    classes: [Mago/Mago de Batalha]
+    funcoes: [Lutador, Mago]
+    rotas: [Barão]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Rumble"
     status:
       recurso: Aquecimento
       VdM: 355
@@ -6027,6 +6497,11 @@ campeoes:
           Dano base: [700, 1050, 1400]
   Ryze:
     titulo: O Mago Rúnico
+    classes: [Mago/Mago de Batalha]
+    funcoes: [Mago]
+    rotas: [Meio]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Ryze"
     status:
       recurso: Mana
       VdM: 360
@@ -6083,6 +6558,11 @@ campeoes:
           Dano de Fluxo: [50%, 75%, 100%]
   Samira:
     titulo: A Rosa do Deserto
+    classes: [Atirador]
+    funcoes: [Atirador, Assassino]
+    rotas: [Dragão]
+    alcance_ataque: 500
+    fonte_classes: "wiki WR:Samira"
     fonte_7_3d: nota de patch
     status:
       recurso: Mana
@@ -6145,6 +6625,11 @@ campeoes:
           Dano base: [20, 40, 60]
   Senna:
     titulo: A Redentora
+    classes: [Atirador, Controlador/Encantador]
+    funcoes: [Atirador, Suporte]
+    rotas: [Dragão, Suporte]
+    alcance_ataque: 600
+    fonte_classes: "wiki WR:Senna"
     fonte_7_3b: nota de patch
     status:
       recurso: Mana
@@ -6222,6 +6707,11 @@ campeoes:
           Escudo: [120, 160, 200]
   Seraphine:
     titulo: A Cantora Sonhadora
+    classes: [Mago/Explosivo, Controlador/Encantador]
+    funcoes: [Mago, Suporte]
+    rotas: [Suporte, Meio]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Seraphine"
     status:
       recurso: Mana
       VdM: 360
@@ -6278,6 +6768,11 @@ campeoes:
           Duração do Encanto: [1.25, 1.5, 1.75]
   Sett:
     titulo: O Chefe
+    classes: [Lutador/Colosso]
+    funcoes: [Lutador]
+    rotas: [Barão]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Sett"
     status:
       VdM: 350
       nv1: {DdA: 62, PdH: 0, Vida: 690, Armadura: 46, RM: 38, VdA: 0.73, AH: 0, RegVida: 15}
@@ -6329,6 +6824,11 @@ campeoes:
           Dano por % de Vida: [35%, 45%, 55%]
   Shen:
     titulo: O Olho do Crepúsculo
+    classes: [Tanque/Guardião]
+    funcoes: [Tanque, Suporte]
+    rotas: [Barão, Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Shen"
     status:
       recurso: Energia  # máx. 200
       VdM: 350
@@ -6396,6 +6896,11 @@ campeoes:
           Escudo: [170, 340, 510]
   Shyvana:
     titulo: A Meio-Dragão
+    classes: [Lutador/Colosso]
+    funcoes: [Lutador, Tanque]
+    rotas: [Selva]
+    alcance_ataque: 150
+    fonte_classes: "wiki WR:Shyvana"
     fonte_7_3d: nota de patch
     status:
       recurso: Fúria  # máx. 100
@@ -6462,6 +6967,11 @@ campeoes:
           Vida: [350, 475, 600]
   Singed:
     titulo: O Químico Louco
+    classes: [Especialista]
+    funcoes: [Tanque, Mago]
+    rotas: [Barão]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Singed"
     fonte_7_3d: nota de patch
     status:
       recurso: Mana
@@ -6532,6 +7042,11 @@ campeoes:
           Reg. de Mana: [15, 20, 25]
   Sion:
     titulo: O Colosso Morto-Vivo
+    classes: [Tanque/Vanguarda]
+    funcoes: [Tanque, Lutador]
+    rotas: [Barão, Selva]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Sion"
     status:
       recurso: Mana
       VdM: 355
@@ -6598,6 +7113,11 @@ campeoes:
           Dano Máx.: [400, 800, 1200]
   Sivir:
     titulo: A Mestra da Batalha
+    classes: [Atirador]
+    funcoes: [Atirador]
+    rotas: [Dragão]
+    alcance_ataque: 500
+    fonte_classes: "wiki WR:Sivir"
     status:
       recurso: Mana
       VdM: 340
@@ -6670,6 +7190,11 @@ campeoes:
           VdM: [15%, 20%, 25%]
   Skarner:
     titulo: O Soberano Primordial
+    classes: [Tanque, Lutador]
+    funcoes: [Tanque, Lutador]
+    rotas: [Selva, Barão]
+    alcance_ataque: 150
+    fonte_classes: "wiki WR:Skarner"
     status:
       recurso: Mana
       VdM: 360
@@ -6740,6 +7265,11 @@ campeoes:
           Dano base: [150, 250, 350]
   Smolder:
     titulo: O Filhote Flamejante
+    classes: [Atirador]
+    funcoes: [Atirador, Mago]
+    rotas: [Dragão]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Smolder"
     status:
       recurso: Mana
       VdM: 335
@@ -6816,6 +7346,11 @@ campeoes:
           Cura: [100, 135, 170]
   Sona:
     titulo: A Mestra das Cordas
+    classes: [Controlador/Encantador]
+    funcoes: [Suporte, Mago]
+    rotas: [Suporte]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Sona"
     status:
       recurso: Mana
       VdM: 340
@@ -6874,6 +7409,11 @@ campeoes:
           Redução de Velocidade: [25%, 30%, 35%]
   Soraka:
     titulo: A Filha das Estrelas
+    classes: [Controlador/Encantador]
+    funcoes: [Suporte, Mago]
+    rotas: [Suporte]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Soraka"
     status:
       recurso: Mana
       VdM: 340
@@ -6927,6 +7467,11 @@ campeoes:
           Cura: [150, 225, 300]
   Swain:
     titulo: O Grande General Noxiano
+    classes: [Mago/Mago de Batalha]
+    funcoes: [Mago, Tanque]
+    rotas: [Meio, Suporte]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Swain"
     status:
       recurso: Mana
       VdM: 355
@@ -6990,6 +7535,11 @@ campeoes:
           Cura: [15, 30, 45]
   Syndra:
     titulo: A Soberana Sombria
+    classes: [Mago/Explosivo]
+    funcoes: [Mago]
+    rotas: [Meio]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Syndra"
     status:
       recurso: Mana
       VdM: 360
@@ -7056,6 +7606,11 @@ campeoes:
           Dano base: [60, 110, 160]
   Taliyah:
     titulo: A Tecelã de Pedras
+    classes: [Mago/Mago de Batalha]
+    funcoes: [Mago, Suporte]
+    rotas: [Selva, Meio]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Taliyah"
     status:
       recurso: Mana
       VdM: 350
@@ -7124,6 +7679,11 @@ campeoes:
           Tempo de Recarga: [100, 90, 80]
   Talon:
     titulo: A Sombra da Lâmina
+    classes: [Assassino/Assassino]
+    funcoes: [Assassino]
+    rotas: [Meio, Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Talon"
     status:
       recurso: Mana
       VdM: 355
@@ -7185,6 +7745,11 @@ campeoes:
           VdM: [40%, 55%, 70%]
   Teemo:
     titulo: O Explorador Veloz
+    classes: [Especialista]
+    funcoes: [Atirador, Mago]
+    rotas: [Barão, Meio]
+    alcance_ataque: 500
+    fonte_classes: "wiki WR:Teemo"
     status:
       recurso: Mana
       VdM: 355
@@ -7248,6 +7813,11 @@ campeoes:
           Tempo de Recarga: [30, 25, 20]
   Thresh:
     titulo: O Guardião das Correntes
+    classes: [Controlador/Captor]
+    funcoes: [Tanque]
+    rotas: [Suporte]
+    alcance_ataque: 450
+    fonte_classes: "wiki WR:Thresh"
     status:
       recurso: Mana
       VdM: 345
@@ -7309,6 +7879,11 @@ campeoes:
           Dano base: [250, 400, 550]
   Tristana:
     titulo: A Artilheira Yordle
+    classes: [Atirador]
+    funcoes: [Atirador]
+    rotas: [Dragão]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Tristana"
     status:
       recurso: Mana
       VdM: 335
@@ -7368,6 +7943,11 @@ campeoes:
           Dano base: [300, 350, 400]
   Tryndamere:
     titulo: O Rei Bárbaro
+    classes: [Assassino/Escaramuçador]
+    funcoes: [Lutador]
+    rotas: [Selva, Barão]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Tryndamere"
     fonte_7_3b: nota de patch
     status:
       recurso: Fúria
@@ -7431,6 +8011,11 @@ campeoes:
           Reg. de Fúria: [50, 75, 100]
   Twisted Fate:
     titulo: O Mestre das Cartas
+    classes: [Mago/Explosivo]
+    funcoes: [Mago, Atirador]
+    rotas: [Meio]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Twisted Fate"
     status:
       recurso: Mana
       VdM: 355
@@ -7497,6 +8082,11 @@ campeoes:
           Duração: [6, 7, 8]
   Twitch:
     titulo: O Semeador da Peste
+    classes: [Atirador]
+    funcoes: [Atirador]
+    rotas: [Dragão, Selva]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Twitch"
     status:
       recurso: Mana
       VdM: 340
@@ -7568,6 +8158,11 @@ campeoes:
           DdA adicional: [30, 45, 60]
   Urgot:
     titulo: O Encouraçado
+    classes: [Lutador/Colosso]
+    funcoes: [Lutador]
+    rotas: [Barão]
+    alcance_ataque: 350
+    fonte_classes: "wiki WR:Urgot"
     status:
       recurso: Mana
       VdM: 340
@@ -7623,6 +8218,11 @@ campeoes:
           Dano base: [100, 225, 350]
   Varus:
     titulo: A Flecha da Vingança
+    classes: [Atirador, Mago/Artilharia]
+    funcoes: [Atirador, Mago]
+    rotas: [Dragão]
+    alcance_ataque: 575
+    fonte_classes: "wiki WR:Varus"
     status:
       recurso: Mana
       VdM: 340
@@ -7686,6 +8286,11 @@ campeoes:
           Dano base: [150, 250, 350]
   Vayne:
     titulo: A Caçadora Noturna
+    classes: [Atirador]
+    funcoes: [Atirador, Assassino]
+    rotas: [Dragão]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Vayne"
     status:
       recurso: Mana
       VdM: 335
@@ -7742,6 +8347,11 @@ campeoes:
           Duração: [8, 10, 12]
   Veigar:
     titulo: O Pequeno Mestre do Mal
+    classes: [Mago/Explosivo]
+    funcoes: [Mago]
+    rotas: [Meio, Suporte]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Veigar"
     status:
       recurso: Mana
       VdM: 360
@@ -7803,6 +8413,11 @@ campeoes:
           Dano base: [185, 250, 315]
   Vel'Koz:
     titulo: O Olho do Vazio
+    classes: [Mago/Artilharia]
+    funcoes: [Mago, Suporte]
+    rotas: [Meio, Suporte]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Vel'Koz"
     status:
       recurso: Mana
       VdM: 360
@@ -7861,6 +8476,11 @@ campeoes:
           Dano base: [450, 625, 800]
   Vex:
     titulo: A Melancolista
+    classes: [Mago/Explosivo]
+    funcoes: [Mago]
+    rotas: [Meio]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Vex"
     status:
       recurso: Mana
       VdM: 360
@@ -7922,6 +8542,11 @@ campeoes:
           Alcance de Ataque: [20, 25, 30]
   Vi:
     titulo: A Defensora de Piltover
+    classes: [Lutador/Mergulhador]
+    funcoes: [Lutador]
+    rotas: [Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Vi"
     status:
       recurso: Mana
       VdM: 350
@@ -7988,6 +8613,11 @@ campeoes:
           Dano base: [150, 300, 450]
   Viego:
     titulo: O Rei Destruído
+    classes: [Assassino/Escaramuçador]
+    funcoes: [Assassino]
+    rotas: [Selva, Barão]
+    alcance_ataque: 200
+    fonte_classes: "wiki WR:Viego"
     status:
       VdM: 345
       nv1: {DdA: 60, PdH: 0, Vida: 630, Armadura: 46, RM: 36, VdA: 0.80, AH: 0, RegVida: 8}
@@ -8056,6 +8686,11 @@ campeoes:
           Vida perdida do alvo: [14%, 17%, 20%]
   Viktor:
     titulo: O Arauto do Arcano
+    classes: [Mago/Mago de Batalha]
+    funcoes: [Mago]
+    rotas: [Meio]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Viktor"
     status:
       recurso: Mana
       VdM: 355
@@ -8126,6 +8761,11 @@ campeoes:
           Dano: [50, 90, 130]
   Vladimir:
     titulo: O Sanguinário Escarlate
+    classes: [Mago/Mago de Batalha]
+    funcoes: [Mago]
+    rotas: [Meio, Barão]
+    alcance_ataque: 450
+    fonte_classes: "wiki WR:Vladimir"
     status:
       VdM: 355
       nv1: {DdA: 52, PdH: 0, Vida: 630, Armadura: 37, RM: 36, VdA: 0.75, AH: 0, RegVida: 8}
@@ -8181,6 +8821,11 @@ campeoes:
           Cura: [150, 250, 350]
   Volibear:
     titulo: A Tempestade Implacável
+    classes: [Lutador/Colosso]
+    funcoes: [Lutador, Tanque]
+    rotas: [Barão, Selva]
+    alcance_ataque: 150
+    fonte_classes: "wiki WR:Volibear"
     fonte_7_3b: nota de patch
     status:
       recurso: Mana
@@ -8253,6 +8898,11 @@ campeoes:
           Dano base: [300, 500, 700]
   Warwick:
     titulo: A Ira Desimpedida de Zaun
+    classes: [Lutador/Mergulhador]
+    funcoes: [Lutador]
+    rotas: [Selva, Barão]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Warwick"
     status:
       recurso: Mana
       VdM: 345
@@ -8326,6 +8976,11 @@ campeoes:
           Dano base: [100, 275, 450]
   Wukong:
     titulo: O Macaco Rei
+    classes: [Lutador/Mergulhador]
+    funcoes: [Lutador, Tanque]
+    rotas: [Selva, Barão]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Wukong"
     status:
       recurso: Mana
       VdM: 350
@@ -8395,6 +9050,11 @@ campeoes:
           Vida Máxima: [10%, 14%, 18%]
   Xayah:
     titulo: A Rebelde
+    classes: [Atirador]
+    funcoes: [Atirador, Mago]
+    rotas: [Dragão]
+    alcance_ataque: 525
+    fonte_classes: "wiki WR:Xayah"
     status:
       recurso: Mana
       VdM: 335
@@ -8452,6 +9112,11 @@ campeoes:
           Dano base: [150, 250, 350]
   Xin Zhao:
     titulo: O Senescal de Demacia
+    classes: [Lutador/Mergulhador]
+    funcoes: [Lutador, Tanque]
+    rotas: [Selva]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Xin Zhao"
     status:
       recurso: Mana
       VdM: 355
@@ -8520,6 +9185,11 @@ campeoes:
           Dano base: [75, 150, 225]
   Yasuo:
     titulo: O Imperdoável
+    classes: [Assassino/Escaramuçador]
+    funcoes: [Lutador, Assassino]
+    rotas: [Meio, Barão]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Yasuo"
     fonte_7_3b: nota de patch
     status:
       recurso: Fluxo  # máx. 100
@@ -8588,6 +9258,11 @@ campeoes:
           Dano base: [200, 350, 500]
   Yone:
     titulo: O Inesquecido
+    classes: [Assassino/Assassino, Assassino/Escaramuçador]
+    funcoes: [Assassino]
+    rotas: [Meio, Barão]
+    alcance_ataque: 175
+    fonte_classes: "wiki WR:Yone"
     status:
       recurso: Mana
       VdM: 355
@@ -8653,6 +9328,11 @@ campeoes:
           Dano base: [200, 375, 550]
   Yunara:
     titulo: A Fé Inabalável
+    classes: [Atirador]
+    funcoes: [Atirador]
+    rotas: [Dragão]
+    alcance_ataque: 575
+    fonte_classes: "wiki WR:Yunara"
     fonte_7_3b: nota de patch
     status:
       recurso: Mana
@@ -8725,6 +9405,11 @@ campeoes:
           Tempo de Recarga: [70, 65, 60]
   Yuumi:
     titulo: A Gata Mágica
+    classes: [Controlador/Encantador]
+    funcoes: [Suporte, Mago]
+    rotas: [Suporte]
+    alcance_ataque: 425
+    fonte_classes: "wiki WR:Yuumi"
     status:
       recurso: Mana
       VdM: 340
@@ -8813,6 +9498,11 @@ campeoes:
           Dano base das ondas subsequentes: [20, 30, 40]
   Zed:
     titulo: O Mestre das Sombras
+    classes: [Assassino/Assassino]
+    funcoes: [Assassino]
+    rotas: [Meio, Barão, Selva]
+    alcance_ataque: 125
+    fonte_classes: "wiki WR:Zed"
     status:
       recurso: Energia  # máx. 200
       VdM: 355
@@ -8866,6 +9556,11 @@ campeoes:
           Dano base: [30%, 42.5%, 55%]
   Zeri:
     titulo: A Faísca de Zaun
+    classes: [Atirador]
+    funcoes: [Atirador]
+    rotas: [Dragão]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Zeri"
     status:
       recurso: Mana
       VdM: 335
@@ -8924,6 +9619,11 @@ campeoes:
           Dano base: [150, 225, 300]
   Ziggs:
     titulo: O Especialista em Hexplosivos
+    classes: [Mago/Artilharia]
+    funcoes: [Mago]
+    rotas: [Meio]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Ziggs"
     status:
       recurso: Mana
       VdM: 355
@@ -8979,6 +9679,11 @@ campeoes:
           Dano base: [270, 375, 480]
   Zilean:
     titulo: O Guardião do Tempo
+    classes: [Especialista]
+    funcoes: [Suporte, Mago]
+    rotas: [Suporte]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Zilean"
     status:
       recurso: Mana
       VdM: 360
@@ -9038,6 +9743,11 @@ campeoes:
           Cura: [600, 850, 1100]
   Zoe:
     titulo: O Aspecto do Crepúsculo
+    classes: [Mago/Explosivo]
+    funcoes: [Mago]
+    rotas: [Meio]
+    alcance_ataque: 550
+    fonte_classes: "wiki WR:Zoe"
     status:
       recurso: Mana
       VdM: 360
@@ -9093,6 +9803,11 @@ campeoes:
           Tempo de Recarga: [11, 8, 5]
   Zyra:
     titulo: A Ascensão dos Espinhos
+    classes: [Controlador/Captor]
+    funcoes: [Mago]
+    rotas: [Suporte, Meio]
+    alcance_ataque: 575
+    fonte_classes: "wiki WR:Zyra"
     status:
       recurso: Mana
       VdM: 360

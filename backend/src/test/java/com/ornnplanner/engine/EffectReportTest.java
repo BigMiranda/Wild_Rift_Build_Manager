@@ -48,6 +48,11 @@ class EffectReportTest {
     @Autowired
     PassiveValueService passives;
 
+    @Autowired
+    com.ornnplanner.arena.fight.ChampionProfiles profiles;
+    @Autowired
+    com.ornnplanner.arena.fight.BuildArchetypes archetypes;
+
     private final StringBuilder out = new StringBuilder();
 
     private void line(String f, Object... a) {
@@ -84,6 +89,36 @@ class EffectReportTest {
             }
         }
         Files.write(Paths.get("target/effect-report.txt"), out.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Classes against the profiles, and the archetypes of the saved builds. Writes target/classification-report.txt. */
+    @Test
+    void classification() throws IOException {
+        Map<String, Integer> byClass = new java.util.TreeMap<>();
+        int divergent = 0;
+        for (com.ornnplanner.arena.fight.ChampionProfiles.Profile p : profiles.all()) {
+            p.mainClasses.forEach(c -> byClass.merge(c, 1, Integer::sum));
+            if (p.divergent) {
+                divergent++;
+                line("- %s: oficial %s, perfil %s (%.1f contra %.1f); %.0f de Vida, %.0f de Armadura, alcance %.0f, mobilidade %d, controle %s, explosão %.0f%%, físico %.0f%%, mágico %.0f%%",
+                        p.name, p.classes, p.suggested, p.scores.get(p.suggested), p.mainClasses.stream().filter(p.scores::containsKey)
+                                .mapToDouble(p.scores::get).max().orElse(0), p.healthLv15, p.armorLv15, p.attackRange, p.mobility, p.control,
+                        100 * p.burstShare, 100 * p.physical, 100 * p.magic);
+            }
+        }
+        line("campeões %d, por classe %s, divergentes %d", profiles.all().size(), byClass, divergent);
+        for (BuildRepository.Build s : builds.findBuildSummaries()) {
+            BuildRepository.Build b = builds.findBuild(s.id).orElseThrow();
+            try {
+                com.ornnplanner.arena.fight.BuildArchetypes.Archetype a = archetypes.of(b, null);
+                StringBuilder sh = new StringBuilder();
+                a.shares.forEach((k, v) -> sh.append(v >= 0.01 ? String.format(Locale.ROOT, " %s %.0f%%", k, 100 * v) : ""));
+                line("- %s (%s): %s%s |%s | %s", b.name, b.unitCode, a.name, a.detail == null ? "" : " (" + a.detail + ")", sh, a.effects);
+            } catch (RuntimeException e) {
+                line("- %s: %s", b.name, e.getMessage());
+            }
+        }
+        Files.write(Paths.get("target/classification-report.txt"), out.toString().getBytes(StandardCharsets.UTF_8));
     }
 
     private List<EffectModel.Outcome> run(EffectModel.Request base, List<EffectModel.Job> jobs) {

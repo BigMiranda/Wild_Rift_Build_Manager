@@ -5,6 +5,7 @@ import { t } from '../i18n.js';
 import { SERIES_COLORS, mmss, n0, n1 } from '../format.js';
 import { READ_MODES, breakPoint, effectMeta, gain, indexText, overReference, reportJobs, runJobs, weakPoints, weightedIndex } from '../effectiveness.js';
 import ItemIcon from './ItemIcon.jsx';
+import { archetypeLabel, archetypeTitle, useArchetypes } from '../archetypes.js';
 import { openInArena } from './TestInArena.jsx';
 import { CandidatePicker } from './ShopPicker.jsx';
 
@@ -259,6 +260,17 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
   const [report, setReport] = useState(null);
   const [ref, setRef] = useState({ kind: 'proprio' });
   const [readMode, setReadMode] = useState('fixo');
+  const saved = useArchetypes(compareKey);
+  const [archetype, setArchetype] = useState(null);
+  useEffect(() => {
+    if (!build) return undefined;
+    let live = true;
+    api.post('/api/archetypes', { build, minute }).then((a) => { if (live) setArchetype(a); }).catch(() => {});
+    return () => { live = false; };
+  }, [build, minute]);
+  // Side by side, a build of another archetype is not a fair comparison: the screen says so.
+  const mixed = compare.filter((c) => archetype && saved[c.id] && saved[c.id].key !== archetype.key)
+    .map((c) => `${c.name} (${archetypeLabel(saved[c.id])})`);
   const [outcomes, setOutcomes] = useState(null);
   const [others, setOthers] = useState([]);
   const [busy, setBusy] = useState(null);
@@ -403,6 +415,8 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
     <section className="panel eff-panel">
       <h3>{t('efx.panelTitle', { time: at == null ? '—' : mmss(at) })}</h3>
       <p className="muted small" style={{ marginTop: 0 }}>{t('efx.panelHelp')}</p>
+      {archetype && <p className="small" title={archetypeTitle(archetype)}>{t('arch.of', { name: archetypeLabel(archetype) })}</p>}
+      {mixed.length > 0 && <p className="warn small">{t('arch.mixed', { list: mixed.join(', ') })}</p>}
       <div className="row">
         <div className="chips" role="tablist">
           {['basico', 'completo'].map((k) => (
