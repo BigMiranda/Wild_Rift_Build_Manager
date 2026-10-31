@@ -6,10 +6,11 @@ import Admin from './pages/Admin.jsx';
 import About from './pages/About.jsx';
 import Arena from './pages/Arena.jsx';
 import Match from './pages/Match.jsx';
+import Calculator from './pages/Calculator.jsx';
 import Ranking from './pages/Ranking.jsx';
 import Effectiveness from './pages/Effectiveness.jsx';
 
-const TABS = ['planner', 'arena', 'match', 'effectiveness', 'ranking', 'admin', 'about'];
+const TABS = ['planner', 'arena', 'match', 'effectiveness', 'calculator', 'ranking', 'admin', 'about'];
 
 export default function App() {
   const [tab, setTab] = useState('planner');
@@ -99,6 +100,7 @@ export default function App() {
       {meta && tab === 'planner' && <Planner meta={meta} items={items} settings={settings} />}
       {meta && tab === 'arena' && <Arena />}
       {meta && tab === 'match' && <Match />}
+      {meta && tab === 'calculator' && <Calculator />}
       {meta && tab === 'effectiveness' && <Effectiveness items={items} />}
       {meta && tab === 'ranking' && <Ranking items={items} />}
       {meta && tab === 'admin' && <Admin meta={meta} items={items} onChanged={reload} />}

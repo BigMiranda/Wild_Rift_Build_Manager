@@ -28,7 +28,7 @@ cd backend && ./mvnw test -Dtest=TimelineEngineTest#methodName   # one method
 ```
 
 `.claude/launch.json` defines `backend` and `frontend` preview servers. There is no linter and no frontend test suite;
-"done" for a change has meant `./mvnw test` and `npm run build` both clean.
+"done" for a change has meant `./mvnw test` and `npm run build` both clean. Neither runs a page: open the screens too (the `backend-dev` and `frontend-dev` servers use their own database), because a React error passes both.
 
 Opt-in tests, gated by system properties (skipped by default):
 - `-Darena.bench=true` — `ArenaBenchmarkTest` (simulated seconds per second, 1 vs N threads).
@@ -41,6 +41,8 @@ Opt-in tests, gated by system properties (skipped by default):
   to diff two patches or rule changes.
 - `-Dauto.report=data/ornn-planner.db` (+ `-Dauto.scenario=2 -Dauto.fighter=0 -Dauto.classGenerations=15`) — `AutoTrainReportTest`: on a
   copy, the automatic brain's choice in a saved scenario, a "Treinar automaticamente" until the clean victory, and the class AIs.
+- `-Dmatch.report=data/ornn-planner.db` — `MatchReportTest`: whole matches of the saved builds on a copy, with cost, gold and XP against the builds'.
+- `-Dcalc.report=data/ornn-planner.db` — `CalculatorReportTest`: the calculator's measured examples on a copy.
 - `-Darena.golden.write=true` — **re-records** the golden files in `src/test/resources/arena/`
   (`ArenaRegressionTest`: SHA-256 fingerprints of full fight results for ~35 scenarios; `ArenaPolicyMigrationTest`:
   `golden-ai-v2.txt`). Only re-record when a behavior change is intended, and say so; a golden mismatch otherwise
@@ -81,6 +83,9 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
 - `arena/AutoBrain` (+ `AiResultRepository`, table `ai_result`) — the `auto` brain: picks a saved AI from the history, in the order and
   by the criteria of `ia_automatica_<patch>.yml`, at the end of `ArenaService.prepare`. `class:<Class>` in `arena_policy.champion` is an
   AI of a class (`ArenaTrainingService.startClass`); `startAuto` is "Treinar automaticamente".
+- `arena/fight/HitShape` and `SheetValidator` — the hit areas of ability zones (`forma: zonas`; one test, the target's circle against the shape) and the check of any kit sheet. Synthetic sheets, one per mechanic: `src/test/resources/arena/fichas-sinteticas.yml`.
+- `arena/rift/` — the full map: `RiftMap` (walls grid, A*), `RiftRules` (`objetivos_<patch>.yml`), `RiftTemplates`; `Arena.withRift` puts minions, towers, camps, plants and objectives on it as `npc` units. `Match` is a whole match at a coarse 0.25s step (waves in batches, `MacroPolicy`, `macro_<patch>.yml`), and its fights run on `Arena` at the fine step through `arena/MatchService` (`api/MatchController`). `Scenario.rift == null` is the single lane.
+- `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.
 - `arena/QuickCompareService` (`api/QuickCompareController`) — the planner's quick item comparison: no fight, one
@@ -99,7 +104,7 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
 **Data lives in YAML seeds, not code** (`backend/src/main/resources/seed/`, patch-suffixed; current patch **7.3d**,
 suffix `_7_3d`): `loja_7_3d.yml` (171 shop items; header documents each field), `precos_status.yml`,
 `efeitos_itens_7_3d.yml`, `campeoes_7_3d.yml`, `runas_7_3d.yml` (+ `runas/` icons), `feiticos_7_3d.yml`,
-`combate_7_3d.yml`, `kits_7_3d.yml`, `efetividade_7_3d.yml`, `classificacao_7_3d.yml`, `ia_automatica_7_3d.yml`, `regras_loja.yml`. `application.properties` and the `@Value` defaults point at
+`combate_7_3d.yml`, `kits_7_3d.yml`, `mapa_7_3d.yml`, `objetivos_7_3d.yml`, `macro_7_3d.yml`, `efetividade_7_3d.yml`, `classificacao_7_3d.yml`, `ia_automatica_7_3d.yml`, `regras_loja.yml`. `application.properties` and the `@Value` defaults point at
 the current patch; older `_7_3` and `_7_3b` files stay as history. New game data or modeled effects usually mean editing these
 files plus a test, not Java. `LojaCatalogTest` enforces catalog consistency (components exist and cost less, every
 stat has a price).
@@ -121,7 +126,7 @@ Catalog re-import (Admin screen) upserts by name and preserves hand-edited items
 validation depend on it.
 
 Frontend: React 18 + Vite 5 + Recharts, plain JS (no TypeScript), **no router** — `App.jsx` switches pages
-(`pages/Planner`, `Arena`, `Effectiveness`, `Ranking`, `Admin`, `About`). `api.js` wraps all backend calls. Client-side game math
+(`pages/Planner`, `Arena`, `Match`, `Effectiveness`, `Calculator`, `Ranking`, `Admin`, `About`). `api.js` wraps all backend calls. Client-side game math
 mirrors the backend in `abilityMath.js`, `effective.js`, `passives.js`, `runes.js`, `shopModel.js`, `skills.js` —
 keep these in sync with the Java side when a rule changes.
 

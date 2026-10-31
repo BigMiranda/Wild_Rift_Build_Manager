@@ -116,7 +116,7 @@ public class MatchService {
             p.xpPerMin = Math.round(s.xp / minutes);
             p.purchases = s.purchases;
         }
-        m.towers.forEach(t -> r.towers.add(new double[] {t.team, t.hp}));
+        m.towers.forEach(t -> r.towers.add(new double[] {t.team, t.x, t.y}));
         r.world = arena.riftMap().drawing();
         r.left = left;
         r.runSeconds = (System.nanoTime() - start) / 1e9;

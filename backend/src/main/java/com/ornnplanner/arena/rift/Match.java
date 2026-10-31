@@ -109,8 +109,8 @@ public final class Match {
         final String lane;
         final String kind;
         final int order;
-        final double x;
-        final double y;
+        public final double x;
+        public final double y;
         final double along;
         public double hp;
         final double maxHp;

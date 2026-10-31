@@ -143,6 +143,7 @@ export default function Planner({ meta, items }) {
   const [momentTab, setMomentTab] = useState('relevance');
   /** What the "Objectives" selector puts on top of the sheet and of the effectiveness fights. */
   const [objectives, setObjectives] = useState(emptyObjectives);
+  const objectiveRules = useObjectiveRules();
   // The quick item comparison: a purchase of the sequence (null = the next purchase) and the extra candidates.
   const [quick, setQuick] = useState(null);
   /** Rune / spell catalog loaded, and which "Preparações" editor is open (runes | spells). */
@@ -378,7 +379,6 @@ export default function Planner({ meta, items }) {
   // Moment inspected by the stat sheet and the relevance report: the clicked one, or the last purchase.
   const lastStep = result?.steps[result.steps.length - 1];
   const moment = selectedMinute ?? lastStep?.minute ?? null;
-  const objectiveRules = useObjectiveRules();
   const rawPoint = result && moment != null ? pointAt(result.series, moment) : null;
   const point = withObjectives(rawPoint, objectives, objectiveRules);
 
@@ -411,6 +411,7 @@ export default function Planner({ meta, items }) {
         <BuildDock point={point} itemsById={itemsById} selected={selectedMinute != null} readerId={readerId} draft={payload}
           overlay={point ? passiveValues.overlayAt('active', point.minute) : undefined} prices={result?.statPrices}
           sales={[...(result?.steps ?? []), ...(result?.ignored ?? [])].filter((x) => x.saleTiming)}
+          objectives={<ObjectivesPicker value={objectives} onChange={setObjectives} compact />}
           testInArena={<TestInArena compact buildId={draft.id} buildName={draft.name} minute={point?.minute ?? null} builds={builds} />}
           onRead={setReaderId} onShop={() => shopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
         {message && (
@@ -605,7 +606,6 @@ export default function Planner({ meta, items }) {
 
         {point && (
           <div className="grid-2 moment-panels">
-            <ObjectivesPicker value={objectives} onChange={setObjectives} compact />
             <StatSheet point={point} itemsById={itemsById} />
             <div className="moment-tabbed">
               <div className="chips moment-tabs" role="tablist" aria-label={t('moment.tabs')}>

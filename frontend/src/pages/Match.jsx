@@ -131,7 +131,9 @@ export default function Match() {
             <svg viewBox={`0 ${-result.world.size} ${result.world.size} ${result.world.size}`} width="100%" style={{ maxHeight: 560 }} role="img" aria-label={t('match.map')}>
               <g transform="scale(1,-1)">
                 <RiftGround world={result.world} />
-                {result.towers.map((tw, i) => (now.towers[i] > 0 ? null : null))}
+                {result.towers.map((tw, i) => (now.towers[i] > 0
+                  ? <rect key={i} x={tw[1] - 90} y={tw[2] - 90} width={180} height={180} fill={TEAM[tw[0]]} stroke="#0b1621" strokeWidth={12}><title>{n0(now.towers[i])}</title></rect>
+                  : null))}
                 {now.waves.map((w, i) => <circle key={i} cx={w[0]} cy={w[1]} r={70} fill={TEAM[w[2]]} opacity={0.6} />)}
                 {now.xy.map((p, i) => (now.dead[i] ? null : (
                   <g key={i}>
@@ -144,7 +146,7 @@ export default function Match() {
               </g>
             </svg>
           </section>
-          <section className="panel">
+          <section className="panel table-scroll">
             <table className="table">
               <thead><tr><th>{t('match.player')}</th><th>{t('match.role')}</th><th>{t('match.level')}</th><th>K/D</th><th>{t('match.gold')}</th><th>{t('match.goldRate')}</th><th>{t('match.xpRate')}</th><th>{t('match.farm')}</th></tr></thead>
               <tbody>

@@ -552,6 +552,20 @@ Nexus (ou onde você os colocar).
 Limites: o mapa é uma rota reta (medidas estimadas em `kits_7_3.yml`, `mapa`); custo de mana não é cobrado; campeões
 não colidem entre si; parte da geometria vem do LoL de PC (conferir no Treino).
 
+### Mapa completo
+
+Cada cenário escolhe o mapa: **Rota única** (a de sempre) ou **Summoner's Rift**, com tropas, torres, selva, plantas, moitas e objetivos, cada um ligável. "Novo a partir de um modelo" traz x1 nas três rotas, lutas no rio e lutas de equipe no Barão e no Dragão. Cada lado pode começar com acúmulos de dragão, alma, Ancião e Mão do Barão; no planejador, o seletor "Objetivos" da barra fixa muda a ficha e a Efetividade.
+
+As fichas dos campeões descrevem hitboxes por zonas (`forma: zonas`) e as mecânicas dos demais campeões; o formato está no cabeçalho de `kits_7_3d.yml`. Fontes e estimativas do mapa: `docs/dados-mapa-objetivos.md`. **A geometria do mapa é um esquema, e boa parte dos números de tropas e torres é estimativa**, marcada em `fonte`.
+
+## Partida inteira
+
+A aba **Partida** simula 5 contra 5 desde o minuto 0. A macro por função, as ondas em lote e o ouro e a XP do mapa rodam em passo de 0,25 s; cada luta roda na Arena no passo fino e pode ser aberta lá. As compras seguem a build e as regras da loja. Só jogam campeões com ficha de qualidade A ou B. Ao fim, a tabela compara ouro e XP por minuto com os da build.
+
+## Calculadora de builds
+
+A aba **Calculadora** procura a ordem de compra que vai melhor contra um relatório da Efetividade ou contra a build de um adversário, pelas regras da loja. Mostra a melhor ordem, alternativas, a importância cedo de cada item e o minuto da bota aprimorada. Com "Os dois lados escolhem", monta a matriz de respostas, com maximin, frequência de vitória e equilíbrio misto. Há estimativa de tempo, progresso e "Parar".
+
 ## Aproximações assumidas
 
 - **Tabela de XP por nível é uma estimativa**: não há fonte pública confiável para o Wild Rift. Os valores iniciais

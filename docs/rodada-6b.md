@@ -202,7 +202,69 @@ Testes: 294 → 295 (11 opcionais pulados). `npm run build` limpo (sem mudança 
 
 **Testes:** `MatchTest` (7), num mundo simples: ondas nos tempos, ouro pelo último golpe, ouro e XP até 10:00 parado na rota, compras na ordem com a regra da loja, selva e dragão, fim pelo Nexo, determinismo. `MatchReportTest` (opcional, `-Dmatch.report=data/ornn-planner.db`) gera a tabela acima e confere o determinismo com as lutas reais.
 
+## Parte 6 — Calculadora de builds ✅
+
+**Aba "Calculadora":** a build dá o campeão, as runas, os feitiços e o ouro. Alvo: relatório Básico ou Completo, ou uma build do adversário. Filtros: só tanque, itens obrigatórios e proibidos. Mais os minutos de medida, tamanho, feixe, orçamento, estimativa de tempo, barra de progresso e "Parar". Pelo serviço também dá para pedir uma lista de testes ou um cenário salvo da Arena.
+
+**Regras da loja:** uma ordem só vale se a linha do tempo do planejador a compra inteira e sem violação. São as mesmas regras do planejador: grupos exclusivos, uma bota, bota aprimorada aos 10:00.
+
+### 6.1 Contra um alvo
+
+`arena/calc/BuildSearch` faz a busca em feixe sobre a ordem, separada de como uma ordem é medida. A nota de um prefixo é a média dos minutos de medida, com o que ele tem em cada um. A cada minuto, o cache por itens + minuto evita repetir medidas: duas ordens com os mesmos itens prontos custam uma medida.
+
+**Saída:** a melhor ordem, as 3 mais próximas, a importância cedo (quanto a nota cai ao atrasar um item uma posição e sobe ao adiantar), o minuto em que a bota aprimorada passa a valer a pena e a curva no tempo. 20% do orçamento fica guardado para essas leituras.
+
+### 6.2 Os dois lados escolhendo
+
+`arena/calc/GameTree`: as k melhores sequências de cada lado na profundidade pedida formam a matriz nossas × respostas, em lutas de build contra build. Saída: maximin (a linha com o melhor pior caso), frequência de vitória, equilíbrio misto por *fictitious play* (só Java), as frases no estilo do prompt e a matriz com mapa de calor.
+
+### Medido 🎯 (cópia do banco)
+
+| caso | parâmetros | tempo | medidas |
+|---|---|---|---|
+| 6.1: Big Carry v1 × Básico | só tanque (30 itens), 3 itens, feixe 4, minutos 8/12/16, orçamento 120 | 10,8 s | 96, orçamento esgotado |
+| 6.2: Ornn × Darius | k = 4, profundidade 2, minutos 10/14/18 | 144 s | 1.560 |
+
+- **Com 30 itens, orçamento 120 não termina nem o 2º item:** melhor achado: Anjo Guardião → Máscara Abissal (265). Para 3 itens, conte com umas 400 medidas, cerca de 1 min.
+- **6.2:** Força da Trindade → Coração de Aço lidera pela média, e o maximin aponta Força do Vendaval → Lembranças do Lorde Dominik (pior caso −60% contra −96%). **Nenhuma linha vence: 0%.** Com 2 itens de cada lado, o Ornn ganha aos 10:00 e perde aos 18:00, e a média fica negativa. Sem filtro, a busca também escolhe itens de dano para um tanque, porque a medida é só "quem sobra na luta".
+- **Quase todo o tempo do 6.2 é montar lutadores pelo planejador**, não lutar.
+
+### Limites
+
+- **Alvo "partida da Parte 5": não implementado.** A partida usa builds salvas, e a busca gera builds que não existem. O ouro de uma partida simulada também não entra; o campo de ouro por minuto do serviço sim, mas a tela ainda não o mostra.
+- **Respostas por arquétipo (Rodada 7) não entraram.** Sem adversário, a nota é o relatório; o boneco atacante não varia por arquétipo.
+- **Importância 0:** se os dois itens de uma troca ficam prontos antes do primeiro minuto de medida, a troca não muda nenhuma medida. Foi o caso nos exemplos (itens aos 3:51 e 7:17, primeiro minuto 8). Inclua minutos mais cedo para enxergar isso.
+- **Bota aprimorada:** nos dois exemplos a melhor ordem não tinha nenhuma, então o minuto da bota não foi medido com dado real; o teste usa um caso sintético. Para perguntar por ela, marque a bota como obrigatória.
+
+**Testes:** `BuildSearchTest` (8): item claramente melhor sai primeiro; regras da loja; obrigatórios; importância; regra da bota; maximin numa matriz conhecida; equilíbrio de pedra-papel-tesoura; determinismo. `CalculatorReportTest` (opcional, `-Dcalc.report=data/ornn-planner.db`) gera os exemplos e confere o determinismo com lutas reais.
+
+Testes: 320 → 329 (14 opcionais pulados). `npm run build` limpo.
+
+## Conferido na tela
+
+No servidor de desenvolvimento (porta 8090, banco `data/dev`, sem tocar no seu banco nem no backend da porta 8080).
+
+**Achei e corrigi um erro grave meu da Parte 4, já commitado:** o seletor de Objetivos estava depois de um `return` antecipado do Planejador e **derrubava a página inteira** (tela vazia, "Rendered more hooks"). Testes e `npm run build` passavam, porque não há teste de frontend. Só apareceu ao abrir a tela. A correção está no commit da Parte 6.
+
+| tela | resultado |
+|---|---|
+| Partida | 10 posições, partida de 14:58 em cerca de 6 s, placar, reprodução, 33 lutas e eventos |
+| Abrir a luta na Arena | abre "Luta da partida aos 2:38" com "Mapa: Summoner's Rift", paredes e a luta rodada |
+| Calculadora | estimativa, cálculo com orçamento 30, resultado e importância; seletores de itens obrigatórios e proibidos |
+| Objetivos na barra fixa | 3 acúmulos de Infernal + Mão do Barão: DdA 118 → 208 e PdH 0 → 111, que confere com a conta; "Objetivos: 6.508 (8%)" na relevância |
+
+**Só compilado, não usado na tela:** o seletor de mapa e os cenários-modelo (a API devolve os 14), o desenho das torres na reprodução, "Ver tudo", o heatmap do 6.2 e a Efetividade com objetivos ligados (o cache e a API foram cobertos por código, não por teste). Celular não foi revisto.
+
 ## Para o usuário
+
+**Precisa de ação:**
+- **Reinicie o backend.** O servidor na porta 8080 roda o código antigo. Não há migração de banco nesta rodada.
+- **Treine de novo as IAs de Darius e Rumble.** As formas mudaram e `Arena.RULES` não subiu: elas abrem, sem aviso, mas foram treinadas com as hitboxes antigas.
+- **A branch `rodada-6b` não foi enviada nem mesclada:** 6 commits sobre o `main`.
+
+**Precisa de decisão:**
+- **Partida como alvo da calculadora:** exige montar a partida com builds não salvas. Vale fazer antes da Etapa 7?
+- **Calibragem:** a partida rende bem menos ouro e XP que as builds, mas com tropas, XP e macro estimadas. Depois dos prints, diga se ajusto a macro ou o ouro por minuto das builds.
 
 **Prints, por prioridade:**
 1. **Minimapa ampliado, sem campeões.** É o que mais falta: a geometria do mapa é um esquema. Com o print, retraço `mapa_7_3d.yml`.
@@ -216,4 +278,25 @@ Testes: 294 → 295 (11 opcionais pulados). `npm run build` limpo (sem mudança 
 9. **Nomes pt-BR das plantas:** usei Frutomel, pinstouro e Clarevidente, do prompt.
 
 **Vale conferir:**
+- **Modelo simplificado:** Ancião sem efeito na luta, alma de gelo sem efeito, Mão do Barão sem efeito nas tropas, Rift de elemento fora.
 - **Dizimar:** decidi que o corpo do alvo tocando o anel já recebe a lâmina, pela regra geral do prompt. Se no jogo vale o centro do alvo, o Darius fica forte demais nesta base.
+
+## Relatório final
+
+**O que mudou:** hitboxes compostas; motor com as mecânicas dos outros campeões e validador de ficha; dados do mapa e objetivos; "Summoner's Rift" na Arena, com cenários-modelo e buffs de objetivo na Arena, na Efetividade e no planejador; partida inteira, com a aba "Partida"; calculadora de builds, com a aba "Calculadora".
+
+| parte | commit | testes depois |
+|---|---|---|
+| 1. Hitboxes | 28b9a0c | 253 |
+| 2. Mecânicas | 6468d3e | 294 |
+| 3. Dados | 6bc5490 | 295 |
+| 4. Mapa | 0951591 | 312 |
+| 5. Partida | 91f0831 | 320 |
+| 6. Calculadora | último da branch | 329 |
+
+- **Testes:** 236 antes (11 opcionais) → 329 depois (14 opcionais), 0 falhas, contados com a pasta `target/surefire-reports/` limpa. `npm run build` limpo.
+- **Golden:** mudou só na Parte 1, em 21 de 35 cenários, todos com Darius ou Rumble, mais 3 linhas do `golden-ai-v2.txt`.
+- **Um teste mudou de orçamento:** `trainedDariusBeatsTheScriptOnValidation`, de 30 para 45 gerações, sem mudar a meta (Parte 1).
+- **Desempenho:** Rota única −15% (12.366 → 10.504 s simulados por s); partida de 15 min em 3 a 7 s; meta de 60 s atingida.
+- **Mecânicas para a Etapa 7:** todas as da lista têm campo e ficha sintética. Falta a IA saber usar invisibilidade, mina, parede, forma e invocação, e os casos particulares de cada campeão.
+- **Banco:** sem migração. Saved builds, cenários, IAs e combos seguem abrindo: a "Rota única" é o padrão de todo cenário sem `rift`.

@@ -1266,3 +1266,7 @@ elemental do Ornn com 480 de comprimento, "fotos de luta") está em [rodada-5.md
 ## Rodada 7 (31/10/2026)
 
 Cérebro Automático, histórico `ai_result`, IAs de classe e "Treinar automaticamente": ver a Parte 6 de [rodada-7.md](rodada-7.md).
+
+## Rodada 6.b (31/10/2026)
+
+Hitboxes compostas, mecânicas genéricas nas fichas, mapa completo, partida inteira e calculadora: ver [rodada-6b.md](rodada-6b.md). Para a IA: as observações e as ações não mudaram (`obs_schema` igual). As formas de Darius e Rumble mudaram sem subir `Arena.RULES`, então as IAs deles pedem treino novo; o Tático ainda não sabe usar as mecânicas novas.

@@ -68,7 +68,7 @@ function PendingSale({ point, sales }) {
   );
 }
 
-export default function BuildDock({ point, itemsById, selected, readerId, onRead, onShop, draft, sales = [], testInArena, overlay, prices }) {
+export default function BuildDock({ point, itemsById, selected, readerId, onRead, onShop, draft, sales = [], testInArena, overlay, prices, objectives }) {
   const [statsOpen, setStatsOpen] = useState(loadOpen);
   const [passivesOpen, setPassivesOpen] = useState(() => {
     try {
@@ -129,6 +129,7 @@ export default function BuildDock({ point, itemsById, selected, readerId, onRead
         )}
       </div>
       {point && sales.length > 0 && <PendingSale point={point} sales={sales} />}
+      {statsOpen && objectives}
       {point && statsOpen && (
         <div className="dock-stats">
           {DOCK_STATS.map((s) => {

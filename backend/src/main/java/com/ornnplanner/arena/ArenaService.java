@@ -144,6 +144,16 @@ public class ArenaService {
         return combat.championName(c);
     }
 
+    /** The prepared champions of a scenario, for who keeps them apart and runs many fights on them. */
+    public List<Arena.Input> prepareSlots(Scenario sc) {
+        return prepare(sc);
+    }
+
+    /** A fight on the single lane of prepared champions, numbers only, until a side falls. */
+    public ArenaModel.Result runPlain(List<Arena.Input> inputs, double duration) {
+        return new Arena(catalog, map).withObjectives(rules, null).withoutFrames().run(new ArrayList<>(inputs), List.of(), duration);
+    }
+
     /** A fight of a whole match: prepared champions, on the full map, ended by a few seconds of quiet. */
     public ArenaModel.Result matchFight(List<Arena.Input> inputs, Scenario sc, double quiet) {
         return arena(sc).withoutFrames().stopWhenQuiet(quiet).run(inputs, List.of(), sc.duration);
