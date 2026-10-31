@@ -46,7 +46,7 @@ export function saleInHand(s) {
  */
 export default function BuildBar({
   steps, itemsById, evoPairs, timeline, ignored, moments, selectedIdx, onSelect, onMove, onMoveTo, onRemove, onClear,
-  onToggleCond, onToggleEvolved, onAddMoment, onUpdateMoment, onSell, onSellWhen, onAssumeRange,
+  onToggleCond, onToggleEvolved, onAddMoment, onUpdateMoment, onSell, onSellWhen, onAssumeRange, onCompare,
 }) {
   const [dragFrom, setDragFrom] = useState(null);
   const [rangeOpen, setRangeOpen] = useState(false);
@@ -228,6 +228,7 @@ export default function BuildBar({
                 <button className="icon danger" onClick={() => onRemove(idx)} aria-label={t('bar.remove', { name })}>✕</button>
                 <button className="icon" onClick={() => onMove(idx, 1)} disabled={idx === steps.length - 1} aria-label={t('bar.after', { name })}>›</button>
                 {onSell && item && <button className="icon sell" onClick={() => onSell(idx)} title={t('sell.addTitle', { name })} aria-label={t('sell.addTitle', { name })}>$</button>}
+                {onCompare && item && <button className="icon" onClick={() => onCompare(idx)} title={t('qc.open', { name })} aria-label={t('qc.open', { name })}>⇄</button>}
               </span>
             </li>
           );

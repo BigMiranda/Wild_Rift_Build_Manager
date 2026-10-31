@@ -272,3 +272,58 @@ cada consulta ao planejador); comparação de 4 candidatos num cenário, 2,3 s.
 
 **Em aberto:** a referência do Ornn sem itens contra o Atirador alimentado é 2,8 s na Big Carry e 20,8 s nas outras
 builds conferidas, e isso infla o índice 722 da Parte 4. A causa ainda não foi investigada.
+
+## Complemento: comparador rápido ✅
+
+- **Abrir:** "⇄" em cada compra da sequência e a caixa ⇄ nos itens aprimorados da loja (até 4). Sem espaço escolhido, os
+  candidatos entram como próximo item: depois do minuto selecionado no gráfico, ou da última compra. Os candidatos
+  ficam em `QuickCompare.jsx`, abaixo da sequência, e a resposta vem sozinha a cada mudança.
+- **Função única:** `PlannerService.withItem(build, espaço, item, minuto)` troca o item do espaço (ou insere uma compra).
+  A comparação de candidatos da Efetividade passou a usá-la (antes tinha a própria troca); só a medida muda.
+- **Backend:** `arena/QuickCompareService` e `api/QuickCompareController` (`/api/quick/compare` e `/suggest`). Sem luta:
+  linha do tempo, contribuição do item no ponto (a mesma da relevância), `SeenBy.Base` da corrida de 0 s (cache por build
+  e minuto) e valores das passivas (a mesma função de `/api/lab/effect-values`).
+- **Decisões:**
+  - Todos os cartões comparam no **mesmo minuto** (o escolhido, ou 5 min depois de o último candidato ficar pronto). Com o
+    minuto de cada um, um item caro seria medido mais tarde, com mais nível e ouro, e levaria vantagem. "Soma ao ficar
+    pronto" continua no minuto de cada um.
+  - O atraso compara com a build como está, casando as compras pela posição, e mostra o item seguinte e a última compra.
+  - **Sugerir** usa a ficha do planejador, sem a corrida de 0 s: a ficha conta os condicionais como a build os deixa, e a
+    escala sai bem mais alta que a dos cartões (28 mil contra 13 mil). Por isso a sugestão mostra o ganho % sobre a build
+    como está, e clicar leva o item aos cartões, que dão o número final.
+- **Desempenho:** a primeira medição deu 5,4 s (4 candidatos). A causa eram duas leituras repetidas do banco a cada
+  consulta ao planejador: o catálogo inteiro, e todas as ~140 unidades em `findUnit` para pegar uma. Agora o catálogo fica
+  em cache (invalidado por qualquer escrita, contador nos repositórios) e `findUnit` lê só a unidade. Isso acelera também
+  a Arena e a Efetividade.
+
+| medida (Big Carry v1, 4 candidatos) | antes dos caches | depois |
+|---|---|---|
+| primeira consulta | 5.388 ms | 789 ms |
+| 🎯 a mesma consulta de novo | 367 ms | 152 ms |
+| um minuto novo | 4.595 ms | 578 ms |
+| Sugerir (aba inteira) | 3.174 ms | 1.340 ms |
+
+**Exemplo:** 3º item da Big Carry v1 (Colete Espinhoso, 1.000, pronto aos 6:26) contra 3 candidatos, aos 14:00, sem
+efeitos, 50% físico:
+
+| candidato | custo | pronto | próximo item | última compra | mista | física | mágica | eficiência |
+|---|---|---|---|---|---|---|---|---|
+| Colete Espinhoso (referência) | 1.000 | 6:26 | = | = | 12.590 | 15.010 | 10.842 | 75% |
+| Presságio de Randuin | 2.800 | 9:00 | +2,6 min | +4,0 min | 13.287 | 17.026 | 10.895 | 115% |
+| Manto da Meia-noite | 2.550 | 8:39 | +2,2 min | +3,6 min | 12.271 | 13.214 | 11.454 | 399% |
+| Coração Congelado | 2.550 | 8:39 | +2,2 min | +3,6 min | 12.002 | 15.543 | 9.775 | 132% |
+
+Veredito na tela: "Presságio de Randuin rende +6% de vida efetiva mista aos 14:00 e fica pronto 2,6 min depois; Manto da
+Meia-noite rende −3%; Coração Congelado rende −5%." Os números negativos vêm do atraso: aos 14:00 os itens seguintes
+ainda não chegaram. Sugerir traz Placa Gargolítica +64%, Manto da Aurora +41%, Rookern Lamúrico +32%, Duplaguarda de
+Amaranto +25% e Força da Natureza +25% (triagem pela ficha, aos 11:26).
+
+**Testes novos (`QuickCompareTest`, com o catálogo do seed num banco novo):** o item atual é a referência, com Δ 0; um
+candidato mais caro atrasa os seguintes exatamente pela conta do ouro (Δ custo ÷ ouro/min); a bota aprimorada antes dos
+10:00 espera; a sugestão respeita os grupos exclusivos.
+
+**Índice Básico do exemplo:** Colete Espinhoso 347, Manto da Meia-noite 430, Coração Congelado 423, Presságio de Randuin
+419: na luta o Manto passa na frente, ao contrário da vida efetiva mista. Numa build cheia, o próximo item aparece como
+"Não cabe aqui" (regra dos espaços); escolher um minuto no gráfico o põe no meio da sequência.
+
+Testes: 207 → 211 (10 opcionais pulados). Golden sem mudança. `npm run build` limpo.

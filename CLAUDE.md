@@ -73,6 +73,9 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   `immortal`), fights stop when the build dies (`Arena.stopWhenDead`), cached and run in parallel. Presets in
   `efetividade_<patch>.yml`; the user's scenarios and report settings in table `effect_test`. Item variants (only flat
   stats, same gold in pure stats) are synthetic items passed through `Slot.replaceItems` → `FighterBuilder`.
+- `arena/QuickCompareService` (`api/QuickCompareController`) — the planner's quick item comparison: no fight, one
+  timeline per candidate plus the cached zero-second `SeenBy` run. `PlannerService.withItem` is the one swap of an
+  item in a slot, shared with the effectiveness candidates.
 - `engine/ShopRuleCheck` — the single check of when the shop sells an item (upgraded boots from 10:00,
   `regras_loja.yml`); the planner's timeline applies it, `/api/meta` sends it to the shop screen.
 - `seed/` — `SchemaManager` (migrations), `CatalogImporter` (YAML → SQLite), catalogs for champions, runes, item

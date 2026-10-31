@@ -27,6 +27,7 @@ import SkillExport from '../components/SkillExport.jsx';
 import BuildTestPanels from '../components/BuildTestPanels.jsx';
 import TestInArena from '../components/TestInArena.jsx';
 import { EffectivenessPanel } from '../components/EffectivenessReport.jsx';
+import QuickCompare, { MAX_COMPARED } from '../components/QuickCompare.jsx';
 import ItemSetupExport, { configurableItems, explicitItemSetup } from '../components/ItemSetupExport.jsx';
 
 const emptyBuild = (folderId) => ({
@@ -135,6 +136,8 @@ export default function Planner({ meta, items }) {
   const [chartStat, setChartStat] = useState('Max Health');
   /** Tab of the moment panel next to the stat sheet: item relevance or passives held. */
   const [momentTab, setMomentTab] = useState('relevance');
+  // The quick item comparison: a purchase of the sequence (null = the next purchase) and the extra candidates.
+  const [quick, setQuick] = useState(null);
   /** Rune / spell catalog loaded, and which "Preparações" editor is open (runes | spells). */
   const [runesReady, setRunesReady] = useState(false);
   const [prepEditor, setPrepEditor] = useState(null);
@@ -486,6 +489,12 @@ export default function Planner({ meta, items }) {
             } : null}
             onPurchaseClear={() => setSelectedIdx(null)}
             onAdd={addItem}
+            comparing={quick?.ids ?? []}
+            onToggleCompare={(id) => setQuick((q) => {
+              const ids = q?.ids ?? [];
+              if (ids.includes(id)) return { slot: q.slot, ids: ids.filter((x) => x !== id) };
+              return ids.length >= MAX_COMPARED ? q : { slot: q?.slot ?? null, ids: [...ids, id] };
+            })}
           />
           <BuildBar
             steps={draft.steps}
@@ -498,6 +507,7 @@ export default function Planner({ meta, items }) {
             onUpdateMoment={(idx, patch) => updateStep(idx, (s) => ({ ...s, ...patch }))}
             selectedIdx={selectedIdx}
             onSelect={setSelectedIdx}
+            onCompare={(idx) => setQuick((q) => ({ slot: idx, ids: q?.ids ?? [] }))}
             onMove={(idx, delta) => moveStepTo(idx, idx + delta)}
             onMoveTo={moveStepTo}
             onRemove={removeStep}
@@ -514,6 +524,10 @@ export default function Planner({ meta, items }) {
             }))}
             onToggleEvolved={(idx) => updateStep(idx, (s) => ({ ...s, itemId: evoPairs.get(s.itemId)?.id ?? s.itemId }))}
           />
+          {quick && canCalculate && (
+            <QuickCompare build={payload} slot={quick.slot} atMinute={selectedMinute} ids={quick.ids} items={items} itemsById={itemsById}
+              onIds={(ids) => setQuick((q) => ({ ...q, ids }))} onClose={() => setQuick(null)} />
+          )}
           <ItemEffectsPanel steps={draft.steps} itemsById={itemsById} setup={draft.itemSetup} matchEnd={draft.matchEnd}
             onChange={(itemSetup) => update({ itemSetup })}
             onExport={builds.some((b) => b.id !== draft.id) ? () => setPrepEditor('items') : null} />

@@ -123,6 +123,21 @@ public class ArenaService {
         return new Arena(catalog, map).withoutFrames().withEffectValues().run(inputs, List.of(), 0).fighters.get(0).effectValues;
     }
 
+    /** The stats a build (saved or not) starts a fight with at a minute: the zero-second run of {@link SeenBy}. */
+    public SeenBy.Base startBase(BuildRepository.Build build, Double minute) {
+        Slot me = new Slot();
+        me.team = 0;
+        me.build = build;
+        me.minute = minute;
+        Slot other = new Slot();
+        other.team = 1;
+        other.dummy = new ArenaModel.Dummy();
+        Scenario sc = new Scenario();
+        sc.fighters = List.of(me, other);
+        List<Arena.Input> in = prepare(sc);
+        return SeenBy.base(catalog, map, in.get(0), in.get(1));
+    }
+
     /** A fight of prepared champions without frames (numbers only): the effectiveness tests reuse their inputs. */
     public ArenaModel.Result runInputs(List<Arena.Input> inputs, double duration) {
         return new Arena(catalog, map).withoutFrames().stopWhenDead(0).run(inputs, List.of(), duration);

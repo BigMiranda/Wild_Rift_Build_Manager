@@ -27,6 +27,13 @@ public class CatalogRepository {
 
     private final JdbcTemplate jdbc;
 
+    /** Bumped by every write to the catalog: what was read before is stale. */
+    private final java.util.concurrent.atomic.AtomicLong generation = new java.util.concurrent.atomic.AtomicLong();
+
+    public long generation() {
+        return generation.get();
+    }
+
     public CatalogRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
@@ -91,6 +98,7 @@ public class CatalogRepository {
     }
 
     public long insertItem(ItemDef item) {
+        generation.incrementAndGet();
         KeyHolder kh = new GeneratedKeyHolder();
         jdbc.update(con -> {
             PreparedStatement ps = con.prepareStatement(
@@ -119,6 +127,7 @@ public class CatalogRepository {
     }
 
     public void updateItem(long id, ItemDef item) {
+        generation.incrementAndGet();
         jdbc.update("UPDATE item SET name = ?, cost = ?, category = ?, image = ?, source_patch = ?, edited = ?, section = ?, "
                         + "active = ?, marker = ?, summary = ?, item_group = ?, capture = ?, exclusive_groups = ? WHERE id = ?",
                 item.name, item.cost, categoryOf(item), item.image, item.sourcePatch, item.edited ? 1 : 0, item.section,
@@ -138,6 +147,7 @@ public class CatalogRepository {
     }
 
     public void replacePassives(long itemId, List<PassiveText> passives) {
+        generation.incrementAndGet();
         jdbc.update("DELETE FROM item_passive WHERE item_id = ?", itemId);
         int seq = 0;
         for (PassiveText p : passives == null ? List.<PassiveText>of() : passives) {
@@ -146,6 +156,7 @@ public class CatalogRepository {
     }
 
     public void replaceStats(long itemId, List<StatLine> stats) {
+        generation.incrementAndGet();
         jdbc.update("DELETE FROM item_stat WHERE item_id = ?", itemId);
         int seq = 0;
         for (StatLine s : stats) {
@@ -157,6 +168,7 @@ public class CatalogRepository {
     }
 
     public void replaceComponents(long itemId, List<ComponentRef> components) {
+        generation.incrementAndGet();
         jdbc.update("DELETE FROM item_component WHERE item_id = ?", itemId);
         for (ComponentRef c : components) {
             jdbc.update("INSERT INTO item_component (item_id, component_id, quantity) VALUES (?,?,?)",
@@ -170,6 +182,7 @@ public class CatalogRepository {
     }
 
     public void deleteItem(long id) {
+        generation.incrementAndGet();
         jdbc.update("DELETE FROM item_component WHERE component_id = ?", id);
         jdbc.update("DELETE FROM item WHERE id = ?", id);
     }
@@ -193,6 +206,7 @@ public class CatalogRepository {
     }
 
     public void upsertStatDef(StatDef d) {
+        generation.incrementAndGet();
         jdbc.update("INSERT INTO stat_def (name, seq, category, base_type, base_item, fixed_price, alias, factor, relevant) "
                         + "VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(name) DO UPDATE SET seq = excluded.seq, "
                         + "category = excluded.category, base_type = excluded.base_type, base_item = excluded.base_item, "

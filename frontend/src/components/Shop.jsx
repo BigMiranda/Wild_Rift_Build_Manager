@@ -14,7 +14,7 @@ import { StatIcon, statColor } from './StatIcon.jsx';
  * `purchase` is the purchase selected in the sequence ({ index, itemId, step, ignored }): the shop opens its item and
  * shows what that purchase adds to the build instead of the preview. Picking another item clears it (`onPurchaseClear`).
  */
-export default function Shop({ items, buildPayload, ownedIds, purchase, onPurchaseClear, onAdd, shopRules }) {
+export default function Shop({ items, buildPayload, ownedIds, purchase, onPurchaseClear, onAdd, shopRules, comparing = [], onToggleCompare }) {
   const [tab, setTab] = useState(DEFAULT_TAB);
   const [query, setQuery] = useState('');
   const [selectedKey, setSelectedKey] = useState(null);
@@ -92,6 +92,19 @@ export default function Shop({ items, buildPayload, ownedIds, purchase, onPurcha
                         <span className="tile-cost">{x.cost}</span>
                         {ownedByTile.has(x.key) && <span className="tile-owned" aria-label={t('shop.owned')}>×{ownedByTile.get(x.key)}</span>}
                         {x.base.active && <span className="tile-active" title={t('shop.activeItem')} aria-label={t('shop.activeItem')}>◆</span>}
+                        {onToggleCompare && x.base.section === 'aprimorado' && (
+                          <span role="checkbox" tabIndex={0} aria-checked={comparing.includes(x.preferredId)} aria-label={t('qc.shopBox', { name: x.name })}
+                            title={t('qc.shopBox', { name: x.name })} className={`tile-compare${comparing.includes(x.preferredId) ? ' on' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); onToggleCompare(x.preferredId); }}
+                            onDoubleClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.key === ' ' || e.key === 'Enter') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onToggleCompare(x.preferredId);
+                              }
+                            }}>⇄</span>
+                        )}
                         {from > 0 && <span className="tile-rule" aria-label={t('shop.ruleFrom', { time: mmss(from) })}>{mmss(from)}</span>}
                         {marker && <span className={`tile-marker ${x.base.marker}`} title={markerLabel(x.base.marker)} aria-label={markerLabel(x.base.marker)}>{marker.badge}</span>}
                       </span>

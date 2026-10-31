@@ -392,6 +392,20 @@ As builds rodam uma a uma e as linhas aparecem conforme ficam prontas; "Parar" i
 navegador. Os status base de cada build e minuto ficam em cache no backend, então refazer o ranking com outros efeitos
 é rápido; o modo cenário roda uma luta por item de cada build e demora mais.
 
+## Comparador rápido de itens
+
+No planejador, "⇄" numa compra da sequência compara itens para aquele espaço (o item que está lá é a referência) e a
+caixa ⇄ dos itens da loja marca até 4 candidatos, que entram no espaço aberto ou, sem espaço, como próximo item (depois
+do minuto selecionado no gráfico, ou da última compra). Cada candidato passa pela linha do tempo e pelas regras da loja
+(ouro, meios itens supostos, grupos exclusivos, botas aos 10:00), pela mesma troca da comparação da Efetividade
+(`PlannerService.withItem`), sem luta. Os cartões mostram custo, minuto pronto, atraso nos itens seguintes, o que o item
+soma ao ficar pronto e no minuto comparado, vida efetiva física, mágica e mista (base do `SeenBy`, corrida de 0 s em
+cache; "sob efeitos" usa os efeitos da Visão sob efeitos), valor das passivas e eficiência de ouro (a da relevância),
+com o melhor de cada linha marcado e um veredito pelo critério escolhido. Todos são comparados no mesmo minuto: o
+escolhido, ou 5 minutos depois de o último ficar pronto. "Índice Básico" roda o relatório da Efetividade só nos
+candidatos. "Sugerir" testa os itens da mesma aba da loja que cabem no espaço e traz os 5 melhores, pela ficha do
+planejador (sem a corrida de 0 s): o ganho % é uma triagem, e os cartões dão o número final.
+
 ## Efetividade por cenários de teste
 
 A aba **Efetividade** (e a aba "Efetividade" do momento, no planejador) mede a build em **cenários de teste**: lutas

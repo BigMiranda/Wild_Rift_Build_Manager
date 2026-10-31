@@ -1154,3 +1154,30 @@ tr.report-total td { border-top: 1px solid var(--border-strong); }
 .eff-help h4 { margin: 12px 0 4px; color: var(--gold-bright); }
 .eff-help p { margin: 0; max-width: 90ch; }
 .eff-ref select { max-width: 220px; }
+
+/* Quick item comparison (planner) */
+.qc { border-top: 1px solid var(--border); padding: 12px 14px; }
+.qc-head { justify-content: space-between; }
+.qc-head h3 { margin: 0; }
+.qc-controls { flex-wrap: wrap; gap: 8px 12px; margin: 8px 0; }
+.qc-verdict { color: var(--gold-bright); margin: 8px 0; }
+.qc-suggest { margin: 8px 0; }
+.qc-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.qc-card { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; background: var(--surface-2); min-width: 0; }
+.qc-card.reference { border-color: var(--gold); }
+.qc-card header { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.qc-card header > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.qc-card dl { margin: 0; }
+.qc-card dl > div { display: flex; justify-content: space-between; gap: 8px; padding: 1px 4px; border-radius: 3px; }
+.qc-card dl > div.best { background: rgba(111, 207, 151, .16); }
+.qc-card dt { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qc-card dd { margin: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.qc-card h5 { margin: 8px 0 2px; color: var(--muted); font-size: 11px; }
+.qc-list { margin: 0; padding-left: 16px; font-size: 12px; }
+.qc-rule { display: block; color: #e0b45a; margin-top: 4px; }
+.tile-compare {
+  position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 20px; height: 20px; border-radius: 4px; line-height: 18px;
+  font-size: 11px; text-align: center; color: var(--muted); background: var(--surface-3); border: 1px solid var(--border-strong); opacity: .75;
+}
+.tile:hover .tile-compare, .tile-compare.on { opacity: 1; }
+.tile-compare.on { background: var(--gold); color: var(--accent-ink); }

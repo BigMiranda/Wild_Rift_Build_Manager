@@ -597,14 +597,7 @@ public class EffectTestService {
 
     /** The build with the candidate item in the purchase at the slot (the timeline and the shop's rules recomputed). */
     private BuildRepository.Build candidate(BuildRepository.Build build, Variant v) {
-        BuildRepository.Build b = JSON.convertValue(build, BuildRepository.Build.class);
-        if (v.slot == null || v.candidateId == null || b.steps == null || v.slot < 0 || v.slot >= b.steps.size()
-                || b.steps.get(v.slot).moment()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha uma compra da build e um item candidato.");
-        }
-        b.steps.get(v.slot).itemId = v.candidateId;
-        b.name = build.name;
-        return b;
+        return planner.withItem(build, v.slot, v.candidateId, v.atMinute);
     }
 
     private boolean holds(BuildRepository.Build b, Double minute, Long itemId) {

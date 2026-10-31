@@ -125,6 +125,8 @@ public final class EffectModel {
         /** Index in the build's steps of the purchase replaced, and the candidate item (candidato). */
         public Integer slot;
         public Long candidateId;
+        /** Candidate as a new purchase (no slot): right after this minute; null = after the last purchase. */
+        public Double atMinute;
     }
 
     /** What an index is measured against: the same champion with no items (proprio), another build, or a folder's mean. */

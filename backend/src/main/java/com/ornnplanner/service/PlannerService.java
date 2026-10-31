@@ -57,7 +57,74 @@ public class PlannerService {
         return shopRules.check;
     }
 
+    /** The last reference data read and the writes it saw: reads are many, writes come from the Admin screen. */
+    private volatile ReferenceData cachedRef;
+    private volatile long cachedRefAt = -1;
+
+    /**
+     * The reference data, read once per change of the catalog. Items are shared (nothing writes to an ItemDef: item
+     * effects make a copy); the maps are each caller's own, since a run may add to them.
+     */
     public ReferenceData referenceData() {
+        long at = catalog.generation() + reference.generation();
+        ReferenceData c = cachedRef;
+        if (c == null || cachedRefAt != at) {
+            c = readReferenceData();
+            cachedRef = c;
+            cachedRefAt = at;
+        }
+        ReferenceData r = new ReferenceData();
+        r.items = new java.util.LinkedHashMap<>(c.items);
+        r.forgeTiers = new ArrayList<>(c.forgeTiers);
+        r.xpTable = new java.util.TreeMap<>(c.xpTable);
+        r.statPrices = new java.util.LinkedHashMap<>(c.statPrices);
+        r.baseItemNames = new java.util.HashSet<>(c.baseItemNames);
+        return r;
+    }
+
+    /**
+     * The build with {@code itemId} in the purchase at {@code slot}, or as a new purchase: right after {@code atMinute},
+     * or after the last one. The one swap of the item comparisons: the timeline and the shop's rules are the caller's
+     * next step (the quick comparison and the effectiveness candidates only differ in what they measure then).
+     */
+    public Build withItem(Build build, Integer slot, Long itemId, Double atMinute) {
+        Build b = SWAP_JSON.convertValue(build, Build.class);
+        b.name = build.name;
+        if (b.steps == null) {
+            b.steps = new ArrayList<>();
+        }
+        if (itemId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha um item.");
+        }
+        if (slot == null) {
+            b.steps.add(insertPosition(build, atMinute), new com.ornnplanner.repo.BuildRepository.Step(itemId, true));
+            return b;
+        }
+        if (slot < 0 || slot >= b.steps.size() || b.steps.get(slot).moment() || b.steps.get(slot).sell()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha uma compra da build.");
+        }
+        b.steps.get(slot).itemId = itemId;
+        return b;
+    }
+
+    /** Where a new purchase goes: before the first purchase after {@code atMinute}, or at the end. */
+    public int insertPosition(Build build, Double atMinute) {
+        int end = build.steps == null ? 0 : build.steps.size();
+        if (atMinute == null) {
+            return end;
+        }
+        for (com.ornnplanner.engine.Model.TimelineStep s : calculate(build).steps) {
+            if (!s.implied && s.minute > atMinute + 1e-9) {
+                return s.buildIndex;
+            }
+        }
+        return end;
+    }
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper SWAP_JSON = new com.fasterxml.jackson.databind.ObjectMapper()
+            .configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    private ReferenceData readReferenceData() {
         ReferenceData r = new ReferenceData();
         r.items = catalog.findAllItems();
         r.forgeTiers = reference.findForgeTiers();

@@ -17,6 +17,13 @@ public class ReferenceRepository {
 
     private final JdbcTemplate jdbc;
 
+    /** Bumped when the Forge tiers or the XP table change: what was read before is stale. */
+    private final java.util.concurrent.atomic.AtomicLong generation = new java.util.concurrent.atomic.AtomicLong();
+
+    public long generation() {
+        return generation.get();
+    }
+
     public ReferenceRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
@@ -38,7 +45,19 @@ public class ReferenceRepository {
     }
 
     public Optional<UnitProfile> findUnit(String code) {
-        return findUnits().stream().filter(u -> u.code.equals(code)).findFirst();
+        List<UnitProfile> units = jdbc.query("SELECT * FROM unit WHERE code = ?", (rs, n) -> {
+            UnitProfile u = new UnitProfile();
+            u.code = rs.getString("code");
+            u.name = rs.getString("name");
+            u.livingForge = rs.getInt("living_forge") == 1;
+            return u;
+        }, code);
+        for (UnitProfile u : units) {
+            jdbc.query("SELECT * FROM unit_stat WHERE unit_code = ? ORDER BY rowid", rs -> {
+                u.stats.put(rs.getString("stat"), new StatGrowth(rs.getDouble("base"), rs.getDouble("growth")));
+            }, u.code);
+        }
+        return units.stream().findFirst();
     }
 
     public void upsertUnit(UnitProfile u) {
@@ -55,6 +74,7 @@ public class ReferenceRepository {
     }
 
     public void replaceForgeTiers(List<ForgeTier> tiers) {
+        generation.incrementAndGet();
         jdbc.update("DELETE FROM living_forge_tier");
         for (ForgeTier t : tiers) {
             jdbc.update("INSERT INTO living_forge_tier (min_level, pct) VALUES (?,?)", t.minLevel, t.pct);
@@ -70,6 +90,7 @@ public class ReferenceRepository {
     }
 
     public void replaceXpTable(NavigableMap<Integer, Double> table) {
+        generation.incrementAndGet();
         jdbc.update("DELETE FROM xp_level");
         table.forEach((level, xp) -> jdbc.update("INSERT INTO xp_level (level, cumulative_xp) VALUES (?,?)", level, xp));
     }
