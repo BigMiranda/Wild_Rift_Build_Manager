@@ -1,0 +1,83 @@
+# Mapa "Summoner's Rift" do Wild Rift, patch 7.3d: geometria e estruturas. Fontes e datas: docs/dados-mapa-objetivos.md.
+#
+# GEOMETRIA É UM ESQUEMA, NÃO UM TRAÇADO. Nenhuma fonte pública traz as medidas do mapa do Wild Rift, e a imagem da wiki
+# recusou o download (31/10/2026). As posições vêm das coordenadas conhecidas do LoL de PC, na escala 0,807 (PC 14870 -> 12000),
+# e as paredes e moitas são blocos que reproduzem a ideia das rotas e da selva. Marcadas `fonte: PC (estimativa)` ou `esquema`.
+#
+# Coordenadas: origem no canto da base azul; x para a direita (rota do Dragão), y para cima (rota do Barão); de 0 a 12000.
+# `espelha`: o que vale para o lado azul vale para o vermelho, refletido no centro: (x, y) -> (12000 - x, 12000 - y).
+fonte: "esquema a partir do LoL de PC na escala 0,807 (estimativa)"
+data: "2026-10-31"
+tamanho: 12000
+grade: 100                 # lado da célula do caminho (A*)
+paredes:                   # polígonos do lado azul; o vermelho é o espelho
+  # borda das rotas
+  - [[1500, 3700], [1500, 8900], [2100, 8900], [2100, 7300], [2500, 6800], [2500, 3700]]
+  - [[3700, 1500], [8900, 1500], [8900, 2100], [7300, 2100], [6800, 2500], [3700, 2500]]
+  # base
+  - [[2400, 1500], [3700, 1500], [3700, 2100], [2400, 2100]]
+  - [[1500, 2400], [2100, 2400], [2100, 3700], [1500, 3700]]
+  # selva, entre a rota do Barão e o meio
+  - [[2900, 3400], [3500, 3400], [3500, 4700], [2900, 4700]]
+  - [[3700, 4500], [4200, 5000], [3500, 5700], [2950, 5600], [2950, 5000]]
+  - [[2750, 5900], [3700, 6000], [3600, 6700], [2750, 6900]]
+  - [[4000, 5900], [4500, 5500], [4900, 5900], [4400, 6500]]
+  - [[3700, 7000], [4500, 6700], [4700, 7100], [3900, 7500]]
+  # selva, entre o meio e a rota do Dragão
+  - [[3400, 2900], [4700, 2900], [4700, 3500], [3400, 3500]]
+  - [[4600, 3700], [5100, 4200], [5700, 3500], [5600, 2950], [5000, 2950]]
+  - [[5900, 2750], [6000, 3700], [6700, 3600], [6900, 2750]]
+  - [[5500, 4600], [5900, 4100], [6600, 4400], [6100, 5000]]
+  - [[7000, 3700], [6700, 4500], [7100, 4700], [7500, 3900]]
+moitas:                    # círculos {x, y, raio} do lado azul
+  - {x: 2650, y: 7350, raio: 180}
+  - {x: 7350, y: 2650, raio: 180}
+  - {x: 5000, y: 5000, raio: 150}
+  - {x: 3900, y: 7700, raio: 170}
+  - {x: 7700, y: 3900, raio: 170}
+  - {x: 2700, y: 3300, raio: 150}
+  - {x: 3300, y: 2700, raio: 150}
+  - {x: 1200, y: 9500, raio: 220}
+  - {x: 2500, y: 10800, raio: 220}
+rio:                       # faixa diagonal, sem efeito na luta além de onde ficam plantas e objetivos
+  de: [2000, 10000]
+  ate: [10000, 2000]
+  largura: 900
+fossos:
+  barao: {x: 3990, y: 8390, raio: 580}
+  dragao: {x: 7960, y: 3550, raio: 560}
+rotas:                     # do Nexo azul ao Nexo vermelho
+  barao: [[1250, 1330], [1000, 3500], [800, 8400], [900, 10600], [1300, 11000], [3500, 11200], [8500, 11100], [10700, 10650]]
+  meio: [[1250, 1330], [2950, 2950], [6000, 6000], [9050, 9050], [10700, 10650]]
+  dragao: [[1250, 1330], [3500, 1000], [8400, 800], [10600, 900], [11000, 1300], [11200, 3500], [11100, 8500], [10700, 10650]]
+nexo: {x: 1250, y: 1330, raio: 300}
+fonte_base: {x: 400, y: 400, raio: 900}   # área em que a fonte cura e o laser acerta
+torres:                    # do lado azul; `rota` e `ordem` (1 = externa, 2 = interna, 3 = da base)
+  - {rota: barao, tipo: externa, x: 790, y: 8420}
+  - {rota: barao, tipo: interna, x: 1220, y: 5400}
+  - {rota: barao, tipo: base, x: 940, y: 3470}
+  - {rota: meio, tipo: externa, x: 4720, y: 5155}
+  - {rota: meio, tipo: interna, x: 4075, y: 3880}
+  - {rota: meio, tipo: base, x: 2945, y: 2945}
+  - {rota: dragao, tipo: externa, x: 8470, y: 830}
+  - {rota: dragao, tipo: interna, x: 5580, y: 1195}
+  - {rota: dragao, tipo: base, x: 3450, y: 1010}
+acampamentos:              # do lado azul
+  - {nome: Sentinela Azul, x: 3120, y: 6370}
+  - {nome: Lobos, x: 3050, y: 5200}
+  - {nome: Aves Carniceiras, x: 5610, y: 4400}
+  - {nome: Espinhento Vermelho, x: 6340, y: 3275}
+  - {nome: Krugs, x: 6780, y: 2180}
+  - {nome: Gromp, x: 1690, y: 6800}
+aronguejos:                # não espelhados
+  - {x: 3550, y: 7750}
+  - {x: 8470, y: 4200}
+plantas:                   # não espelhadas
+  - {tipo: pinstouro, x: 2700, y: 7900}
+  - {tipo: pinstouro, x: 4900, y: 7100}
+  - {tipo: pinstouro, x: 7100, y: 4900}
+  - {tipo: pinstouro, x: 9300, y: 4100}
+  - {tipo: frutomel, x: 4500, y: 8000}
+  - {tipo: frutomel, x: 7400, y: 4000}
+  - {tipo: clarevidente, x: 2600, y: 9200}
+  - {tipo: clarevidente, x: 9400, y: 2800}

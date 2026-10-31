@@ -1,0 +1,147 @@
+# Regras de partida do Wild Rift, patch 7.3d: tropas, torres, selva, plantas, objetivos e ouro. Fontes e lacunas em
+# docs/dados-mapa-objetivos.md. Marcas em `fonte`:
+#   RPN riftpatchnotes.com (histórico de patches; o valor mais recente registrado)
+#   WR  páginas WR: da wiki oficial
+#   NP  nota de patch oficial (docs/patches/)
+#   PC  LoL de PC, usado como último recurso: sempre estimativa
+#   EST estimativa própria, sem fonte
+# Consultado em 31/10/2026. Tempos em segundos de partida; vida e dano por minuto (por_min) ou por nível (por_nivel).
+fonte: "RPN, WR, NP; PC e EST marcados"
+data: "2026-10-31"
+
+tropas:
+  primeira_onda: {valor: 30, fonte: "PC (estimativa)"}
+  intervalo: {valor: 30, fonte: "RPN (4.2: 30 s fora da janela)"}
+  intervalo_rapido: {de: 240, ate: 600, valor: 25, fonte: "RPN 4.2"}
+  onda: {combatente: 3, conjuradora: 3, fonte: "PC (estimativa)"}
+  canhao_a_cada: {valor: 3, fonte: "PC (estimativa)"}          # uma onda em cada 3 traz a Tropa de Canhão
+  super_apos_torre_da_base: {valor: true, fonte: "Riot, Mapa e Modos (2022): sem inibidores, a torre da base dá as supertropas"}
+  velocidade: {valor: 325, fonte: "PC (estimativa)"}
+  bonus_velocidade: {aos: 720, valor: 10, fonte: "RPN 3.1a"}
+  agro: {valor: 1, fonte: "RPN 4.2"}                            # segundos
+  alcance_alerta: {valor: 700, fonte: "PC (estimativa)"}
+  tipos:
+    combatente: {vida: 480, vida_por_min: 21, dda: 12, dda_por_min: 1.0, armadura: 0, rm: 0, velocidade_ataque: 1.25, alcance: 110, ouro: 60, xp: 60, fonte: "ouro: RPN 4.2; alcance, XP e status: PC (estimativa)"}
+    conjuradora: {vida: 290, vida_por_min: 10, dda: 23, dda_por_min: 2.2, armadura: 0, rm: 0, velocidade_ataque: 0.67, alcance: 525, ouro: 40, xp: 30, fonte: "alcance: RPN 4.2; ouro: WR:Gold; XP e status: PC (estimativa)"}
+    canhao: {vida: 900, vida_por_min: 30, dda: 40, dda_por_min: 3.0, armadura: 0, rm: 0, velocidade_ataque: 1.0, alcance: 300, ouro: 80, xp: 90, fonte: "alcance, ouro: RPN 4.2; a XP de 1800 da RPN não cabe na tabela de XP do planejador: XP e status: PC (estimativa)"}
+    super: {vida: 1600, vida_por_min: 60, dda: 190, dda_por_min: 5.0, armadura: 30, rm: 0, velocidade_ataque: 0.85, alcance: 170, ouro: 40, xp: 90, fonte: "PC (estimativa)"}
+
+torres:
+  ataques_seguidos: {valores: [1.0, 1.5, 2.1, 2.7], fonte: "NP 7.3d"}
+  bonus_contra_campeoes: {fonte: "RPN 7.0", nota: "0/25/50% por campeões inimigos por perto (nível 1/4/5): fora do modelo"}
+  penetracao_armadura: {valor: 0.5, fonte: "RPN 7.1"}
+  anti_backdoor: {torre: 0.75, nexo: 0.80, fonte: "RPN 5.2"}    # redução de dano sem tropas aliadas por perto
+  alcance: {valor: 750, fonte: "PC (estimativa)"}
+  velocidade_ataque: {valor: 0.83, fonte: "RPN 6.2 (0.74 contra tropas no meio)"}
+  dano_estrutura_pdh: {valor: 0.4, fonte: "RPN 4.4"}            # dano de campeão em estrutura: DdA + 40% do PdH
+  placas: {quantidade: 5, ouro: 150, ate: 360, resistencia: 20, duracao: 10, fonte: "quantidade, ouro: RPN 3.3; ate: RPN 6.2; resistências: NP 7.3a"}
+  defesa_inicio: {ate: 120, armadura: 50, rm: 50, rotas: [meio, barao], fonte: "RPN 3.3b"}
+  barricadas: {valor: null, fonte: "sem fonte: nenhuma página usa o nome; ver Para o usuário"}
+  tipos:
+    externa: {vida: 3500, armadura: 60, rm: 60, dda: 200, dda_ate: 325, dda_em: 1050, ouro_local: 200, ouro_global: 75, fonte: "armadura, RM: RPN 6.2h; dano: RPN 3.3b; ouro: RPN 3.3 e 3.1; vida: EST (registro antigo sem patch)"}
+    interna: {vida: 3000, armadura: 15, rm: 15, dda: 200, dda_passo: 8, dda_a_cada: 30, dda_de: 450, dda_passos: 25, ouro_local: 350, ouro_global: 75, fonte: "RPN 4.2, 6.2h e 7.0"}
+    base: {vida: 3200, armadura: 30, rm: 30, dda: 200, dda_passo: 8, dda_a_cada: 30, dda_de: 450, dda_passos: 25, ouro_local: 200, ouro_global: 75, fonte: "RPN 3.3, 4.2, 5.2, 6.2h e 7.0"}
+  nexo: {vida: 4000, armadura: 30, rm: 30, dda: 280, dda_passo: 8, dda_a_cada: 30, alcance: 750, fonte: "vida: NP 7.3a; dano: RPN 4.2; resistências e alcance: EST"}
+
+fonte_base:
+  laser_por_s: {valor: 800, fonte: "PC (estimativa)"}
+  cura_por_s: {valor: 0.12, fonte: "PC (estimativa)"}           # fração da Vida máxima
+  mana_por_s: {valor: 0.12, fonte: "PC (estimativa)"}
+
+selva:
+  primeira_aparicao: {valor: 20, fonte: "WR:Monster"}
+  evolucao: {aos: 480, fonte: "WR:Monster"}
+  acampamentos:
+    Espinhento Vermelho: {vida: 2800, vida_ate: 4000, dda: 75, dda_ate: 135, armadura: 40, rm: 0, renasce: 150, ouro: 130, xp: 200, buff: vermelho, fonte: "WR:Monster; armadura e XP: EST"}
+    Sentinela Azul: {vida: 2800, vida_ate: 4000, dda: 75, dda_ate: 135, armadura: 0, rm: 40, renasce: 150, ouro: 130, xp: 200, buff: azul, fonte: "WR:Monster; RM e XP: EST"}
+    Lobos: {vida: 2100, vida_ate: 3000, dda: 60, dda_ate: 110, armadura: 10, rm: 10, renasce: 135, ouro: 95, xp: 150, fonte: "EST"}
+    Aves Carniceiras: {vida: 2000, vida_ate: 2900, dda: 55, dda_ate: 100, armadura: 15, rm: 15, renasce: 135, ouro: 95, xp: 150, fonte: "EST; WR:Monster: 3 aves em vez de 5"}
+    Krugs: {vida: 2300, vida_ate: 3200, dda: 60, dda_ate: 110, armadura: 25, rm: 0, renasce: 135, ouro: 95, xp: 150, fonte: "EST"}
+    Gromp: {vida: 2300, vida_ate: 3200, dda: 80, dda_ate: 130, armadura: 0, rm: 0, renasce: 135, ouro: 95, xp: 150, fonte: "EST"}
+  buffs:
+    vermelho: {duracao: 90, lentidao: 0.20, queimadura: [11, 25], fonte: "WR:Monster"}
+    vermelho_evoluido: {duracao: 90, dda: 10, pdh: 30, lentidao: 0.30, queimadura: [16.5, 37.5], fonte: "WR:Monster"}
+    azul: {duracao: 90, aceleracao: 15, fonte: "WR:Monster"}
+    azul_evoluido: {duracao: 90, aceleracao: 15, aceleracao_ult: 15, fonte: "WR:Monster"}
+  aronguejo: {vida: 400, vida_por_min: 15, velocidade: 300, aparece: 180, renasce: 150, ouro: 60, xp: 60, fonte: "WR:Monster só diz que foge ao ser atacado: EST"}
+
+plantas:
+  frutomel: {aparece: 360, renasce: 360, frutos: 3, cura_pct: 0.035, lentidao: 0.35, duracao_lentidao: 0.25, raio: 250, fonte: "3 frutos: WR:Map; demais: Jungle_plants (PC, estimativa)"}
+  pinstouro: {aparece: 75, renasce: 360, raio: 325, distancia: 900, fonte: "Jungle_plants (PC, estimativa)"}
+  clarevidente: {aparece: 180, renasce: 330, revela_campeoes: 3, revela_outros: 12, raio: 1000, fonte: "Jungle_plants (PC, estimativa)"}
+
+objetivos:
+  barao:
+    aparece: {valor: 660, fonte: "RPN 6.2"}
+    renasce: {valor: 210, fonte: "WR:Baron_pit"}
+    vida: {valor: 9500, por_min: 180, fonte: "base: RPN 6.3; crescimento: EST"}
+    dda: {valor: 200, por_nivel: 22, fonte: "RPN 4.2"}
+    armadura: {valor: 120, fonte: "WR:Baron_pit"}
+    rm: {valor: 70, fonte: "WR:Baron_pit"}
+    velocidade_ataque: {valor: 0.5, fonte: "EST"}
+    alcance: {valor: 1100, fonte: "EST: o fosso inteiro"}
+    ciclo: {golpes: 5, fonte: "WR:Baron_pit: uma habilidade a cada 5 ou 6 ataques"}
+    habilidades:
+      - {nome: Poça Ácida, dano: {tipo: magico, base: 120, dda: 0.25}, lentidao: 0.3, duracao: 1, fonte: "WR:Baron_pit; lentidão: EST"}
+      - {nome: Tentáculos, dano: {tipo: magico, base: 180, dda: 0.25}, arremessa: 1, fonte: "WR:Baron_pit"}
+    olhar: {reducao: 0.5, duracao: 5, fonte: "WR:Baron_pit"}
+    corrosao: {por_golpe: 3, duracao: 5, max: 50, fonte: "WR:Baron_pit"}
+    veneno: {duracao: 5, a_cada: 0.5, dano: 15, fonte: "WR:Baron_pit; dano: EST"}
+    imune_controle: {valor: true, fonte: "WR:Baron_pit (marcado para testar)"}
+    ouro: {valor: 200, fonte: "WR:Baron_pit"}
+    xp: {valor: 800, fonte: "EST"}
+  mao_do_barao:
+    duracao: {valor: 90, fonte: "RPN 6.2 (a primeira); as demais 120: WR:Baron_pit"}
+    dda_pdh_por_min: {dda: 2, pdh: 3, base_dda: 24, base_pdh: 40, fonte: "EST: a página diz que cresce por minuto, sem números"}
+    tropas:
+      reducao_contra_campeoes: {combatente: 0.65, conjuradora: 0.65, canhao: 0.35, fonte: "NP 7.3d (55–75% e 35%; o meio da faixa)"}
+      dano_contra_tropas: {combatente: 0.90, outras: 0.25, fonte: "NP 7.3d"}
+      dano_contra_torres: {valor: 0.30, fonte: "NP 7.3d"}
+  dragao:
+    aparece: {valor: 360, fonte: "RPN 6.2"}
+    renasce: {valor: 270, fonte: "RPN 4.2"}
+    some: {valor: 1050, em_luta: 1070, fonte: "RPN 4.2"}
+    vida: {valor: 4000, por_nivel: 180, fonte: "RPN 4.2"}
+    dda: {valor: 110, por_nivel: 12, fonte: "EST"}
+    armadura: {valor: 40, fonte: "EST"}
+    rm: {valor: 40, fonte: "EST"}
+    velocidade_ataque: {valor: 0.5, fonte: "EST"}
+    alcance: {valor: 500, fonte: "EST"}
+    ouro_time: {valor: 40, fonte: "RPN 4.2"}
+    xp: {valor: 400, fonte: "EST"}
+    acumulos_para_alma: {valor: 3, fonte: "WR:Dragon_Slayer"}
+    elementos:                  # bônus por acúmulo (1, 2, 3): a tabela velha da RPN 3.3b com o 1º acúmulo do 7.2c
+      infernal: {status: {"% Attack Damage": [4, 8, 16], "% Ability Power": [4, 8, 16]}, fonte: "1º: RPN 7.2c; 2º e 3º: proporção da RPN 3.3b (EST)"}
+      montanha: {status: {"Armor": [5, 10, 20], "Magic Resistance": [5, 10, 20]}, fonte: "RPN 3.3b, em pontos no lugar de 3+2 / 6+4 / 12+8% (EST)"}
+      oceano: {regeneracao_vida_perdida: [0.028, 0.056, 0.112], a_cada: 5, fonte: "1º: RPN 7.2c; 2º e 3º: proporção da RPN 3.3b (EST)"}
+      gelo: {status: {"Ability Haste": [7, 17.5, 28]}, fonte: "RPN 4.2"}
+    almas:
+      infernal: {dano: {tipo: adaptativo, base: 180, dda_bonus: 0.35, pdh: 0.15}, recarga: 5, fonte: "RPN 7.2c"}
+      montanha: {escudo: 350, apos: 5, fonte: "RPN 7.2c"}
+      oceano: {cura: {base: 250, dda_bonus: 0.48, pdh: 0.25, vida_bonus: 0.10}, duracao: 4, recarga: 6, fonte: "RPN 7.2c"}
+      gelo: {lentidao: 0.5, verdadeiro_pct: 0.15, recarga: 12, fonte: "WR:Dragon_Slayer, histórico 5.0"}
+  anciao:
+    aparece: {valor: 1140, apos_terceiro: true, fonte: "RPN 6.2; WR:Dragon_pit"}
+    renasce: {valor: 360, fonte: "WR:Dragon_pit"}
+    vida: {valor: 7000, por_min: 120, fonte: "EST"}
+    dda: {valor: 200, fonte: "EST"}
+    armadura: {valor: 70, fonte: "EST"}
+    rm: {valor: 70, fonte: "EST"}
+    velocidade_ataque: {valor: 0.5, fonte: "EST"}
+    alcance: {valor: 500, fonte: "EST"}
+    buff: {duracao: 120, verdadeiro: 450, em: 3, executa_abaixo: 0.15, fonte: "WR:Dragon_Slayer; dano: RPN 6.2"}
+  arauto:
+    existe: {valor: false, fonte: "RPN 5.2: trocado por Torreta Guerrilha ou Mímico Hextec, sem números; ver Para o usuário"}
+
+ouro:
+  inicial: {valor: 500, fonte: "WR:Gold; planejador"}
+  passivo_por_s: {valor: 3, de: 20, fonte: "RPN 4.2 (a WR:Gold ainda diz 3,5)"}
+  abate: {sequencia: [225, 150, 100, 100], fonte: "RPN 7.0"}
+  primeiro_sangue: {valor: 150, fonte: "RPN 4.2"}
+  assistencia: {fracao: 0.35, fonte: "RPN 5.0 (com um assistente)"}
+  compartilhado_tropa: {fracao: 0.45, raio: 1400, fonte: "WR:Gold (40 / 50%: ambíguo; a média); raio: PC (estimativa)"}
+
+xp:
+  raio: {valor: 1400, fonte: "PC (estimativa)"}
+  abate_por_nivel: {valores: [130, 180, 230, 280, 355], fonte: "RPN 3.5, dividido por 10 para caber na tabela do planejador (EST)"}
+  # a curva por nível é a do planejador (tabela xp_level)

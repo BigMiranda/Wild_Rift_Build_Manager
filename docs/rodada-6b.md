@@ -122,7 +122,31 @@ Cada mecânica é campo de ficha, sem citar campeão. As fichas sintéticas, uma
 
 Testes: 253 → 294 (`MecanicasTest`, 41, com tenacidade e Purificar por tipo e determinismo em todas as fichas; 11 opcionais pulados). `npm run build` limpo.
 
+## Parte 3 — Dados do mapa, tropas, selva e objetivos ✅
+
+Produzi `docs/dados-mapa-objetivos.md`, `seed/mapa_7_3d.yml` e `seed/objetivos_7_3d.yml`, com fonte em cada bloco. `RiftDataTest` exige `fonte` em todo bloco com número das regras de partida.
+
+**Achados:**
+- **Não há inibidores nem torres do Nexo** no Wild Rift (Riot): a torre da base dá as supertropas, e o Nexo atira sozinho.
+- **O Arauto saiu** na RPN 5.2, trocado por Torreta Guerrilha ou Mímico Hextec, sem números; ficou fora.
+- **As fontes são fracas.** Sete páginas `WR:` não existem, e tudo sobre tropas (vida, dano, composição) e alcance de torre é do PC. A lista completa do que falta está em "Para o usuário".
+
+**Mapa:** a imagem da wiki e a Liquipedia recusaram o acesso (403). A geometria é um esquema a partir do PC, em escala estimada, e não um traçado.
+
+Testes: 294 → 295 (11 opcionais pulados). `npm run build` limpo (sem mudança de tela).
+
 ## Para o usuário
+
+**Prints, por prioridade:**
+1. **Minimapa ampliado, sem campeões.** É o que mais falta: a geometria do mapa é um esquema. Com o print, retraço `mapa_7_3d.yml`.
+2. **Modo Treino, tropas:** vida e dano de combatente, conjuradora e canhão aos 0:30 e aos 15:00. Hoje são do PC.
+3. **Torres:** alcance, vida da torre externa e o ícone de buff do início da partida. "Barricadas" não aparece em nenhuma fonte: diga o que é isso no jogo.
+4. **Mão do Barão:** o número no ícone do buff, em dois minutos diferentes. Hoje é estimativa.
+5. **Tempo da primeira onda e composição das ondas.**
+6. **Ouro passivo:** 3/s (RPN) ou 3,5/s (WR:Gold). Dá para medir parado na base com um cronômetro.
+7. **Fonte:** dano do laser e cura. **Acampamentos:** ouro e XP de Lobos, Aves, Krugs e Gromp.
+8. **Arauto:** ele ainda existe? O que há no lugar dele (Torreta Guerrilha, Mímico Hextec)?
+9. **Nomes pt-BR das plantas:** usei Frutomel, pinstouro e Clarevidente, do prompt.
 
 **Vale conferir:**
 - **Dizimar:** decidi que o corpo do alvo tocando o anel já recebe a lâmina, pela regra geral do prompt. Se no jogo vale o centro do alvo, o Darius fica forte demais nesta base.
