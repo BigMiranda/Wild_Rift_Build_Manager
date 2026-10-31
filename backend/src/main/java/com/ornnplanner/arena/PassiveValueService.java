@@ -449,7 +449,7 @@ public class PassiveValueService {
         return r;
     }
 
-    /** {time to die, damage dealt} of the build in the scenario. */
+    /** {durability, damage dealt} of the build in the scenario. */
     private double[] score(BuildRepository.Build b, Scenario sc, double minute, Map<Long, ItemEdit> edits) {
         String kind = sc.kind == null ? "basico" : sc.kind;
         if ("arena".equals(kind)) {
@@ -457,11 +457,11 @@ public class PassiveValueService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha um cenário salvo.");
             }
             Measures m = effect.savedScenario(sc.id, b, minute, edits);
-            return new double[] {m.timeToDeath, m.dealt};
+            return new double[] {m.durability, m.dealt};
         }
         if ("teste".equals(kind)) {
             Measures m = effect.fightWith(b, minute, sc.key, edits);
-            return new double[] {m.timeToDeath, m.dealt};
+            return new double[] {m.durability, m.dealt};
         }
         EffectModel.Report rep = effect.report("basico");
         double ttd = 0;
@@ -469,7 +469,7 @@ public class PassiveValueService {
         double w = 0;
         for (EffectModel.Entry e : rep.tests) {
             Measures m = effect.fightWith(b, minute, e.key, edits);
-            ttd += e.weight * m.timeToDeath;
+            ttd += e.weight * m.durability;
             dealt += e.weight * m.dealt;
             w += e.weight;
         }

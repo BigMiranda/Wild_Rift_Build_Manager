@@ -163,10 +163,20 @@ public final class EffectModel {
 
     /** What a fight says about the build tested. */
     public static class Measures {
-        /** Seconds until the build died; estimated from the health it lost when it survived. */
+        /** Seconds until the build died, or the whole fight when it did not ({@link #died} false): never an estimate. */
         public double timeToDeath;
         public boolean died;
-        public boolean estimated;
+        /** Damage after mitigation, minus the healing and shields it got, per second of the fight (below 0: it sustains). */
+        public double netRate;
+        /** The same in % of its max health per second (100 / time to die when it died). */
+        public double healthRate;
+        /** What it heals beyond what it takes, per second (0 unless it sustains). */
+        public double surplus;
+        /**
+         * Seconds its health lasts at the net rate: its time to die when it died, at most 5x the fight's duration. What
+         * the per-item readings and the measured passives compare (they need one number also when nobody dies).
+         */
+        public double durability;
         /** Raw damage taken until it died (before resistances and reductions): the effective health against them. */
         public double effectiveHealth;
         public double rawTaken;
@@ -176,6 +186,8 @@ public final class EffectModel {
         public double shieldAbsorbed;
         public double healed;
         public double healLost;
+        /** Healing that found its health full. */
+        public double healOver;
         /** Damage the build dealt to the attackers (returned). */
         public double dealt;
         /** Seconds of crowd control it applied to them. */
@@ -193,8 +205,15 @@ public final class EffectModel {
         public String testName;
         public Measures build;
         public Measures reference;
-        /** timeToDeath / reference timeToDeath x 100. */
+        /** The reference's net rate over the build's x 100, at most {@link #cap}; null when the reference sustains and it does not. */
         public Double index;
+        /** The cap of an index, and whether this one hit it. */
+        public double cap;
+        public boolean capped;
+        /** The build heals at least what it takes: its index is the cap (marked), not a number of its own. */
+        public boolean sustains;
+        /** por_vida (in % of each one's max health) | bruta (in damage per second): which rate the index compared. */
+        public String rateMode;
         /** Candidate runs: whether the candidate is held at the minute (bought by then). */
         public Boolean held;
         public String error;

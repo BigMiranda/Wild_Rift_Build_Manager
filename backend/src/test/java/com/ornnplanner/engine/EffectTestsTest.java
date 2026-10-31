@@ -109,6 +109,38 @@ class EffectTestsTest {
         assertEquals(100 * 120 / 220.0, m.mitigatedPct, 1e-6);
     }
 
+    /** The net rate: damage after mitigation minus healing and shields, per second; alive, the time is the fight's. */
+    @Test
+    void theNetRateNeedsNoDeath() {
+        Result r = new Result();
+        r.duration = 100;
+        ArenaModel.FighterStats me = new ArenaModel.FighterStats();
+        me.maxHealth = 4000;
+        me.health = 3000;
+        me.taken = 3000;
+        me.healed = 1200;
+        me.shieldAbsorbed = 800;
+        r.fighters.add(me);
+        Measures m = EffectTestService.measure(r, 0, 0, 100);
+        assertTrue(!m.died);
+        assertEquals(100, m.timeToDeath, 1e-9, "the fight's length, not an estimate");
+        assertEquals(10, m.netRate, 1e-9);
+        assertEquals(0.25, m.healthRate, 1e-9, "10 of 4000 health per second");
+        assertEquals(400, m.durability, 1e-9, "at most 5x the duration");
+        // what it heals beyond what it takes is left over
+        me.healed = 2200;
+        me.healOver = 500;
+        Measures sustains = EffectTestService.measure(r, 0, 0, 100);
+        assertEquals(-5, sustains.netRate, 1e-9);
+        assertEquals(5, sustains.surplus, 1e-9);
+        assertEquals(500, sustains.durability, 1e-9);
+        // dead: the rate is its health over its time to die, whatever the last hit overkilled
+        me.deathTime = 40.0;
+        Measures dead = EffectTestService.measure(r, 0, 0, 100);
+        assertEquals(40, dead.durability, 1e-9);
+        assertEquals(2.5, dead.healthRate, 1e-9);
+    }
+
     /** More armor: a higher index against Critical (physical attacks), the same against 1000 AP + Void Staff (magic only). */
     @Test
     void armorRaisesTheIndexAgainstCritOnly() {

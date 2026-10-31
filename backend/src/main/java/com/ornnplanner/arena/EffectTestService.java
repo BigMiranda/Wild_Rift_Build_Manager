@@ -51,8 +51,8 @@ import java.util.concurrent.Callable;
 /**
  * Effectiveness by test scenarios: standard fights of the build tested (tactical brain, its conditional effects firing
  * for real) against test ragdolls that attack, with optional ragdoll allies, all in the arena by the fight's own rules.
- * The index of a scenario is the build's time to die over the reference's (the same champion at the same level with
- * no items and the build's runes, another build, or a folder's mean) x 100.
+ * The index of a scenario is the reference's net damage rate over the build's x 100 (see {@link #setIndex}), against the
+ * same champion at the same level with no items and the build's runes, another build, or a folder's mean.
  * <p>
  * What grows with the minute: the build (its items, level and stats) and nothing else. An attacker has its fixed stats
  * (unless its scenario says {@link Test#scalesWithMinute}) and the default reference depends only on the level: it runs at
@@ -77,7 +77,7 @@ public class EffectTestService {
     private static final List<Double> OLD_PEN_STAGES = List.of(0.0, 25.0, 50.0, 75.0, 95.0);
     private static final double BUILD_X = 5000;
     private static final int CACHE = 6000;
-    /** A build that survives the whole fight: its estimated time to die is at most this many times the duration. */
+    /** A build that survives the whole fight: its durability is at most this many times the duration. */
     static final double ESTIMATE_CAP = 5;
 
     private static final ObjectMapper JSON = new ObjectMapper()
@@ -100,6 +100,9 @@ public class EffectTestService {
     private double scaleFullMinute = 25;
     private double scaleMin = 0.2;
     private double scaleMax = 1.4;
+    /** The highest index, and the rate it compares: por_vida (% of max health per second) | bruta (damage per second). */
+    private double indexCap = 1000;
+    private String indexRate = "por_vida";
     private final List<Sweep> defaultSweeps = new ArrayList<>();
     private final Map<String, Report> defaultReports = new LinkedHashMap<>();
 
@@ -138,6 +141,9 @@ public class EffectTestService {
             scaleFullMinute = num(scale.get("minuto_cheio"), scaleFullMinute);
             scaleMin = num(scale.get("minimo"), scaleMin);
             scaleMax = num(scale.get("maximo"), scaleMax);
+            Map<String, Object> index = (Map<String, Object>) root.getOrDefault("indice", Map.of());
+            indexCap = num(index.get("teto"), indexCap);
+            indexRate = String.valueOf(index.getOrDefault("taxa", indexRate));
             Map<String, Object> sweep = (Map<String, Object>) root.getOrDefault("varredura", Map.of());
             rawSweepBot = (Map<String, Object>) sweep.get("atacante");
             sweepDuration = num(sweep.get("duracao"), 180);
@@ -398,11 +404,33 @@ public class EffectTestService {
                 refs.add(results.get(k[j]));
             }
             o.reference = mean(refs);
-            if (o.build != null && o.reference != null && o.reference.timeToDeath > 1e-9) {
-                o.index = 100 * o.build.timeToDeath / o.reference.timeToDeath;
-            }
+            setIndex(o);
         }
         return out;
+    }
+
+    /**
+     * The index: reference's net rate / build's net rate x 100. A build that sustains (net rate 0 or less) has no number
+     * of its own: it takes the cap, marked. Every index stops at the cap, so one scenario cannot decide a weighted mean.
+     */
+    private void setIndex(Outcome o) {
+        o.cap = indexCap;
+        o.rateMode = indexRate;
+        if (o.build == null || o.reference == null) {
+            return;
+        }
+        boolean raw = "bruta".equals(indexRate);
+        double me = raw ? o.build.netRate : o.build.healthRate;
+        double ref = raw ? o.reference.netRate : o.reference.healthRate;
+        o.sustains = o.build.netRate <= 0;
+        if (me <= 0) {
+            o.index = ref <= 0 ? 100 : indexCap;
+            o.capped = ref > 0;
+        } else if (ref > 0) {
+            double v = 100 * ref / me;
+            o.capped = v > indexCap;
+            o.index = Math.min(v, indexCap);
+        }
     }
 
     /** The arena scenario of one job (to open the fight in the Arena): the build as it is, with frames. */
@@ -889,19 +917,24 @@ public class EffectTestService {
         m.shieldAbsorbed = me.shieldAbsorbed;
         m.healed = me.healed;
         m.healLost = me.healLost;
+        m.healOver = me.healOver;
         m.dealt = me.dealt;
         m.controlApplied = me.events.getOrDefault("controle_causado", 0.0);
+        m.netRate = (me.taken - me.healed - me.healOver - me.shieldAbsorbed) / elapsed;
+        m.surplus = Math.max(0, -m.netRate);
         // The fight stops when the build dies: the team readings cover the time it was in the fight.
         if (me.deathTime != null) {
             m.died = true;
             m.timeToDeath = me.deathTime;
+            m.durability = me.deathTime;
+            m.healthRate = 100 / Math.max(1e-6, me.deathTime);
             m.effectiveHealth = me.rawTaken;
         } else {
-            m.estimated = true;
-            double lost = me.maxHealth - Math.max(0, me.health);
             double cap = ESTIMATE_CAP * duration;
-            m.timeToDeath = lost > 1e-6 ? Math.min(cap, elapsed * me.maxHealth / lost) : cap;
-            m.effectiveHealth = me.rawTaken * m.timeToDeath / elapsed;
+            m.timeToDeath = elapsed;
+            m.durability = m.netRate > 1e-6 ? Math.min(cap, me.maxHealth / m.netRate) : cap;
+            m.healthRate = 100 * m.netRate / Math.max(1, me.maxHealth);
+            m.effectiveHealth = me.rawTaken * m.durability / elapsed;
         }
         if (allies > 0) {
             double team = me.rawTaken;
@@ -935,6 +968,11 @@ public class EffectTestService {
         int n = ok.size();
         for (Measures m : ok) {
             out.timeToDeath += m.timeToDeath / n;
+            out.durability += m.durability / n;
+            out.netRate += m.netRate / n;
+            out.healthRate += m.healthRate / n;
+            out.surplus += m.surplus / n;
+            out.healOver += m.healOver / n;
             out.effectiveHealth += m.effectiveHealth / n;
             out.rawTaken += m.rawTaken / n;
             out.taken += m.taken / n;
@@ -947,7 +985,6 @@ public class EffectTestService {
             out.fightLength += m.fightLength / n;
             out.maxHealth += m.maxHealth / n;
             out.died |= m.died;
-            out.estimated |= m.estimated;
         }
         return out;
     }

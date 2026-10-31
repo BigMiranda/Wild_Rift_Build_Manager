@@ -3,7 +3,7 @@ import { CartesianGrid, Line, LineChart, ReferenceDot, ResponsiveContainer, Tool
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { SERIES_COLORS, mmss, n0, n1 } from '../format.js';
-import { breakPoint, effectMeta, gain, reportJobs, runJobs, weakPoints, weightedIndex } from '../effectiveness.js';
+import { breakPoint, effectMeta, gain, indexText, overReference, reportJobs, runJobs, weakPoints, weightedIndex } from '../effectiveness.js';
 import ItemIcon from './ItemIcon.jsx';
 import { openInArena } from './TestInArena.jsx';
 import { CandidatePicker } from './ShopPicker.jsx';
@@ -55,24 +55,30 @@ export function ReferencePicker({ value, onChange, builds = [], folders = [] }) 
   );
 }
 
-/** The time to die with its mark when the build survived the whole fight (estimated from the health it lost). */
-export const ttd = (m) => (m == null ? '—' : `${n1(m.timeToDeath)} s${m.estimated ? '*' : ''}`);
+/** The time to die, or "> duration" when the build did not die in the fight. */
+export const ttd = (m) => (m == null ? '—' : `${m.died ? '' : '> '}${n1(m.timeToDeath)} s`);
+
+/** Damage taken net of healing and shields per second, or what is left over when the build sustains. */
+export const netRate = (m) => (m == null ? '—' : m.netRate <= 0 ? t('efx.sustains', { v: n0(m.surplus) }) : `${n0(m.netRate)}/s`);
+
+/** The index as text, for tables. */
+export const indexLabel = (o) => indexText(o, t, n0);
 
 /** A horizontal bar of an index (100 = the reference). */
-function IndexBar({ value, max }) {
+function IndexBar({ outcome }) {
+  const value = outcome?.index;
   if (value == null) return <span className="muted">—</span>;
-  const w = Math.max(2, Math.min(100, (100 * value) / Math.max(max, 1)));
+  const w = Math.max(2, Math.min(100, (100 * value) / Math.max(outcome.cap, 1)));
   return (
-    <span className="eff-bar" title={t('efx.indexTitle', { v: n0(value) })}>
+    <span className="eff-bar" title={t(outcome.capped ? 'efx.indexCapped' : 'efx.indexTitle', { v: n0(value) })}>
       <span className={value >= 100 ? 'up' : 'down'} style={{ width: `${w}%` }} />
-      <strong>{n0(value)}</strong>
+      <strong>{indexLabel(outcome)}</strong>
     </span>
   );
 }
 
 /** The basic report: one row per scenario (its measures and index bar), the weighted index and the weak points. */
 export function BasicResult({ report, outcomes, names }) {
-  const max = Math.max(100, ...outcomes.map((o) => (o?.index != null && Number.isFinite(o.index) ? o.index : 0)));
   const mean = weightedIndex(report, outcomes);
   const weak = weakPoints(report, outcomes);
   return (
@@ -82,7 +88,7 @@ export function BasicResult({ report, outcomes, names }) {
           <thead>
             <tr>
               <th>{t('efx.col.test')}</th><th>{t('efx.col.weight')}</th><th>{t('efx.col.index')}</th><th>{t('efx.col.ttd')}</th>
-              <th>{t('efx.col.ref')}</th><th>{t('efx.col.ehp')}</th><th>{t('efx.col.mitigated')}</th><th>{t('efx.col.shield')}</th>
+              <th>{t('efx.col.ref')}</th><th title={t('efx.col.netTitle')}>{t('efx.col.net')}</th><th>{t('efx.col.ehp')}</th><th>{t('efx.col.mitigated')}</th><th>{t('efx.col.shield')}</th>
               <th>{t('efx.col.heal')}</th><th>{t('efx.col.dealt')}</th><th>{t('efx.col.cc')}</th><th>{t('efx.col.team')}</th>
             </tr>
           </thead>
@@ -94,9 +100,10 @@ export function BasicResult({ report, outcomes, names }) {
                 <tr key={e.key}>
                   <td>{o?.testName ?? names[e.key] ?? e.key}</td>
                   <td>{n1(e.weight ?? 1)}</td>
-                  <td>{o?.error ? <span className="error">{o.error}</span> : <IndexBar value={o?.index} max={max} />}</td>
+                  <td>{o?.error ? <span className="error">{o.error}</span> : <IndexBar outcome={o} />}</td>
                   <td>{ttd(m)}</td>
                   <td>{ttd(o?.reference)}</td>
+                  <td>{netRate(m)}</td>
                   <td>{m ? n0(m.effectiveHealth) : '—'}</td>
                   <td>{m ? `${n0(m.mitigatedPct)}%` : '—'}</td>
                   <td>{m ? n0(m.shieldAbsorbed) : '—'}</td>
@@ -143,7 +150,7 @@ export function ComparativeResult({ report, series, names }) {
                 <td>{cells.find((o) => o?.testName)?.testName ?? names[e.key] ?? e.key}</td>
                 {cells.map((o, k) => (
                   <td key={series[k].key} className={o?.index === best ? 'best' : ''}>
-                    {o?.error ? <span className="error">{o.error}</span> : <>{o?.index == null ? '—' : n0(o.index)} <small className="muted">{ttd(o?.build)}</small></>}
+                    {o?.error ? <span className="error">{o.error}</span> : <>{indexLabel(o)} <small className="muted">{ttd(o?.build)}</small></>}
                   </td>
                 ))}
               </tr>
@@ -304,10 +311,7 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
     setBusy(null);
   };
   // Side by side, every build is measured against the open build's reference: each one's own would not compare.
-  const onOpenRef = (list) => list.map((o, i) => {
-    const r = outcomes[i]?.reference?.timeToDeath;
-    return o?.build && r > 1e-9 ? { ...o, index: (100 * o.build.timeToDeath) / r } : o;
-  });
+  const onOpenRef = (list) => list.map((o, i) => overReference(o, outcomes[i]?.reference));
   const series = outcomes ? [{ key: 'open', name: name ?? '', color: SERIES_COLORS[0], outcomes },
     ...others.map((s) => ({ ...s, outcomes: onOpenRef(s.outcomes) }))] : [];
 
@@ -342,16 +346,16 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
           let bestMix = null;
           for (const mix of meta.mixes) {
             const g = out[k++];
-            if (g?.build && (!best || g.build.timeToDeath > best.build.timeToDeath)) {
+            if (g?.build && (!best || g.build.durability > best.build.durability)) {
               best = g;
               bestMix = mix;
             }
           }
-          const w = withIt?.build?.timeToDeath;
+          const w = withIt?.build?.durability;
           rows.push({
             item: it, test: withIt?.testName ?? names[e.key] ?? e.key,
-            value: gain(w, without?.build?.timeToDeath), passive: gain(w, flat?.build?.timeToDeath),
-            gold: gain(best?.build?.timeToDeath, without?.build?.timeToDeath), mix: bestMix,
+            value: gain(w, without?.build?.durability), passive: gain(w, flat?.build?.durability),
+            gold: gain(best?.build?.durability, without?.build?.durability), mix: bestMix,
           });
         }
       }
@@ -493,7 +497,7 @@ function CompareResult({ cmp, itemsById }) {
                 <td>{row[0]?.testName ?? e.key}</td>
                 {row.map((o, ci) => (
                   <td key={ci} className={o?.index === best ? 'best' : ''} title={o?.held === false ? t('efx.notHeld') : undefined}>
-                    {o?.error ? <span className="error">{o.error}</span> : <>{o?.index == null ? '—' : n0(o.index)} <small className="muted">{ttd(o?.build)}</small>{o?.held === false && ' ⚠'}</>}
+                    {o?.error ? <span className="error">{o.error}</span> : <>{indexLabel(o)} <small className="muted">{ttd(o?.build)}</small>{o?.held === false && ' ⚠'}</>}
                   </td>
                 ))}
               </tr>

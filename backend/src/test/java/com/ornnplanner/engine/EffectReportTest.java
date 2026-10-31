@@ -105,8 +105,8 @@ class EffectReportTest {
         List<EffectModel.Outcome> o = run(base, jobs);
         double ms = (System.nanoTime() - t0) / 1e6;
         line("## Básico (%.0f ms, %d cenários)", ms, jobs.size());
-        line("| cenário | índice | tempo até morrer | referência | vida efetiva | mitigado | escudo | cura (perdida) | devolvido | controle |");
-        line("|---|---|---|---|---|---|---|---|---|---|");
+        line("| cenário | índice | tempo até morrer | referência | taxa líquida | %%Vida/s (ref.) | índice bruto | vida efetiva | mitigado | escudo | cura (perdida) | devolvido | controle |");
+        line("|---|---|---|---|---|---|---|---|---|---|---|---|---|");
         double sum = 0;
         double w = 0;
         for (int i = 0; i < o.size(); i++) {
@@ -116,9 +116,12 @@ class EffectReportTest {
                 continue;
             }
             EffectModel.Measures m = x.build;
-            line("| %s | %.0f | %.1f s%s | %.1f s | %.0f | %.0f%% | %.0f | %.0f (%.0f) | %.0f | %.1f s |", x.testName, x.index,
-                    m.timeToDeath, m.estimated ? " (est.)" : "", x.reference.timeToDeath, m.effectiveHealth, m.mitigatedPct,
-                    m.shieldAbsorbed, m.healed, m.healLost, m.dealt, m.controlApplied);
+            line("| %s | %s | %s | %s | %.0f/s | %.2f (%.2f) | %.0f | %.0f | %.0f%% | %.0f | %.0f (%.0f) | %.0f | %.1f s |", x.testName, index(x),
+                    time(m), time(x.reference), m.netRate, m.healthRate, x.reference.healthRate, m.netRate > 0 ? 100 * x.reference.netRate / m.netRate : -1,
+                    m.effectiveHealth, m.mitigatedPct, m.shieldAbsorbed, m.healed, m.healLost, m.dealt, m.controlApplied);
+            if (x.index > x.cap + 1e-9) {
+                throw new IllegalStateException(x.testName + ": índice acima do teto");
+            }
             sum += rep.tests.get(i).weight * x.index;
             w += rep.tests.get(i).weight;
         }
@@ -146,8 +149,8 @@ class EffectReportTest {
         for (int i = 0; i < k; i++) {
             EffectModel.Outcome x = o.get(i);
             if ("equipe".equals(effect.presets().containsKey(jobs.get(i).testKey) ? effect.presets().get(jobs.get(i).testKey).group : "")) {
-                line("- %s: índice %.0f, tempo %.1f s%s, absorveu %.0f%% do dano inimigo, aliados vivos %.1f s",
-                        x.testName, x.index, x.build.timeToDeath, x.build.estimated ? " (est.)" : "",
+                line("- %s: índice %s, tempo %s, absorveu %.0f%% do dano inimigo, aliados vivos %.1f s",
+                        x.testName, index(x), time(x.build),
                         x.build.absorbedShare == null ? 0 : x.build.absorbedShare, x.build.alliesAlive == null ? 0 : x.build.alliesAlive);
             }
         }
@@ -196,15 +199,15 @@ class EffectReportTest {
                 int bestMix = 0;
                 for (int m = 0; m < EffectTestService.MIXES.size(); m++) {
                     EffectModel.Outcome g = o.get(k++);
-                    if (best == null || g.build.timeToDeath > best.build.timeToDeath) {
+                    if (best == null || g.build.durability > best.build.durability) {
                         best = g;
                         bestMix = m;
                     }
                 }
-                double t = with.build.timeToDeath;
+                double t = with.build.durability;
                 line("| %s | %s | %+.0f%% | %+.0f%% | %+.0f%% (%s) |", it.name, with.testName,
-                        100 * (t / without.build.timeToDeath - 1), 100 * (t / flat.build.timeToDeath - 1),
-                        100 * (best.build.timeToDeath / without.build.timeToDeath - 1), mixName(EffectTestService.MIXES.get(bestMix)));
+                        100 * (t / without.build.durability - 1), 100 * (t / flat.build.durability - 1),
+                        100 * (best.build.durability / without.build.durability - 1), mixName(EffectTestService.MIXES.get(bestMix)));
             }
         }
     }
@@ -236,8 +239,8 @@ class EffectReportTest {
         line("## Candidatos no lugar da Armadura de Espinhos (compra #%d), contra Atirador alimentado (%.0f ms)", slot + 1, ms);
         for (int i = 0; i < cands.size(); i++) {
             EffectModel.Outcome x = o.get(i);
-            line("- %s: índice %.0f (tempo %.1f s%s, vida efetiva %.0f)%s", cands.get(i), x.index, x.build.timeToDeath,
-                    x.build.estimated ? " est." : "", x.build.effectiveHealth, Boolean.FALSE.equals(x.held) ? " — não comprado no minuto" : "");
+            line("- %s: índice %s (tempo %s, vida efetiva %.0f)%s", cands.get(i), index(x), time(x.build),
+                    x.build.effectiveHealth, Boolean.FALSE.equals(x.held) ? " — não comprado no minuto" : "");
         }
     }
 
@@ -258,6 +261,14 @@ class EffectReportTest {
             }
         });
         return sb.toString();
+    }
+
+    private static String index(EffectModel.Outcome x) {
+        return x.sustains ? "sustenta (+" + Math.round(x.build.surplus) + "/s)" : Math.round(x.index) + (x.capped ? "+" : "");
+    }
+
+    private static String time(EffectModel.Measures m) {
+        return (m.died ? "" : "> ") + String.format(Locale.ROOT, "%.1f s", m.timeToDeath);
     }
 
     private static String fmt(double v) {

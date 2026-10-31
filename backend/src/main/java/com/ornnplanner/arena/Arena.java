@@ -4253,6 +4253,7 @@ public class Arena {
             led(s.gwSource).healCut += cut;
         }
         s.r.healLost += cut;
+        s.r.healOver += Math.max(0, amount * (1 - gw) - effective);
         s.hp += effective;
         s.r.healed += effective;
         for (Map.Entry<String, Double> e : sources.entrySet()) {

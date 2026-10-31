@@ -83,7 +83,25 @@ export function weakPoints(report, outcomes) {
     .sort((a, b) => a.o.index - b.o.index);
 }
 
-/** Percent change of a time to die over another (+18 = 18% longer). */
+/** The index of an outcome as text: "sustenta", the number, or the number with + at the cap. */
+export const indexText = (o, tr, fmt) => {
+  if (o?.index == null) return '—';
+  return o.sustains ? tr('efx.sustainsShort') : `${fmt(o.index)}${o.capped ? '+' : ''}`;
+};
+
+/** The outcome measured against another one's reference (side by side, every build uses the open build's). */
+export function overReference(o, reference) {
+  if (!o?.build || !reference) return o;
+  const rate = (m) => (o.rateMode === 'bruta' ? m.netRate : m.healthRate);
+  const me = rate(o.build);
+  const ref = rate(reference);
+  if (me <= 0) return { ...o, index: ref <= 0 ? 100 : o.cap, capped: ref > 0 };
+  if (ref <= 0) return { ...o, index: null, capped: false };
+  const v = (100 * ref) / me;
+  return { ...o, index: Math.min(v, o.cap), capped: v > o.cap };
+}
+
+/** Percent change of a durability over another (+18 = 18% longer). */
 export const gain = (a, b) => (a != null && b != null && b > 0 ? 100 * (a / b - 1) : null);
 
 /** A new test ragdoll with a role's defaults (its pattern follows the role). */

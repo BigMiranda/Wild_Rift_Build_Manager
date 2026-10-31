@@ -6,7 +6,7 @@ import { BOT_STATS, ROLES, effectMeta, newBot, newTest, testKey } from '../effec
 import ItemIcon from '../components/ItemIcon.jsx';
 import ItemPicker from '../components/ShopPicker.jsx';
 import MinuteInput from '../components/MinuteInput.jsx';
-import { ReferencePicker, ttd } from '../components/EffectivenessReport.jsx';
+import { ReferencePicker, indexLabel, netRate, ttd } from '../components/EffectivenessReport.jsx';
 import { openInArena } from '../components/TestInArena.jsx';
 
 /**
@@ -298,8 +298,9 @@ function TryNow({ test }) {
       {out?.error && <p className="error">{out.error}</p>}
       {m && (
         <dl className="eff-measures">
-          <dt>{t('efx.col.index')}</dt><dd><strong>{out.index == null ? '—' : n0(out.index)}</strong> <small className="muted">({n0(out.ms)} ms)</small></dd>
+          <dt>{t('efx.col.index')}</dt><dd><strong>{indexLabel(out)}</strong> <small className="muted">({n0(out.ms)} ms)</small></dd>
           <dt>{t('efx.col.ttd')}</dt><dd>{ttd(m)} · {t('efx.col.ref')} {ttd(out.reference)}</dd>
+          <dt>{t('efx.col.net')}</dt><dd>{netRate(m)} · {t('efx.col.ref')} {netRate(out.reference)}</dd>
           <dt>{t('efx.col.ehp')}</dt><dd>{n0(m.effectiveHealth)}</dd>
           <dt>{t('efx.col.mitigated')}</dt><dd>{n0(m.mitigatedPct)}%</dd>
           <dt>{t('efx.col.shield')}</dt><dd>{n0(m.shieldAbsorbed)}</dd>

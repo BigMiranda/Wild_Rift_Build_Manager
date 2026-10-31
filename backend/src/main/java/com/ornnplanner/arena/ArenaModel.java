@@ -478,6 +478,8 @@ public final class ArenaModel {
         public double shieldAbsorbed;
         public double healed;
         public double healLost;
+        /** Healing that found the health already full: what it could still have taken. */
+        public double healOver;
         public Double deathTime;
         /** When it reached its side's safe zone alive (null = never). */
         public Double escapedAt;

@@ -77,3 +77,85 @@ a mesma referência, com a mesma Vida e o mesmo dano recebido; o atacante não m
 (120 de DdA aos 10:00, 300 aos 25:00); o Ornn sem itens morre onde a luta acontece.
 
 Testes: 217 → 220 (10 opcionais pulados). Golden sem mudança. `npm run build` limpo.
+
+## Parte 2 — Índice que não satura ✅
+
+### Taxa líquida
+
+**Taxa líquida** = (dano recebido depois das mitigações − cura − escudo absorvido) ÷ segundos da luta. A cura que encontra a Vida
+cheia entra na conta (`FighterStats.healOver`, campo novo e descritivo, fora da impressão digital do golden): é ela que dá
+a "sobra por segundo" de quem sustenta.
+
+- **Índice** = taxa da referência ÷ taxa da build × 100, com **teto de 1000**, configurável em `indice.teto`, para todo índice
+  (marcado com "+"). Se a taxa for ≤ 0, a tela mostra **"sustenta (+x/s)"** e entra como o teto no ponderado.
+- **Tempo até morrer:** o real, com "> 180 s" quando não morre. A estimativa de 900 s saiu.
+- **`durability`** (Vida ÷ taxa líquida, no máximo 5× a duração) é o número que as leituras por item e o valor medido das
+  passivas comparam, porque elas precisam de um valor também quando ninguém morre.
+- **Comparativo:** a tela recalcula pela taxa da referência aberta (`overReference`).
+
+### ⚠ Desvio do prompt: a taxa do índice é em % da Vida
+
+O prompt pede `taxa da referência ÷ taxa da build`. Com a taxa em dano por segundo, **a Vida não conta**: um item só de Vida
+não muda a taxa, e o índice dele seria 100. O resultado contradiz o tempo até morrer, contra o Atirador alimentado:
+
+| build | tempo até morrer | Vida | taxa líquida | índice em dano/s | índice em % da Vida/s |
+|---|---|---|---|---|---|
+| Manopla dos Glacinatas | 31,8 s | 4.640 | 146/s | 522 | 755 |
+| Big Carry v1 | 20,1 s | 7.326 | 374/s | 193 | 536 |
+| Soldado v8 | 17,9 s | 5.457 | 335/s | 228 | 423 |
+
+Em dano/s, o Soldado passa da Big Carry mesmo morrendo antes. É o problema "quem vive mais tem índice menor" que a 6.a já tinha
+corrigido no comparativo. Por isso o padrão é `indice.taxa: por_vida`: a taxa em % da Vida máxima de cada um por segundo. Numa
+luta até a morte, o índice fica exatamente tempo ÷ tempo da referência; sem morte, vale a taxa medida. Para seguir o prompt ao pé
+da letra, basta `taxa: bruta` no YAML. A coluna "índice bruto" do `EffectReportTest` mostra os dois.
+
+### Calibragem dos magos: nada a mudar
+
+**Conta:** o preset de 600 de PdH faz, por segundo, Combo (350 + 0,9 × 600) ÷ 5 s = 178 mais Toque (120 + 0,4 × 600) ÷ 2 s = 180,
+ou seja 358 de dano bruto. Com os 40% de penetração do Cajado contra 68 de RM, o multiplicador é 100 ÷ 141 = 0,71, o que dá 254/s
+depois da RM.
+
+Medido, sem itens de RM, em builds de fim de jogo:
+
+| cenário | Manopla dos Glacinatas | tanque de teste* |
+|---|---|---|
+| Tormento de Liandry | 19,5 s | 11,2 s |
+| Cajado do Vazio | 22,1 s | 15,2 s |
+| 1000 de PdH + Cajado | 15,5 s | 11,2 s |
+
+\* Botas Galvanizadas de Aço, Coração de Aço, Égide de Fogo Solar, Armadura de Espinhos, Presságio de Randuin e Coração Congelado
+(`EffectReferenceTest`).
+
+Todos abaixo dos 60 s pedidos, então os pulsos **não mudaram**. A Big Carry não morre contra eles porque tem RM de sobra
+(Desespero Eterno, Esmagadores, Duplaguarda) e cura 128/s. Agora isso aparece como o que é: "sustenta".
+
+### Antes e depois
+
+| cenário | Big Carry v1 | Soldado v8 | Manopla dos Glacinatas |
+|---|---|---|---|
+| Crítico | 2.163 → **1000+** | 949 | 2.843 → **1000+** |
+| Anti-tanque físico | 783 | 518 | 556 |
+| Tormento de Liandry | 9.595 → **sustenta (+14/s)** | 844 | 188 |
+| Liandry + Maldição | 8.735 → **1000+** (12/s) | 617 | 185 |
+| Cajado do Vazio | 8.671 → **sustenta (+35/s)** | 1.292 → **1000+** | 213 |
+| 1000 de PdH + Cajado | 16.729 → **sustenta (+2/s)** | 883 | 243 |
+| Misto | 5.984 → **sustenta (+41/s)** | 5.792 → **sustenta (+4/s)** | 713 |
+| Verdadeiro | 1.967 → **1000+** (30/s) | 626 | 243 |
+| Atirador alimentado | 536 | 423 | 755 |
+| Corta Cura (do usuário) | 1.311 → **1000+** | 425 | 181 |
+| **ponderado** | 5.647 → **932** | 1.237 → **729** | 612 → **428** |
+
+🎯 Nenhum índice do Básico da Big Carry passa do teto (o `EffectReportTest` confere).
+
+**A ordem faz sentido:** Big Carry (932) cobre físico e mágico e só cai contra quem mata de verdade: Atirador 536, Anti-tanque 783.
+Soldado (729) é médio em tudo, sem um cenário muito ruim. Manopla (428) é a melhor de longe contra físico puro (Atirador 755, a
+mais alta dos três) e a pior contra mágico (185 a 243), porque não tem RM. O ponderado fica assim porque 5 dos 10 cenários são
+mágicos.
+
+**Efeito colateral bom:** sem a fuga da Parte 1, a contradição da 6.a sumiu. Sem o Coração de Aço, a Big Carry dura **menos**
+contra o Atirador alimentado (+86% com o item, antes −15%).
+
+**Testes novos:** `theNetRateNeedsNoDeath` (`EffectTestsTest`); 🎯 `magesKillATankWithoutMagicResist` e
+`theIndexOfAFightToTheDeathIsTheTimeRatio` (`EffectReferenceTest`).
+
+Testes: 220 → 223 (10 opcionais pulados). Golden sem mudança. `npm run build` limpo.

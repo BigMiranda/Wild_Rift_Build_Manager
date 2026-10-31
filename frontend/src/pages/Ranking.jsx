@@ -7,7 +7,7 @@ import ItemIcon from '../components/ItemIcon.jsx';
 import MinuteInput from '../components/MinuteInput.jsx';
 import SeenByReport, { Bars, MetricControls, ehp } from '../components/SeenByReport.jsx';
 import { reportJobs, runJobs, weightedIndex } from '../effectiveness.js';
-import { ReferencePicker, ttd, useTestNames } from '../components/EffectivenessReport.jsx';
+import { ReferencePicker, indexLabel, ttd, useTestNames } from '../components/EffectivenessReport.jsx';
 
 /**
  * Ranking of builds: the builds of a folder (or picked by hand) at the same minute, either under chosen effects (the
@@ -439,7 +439,7 @@ function EffectivenessResult({ rows, report }) {
                   const o = r.outcomes?.[k];
                   return (
                     <td key={e.key} style={cell(o?.index)} title={o?.build ? `${t('efx.col.ttd')} ${ttd(o.build)} · ${t('efx.col.ref')} ${ttd(o.reference)}` : o?.error}>
-                      {o?.index == null ? '—' : n0(o.index)}
+                      {indexLabel(o)}
                     </td>
                   );
                 })}

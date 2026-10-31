@@ -120,6 +120,30 @@ class EffectReferenceTest {
         assertTrue(o.reference.timeToDeath < 6, "dead where the fight is, in " + o.reference.timeToDeath + " s");
     }
 
+    /** 🎯 The mage presets kill a late game tank with no magic resist items in less than 60 s. */
+    @Test
+    void magesKillATankWithoutMagicResist() {
+        BuildRepository.Build b = build("Botas Galvanizadas de Aço", "Coração de Aço", "Égide de Fogo Solar", "Armadura de Espinhos",
+                "Presságio de Randuin", "Coração Congelado");
+        b.goldPerMin = 3000;
+        for (String mage : List.of("liandry", "cajado_vazio", "pdh_1000_cajado")) {
+            EffectModel.Outcome o = run(b, 26, null, mage);
+            System.out.printf("%s: %.1f s, %.0f health, net %.0f/s (reference %.1f s), index %.0f%n", mage, o.build.timeToDeath, o.build.maxHealth,
+                    o.build.netRate, o.reference.timeToDeath, o.index);
+            assertTrue(o.build.died && o.build.timeToDeath < 60, mage + ": " + o.build.timeToDeath + " s");
+            assertTrue(o.index <= o.cap);
+        }
+    }
+
+    /** Every index stops at the cap, and a fight to the death gives time to die over the reference's. */
+    @Test
+    void theIndexOfAFightToTheDeathIsTheTimeRatio() {
+        EffectModel.Outcome o = run(build("Coração de Aço", "Égide de Fogo Solar"), 26, null, "atirador_alimentado");
+        assertTrue(o.build.died && o.reference.died);
+        assertEquals(100 * o.build.timeToDeath / o.reference.timeToDeath, o.index, 1e-9);
+        assertEquals(1000, o.cap, 1e-9);
+    }
+
     private static EffectModel.Test copy(EffectModel.Test t) {
         EffectModel.Test c = new EffectModel.Test();
         c.name = t.name;
