@@ -1144,6 +1144,7 @@ function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onC
           <select value={brain} onChange={(e) => onChange({ brain: e.target.value })}>
             <option value="script">{t('arena.brain.script')}</option>
             <option value="tactical">{t('arena.brain.tactical')}</option>
+            {brain === 'tactical_stand' && <option value="tactical_stand">{t('arena.brain.stand')}</option>}
             {mine.map((p) => <option key={p.id} value={`ai:${p.id}`}>{policyLabel(p)}</option>)}
             {brain.startsWith('ai:') && !mine.some((p) => `ai:${p.id}` === brain) && <option value={brain}>{t('arena.brain.missing')}</option>}
           </select>

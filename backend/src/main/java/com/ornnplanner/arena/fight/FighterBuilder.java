@@ -130,6 +130,25 @@ public class FighterBuilder {
         return resolve(c).point;
     }
 
+    /** The game minute a combatant resolves to (its own, or the build's end of match, else its last purchase). */
+    public double minuteOf(Combatant c) {
+        return resolve(c).minute;
+    }
+
+    /**
+     * The first minute of the build's timeline at the level it has at the combatant's minute: two minutes of one level
+     * give the same answer, whatever grows with the clock (Overgrowth) stays out of a comparison by level.
+     */
+    public double levelStart(Combatant c) {
+        Resolved r = resolve(c);
+        for (MinutePoint x : planner.calculate(r.build).series) {
+            if (x.level == r.level) {
+                return x.minute;
+            }
+        }
+        return r.minute;
+    }
+
     /** The champion's name of a combatant's build (decides its ability sheet). */
     public String championName(Combatant c) {
         Resolved r = resolve(c);

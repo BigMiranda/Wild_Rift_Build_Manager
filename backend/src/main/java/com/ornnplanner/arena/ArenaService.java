@@ -46,6 +46,8 @@ public class ArenaService {
     /** Up to 5 per side, 6 with clones (Wukong). */
     public static final int MAX_TEAM = 6;
     public static final double MAX_DURATION = 180;
+    /** The brain of the effectiveness fights: the tactical rules without running away. */
+    public static final String STAND = "tactical_stand";
 
     /** Cooldowns of item actives the combat file does not carry (s). */
     private static final Map<String, Double> ITEM_COOLDOWNS = Map.of(
@@ -348,6 +350,9 @@ public class ArenaService {
         }
         if ("tactical".equals(brain)) {
             return new TacticalPolicy(in.priority);
+        }
+        if (STAND.equals(brain)) {
+            return new com.ornnplanner.arena.ai.StandPolicy(in.priority);
         }
         if (brain.startsWith("ai:")) {
             long id;

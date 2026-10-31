@@ -54,6 +54,10 @@ import java.util.concurrent.Callable;
  * The index of a scenario is the build's time to die over the reference's (the same champion at the same level with
  * no items and the build's runes, another build, or a folder's mean) x 100.
  * <p>
+ * What grows with the minute: the build (its items, level and stats) and nothing else. An attacker has its fixed stats
+ * (unless its scenario says {@link Test#scalesWithMinute}) and the default reference depends only on the level: it runs at
+ * the first minute of that level. The build never runs away ({@link ArenaService#STAND}).
+ * <p>
  * Every fight is short, without frames, deterministic and cached by (build, minute, scenario, stage, variant); the
  * fights of a batch run in parallel. The screens send batches (a few scenarios at a time) to show progress and stop.
  */
@@ -92,6 +96,10 @@ public class EffectTestService {
     private Map<String, Object> rawSweepBot;
     private Bot sweepBot;
     private double sweepDuration = 180;
+    /** Scenarios that grow with the minute: the minute of the preset's full stats, and the limits of the factor. */
+    private double scaleFullMinute = 25;
+    private double scaleMin = 0.2;
+    private double scaleMax = 1.4;
     private final List<Sweep> defaultSweeps = new ArrayList<>();
     private final Map<String, Report> defaultReports = new LinkedHashMap<>();
 
@@ -126,6 +134,10 @@ public class EffectTestService {
             });
             ((Map<String, Object>) root.getOrDefault("cenarios", Map.of()))
                     .forEach((k, v) -> rawPresets.put(k, (Map<String, Object>) v));
+            Map<String, Object> scale = (Map<String, Object>) root.getOrDefault("escala_com_minuto", Map.of());
+            scaleFullMinute = num(scale.get("minuto_cheio"), scaleFullMinute);
+            scaleMin = num(scale.get("minimo"), scaleMin);
+            scaleMax = num(scale.get("maximo"), scaleMax);
             Map<String, Object> sweep = (Map<String, Object>) root.getOrDefault("varredura", Map.of());
             rawSweepBot = (Map<String, Object>) sweep.get("atacante");
             sweepDuration = num(sweep.get("duracao"), 180);
@@ -338,6 +350,8 @@ public class EffectTestService {
         BuildRepository.Build build = buildOf(req);
         String buildKey = hash(write(build)) + "@" + req.minute;
         Reference ref = req.reference == null ? new Reference() : req.reference;
+        double at = combat.minuteOf(combatant(req, build));
+        double refMinute = combat.levelStart(combatant(req, build));
         List<Outcome> out = new ArrayList<>();
         Map<String, Fight> todo = new LinkedHashMap<>();
         List<String[]> keys = new ArrayList<>();   // per job: build fight key, reference fight keys...
@@ -346,7 +360,7 @@ public class EffectTestService {
             o.tag = job.tag;
             out.add(o);
             try {
-                Test test = testOf(job);
+                Test test = scaled(testOf(job), at);
                 o.testName = test.name;
                 Variant v = job.variant == null ? new Variant() : job.variant;
                 String tk = hash(write(test));
@@ -358,9 +372,9 @@ public class EffectTestService {
                 List<String> refKeys = new ArrayList<>();
                 for (BuildRepository.Build rb : referenceBuilds(build, ref)) {
                     boolean own = rb == build;
-                    String rk = (own ? buildKey : hash(write(rb)) + "@" + req.minute) + "|" + tk + "|ref:" + (own ? "proprio" : "build");
+                    String rk = hash(write(rb)) + "@" + (own ? refMinute : req.minute) + "|" + tk + "|ref:" + (own ? "proprio" : "build");
                     refKeys.add(rk);
-                    plan(todo, rk, () -> fight(own ? noItems(build, req) : slot(rb, req.minute), test));
+                    plan(todo, rk, () -> fight(own ? noItems(build, refMinute) : slot(rb, req.minute), test));
                 }
                 List<String> all = new ArrayList<>();
                 all.add(bk);
@@ -394,7 +408,7 @@ public class EffectTestService {
     /** The arena scenario of one job (to open the fight in the Arena): the build as it is, with frames. */
     public ArenaModel.Scenario scenario(Request req, Job job) {
         BuildRepository.Build build = buildOf(req);
-        Test test = testOf(job);
+        Test test = scaled(testOf(job), combat.minuteOf(combatant(req, build)));
         ArenaModel.Scenario sc = new ArenaModel.Scenario();
         sc.name = "Efetividade: " + build.name + " × " + test.name;
         sc.duration = test.duration;
@@ -561,7 +575,7 @@ public class EffectTestService {
         s.team = 0;
         s.build = b;
         s.minute = minute;
-        s.brain = "tactical";
+        s.brain = ArenaService.STAND;
         return s;
     }
 
@@ -607,11 +621,14 @@ public class EffectTestService {
         return combat.plannerPoint(c).contributions.stream().anyMatch(ic -> !ic.rune && itemId != null && ic.itemId == itemId);
     }
 
-    /** The reference's slot: the same champion at the same minute (level) with no items, and the build's runes. */
-    private ArenaModel.Slot noItems(BuildRepository.Build build, Request req) {
-        ArenaModel.Slot s = slot(build, req.minute);
+    /** The reference's slot: the same champion at the first minute of the level, with no items and the build's runes. */
+    private ArenaModel.Slot noItems(BuildRepository.Build build, double minute) {
+        ArenaModel.Slot s = slot(build, minute);
+        FighterBuilder.Combatant c = new FighterBuilder.Combatant();
+        c.build = build;
+        c.minute = minute;
         Set<Long> all = new LinkedHashSet<>();
-        for (ItemContribution ic : combat.plannerPoint(combatant(req, build)).contributions) {
+        for (ItemContribution ic : combat.plannerPoint(c).contributions) {
             if (!ic.rune) {
                 all.add(ic.itemId);
             }
@@ -775,6 +792,24 @@ public class EffectTestService {
         return base;
     }
 
+    /** The scenario as fought at a minute: itself, or (when it grows with the minute) its attackers scaled. */
+    Test scaled(Test t, double minute) {
+        if (!t.scalesWithMinute) {
+            return t;
+        }
+        double f = Math.max(scaleMin, Math.min(scaleMax, minute / scaleFullMinute));
+        Test c = read(write(t), Test.class);
+        for (Bot b : c.attackers) {
+            b.health = Math.max(1, b.health * f);
+            b.attackDamage *= f;
+            b.stats.computeIfPresent(Stats.ABILITY_POWER, (k, v) -> v * f);
+            for (ArenaModel.Pulse p : b.pulses != null ? b.pulses : List.<ArenaModel.Pulse>of()) {
+                p.base *= f;
+            }
+        }
+        return c;
+    }
+
     /** The sweep's scenario at a stage: the reference attacker with one attribute set (or that many of it). */
     public Test sweep(Stage st) {
         if (st.dimension == null || !DIMENSIONS.contains(st.dimension)) {
@@ -928,6 +963,7 @@ public class EffectTestService {
         t.note = m.get("nota") == null ? null : String.valueOf(m.get("nota"));
         t.group = String.valueOf(m.getOrDefault("grupo", "1x1"));
         t.duration = num(m.get("duracao"), 60);
+        t.scalesWithMinute = Boolean.TRUE.equals(m.get("escala_com_minuto"));
         for (Object o : (List<Object>) m.getOrDefault("atacantes", List.of())) {
             t.attackers.add(bot((Map<String, Object>) o, ids));
         }

@@ -92,4 +92,4 @@ export const newBot = (role = 'lutador', name) => ({
   moveSpeed: 350, attackRange: null, stats: {}, items: [], pulses: null,
 });
 
-export const newTest = () => ({ id: null, key: null, name: '', note: '', group: '1x1', attackers: [newBot('lutador')], allies: [], duration: 180 });
+export const newTest = () => ({ id: null, key: null, name: '', note: '', group: '1x1', attackers: [newBot('lutador')], allies: [], duration: 180, scalesWithMinute: false });

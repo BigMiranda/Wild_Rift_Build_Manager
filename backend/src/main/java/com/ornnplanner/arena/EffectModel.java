@@ -80,6 +80,11 @@ public final class EffectModel {
         public List<Bot> allies = new ArrayList<>();
         public double duration = 60;
         public boolean preset;
+        /**
+         * The attackers grow with the build's minute (their base stats and pulses, by the seed's rule; items stay). Off
+         * by default: an attacker has its fixed stats whatever the minute tested, so builds at different minutes compare.
+         */
+        public boolean scalesWithMinute;
     }
 
     /** One stage of a sweep: a dimension of the reference attacker set to a value. */

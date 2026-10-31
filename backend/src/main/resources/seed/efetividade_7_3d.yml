@@ -1,6 +1,6 @@
 # Efetividade por cenários de teste (patch 7.3d): os presets dos cenários, as funções dos bonecos, as varreduras e os
 # relatórios padrão. Tudo roda na Arena, pelas mesmas regras da luta (sem fórmula paralela); a build testada usa o
-# cérebro Tático e os efeitos condicionais dela disparam de verdade.
+# cérebro Tático sem fuga e os efeitos condicionais dela disparam de verdade.
 #
 # Um cenário de teste é a build testada, num minuto, contra 1 a 5 bonecos atacantes, com 0 a 4 bonecos aliados, por
 # uma duração. Nenhum boneco é um campeão: a função decide só o padrão de dano e a posição. Os atacantes não morrem
@@ -24,7 +24,20 @@
 #               enfrenta (pelas resistências, penetrações e efeitos de habilidade dos itens dele, como Liandry); escudo
 #               e cura vão ao aliado com menos Vida (proporcional) no alcance, ele mesmo incluído.
 #
-# Por cenário: nome, grupo (1x1 | equipe), atacantes, aliados, duracao (s), nota.
+# Por cenário: nome, grupo (1x1 | equipe), atacantes, aliados, duracao (s), nota, escala_com_minuto.
+#
+# O que muda com o minuto testado: só a build (itens, nível, status). O atacante tem os status fixos do preset, em
+# qualquer minuto, e por isso builds em minutos diferentes se comparam. Com `escala_com_minuto: true` (desligado nos
+# presets; os cenários do usuário podem ligar) a Vida, o DdA, o PdH e a base dos pulsos dele seguem o minuto, pela regra
+# de `escala_com_minuto` abaixo; os itens não mudam.
+#
+# A referência padrão é o mesmo campeão, no mesmo nível, sem itens, com as runas da build, contra o mesmo atacante: ela
+# roda no primeiro minuto daquele nível, então dois minutos do mesmo nível têm a mesma referência (o Crescimento
+# Excessivo, que cresce com o relógio, não entra na diferença).
+#
+# A build testada usa o Tático sem fuga (`tactical_stand`): nunca recua nem usa o Flash para escapar. A Arena é uma
+# rota reta, sem para onde ir: quem foge vive até a parede, e o tempo até morrer passaria a medir a caminhada (com 400
+# de Vida a mais, o Ornn sem itens ia de 2,8 s para 20,8 s contra o mesmo atacante).
 #
 # Medidas (as mesmas para todo cenário): tempo até morrer; vida efetiva contra aquele atacante (o dano bruto recebido
 # até morrer); dano mitigado %; escudo absorvido; cura (e a perdida para Feridas Dolorosas); dano devolvido (o que a
@@ -36,6 +49,9 @@
 # Índice de efetividade: tempo até morrer ÷ tempo até morrer da referência × 100. A referência padrão é o mesmo
 # campeão, no mesmo nível, sem itens, com as runas da build.
 patch: "7.3d"
+
+# Cenários com `escala_com_minuto`: fator = minuto da build / minuto_cheio, entre minimo e maximo.
+escala_com_minuto: {minuto_cheio: 25, minimo: 0.2, maximo: 1.4}
 
 funcoes:
   atirador:

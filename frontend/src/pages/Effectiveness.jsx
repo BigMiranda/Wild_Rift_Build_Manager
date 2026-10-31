@@ -132,6 +132,9 @@ function TestEditor({ test, onChange, items, meta, readOnly }) {
               <option value="equipe">{t('efx.group.equipe')}</option>
             </select>
           </label>
+          <label className="inline" title={t('efx.scalesTitle')}>
+            <input type="checkbox" checked={!!test.scalesWithMinute} onChange={(e) => set({ scalesWithMinute: e.target.checked })} /> {t('efx.scales')}
+          </label>
         </div>
         <label className="block">{t('efx.note')}<input value={test.note ?? ''} onChange={(e) => set({ note: e.target.value })} style={{ width: '100%' }} /></label>
         {['attackers', 'allies'].map((side) => (

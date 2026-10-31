@@ -126,6 +126,7 @@ export function BasicResult({ report, outcomes, names }) {
 export function ComparativeResult({ report, series, names }) {
   return (
     <div className="table-wrap">
+      <p className="muted small">{t('efx.compareRefNote')}</p>
       <table className="data eff-table">
         <thead>
           <tr>
