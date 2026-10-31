@@ -247,6 +247,34 @@ public final class ArenaModel {
         public TeamPlan[] teams;
         /** A side's safe zone at its end of the lane (tower or fountain), or null: nowhere to run. */
         public SafeZone safeZone;
+        /** The full map ("Summoner's Rift"); null = the single lane, as every scenario saved before it. */
+        public RiftOptions rift;
+        /** What each side (blue, red) starts with from the objectives; null = nothing. */
+        public ObjectiveBuffs[] objectives;
+    }
+
+    /** A fight on the full map: what is on it, and the minute of the match it starts at. */
+    public static class RiftOptions {
+        public double minute = 10;
+        public boolean minions = true;
+        public boolean towers = true;
+        public boolean jungle = false;
+        public boolean plants = true;
+        public boolean objectives = true;
+        /** Bushes hide; off = everyone sees everyone. */
+        public boolean vision = true;
+        /** Element of the drakes (infernal, montanha, oceano, gelo). */
+        public String dragon;
+        /** The blue side goes for this objective (barao, dragao) while it lives; null = it fights the champions. */
+        public String takes;
+    }
+
+    /** Buffs of objectives: drake stacks by element, the soul, the Elder and the Hand of Baron. */
+    public static class ObjectiveBuffs {
+        public Map<String, Integer> dragons = new LinkedHashMap<>();
+        public String soul;
+        public boolean elder;
+        public boolean baron;
     }
 
     /**
@@ -416,6 +444,9 @@ public final class ArenaModel {
         public Map<String, Double> cooldowns = new LinkedHashMap<>();
         /** Charges of abilities that keep them (Rumble's harpoons). */
         public Map<String, Integer> charges;
+        /** Gold earned in the match (full map only). */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public Double gold;
         /** Active buffs / debuffs (names). */
         public List<String> marks = new ArrayList<>();
     }
@@ -442,6 +473,13 @@ public final class ArenaModel {
         /** The outline in world points: one ring, or two for a form with a hole (the second one is the hole). */
         @JsonInclude(JsonInclude.Include.NON_NULL)
         public List<double[][]> rings;
+        /** Unit of the full map: what it is, and its health. */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public String role;
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public Double hp;
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public Double maxHp;
     }
 
     public static class Frame {
@@ -487,6 +525,9 @@ public final class ArenaModel {
         /** Healing that found the health already full: what it could still have taken. */
         public double healOver;
         public Double deathTime;
+        /** Gold and experience earned on the full map. */
+        public double goldEarned;
+        public double xpEarned;
         /** When it reached its side's safe zone alive (null = never). */
         public Double escapedAt;
         public Map<String, Double> damageBySource = new LinkedHashMap<>();
@@ -655,6 +696,9 @@ public final class ArenaModel {
         public List<Event> events = new ArrayList<>();
         /** Static terrain (map walls) for drawing. */
         public List<Shape> terrain = new ArrayList<>();
+        /** The full map's drawing (walls, bushes, lanes...); null on the single lane. */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public Map<String, Object> world;
         public double mapLength;
         public double mapWidth;
         /** Orders of the timeline that could not be done (not ready, dead, out of range...), with why. */

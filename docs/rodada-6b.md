@@ -135,6 +135,40 @@ Produzi `docs/dados-mapa-objetivos.md`, `seed/mapa_7_3d.yml` e `seed/objetivos_7
 
 Testes: 294 → 295 (11 opcionais pulados). `npm run build` limpo (sem mudança de tela).
 
+## Parte 4 — O mapa completo na Arena ✅
+
+**Mapa por cenário:** `Scenario.rift` (`RiftOptions`) escolhe "Summoner's Rift"; sem ele é a "Rota única", e cenários salvos abrem iguais.
+
+- **`arena/rift/RiftMap`:** grade de 100 unidades com as paredes (lado azul + espelho), A* com cortes de canto proibidos, caminho puxado em linha reta e cache. Compartilhado e só de leitura.
+- **`arena/rift/RiftRules`:** leitura de `objetivos_7_3d.yml`, com a composição das ondas e o dano da torre no tempo.
+- **Unidades:** tropas, torres, Nexo, monstros, plantas e objetivos são unidades reais da Arena (`role`), fora do placar, pelo mesmo `deal` das lutas.
+
+| sistema | o que faz |
+|---|---|
+| Movimento | caminho por A* em volta das paredes; avanços e empurrões param na parede; salto nunca termina dentro dela |
+| Visão | moita esconde de quem está fora, atacar mostra por 1 s, Clarevidente revela; a IA só mira o que vê |
+| Tropas | ondas nos tempos, andam pela rota, alvo: quem chamou, tropa, estrutura, campeão. O último golpe dá ouro, e a XP se divide entre os campeões por perto |
+| Torres | prioridade à tropa, troca para o campeão que bate num campeão aliado, 100/150/210/270%, placas, defesa do início, Anti-Backdoor |
+| Selva | acampamentos com renascimento; atacam quem os atacou e voltam para casa curando; buffs Azul e Vermelho |
+| Plantas | Frutomel cura, pinstouro arremessa quem bateu, Clarevidente revela |
+| Objetivos | Barão com Corrosão, Olhar, Veneno no fosso e ciclo de habilidades; dragões, alma e Ancião; o último golpe dá o buff ao time |
+
+**Buffs de objetivo:** cada lado pode começar com acúmulos, alma, Ancião e Mão do Barão (`Scenario.objectives`). No planejador, o seletor "Objetivos" fica acima da ficha: muda a ficha e a barra, entra nas lutas da Efetividade (`Request.objectives`) e aparece no relatório de relevância como fonte própria.
+
+**Cenários-modelo (`GET /api/arena/templates`, "Novo a partir de um modelo"):** x1 nas três rotas (na rota, sob a torre aliada, sob a inimiga), luta no rio pelo Aronguejo e com a dupla do Dragão, luta de equipe no Barão, com o azul fazendo o Barão, e no Dragão.
+
+**Tela:** paredes, moitas, rio, fossos, fontes, torres com a vida, tropas em pontos, monstros, plantas e objetivos; o zoom e o seguir já existentes; "Ver tudo".
+
+**Decisões e limites:**
+- **Foco do campeão:** com inimigo a mais de 1.500, ele luta com o que está à mão a até 800 (tropas, depois estruturas). Sem isso, um campeão em cenário de rota atravessava o mapa atrás do outro.
+- **Sem subir de nível dentro da luta.** Os status ficam os da build no minuto; ouro e XP são somados no resultado. Quem evolui é a partida da Parte 5.
+- **Modelado de forma simples:** o gelo como alma não tem efeito, o Ancião só guarda a duração (a queimadura e a execução não entram), e o Barão não muda de lado pelo ataque de costas. Mão do Barão nas tropas fica de fora.
+- **Rift de elemento** (mudar o mapa pelo primeiro dragão) ficou de fora.
+
+**Desempenho 🎯:** "Rota única", duelos até a morte, 1 thread: `main` 12.366 → agora 10.504 s simulados por s (−15%, dentro dos 30%). Mapa novo, 5 contra 5 com tudo ligado: 65 s simulados por s, uma luta de 60 s em cerca de 1 s.
+
+**Testes:** `RiftTest`, 16 mais o benchmark opcional: lugares alcançáveis a pé, rotas livres, caminho, ondas nos tempos, último golpe, torre, selva, moita, Barão, buffs e determinismo. Golden sem mudança. Testes: 295 → 312 (12 opcionais pulados). `npm run build` limpo.
+
 ## Para o usuário
 
 **Prints, por prioridade:**

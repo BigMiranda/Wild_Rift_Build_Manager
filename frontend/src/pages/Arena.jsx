@@ -1,5 +1,6 @@
 import { Fragment, Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
+import ObjectivesPicker from '../components/ObjectivesPicker.jsx';
 import ItemPicker from '../components/ShopPicker.jsx';
 import { t } from '../i18n.js';
 import { n0, n1 } from '../format.js';
@@ -57,7 +58,47 @@ export function frameAt(result, time) {
   return result.frames[i];
 }
 
+/** The map of a scenario: what is on the full map, the minute, and what each side starts with. */
+function MapChoice({ sc, set, templates, onTemplate }) {
+  const rift = sc.rift;
+  const setRift = (patch) => set({ rift: { ...rift, ...patch } });
+  const objectives = sc.objectives ?? [null, null];
+  const setObjectives = (team, v) => set({ objectives: team === 0 ? [v, objectives[1]] : [objectives[0], v] });
+  return (
+    <details className="arena-map-choice">
+      <summary>{t('arena.map')}: {rift ? t('arena.map.rift') : t('arena.map.lane')}</summary>
+      <div className="row">
+        <select value={rift ? 'rift' : 'lane'} aria-label={t('arena.map')}
+          onChange={(e) => set({ rift: e.target.value === 'rift' ? { minute: 10, minions: true, towers: true, jungle: false, plants: true, objectives: true, vision: true } : null })}>
+          <option value="lane">{t('arena.map.lane')}</option>
+          <option value="rift">{t('arena.map.rift')}</option>
+        </select>
+        <select value="" aria-label={t('arena.template')} onChange={(e) => e.target.value && onTemplate(e.target.value)}>
+          <option value="">{t('arena.template')}</option>
+          {templates.map((x) => <option key={x.key} value={x.key}>{x.name}</option>)}
+        </select>
+      </div>
+      {rift && (
+        <div className="row">
+          <label className="inline">{t('arena.map.minute')}<input type="number" min={0} max={40} value={rift.minute} style={{ width: 64 }}
+            onChange={(e) => setRift({ minute: Number(e.target.value) || 0 })} /></label>
+          {['minions', 'towers', 'jungle', 'plants', 'objectives', 'vision'].map((k) => (
+            <label key={k} className="check"><input type="checkbox" checked={rift[k]} onChange={(e) => setRift({ [k]: e.target.checked })} />{t(`arena.map.${k}`)}</label>
+          ))}
+        </div>
+      )}
+      {[0, 1].map((team) => (
+        <div key={team}>
+          <small style={{ color: TEAM[team] }}>{t(`report.team${team}`)}</small>
+          <ObjectivesPicker value={objectives[team]} onChange={(v) => setObjectives(team, v)} compact />
+        </div>
+      ))}
+    </details>
+  );
+}
+
 export default function Arena() {
+  const [templates, setTemplates] = useState([]);
   const [builds, setBuilds] = useState([]);
   const [saved, setSaved] = useState([]);
   const [sc, setSc] = useState(() => loadDraft() ?? emptyScenario());
@@ -116,6 +157,7 @@ export default function Arena() {
   useEffect(() => {
     api.get('/api/builds').then(setBuilds).catch((e) => setError(e.message));
     api.get('/api/arena/scenarios').then(setSaved).catch(() => {});
+    api.get('/api/arena/templates').then(setTemplates).catch(() => {});
     loadPolicies();
   }, []);
   useEffect(() => {
@@ -327,6 +369,15 @@ export default function Arena() {
             </>
           )}
         </div>
+        <MapChoice sc={sc} set={set} templates={templates}
+          onTemplate={(key) => {
+            const m = templates.find((x) => x.key === key);
+            if (m) {
+              setSc({ ...emptyScenario(), ...m.scenario, fighters: m.scenario.fighters.map((f) => ({ ...f, priority: f.priority ?? ['R', '3', '1', '2'] })) });
+              setTime(0);
+              setMessage(m.note);
+            }
+          }} />
         <div className="arena-sides">
           {[0, 1].map((team) => (
             <div key={team} className={`arena-side team-${team}`}>
@@ -1436,6 +1487,7 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick, onSe
   const svgRef = useRef(null);
   const [hover, setHover] = useState(null);
   const [follow, setFollow] = useState(true);
+  const [seeAll, setSeeAll] = useState(true);
   if (!result || !frame) {
     return <div className="arena-map empty muted">{t('arena.noRun')}</div>;
   }
@@ -1443,11 +1495,15 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick, onSe
   const W = 1000;
   const alive = frame.units.filter((u) => u.state !== 'dead');
   const xs = (alive.length ? alive : frame.units).map((u) => u.x);
-  const span = follow ? Math.max(2200, Math.max(...xs) - Math.min(...xs) + 1200) : result.mapLength;
+  const world = result.world;
+  const ys = (alive.length ? alive : frame.units).map((u) => u.y);
+  const worldSpan = Math.max(2400, Math.max(Math.max(...xs) - Math.min(...xs), (Math.max(...ys) - Math.min(...ys)) * (W / H)) + 1400);
+  const span = world ? (follow ? Math.min(world.size, worldSpan) : world.size) : follow ? Math.max(2200, Math.max(...xs) - Math.min(...xs) + 1200) : result.mapLength;
   const cx = follow ? (Math.max(...xs) + Math.min(...xs)) / 2 : result.mapLength / 2;
+  const cy = world && follow ? (Math.max(...ys) + Math.min(...ys)) / 2 : world ? world.size / 2 : 0;
   const vw = span;
-  const vh = Math.max(result.mapWidth + 300, (span * H) / W);
-  const view = `${cx - vw / 2} ${-vh / 2} ${vw} ${vh}`;
+  const vh = world ? (span * H) / W : Math.max(result.mapWidth + 300, (span * H) / W);
+  const view = `${cx - vw / 2} ${-cy - vh / 2} ${vw} ${vh}`;
   const toWorld = (ev) => {
     const pt = svgRef.current.createSVGPoint();
     pt.x = ev.clientX;
@@ -1504,6 +1560,7 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick, onSe
     <div className="arena-map">
       <div className="row arena-map-tools">
         <label className="check"><input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} />{t('arena.follow')}</label>
+        {world && <label className="check"><input type="checkbox" checked={seeAll} onChange={(e) => setSeeAll(e.target.checked)} />{t('arena.seeAll')}</label>}
         {pickPoint != null && <small className="warn">{t('arena.pickHint')}</small>}
         {paused && <small className="muted">{t('arena.hoverHint')}</small>}
       </div>
@@ -1511,17 +1568,21 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick, onSe
         onMouseMove={onMove} onMouseLeave={() => setHover(null)} onClick={onClick}
         style={{ cursor: pickPoint != null ? 'crosshair' : 'pointer' }}>
         <g transform="scale(1,-1)">
-          <rect x={0} y={-result.mapWidth / 2} width={result.mapLength} height={result.mapWidth} className="arena-lane" />
-          {[0, 1].map((team) => (
-            <circle key={team} cx={team === 0 ? 500 : result.mapLength - 500} cy={0} r={180} fill={TEAM_SOFT[team]} stroke={TEAM[team]} strokeWidth={8} />
-          ))}
+          {world ? <RiftGround world={world} /> : (
+            <>
+              <rect x={0} y={-result.mapWidth / 2} width={result.mapLength} height={result.mapWidth} className="arena-lane" />
+              {[0, 1].map((team) => (
+                <circle key={team} cx={team === 0 ? 500 : result.mapLength - 500} cy={0} r={180} fill={TEAM_SOFT[team]} stroke={TEAM[team]} strokeWidth={8} />
+              ))}
+            </>
+          )}
           {(result.terrain ?? []).filter((s) => s.id === 'zona-segura').map((s) => (
             <rect key={s.id} x={s.x - s.length / 2} y={-s.width / 2} width={s.length} height={s.width} fill={TEAM_SOFT[s.team] ?? 'none'}
               stroke={TEAM[s.team]} strokeDasharray="40 30" strokeWidth={10}><title>{s.label}</title></rect>
           ))}
           {frame.shapes.map((s) => <ShapeView key={s.id} s={s} lit={lit(s)} />)}
-          {frame.units.map((u, i) => <UnitView key={i} u={u} i={i} name={names[i]} team={result.fighters[i]?.team ?? 0} span={span}
-            lit={highlight?.fighter === i} />)}
+          {frame.units.map((u, i) => ((seeAll || !u.invisible) ? <UnitView key={i} u={u} i={i} name={names[i]} team={result.fighters[i]?.team ?? 0} span={span}
+            lit={highlight?.fighter === i} /> : null))}
         </g>
       </svg>
       {hover && (
@@ -1594,10 +1655,34 @@ function shapeOwner(s, result) {
   return { fighter: fi, key: use?.key ?? null };
 }
 
+/** The ground of the full map: river, walls, bushes, pits and fountains. */
+function RiftGround({ world }) {
+  const [a, b] = world.river;
+  return (
+    <>
+      <rect x={0} y={0} width={world.size} height={world.size} className="arena-lane" />
+      <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="rgba(90,150,200,.25)" strokeWidth={world.riverWidth} />
+      {world.walls.map((w, i) => <polygon key={i} points={w.map((p) => p.join(',')).join(' ')} fill="#2b3a33" stroke="#1a241f" strokeWidth={10} />)}
+      {world.bushes.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={p[2]} fill="rgba(70,140,80,.45)" />)}
+      {[world.baronPit, world.dragonPit].map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={p[2]} fill="none" stroke="#9a8f7a" strokeDasharray="30 20" strokeWidth={8} />)}
+      {world.fountains.map((f, i) => <circle key={i} cx={f[0]} cy={f[1]} r={f[2]} fill={TEAM_SOFT[i]} />)}
+    </>
+  );
+}
+
 function ShapeView({ s, lit }) {
   const color = lit ? '#ffffff' : s.team < 0 ? '#9a8f7a' : TEAM[s.team];
   const fill = s.team < 0 ? 'rgba(154,143,122,.6)' : TEAM_SOFT[s.team];
   const sw = lit ? 18 : 6;
+  if (s.role) {
+    const bar = s.role === 'torre' || s.role === 'nexo' || s.role === 'objetivo';
+    return (
+      <g>
+        <circle cx={s.x} cy={s.y} r={s.radius ?? 20} fill={s.role === 'tropa' ? color : fill} stroke={color} strokeWidth={s.role === 'tropa' ? 0 : 8} />
+        {bar && s.maxHp > 0 && <rect x={s.x - 110} y={s.y + (s.radius ?? 20) + 24} width={(220 * s.hp) / s.maxHp} height={24} fill={color} />}
+      </g>
+    );
+  }
   if (s.kind === 'zone') {
     // Zones of one ability differ by outline and fill: the first is solid, the next ones dashed and lighter.
     const d = (s.rings ?? []).map((r) => `M ${r.map((p) => p.join(' ')).join(' L ')} Z`).join(' ');

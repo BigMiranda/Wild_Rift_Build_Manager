@@ -65,13 +65,17 @@ public class ArenaService {
     private final AutoBrain auto;
     private final Map<String, Object> kits = new LinkedHashMap<>();
     private final Map<String, Object> map = new LinkedHashMap<>();
+    private final com.ornnplanner.arena.rift.RiftMap rift;
+    private final com.ornnplanner.arena.rift.RiftRules rules;
     private static final ObjectMapper JSON = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @SuppressWarnings("unchecked")
     public ArenaService(FighterBuilder combat, CombatCatalog catalog, BuildRepository builds, RuneCatalog runes,
                         JdbcTemplate jdbc, PolicyRepository policies, ComboRepository combos, AutoBrain auto,
-                        @Value("${planner.seed.kits:classpath:seed/kits_7_3d.yml}") Resource kitsFile) {
+                        @Value("${planner.seed.kits:classpath:seed/kits_7_3d.yml}") Resource kitsFile,
+                        @Value("${planner.seed.rift:classpath:seed/mapa_7_3d.yml}") Resource riftFile,
+                        @Value("${planner.seed.objectives:classpath:seed/objetivos_7_3d.yml}") Resource rulesFile) {
         this.combat = combat;
         this.catalog = catalog;
         this.builds = builds;
@@ -80,6 +84,8 @@ public class ArenaService {
         this.policies = policies;
         this.combos = combos;
         this.auto = auto;
+        this.rift = com.ornnplanner.arena.rift.RiftMap.load(riftFile);
+        this.rules = com.ornnplanner.arena.rift.RiftRules.load(rulesFile);
         try (InputStream in = kitsFile.getInputStream()) {
             Map<String, Object> root = new Yaml().load(in);
             kits.putAll((Map<String, Object>) root.get("campeoes"));
@@ -104,7 +110,7 @@ public class ArenaService {
     /** The fight, written to the history of the AIs that played it. */
     public ArenaModel.Result run(Scenario sc, String source) {
         List<Arena.Input> inputs = prepare(sc);
-        ArenaModel.Result r = new Arena(catalog, map).withSafeZone(sc.safeZone).run(inputs, sc.actions == null ? List.of() : sc.actions, duration(sc));
+        ArenaModel.Result r = arena(sc).run(inputs, sc.actions == null ? List.of() : sc.actions, duration(sc));
         for (Arena.Input in : inputs) {
             if (in.autoChoice != null) {
                 r.brainChoices.add(in.autoChoice);
@@ -112,6 +118,19 @@ public class ArenaService {
         }
         auto.record(sc, inputs, r, source);
         return r;
+    }
+
+    /** The arena of a scenario: its map, safe zone and objectives. */
+    private Arena arena(Scenario sc) {
+        return new Arena(catalog, map).withSafeZone(sc.safeZone).withRift(rift, rules, sc.rift).withObjectives(rules, sc.objectives);
+    }
+
+    public com.ornnplanner.arena.rift.RiftMap riftMap() {
+        return rift;
+    }
+
+    public com.ornnplanner.arena.rift.RiftRules riftRules() {
+        return rules;
     }
 
     /** What the automatic brain would pick for each slot that has it, without running the fight. */
@@ -172,7 +191,7 @@ public class ArenaService {
 
     /** The same with orders of the timeline. */
     public ArenaModel.Result runInputs(List<Arena.Input> inputs, List<ArenaModel.Action> actions, double duration) {
-        return new Arena(catalog, map).withoutFrames().stopWhenDead(0).run(inputs, actions, duration);
+        return new Arena(catalog, map).withObjectives(rules, null).withoutFrames().stopWhenDead(0).run(inputs, actions, duration);
     }
 
     /**
@@ -181,7 +200,7 @@ public class ArenaService {
      */
     public List<ArenaModel.Action> recordOrders(List<Arena.Input> inputs, double duration) {
         List<ArenaModel.Action> out = new ArrayList<>();
-        for (ArenaModel.Action a : new Arena(catalog, map).withoutFrames().recordOrders().holdAtOne(0).run(inputs, List.of(), duration).policyOrders) {
+        for (ArenaModel.Action a : new Arena(catalog, map).withObjectives(rules, null).withoutFrames().recordOrders().holdAtOne(0).run(inputs, List.of(), duration).policyOrders) {
             if (a.fighter == 0) {
                 out.add(a);
             }
@@ -192,8 +211,7 @@ public class ArenaService {
     /** The same fight without frames (numbers only). */
     public ArenaModel.Result runQuiet(Scenario sc) {
         List<Arena.Input> inputs = prepare(sc);
-        return new Arena(catalog, map).withSafeZone(sc.safeZone).withoutFrames()
-                .run(inputs, sc.actions == null ? List.of() : sc.actions, duration(sc));
+        return arena(sc).withoutFrames().run(inputs, sc.actions == null ? List.of() : sc.actions, duration(sc));
     }
 
     /**
@@ -225,7 +243,7 @@ public class ArenaService {
                 v.item = item.getKey();
                 v.itemId = item.getValue();
                 rows.add(v);
-                runs.add(() -> new Arena(catalog, map).withSafeZone(without.safeZone).withoutFrames()
+                runs.add(() -> arena(without).withoutFrames()
                         .run(inputs, without.actions == null ? List.of() : without.actions, duration(without)));
             }
         }
@@ -346,13 +364,14 @@ public class ArenaService {
             in.team = plan(sc, slot.team);
             in.followTeam = slot.followTeam;
             in.autoAbilities = slot.autoAbilities;
+            in.objectives = build.objectives;
             if (slot.priority != null && !slot.priority.isEmpty()) {
                 in.priority = new ArrayList<>(slot.priority);
             }
             in.combos = combos.forPolicy(in.f.champion, null);   // the library's active combos, best first
             in.policy = policy(slot.brain, in);
             in.baseAttackSpeed = f.baseAttackSpeed > 0 ? f.baseAttackSpeed : 0.7;
-            double[] start = start(slot.team, perTeam[slot.team]++, ofTeam[slot.team]);
+            double[] start = sc.rift != null ? riftStart(slot.team, perTeam[slot.team]++) : start(slot.team, perTeam[slot.team]++, ofTeam[slot.team]);
             in.x = slot.x != null ? slot.x : start[0];
             in.y = slot.y != null ? slot.y : start[1];
             for (String item : f.items.keySet()) {
@@ -578,6 +597,12 @@ public class ArenaService {
         s.base = base;
         s.growth = 0.0;
         return s;
+    }
+
+    /** Default start on the full map: by the side's fountain. */
+    private double[] riftStart(int team, int k) {
+        double[] f = team == 0 ? rift.fountainBlue : rift.fountainRed;
+        return new double[] {f[0] + (team == 0 ? 1 : -1) * (500 + 120 * k), f[1] + (team == 0 ? 1 : -1) * 300};
     }
 
     /** Default start: next to the side's Nexus, side by side. */

@@ -118,6 +118,8 @@ public class Arena {
         public Double startAirborne;
         /** Drills: the fighter (index) whose own mark is on this one at the start (Brittle, bolts, marks, bleed). */
         public Integer markedBy;
+        /** What it starts with from the objectives (null = nothing). */
+        public ArenaModel.ObjectiveBuffs objectives;
 
         /**
          * A shallow copy (same fighter, sheet and build effects, which a run only reads): to change the start or the
@@ -148,6 +150,7 @@ public class Arena {
             c.startResource = startResource;
             c.startAirborne = startAirborne;
             c.markedBy = markedBy;
+            c.objectives = objectives;
             return c;
         }
     }
@@ -329,6 +332,46 @@ public class Arena {
         String kitForm;
         /** Stats taken or given for a while: {stat, amount, until}. */
         final List<Object[]> statMods = new ArrayList<>();
+        /** Not a fighter of the scoreboard: a summon, or a unit of the map (see {@link #role}). */
+        boolean npc;
+        /** Unit of the full map: tropa | torre | nexo | monstro | planta | objetivo; null otherwise. */
+        String role;
+        /** What it is by the rules (minion kind, camp, objective) and its lane. */
+        String kind;
+        String lane;
+        /** Where it walks (its lane, from its side) and the point it goes to now; where a monster goes back to. */
+        double[][] route;
+        int routeAt;
+        double homeX;
+        double homeY;
+        /** Its current target as a unit of the map, the champion that drew it, and when it looks again. */
+        U aim;
+        U called;
+        double calledUntil = -1;
+        double lookAt;
+        /** Tower: hits in a row on its aim; plates left; health at which the next one falls. */
+        int streak;
+        int plates;
+        /** Objective: basic attacks since its last ability. */
+        int cycle;
+        /** Baron's Gaze on this champion, its corrosion and the poison's next tick. */
+        double gazeUntil = -1;
+        double corrosion;
+        double corrosionUntil = -1;
+        double poisonUntil = -1;
+        double nextPoison;
+        /** Gold and experience of the match (the full map). */
+        double gold;
+        double xp;
+        /** The bush it is hidden in, and until when an attack shows it. */
+        boolean hidden;
+        double shownUntil = -1;
+        double lastStruck = -100;
+        /** Way around the walls, by goal. */
+        double[][] path;
+        int pathAt;
+        double pathX;
+        double pathY;
         /** A summon: who summoned it, its sheet and when it goes (null owner = a champion). */
         U owner;
         Map<String, Object> summon;
@@ -336,6 +379,11 @@ public class Arena {
         /** Attached to an ally: it stays with it, and nobody can target it. */
         U attachedTo;
         double attachedUntil = -1;
+        /** The dragon's soul of its side, when it may act again, and the buffs of the Elder and of Baron. */
+        String soul;
+        double soulReady;
+        double elderUntil = -1;
+        double baronUntil = -1;
         /** Where it was over the last seconds ({t, x, y, hp}, every 0.1s): only with an ability that goes back in time. */
         java.util.ArrayDeque<double[]> past;
         double nextPast;
@@ -381,7 +429,7 @@ public class Arena {
         }
 
         boolean visible() {
-            return now >= invisibleUntil;
+            return now >= invisibleUntil && !hidden;
         }
 
         boolean canAct() {
@@ -709,6 +757,18 @@ public class Arena {
 
     private final CombatCatalog catalog;
     private final Map<String, Object> map;
+    private com.ornnplanner.arena.rift.RiftMap rift;
+    private com.ornnplanner.arena.rift.RiftRules rules;
+    private ArenaModel.RiftOptions riftOptions;
+    private ArenaModel.ObjectiveBuffs[] objectives;
+    /** The team whose Nexus fell (-1 = none). */
+    private int nexusDown = -1;
+    private final int[] waves = new int[1];
+    private boolean firstBlood;
+    private final boolean[][] baseTowerDown = new boolean[2][3];
+    private double nextGold;
+    private double nextSight;
+    private final Map<String, double[]> revealed = new LinkedHashMap<>();
     private final List<U> units = new ArrayList<>();
     /** Each side's plan and shared target (blue, red). */
     private final Side[] sides = {new Side(), new Side()};
@@ -729,6 +789,8 @@ public class Arena {
     private long zoneIds;
     private double now;
     private double halfWidth;
+    /** The middle of the map across (0 on the lane). */
+    private double midY;
     private double length;
     /** Time limit of the run (s). */
     private double duration;
@@ -742,6 +804,21 @@ public class Arena {
     public Arena(CombatCatalog catalog, Map<String, Object> map) {
         this.catalog = catalog;
         this.map = map;
+    }
+
+    /** On the full map (null = the single lane): see {@link ArenaModel.RiftOptions}. */
+    public Arena withRift(com.ornnplanner.arena.rift.RiftMap geometry, com.ornnplanner.arena.rift.RiftRules matchRules, ArenaModel.RiftOptions options) {
+        rift = options == null ? null : geometry;
+        rules = matchRules;
+        riftOptions = options;
+        return this;
+    }
+
+    /** What each side starts with from the objectives (null = nothing): see {@link ArenaModel.ObjectiveBuffs}. */
+    public Arena withObjectives(com.ornnplanner.arena.rift.RiftRules matchRules, ArenaModel.ObjectiveBuffs[] buffs) {
+        rules = matchRules;
+        objectives = buffs;
+        return this;
     }
 
     public Arena withoutFrames() {
@@ -793,6 +870,12 @@ public class Arena {
         this.duration = duration;
         length = num(map.get("comprimento"), 10000);
         halfWidth = num(map.get("largura"), 1100) / 2;
+        if (rift != null) {
+            length = rift.size;
+            halfWidth = rift.size / 2;
+            midY = rift.size / 2;
+            result.world = rift.drawing();
+        }
         result.mapLength = length;
         result.mapWidth = halfWidth * 2;
         result.frameEvery = FRAME_EVERY;
@@ -850,6 +933,10 @@ public class Arena {
                 });
             }
         }
+        startObjectives();
+        if (rift != null) {
+            startRift();
+        }
         double nextFrame = 0;
         for (now = 0; now <= duration + 1e-9; now += DT) {
             if (!newSummons.isEmpty()) {
@@ -874,6 +961,9 @@ public class Arena {
             tickFields();
             tickZones();
             tickMechanics();
+            if (rift != null) {
+                tickRift();
+            }
             tickPeriodic();
             tickSafeZone();
             trackEvents();
@@ -883,6 +973,11 @@ public class Arena {
             }
             int a = alive(0);
             int b = alive(1);
+            if (nexusDown >= 0) {
+                result.winner = 1 - nexusDown;
+                frame();
+                break;
+            }
             if (stopWhenDead != null && stopWhenDead < units.size() && units.get(stopWhenDead).dead) {
                 result.winner = units.get(stopWhenDead).team() == 0 ? 1 : 0;
                 frame();
@@ -910,7 +1005,7 @@ public class Arena {
                 mergeSummon(u);
             }
         }
-        units.removeIf(u -> u.owner != null);
+        units.removeIf(u -> u.npc);
         for (U u : units) {
             u.r.eventSummary = ArenaEvents.summary(u.r.events);
             for (String slot : ActionSpace.SLOTS) {
@@ -922,6 +1017,8 @@ public class Arena {
                 result.skipped.add(new Event(a.time, u.idx, describe(a) + ": não foi possível até o fim da luta"));
             }
             u.r.health = Math.max(0, u.hp);
+            u.r.goldEarned = round(u.gold);
+            u.r.xpEarned = round(u.xp);
             result.fighters.add(u.r);
         }
         if (safeZone != null) {
@@ -929,8 +1026,10 @@ public class Arena {
             result.terrain.add(rect("zona-segura", "Zona segura" + (safeZone.damagePerSecond > 0 ? " (torre)" : ""),
                     safeZone.team, cx, 0, safeZone.depth, halfWidth * 2, 0));
         }
-        result.terrain.add(rect("wall-top", "Parede", -1, length / 2, halfWidth + 50, length, 100, 0));
-        result.terrain.add(rect("wall-bottom", "Parede", -1, length / 2, -halfWidth - 50, length, 100, 0));
+        if (rift == null) {
+            result.terrain.add(rect("wall-top", "Parede", -1, length / 2, halfWidth + 50, length, 100, 0));
+            result.terrain.add(rect("wall-bottom", "Parede", -1, length / 2, -halfWidth - 50, length, 100, 0));
+        }
         result.ledger.addAll(ledger.values());
         return result;
     }
@@ -1034,6 +1133,12 @@ public class Arena {
         }
         if (now < u.walkUntil && u.forced == null) {
             forcedWalk(u);
+            return;
+        }
+        if (u.role != null) {
+            if (u.canAct() && now >= u.busyUntil) {
+                riftStep(u);
+            }
             return;
         }
         if (u.owner != null) {
@@ -1281,7 +1386,7 @@ public class Arena {
         }
         ax /= d;
         ay /= d;
-        if (Math.abs(u.y) >= halfWidth - u.radius() - 5 && ay * u.y > 0) {
+        if (Math.abs(u.y - midY) >= halfWidth - u.radius() - 5 && ay * (u.y - midY) > 0) {
             // against the wall: run along it instead
             return new double[] {Math.abs(ax) < 1e-6 ? (u.team() == 0 ? -1 : 1) : Math.signum(ax), 0};
         }
@@ -1328,7 +1433,7 @@ public class Arena {
         double nx = -threat[1];
         double ny = threat[0];
         double side = (u.x - threat[2]) * nx + (u.y - threat[3]) * ny >= 0 ? 1 : -1;
-        if (Math.abs(u.y + ny * side * 60) > halfWidth - u.radius()) {
+        if (Math.abs(u.y + ny * side * 60 - midY) > halfWidth - u.radius()) {
             side = -side;
         }
         moveTo(u, u.x + nx * side * 100, u.y + ny * side * 100, u.moveSpeed() * DT);
@@ -1426,7 +1531,7 @@ public class Arena {
             if (others == null) {
                 others = new ArrayList<>();
                 for (U e : units) {
-                    if (e != target && e.team() != u.team() && e.targetable() && e.visible()) {
+                    if (e != target && e.team() != u.team() && e.targetable() && e.visible() && !e.npc) {
                         others.add(e);
                     }
                 }
@@ -1621,7 +1726,7 @@ public class Arena {
             s.activeReady[k] = now >= u.ready.getOrDefault(u.actives.get(k), 0.0) - 1e-9;
             s.activeKind[k] = activeKind(u, u.actives.get(k));
         }
-        s.wallDistance = Math.max(0, halfWidth - Math.abs(u.y));
+        s.wallDistance = Math.max(0, halfWidth - Math.abs(u.y - midY));
         double[] threat = turn.threat();
         s.threatTime = threat == null ? Double.POSITIVE_INFINITY : threat[4];
         for (int k = 0; k < ActionSpace.ENEMIES; k++) {
@@ -1797,7 +1902,7 @@ public class Arena {
         for (double d = 20; d <= range + 1e-6; d += 20) {
             double x = u.x + Math.cos(angle) * d;
             double y = u.y + Math.sin(angle) * d;
-            if (Math.abs(y) > halfWidth - r || x < 0 || x > length || blocked(x, y, r)) {
+            if (Math.abs(y - midY) > halfWidth - r || x < 0 || x > length || blocked(x, y, r)) {
                 return new double[] {u.x + Math.cos(angle) * (d - 20), u.y + Math.sin(angle) * (d - 20), d - 20};
             }
         }
@@ -2114,6 +2219,13 @@ public class Arena {
         if (u.focus != null && !u.focus.dead && u.focus.targetable() && u.focus.visible()) {
             return u.focus;
         }
+        if (rift != null && riftOptions.takes != null && u.team() == 0 && !u.npc) {
+            for (U e : units) {
+                if (riftOptions.takes.equals(e.kind) && !e.dead) {
+                    return e;
+                }
+            }
+        }
         if (u.in.followTeam && sides[u.team()].plan != null) {
             U t = teamTarget(u);
             if (t != null) {
@@ -2128,10 +2240,26 @@ public class Arena {
         }
         U best = null;
         for (U e : units) {
-            if (e.team() != u.team() && e.targetable() && e.visible()
+            if (e.team() != u.team() && e.targetable() && e.visible() && (rift == null || !e.npc)
                     && (best == null || dist(u.x, u.y, e.x, e.y) < dist(u.x, u.y, best.x, best.y))) {
                 best = e;
             }
+        }
+        // on the full map, with no champion around it fights what is at hand: minions, then structures
+        if (rift != null && (best == null || dist(u.x, u.y, best.x, best.y) > CHAMPION_INTEREST)) {
+            U near = null;
+            double rank = 0;
+            for (U e : units) {
+                double d = dist(u.x, u.y, e.x, e.y);
+                if (e.npc && e.team() != u.team() && e.team() < 2 && e.targetable() && e.visible() && d <= LANE_INTEREST) {
+                    double r = d + ("tropa".equals(e.role) ? 0 : LANE_INTEREST);
+                    if (near == null || r < rank) {
+                        near = e;
+                        rank = r;
+                    }
+                }
+            }
+            return near != null ? near : best;
         }
         return best;
     }
@@ -2178,7 +2306,7 @@ public class Arena {
     }
 
     private static boolean aimable(U u, U e) {
-        return e.team() != u.team() && !e.dead && e.targetable() && e.visible();
+        return e.team() != u.team() && !e.dead && e.targetable() && e.visible() && !e.npc;
     }
 
     /**
@@ -3471,7 +3599,7 @@ public class Arena {
         // Into a wall within reach: the target is slammed and stunned; else pushed and briefly stunned.
         double ex = t.x + Math.cos(a) * (push + wallAt);
         double ey = t.y + Math.sin(a) * (push + wallAt);
-        boolean hitsWall = Math.abs(ey) > halfWidth - t.radius() || ex < 0 || ex > length;
+        boolean hitsWall = Math.abs(ey - midY) > halfWidth - t.radius() || ex < 0 || ex > length;
         controlled(u, t, true);
         forcedMove(u, t, "empurrao", t.x + Math.cos(a) * push, t.y + Math.sin(a) * push, 1800, null, () -> {
             if (hitsWall) {
@@ -3843,6 +3971,14 @@ public class Arena {
         if (now < u.rootUntil || u.attachedTo != null) {
             return false;
         }
+        if (rift != null) {
+            double[] via = waypoint(u, tx, ty);
+            if (via != null) {
+                d = Math.max(1e-6, dist(u.x, u.y, via[0], via[1]));
+                a = Math.atan2(via[1] - u.y, via[0] - u.x);
+                u.facing = a;
+            }
+        }
         double s = Math.min(step, d);
         double nx = clampX(u.x + Math.cos(a) * s);
         double ny = clampY(u.y + Math.sin(a) * s);
@@ -3873,7 +4009,7 @@ public class Arena {
         double a = Math.atan2(dash.ty - u.y, dash.tx - u.x);
         double nx = u.x + Math.cos(a) * s;
         double ny = u.y + Math.sin(a) * s;
-        boolean wall = !dash.through && (Math.abs(ny) > halfWidth - u.radius() || nx < 0 || nx > length || blocked(nx, ny, u.radius()));
+        boolean wall = !dash.through && (Math.abs(ny - midY) > halfWidth - u.radius() || nx < 0 || nx > length || blocked(nx, ny, u.radius()));
         if (!wall) {
             u.x = nx;
             u.y = ny;
@@ -3891,6 +4027,11 @@ public class Arena {
             u.dashedAt = now;
             u.y = clampY(u.y);
             u.x = clampX(u.x);
+            if (rift != null) {
+                double[] free = rift.free(u.x, u.y);   // a leap never ends inside a wall
+                u.x = free[0];
+                u.y = free[1];
+            }
             if (wall && dash.onWall != null) {
                 dash.onWall.run();
             }
@@ -3930,7 +4071,7 @@ public class Arena {
         double a = Math.atan2(f.ty - t.y, f.tx - t.x);
         double nx = t.x + Math.cos(a) * s;
         double ny = t.y + Math.sin(a) * s;
-        boolean wall = Math.abs(ny) > halfWidth - t.radius() || nx < 0 || nx > length || blocked(nx, ny, t.radius());
+        boolean wall = Math.abs(ny - midY) > halfWidth - t.radius() || nx < 0 || nx > length || blocked(nx, ny, t.radius());
         if (wall) {
             t.forced = null;
             t.x = clampX(t.x);
@@ -4068,7 +4209,7 @@ public class Arena {
             p.x = nx;
             p.y = ny;
             p.left -= s;
-            if (p.left <= 1e-6 || Math.abs(p.y) > halfWidth + 200) {
+            if (p.left <= 1e-6 || Math.abs(p.y - midY) > halfWidth + 200) {
                 projectiles.remove(p);
                 if (p.onEnd != null) {
                     p.onEnd.run();
@@ -4362,7 +4503,7 @@ public class Arena {
                 return true;
             }
         }
-        return false;
+        return rift != null && rift.solid(x, y);
     }
 
     // ------------------------------------------------------------------ periodic effects
@@ -4463,6 +4604,20 @@ public class Arena {
             return 0;
         }
         struck(t);
+        t.lastStruck = now;
+        if (rift != null) {
+            if (t.role != null) {
+                raw *= structureHit(a, t, raw);
+                critPart = 0;
+            }
+            if ("objetivo".equals(t.role) && now < a.gazeUntil) {
+                raw *= 1 - rules.num(0.5, "objetivos", "barao", "olhar", "reducao");
+            }
+            if (!a.npc && !t.npc) {
+                callForHelp(a, t);
+                a.shownUntil = now + 1;
+            }
+        }
         if ("adaptativo".equals(type)) {
             type = adaptive(a);
         }
@@ -5370,8 +5525,11 @@ public class Arena {
 
     /** A champion died: its killer and whoever hit it in the last 3s get their kill triggers. */
     private void killed(U t) {
-        if (t.owner != null) {
-            return;   // a summon is no kill
+        if (rift != null) {
+            riftKilled(t);
+        }
+        if (t.npc) {
+            return;   // a summon or a unit of the map is no kill
         }
         for (Map.Entry<U, Double> e : t.lastHitBy.entrySet()) {
             U a = e.getKey();
@@ -6609,6 +6767,867 @@ public class Arena {
         return false;
     }
 
+    // ------------------------------------------------------------------ the full map
+
+    private static final List<String> LANES = List.of("barao", "meio", "dragao");
+    /** How far an enemy champion draws a champion away from the minions at hand. */
+    private static final double CHAMPION_INTEREST = 1500;
+    private static final double LANE_INTEREST = 800;
+
+    /** Second of the match now. */
+    private double clock() {
+        return riftOptions.minute * 60 + now;
+    }
+
+    private double[] statLine(Map<String, Object> t, double hpNow, double adNow) {
+        return new double[] {hpNow, adNow, Rules.num(t.get("armadura")), Rules.num(t.get("rm"))};
+    }
+
+    /** Numbers of the sheets read without a default. */
+    private static final class Rules {
+        static double num(Object v) {
+            return com.ornnplanner.arena.rift.RiftRules.value(v, 0);
+        }
+    }
+
+    /** A unit of the map, ready on the next step. */
+    private U npc(String name, String role, String kind, int team, double x, double y, double[] stats, double speed, double attacks,
+                  double range, double radius) {
+        Fighter f = new Fighter();
+        f.name = name;
+        f.champion = name;
+        f.team = team;
+        f.level = 1;
+        f.ranks = new int[4];
+        for (Map<String, Double> m : List.of(f.total, f.base)) {
+            m.put(Stats.MAX_HEALTH, stats[0]);
+            m.put(Stats.ATTACK_DAMAGE, stats[1]);
+            m.put(Stats.ARMOR, stats[2]);
+            m.put(Stats.MAGIC_RESIST, stats[3]);
+            m.put(Stats.MOVE_SPEED, speed);
+        }
+        Input in = new Input();
+        in.f = f;
+        in.build = role;
+        Map<String, Object> kit = new LinkedHashMap<>();
+        kit.put("raio", radius);
+        kit.put("alcance", range);
+        in.kit = kit;
+        in.policy = (o, m) -> Policy.Decision.of(ActionSpace.IDLE);
+        in.baseAttackSpeed = attacks;
+        in.x = x;
+        in.y = y;
+        U u = start(units.size() + newSummons.size(), in, Set.of());
+        u.npc = true;
+        u.role = role;
+        u.kind = kind;
+        u.homeX = x;
+        u.homeY = y;
+        newSummons.add(u);
+        return u;
+    }
+
+    private void startRift() {
+        ArenaModel.RiftOptions o = riftOptions;
+        double second = clock();
+        if (o.towers) {
+            for (com.ornnplanner.arena.rift.RiftMap.Spot t : rift.towers) {
+                tower(t);
+            }
+            nexus(0, rift.nexusBlue);
+            nexus(1, rift.nexusRed);
+        }
+        if (o.minions) {
+            waves[0] = (int) Math.max(0, (second - rules.num(30, "tropas", "primeira_onda")) / 30);
+            at(rules.nextWave(second) - second, this::wave);
+        }
+        if (o.jungle) {
+            double first = rules.num(20, "selva", "primeira_aparicao");
+            for (com.ornnplanner.arena.rift.RiftMap.Spot c : rift.camps) {
+                at(Math.max(0, first - second), () -> camp(c));
+            }
+            for (com.ornnplanner.arena.rift.RiftMap.Spot c : rift.crabs) {
+                at(Math.max(0, num(rules.map("selva", "aronguejo").get("aparece"), 180) - second), () -> crab(c));
+            }
+        }
+        if (o.plants) {
+            for (com.ornnplanner.arena.rift.RiftMap.Spot p : rift.plants) {
+                at(Math.max(0, num(rules.map("plantas", p.kind).get("aparece"), 60) - second), () -> plant(p));
+            }
+        }
+        if (o.objectives) {
+            at(Math.max(0, rules.num(660, "objetivos", "barao", "aparece") - second), this::baron);
+            at(Math.max(0, rules.num(360, "objetivos", "dragao", "aparece") - second), this::dragon);
+        }
+        nextGold = now + 1;
+    }
+
+    private void tower(com.ornnplanner.arena.rift.RiftMap.Spot s) {
+        Map<String, Object> t = rules.map("torres", "tipos", s.kind);
+        Map<String, Object> all = rules.map("torres");
+        U u = npc("Torre " + s.kind, "torre", s.kind, s.team, s.x, s.y, statLine(t, Rules.num(t.get("vida")), rules.towerDamage(t, clock())), 0,
+                Rules.num(all.get("velocidade_ataque")), Rules.num(all.get("alcance")), 110);
+        u.lane = s.lane;
+        if ("externa".equals(s.kind) && clock() < num(map(all.get("placas")).get("ate"), 360)) {
+            u.plates = (int) num(map(all.get("placas")).get("quantidade"), 5);
+        }
+        Map<String, Object> early = map(all.get("defesa_inicio"));
+        double ends = num(early.get("ate"), 120) - clock();
+        if (ends > 0 && ((List<?>) early.get("rotas")).contains(s.lane)) {
+            u.statMods.add(new Object[] {Stats.ARMOR, num(early.get("armadura"), 50), now + ends});
+            u.statMods.add(new Object[] {Stats.MAGIC_RESIST, num(early.get("rm"), 50), now + ends});
+        }
+    }
+
+    private void nexus(int team, double[] at) {
+        Map<String, Object> t = rules.map("torres", "nexo");
+        npc("Nexo", "nexo", "nexo", team, at[0], at[1], statLine(t, Rules.num(t.get("vida")), rules.towerDamage(t, clock())), 0,
+                Rules.num(rules.map("torres").get("velocidade_ataque")), Rules.num(t.get("alcance")), 300);
+    }
+
+    private void wave() {
+        if (nexusDown >= 0) {
+            return;
+        }
+        waves[0]++;
+        for (int team = 0; team < 2; team++) {
+            for (String lane : LANES) {
+                double[][] route = route(lane, team);
+                boolean strong = rules.map("tropas").get("super_apos_torre_da_base") != null && baseTowerDown[1 - team][LANES.indexOf(lane)];
+                int k = 0;
+                for (String kind : rules.wave(waves[0], strong)) {
+                    minion(kind, team, lane, route, k++);
+                }
+            }
+        }
+        double gap = rules.waveGap(clock());
+        at(now + gap, this::wave);
+    }
+
+    private double[][] route(String lane, int team) {
+        double[][] r = rift.lanes.get(lane);
+        if (team == 0) {
+            return r;
+        }
+        double[][] back = new double[r.length][];
+        for (int i = 0; i < r.length; i++) {
+            back[i] = r[r.length - 1 - i];
+        }
+        return back;
+    }
+
+    private void minion(String kind, int team, String lane, double[][] route, int k) {
+        Map<String, Object> t = rules.map("tropas", "tipos", kind);
+        double minute = clock() / 60;
+        double hp = Rules.num(t.get("vida")) + Rules.num(t.get("vida_por_min")) * minute;
+        double ad = Rules.num(t.get("dda")) + Rules.num(t.get("dda_por_min")) * minute;
+        U u = npc("Tropa " + kind, "tropa", kind, team, route[0][0] + 60 * (k % 3), route[0][1] + 60 * (k / 3), statLine(t, hp, ad),
+                rules.num(325, "tropas", "velocidade"), Rules.num(t.get("velocidade_ataque")), Rules.num(t.get("alcance")), 40);
+        u.lane = lane;
+        u.route = route;
+        u.routeAt = 1;
+    }
+
+    private static double grow(Map<String, Object> t, String key, double second) {
+        double a = Rules.num(t.get(key));
+        Object top = t.get(key + "_ate");
+        return top == null ? a : a + (Rules.num(top) - a) * Math.min(1, second / 1500);
+    }
+
+    private void camp(com.ornnplanner.arena.rift.RiftMap.Spot c) {
+        Map<String, Object> t = rules.map("selva", "acampamentos", c.name);
+        double second = clock();
+        U u = npc(c.name, "monstro", c.name, 2, c.x, c.y, statLine(t, grow(t, "vida", second), grow(t, "dda", second)), 400, 0.7, 200, 90);
+        u.lane = String.valueOf(c.team);
+    }
+
+    private void crab(com.ornnplanner.arena.rift.RiftMap.Spot c) {
+        Map<String, Object> t = rules.map("selva", "aronguejo");
+        U u = npc("Aronguejo", "monstro", "Aronguejo", 2, c.x, c.y, statLine(t, Rules.num(t.get("vida")) + Rules.num(t.get("vida_por_min")) * clock() / 60, 0),
+                Rules.num(t.get("velocidade")), 0.1, 0, 60);
+        u.homeX = c.x;
+        u.homeY = c.y;
+    }
+
+    private void plant(com.ornnplanner.arena.rift.RiftMap.Spot p) {
+        U u = npc(p.kind, "planta", p.kind, 2, p.x, p.y, new double[] {1, 0, 0, 0}, 0, 0.1, 0, 50);
+        u.homeX = p.x;
+        u.homeY = p.y;
+    }
+
+    private void baron() {
+        Map<String, Object> t = rules.map("objetivos", "barao");
+        double minute = clock() / 60;
+        Map<String, Object> hp = map(t.get("vida"));
+        Map<String, Object> ad = map(t.get("dda"));
+        U u = npc("Barão Na'Shor", "objetivo", "barao", 2, rift.baronPit[0], rift.baronPit[1], new double[] {
+            Rules.num(hp) + num(hp.get("por_min"), 0) * minute, Rules.num(ad) + num(ad.get("por_nivel"), 0) * minute / 2,
+            Rules.num(t.get("armadura")), Rules.num(t.get("rm"))}, 0, Rules.num(t.get("velocidade_ataque")), Rules.num(t.get("alcance")), 240);
+        u.immuneUntil = Double.MAX_VALUE;
+        u.immuneCc = CC_IGNORE;
+    }
+
+    private void dragon() {
+        boolean elder = sideDragons[0] >= 3 || sideDragons[1] >= 3 || clock() >= rules.num(1140, "objetivos", "anciao", "aparece");
+        Map<String, Object> t = rules.map("objetivos", elder ? "anciao" : "dragao");
+        double minute = clock() / 60;
+        Map<String, Object> hp = map(t.get("vida"));
+        Map<String, Object> ad = map(t.get("dda"));
+        U u = npc(elder ? "Dragão Ancião" : "Dragão " + dragonElement(), "objetivo", elder ? "anciao" : "dragao", 2, rift.dragonPit[0], rift.dragonPit[1], new double[] {
+            Rules.num(hp) + num(hp.get("por_nivel"), num(hp.get("por_min"), 0)) * (elder ? minute : minute / 2),
+            Rules.num(ad) + num(ad.get("por_nivel"), 0) * minute / 2, Rules.num(t.get("armadura")), Rules.num(t.get("rm"))}, 0,
+                Rules.num(t.get("velocidade_ataque")), Rules.num(t.get("alcance")), 200);
+        u.immuneUntil = Double.MAX_VALUE;
+        u.immuneCc = CC_IGNORE;
+    }
+
+    private final int[] sideDragons = new int[2];
+
+    private String dragonElement() {
+        return riftOptions.dragon == null ? "infernal" : riftOptions.dragon;
+    }
+
+    /** A champion hit an enemy champion: units of the other side around it go after it. */
+    private void callForHelp(U a, U t) {
+        double alert = rules.num(700, "tropas", "alcance_alerta");
+        for (U n : units) {
+            if (n.npc && n.team() == t.team() && !n.dead && ("tropa".equals(n.role) || "torre".equals(n.role) || "nexo".equals(n.role))
+                    && dist(n.x, n.y, a.x, a.y) <= Math.max(alert, n.attackRange())) {
+                n.called = a;
+                n.calledUntil = now + 3;
+            }
+        }
+    }
+
+    /** What share of a hit a structure takes (no minions of the attacker around: Anti-Backdoor), and its plates. */
+    private double structureHit(U a, U t, double raw) {
+        boolean tower = "torre".equals(t.role);
+        if (!tower && !"nexo".equals(t.role)) {
+            return 1;
+        }
+        double mult = 1;
+        boolean escorted = false;
+        for (U n : units) {
+            if ("tropa".equals(n.role) && !n.dead && n.team() == a.team() && dist(n.x, n.y, t.x, t.y) <= 1200) {
+                escorted = true;
+                break;
+            }
+        }
+        if (!escorted) {
+            mult = 1 - num(rules.map("torres", "anti_backdoor").get(tower ? "torre" : "nexo"), 0.75);
+        }
+        if (t.plates > 0 && clock() < num(rules.map("torres", "placas").get("ate"), 360)) {
+            Map<String, Object> p = rules.map("torres", "placas");
+            double left = t.maxHp * (t.plates - 1) / 5;
+            if (t.hp - raw * mult <= left) {
+                t.plates--;
+                t.statMods.add(new Object[] {Stats.ARMOR, num(p.get("resistencia"), 20), now + num(p.get("duracao"), 10)});
+                t.statMods.add(new Object[] {Stats.MAGIC_RESIST, num(p.get("resistencia"), 20), now + num(p.get("duracao"), 10)});
+                if (!a.npc) {
+                    reward(a, num(p.get("ouro"), 150), 0);
+                }
+                count(a, "placa");
+            }
+        }
+        return mult;
+    }
+
+    private void reward(U u, double gold, double xp) {
+        u.gold += gold;
+        u.xp += xp;
+    }
+
+    /** The champion that took the last hit, or null (a minion, a tower, nobody in 3 s). */
+    private U lastHitter(U t) {
+        U best = null;
+        double when = -1;
+        for (Map.Entry<U, Double> e : t.lastHitBy.entrySet()) {
+            if (e.getValue() > when) {
+                best = e.getKey();
+                when = e.getValue();
+            }
+        }
+        return best != null && !best.npc && now - when <= 3 + 1e-9 ? best : null;
+    }
+
+    /** Champions of a side close to a point. */
+    private List<U> near(int team, double x, double y, double radius) {
+        List<U> out = new ArrayList<>();
+        for (U c : units) {
+            if (!c.npc && c.team() == team && !c.dead && dist(c.x, c.y, x, y) <= radius) {
+                out.add(c);
+            }
+        }
+        return out;
+    }
+
+    private void shareXp(int team, double x, double y, double amount) {
+        List<U> who = near(team, x, y, rules.num(1400, "xp", "raio"));
+        for (U c : who) {
+            c.xp += amount / who.size();
+        }
+    }
+
+    private void riftKilled(U t) {
+        U by = lastHitter(t);
+        if (t.role == null) {
+            if (!t.npc) {
+                championKilled(t, by);
+            }
+            return;
+        }
+        int rival = t.team() == 0 ? 1 : 0;
+        switch (t.role) {
+            case "tropa": {
+                Map<String, Object> m = rules.map("tropas", "tipos", t.kind);
+                if (by != null) {
+                    reward(by, Rules.num(m.get("ouro")), 0);
+                    count(by, "ultimo_golpe");
+                }
+                shareXp(rival, t.x, t.y, Rules.num(m.get("xp")));
+                break;
+            }
+            case "torre": {
+                Map<String, Object> m = rules.map("torres", "tipos", t.kind);
+                for (U c : units) {
+                    if (!c.npc && c.team() == rival) {
+                        c.gold += Rules.num(m.get("ouro_global"));
+                    }
+                }
+                if (by != null) {
+                    by.gold += Rules.num(m.get("ouro_local"));
+                }
+                event(t, "caiu");
+                if ("base".equals(t.kind)) {
+                    baseTowerDown[t.team()][LANES.indexOf(t.lane)] = true;
+                }
+                break;
+            }
+            case "nexo":
+                nexusDown = t.team();
+                event(t, "caiu");
+                break;
+            case "monstro":
+                monsterKilled(t, by);
+                break;
+            case "planta":
+                plantBroken(t, by);
+                break;
+            default:
+                objectiveKilled(t, by);
+                break;
+        }
+    }
+
+    private void championKilled(U t, U by) {
+        int rival = t.team() == 0 ? 1 : 0;
+        Map<String, Object> g = rules.map("ouro");
+        @SuppressWarnings("unchecked")
+        List<Number> streak = (List<Number>) map(g.get("abate")).get("sequencia");
+        double gold = streak.get(0).doubleValue();
+        if (by != null) {
+            by.gold += gold + (firstBlood ? 0 : Rules.num(g.get("primeiro_sangue")));
+            firstBlood = true;
+            count(by, "abate");
+        }
+        List<U> help = near(rival, t.x, t.y, 1400);
+        help.remove(by);
+        for (U a : help) {
+            a.gold += gold * num(map(g.get("assistencia")).get("fracao"), 0.35);
+        }
+        @SuppressWarnings("unchecked")
+        List<Number> xp = (List<Number>) rules.map("xp", "abate_por_nivel").get("valores");
+        shareXp(rival, t.x, t.y, xp.get(Math.min(xp.size() - 1, Math.max(0, t.f.level - 1) / 3)).doubleValue());
+    }
+
+    private void monsterKilled(U t, U by) {
+        Map<String, Object> m = "Aronguejo".equals(t.kind) ? rules.map("selva", "aronguejo") : rules.map("selva", "acampamentos", t.kind);
+        if (by != null) {
+            reward(by, Rules.num(m.get("ouro")), Rules.num(m.get("xp")));
+            count(by, "monstro:" + t.kind);
+            Object buff = m.get("buff");
+            if (buff != null) {
+                boolean grown = clock() >= num(rules.map("selva", "evolucao").get("aos"), 480);
+                crest(by, String.valueOf(buff) + (grown ? "_evoluido" : ""));
+            }
+        }
+        double back = Rules.num(m.get("renasce"));
+        double x = t.homeX;
+        double y = t.homeY;
+        String kind = t.kind;
+        if ("Aronguejo".equals(kind)) {
+            for (com.ornnplanner.arena.rift.RiftMap.Spot c : rift.crabs) {
+                if (c.x == x) {
+                    at(now + back, () -> crab(c));
+                }
+            }
+            return;
+        }
+        for (com.ornnplanner.arena.rift.RiftMap.Spot c : rift.camps) {
+            if (c.name.equals(kind) && c.x == x && c.y == y) {
+                at(now + back, () -> camp(c));
+            }
+        }
+    }
+
+    /** The buff of a jungle camp on who took it. */
+    private void crest(U by, String name) {
+        Map<String, Object> b = rules.map("selva", "buffs", name);
+        double until = now + num(b.get("duracao"), 90);
+        if (b.get("dda") != null) {
+            by.statMods.add(new Object[] {Stats.ATTACK_DAMAGE, num(b.get("dda"), 0), until});
+        }
+        if (b.get("pdh") != null) {
+            by.statMods.add(new Object[] {Stats.ABILITY_POWER, num(b.get("pdh"), 0), until});
+        }
+        if (b.get("aceleracao") != null) {
+            by.statMods.add(new Object[] {Stats.ABILITY_HASTE, num(b.get("aceleracao"), 0), until});
+        }
+        if (b.get("aceleracao_ult") != null) {
+            by.statMods.add(new Object[] {"Ultimate Haste", num(b.get("aceleracao_ult"), 0), until});
+        }
+        count(by, "buff:" + name);
+        event(by, "pegou o buff " + name);
+    }
+
+    private void plantBroken(U t, U by) {
+        Map<String, Object> p = rules.map("plantas", t.kind);
+        double radius = num(p.get("raio"), 300);
+        if ("pinstouro".equals(t.kind) && by != null) {
+            double a = by.facing + Math.PI;
+            double d = num(p.get("distancia"), 900);
+            double[] land = rift.free(clampX(by.x + Math.cos(a) * d), clampY(by.y + Math.sin(a) * d));
+            by.x = land[0];
+            by.y = land[1];
+            airborne(by, 0.5, null);
+            count(by, "pinstouro");
+        } else if ("frutomel".equals(t.kind)) {
+            for (U c : units) {
+                if (!c.npc && !c.dead && dist(c.x, c.y, t.x, t.y) <= radius) {
+                    double h = num(p.get("cura_pct"), 0.035) * c.maxHp * num(p.get("frutos"), 3);
+                    heal(c, h, Map.of(key(c, "Frutomel"), h));
+                    c.slows.add(new double[] {num(p.get("lentidao"), 0.35), now + num(p.get("duracao_lentidao"), 0.25)});
+                    count(c, "frutomel");
+                }
+            }
+        } else if ("clarevidente".equals(t.kind) && by != null) {
+            revealed.put(by.team() + "|" + t.idx, new double[] {by.team(), t.x, t.y, num(p.get("raio"), 1000), now + num(p.get("revela_campeoes"), 3)});
+            count(by, "clarevidente");
+        }
+        com.ornnplanner.arena.rift.RiftMap.Spot spot = null;
+        for (com.ornnplanner.arena.rift.RiftMap.Spot s : rift.plants) {
+            if (s.kind.equals(t.kind) && s.x == t.homeX && s.y == t.homeY) {
+                spot = s;
+            }
+        }
+        if (spot != null) {
+            com.ornnplanner.arena.rift.RiftMap.Spot again = spot;
+            at(now + num(p.get("renasce"), 360), () -> plant(again));
+        }
+    }
+
+    private void objectiveKilled(U t, U by) {
+        if (by == null) {
+            return;
+        }
+        int team = by.team();
+        Map<String, Object> m = rules.map("objetivos", t.kind);
+        by.gold += Rules.num(m.get("ouro"));
+        shareXp(team, t.x, t.y, Rules.num(m.get("xp")));
+        event(by, "abateu " + t.f.name);
+        count(by, "objetivo:" + t.kind);
+        ArenaModel.ObjectiveBuffs one = new ArenaModel.ObjectiveBuffs();
+        if ("barao".equals(t.kind)) {
+            one.baron = true;
+            at(now + Rules.num(m.get("renasce")), this::baron);
+        } else if ("anciao".equals(t.kind)) {
+            one.elder = true;
+            at(now + Rules.num(m.get("renasce")), this::dragon);
+        } else {
+            sideDragons[team]++;
+            one.dragons.put(dragonElement(), sideDragons[team]);
+            if (sideDragons[team] >= (int) rules.num(3, "objetivos", "dragao", "acumulos_para_alma")) {
+                one.soul = dragonElement();
+            }
+            at(now + Rules.num(m.get("renasce")), this::dragon);
+        }
+        applyBuffs(team, one);
+    }
+
+    /** What the sides start with. */
+    private void startObjectives() {
+        for (U u : units) {
+            if (u.in.objectives != null) {
+                applyBuffs(u, u.in.objectives);
+            }
+        }
+        if (objectives == null) {
+            return;
+        }
+        for (int team = 0; team < Math.min(2, objectives.length); team++) {
+            if (objectives[team] != null) {
+                applyBuffs(team, objectives[team]);
+            }
+        }
+    }
+
+    /** Buffs of objectives on the living champions of a side, on top of what they have (one stack replaces the last). */
+    private void applyBuffs(int team, ArenaModel.ObjectiveBuffs b) {
+        for (U c : units) {
+            if (!c.npc && c.team() == team && !c.dead) {
+                applyBuffs(c, b);
+            }
+        }
+    }
+
+    private void applyBuffs(U c, ArenaModel.ObjectiveBuffs b) {
+        Map<String, Object> elements = rules.map("objetivos", "dragao", "elementos");
+        b.dragons.forEach((element, stacks) -> {
+            Map<String, Object> e = map(elements.get(element));
+            Map<String, Object> status = e == null ? null : map(e.get("status"));
+            if (status != null && stacks > 0) {
+                c.statMods.removeIf(m -> ("dragao:" + element).equals(m.length > 3 ? m[3] : null));
+                status.forEach((stat, list) -> {
+                    double v = ((Number) ((List<?>) list).get(Math.min(2, stacks - 1))).doubleValue();
+                    String key = stat.startsWith("% ") ? stat.substring(2) : stat;
+                    double amount = stat.startsWith("% ") ? c.stat(key) * v / 100 : v;
+                    c.statMods.add(new Object[] {key, amount, Double.MAX_VALUE, "dragao:" + element});
+                });
+            }
+            count(c, "dragao:" + element);
+        });
+        if (b.soul != null) {
+            c.soul = b.soul;
+        }
+        if (b.elder) {
+            c.elderUntil = now + num(rules.map("objetivos", "anciao", "buff").get("duracao"), 120);
+        }
+        if (b.baron) {
+            Map<String, Object> h = rules.map("objetivos", "mao_do_barao");
+            Map<String, Object> g = map(h.get("dda_pdh_por_min"));
+            double minute = riftOptions == null ? c.f.minute : clock() / 60;
+            double until = now + Rules.num(h.get("duracao"));
+            c.statMods.add(new Object[] {Stats.ATTACK_DAMAGE, num(g.get("base_dda"), 0) + num(g.get("dda"), 0) * minute, until});
+            c.statMods.add(new Object[] {Stats.ABILITY_POWER, num(g.get("base_pdh"), 0) + num(g.get("pdh"), 0) * minute, until});
+            c.baronUntil = until;
+            count(c, "mao_do_barao");
+        }
+    }
+
+    /** The clock of the map: gold, fountains, what is seen, poison, what souls and the Elder do. */
+    private void tickRift() {
+        boolean second = now >= nextGold - 1e-9;
+        if (second) {
+            nextGold += 1;
+        }
+        boolean sight = now >= nextSight - 1e-9;
+        if (sight) {
+            nextSight = now + 0.1;
+            sightCheck();
+        }
+        for (U c : units) {
+            if (c.dead || c.npc) {
+                continue;
+            }
+            if (second) {
+                if (clock() >= rules.num(20, "ouro", "passivo_por_s", "de")) {
+                    c.gold += rules.num(3, "ouro", "passivo_por_s");
+                }
+                fountain(c);
+            }
+            baronAt(c);
+            if (c.soul != null || now < c.elderUntil) {
+                soulTick(c, second);
+            }
+        }
+    }
+
+    private void fountain(U c) {
+        double[] own = c.team() == 0 ? rift.fountainBlue : rift.fountainRed;
+        double[] other = c.team() == 0 ? rift.fountainRed : rift.fountainBlue;
+        if (dist(c.x, c.y, own[0], own[1]) <= own[2]) {
+            double h = rules.num(0.12, "fonte_base", "cura_por_s") * c.maxHp;
+            heal(c, h, Map.of(key(c, "Fonte"), h));
+        }
+        if (dist(c.x, c.y, other[0], other[1]) <= other[2]) {
+            c.hp -= rules.num(800, "fonte_base", "laser_por_s");
+            if (c.hp <= 0) {
+                c.hp = 0;
+                c.dead = true;
+                c.r.deathTime = now;
+                event(c, "foi abatido pela fonte");
+            }
+        }
+    }
+
+    /** Inside the pit with Baron alive: his poison, while it lasts. */
+    private void baronAt(U c) {
+        if (now < c.poisonUntil && now >= c.nextPoison - 1e-9
+                && dist(c.x, c.y, rift.baronPit[0], rift.baronPit[1]) <= rift.baronPit[2]) {
+            Map<String, Object> v = rules.map("objetivos", "barao", "veneno");
+            c.nextPoison = now + num(v.get("a_cada"), 0.5);
+            for (U b : units) {
+                if ("barao".equals(b.kind)) {
+                    deal(b, c, num(v.get("dano"), 15), "magico", "Veneno de Barão", DOT, 0);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void soulTick(U c, boolean second) {
+        Map<String, Object> soul = c.soul == null ? null : rules.map("objetivos", "dragao", "almas", c.soul);
+        if ("montanha".equals(c.soul) && now - c.lastStruck >= num(soul.get("apos"), 5) && c.shieldLeft() <= 0 && now >= c.soulReady) {
+            addShield(c, num(soul.get("escudo"), 350), key(c, "Alma da Montanha"), now + 30, "any");
+            c.soulReady = now + 5;
+        }
+        if ("oceano".equals(c.soul) && now - c.lastStruck < 4 && now >= c.soulReady) {
+            double h = formula(map(soul.get("cura")), c, c, 1);
+            heal(c, h, Map.of(key(c, "Alma do Oceano"), h));
+            c.soulReady = now + num(soul.get("recarga"), 6);
+        }
+    }
+
+    /** Hidden in a bush: only enemies in the same bush, or close enough, or an open reveal, see it. */
+    private void sightCheck() {
+        if (!riftOptions.vision) {
+            return;
+        }
+        for (U c : units) {
+            if (c.npc || c.dead) {
+                continue;
+            }
+            int bush = rift.bush(c.x, c.y);
+            boolean hide = bush >= 0 && now >= c.shownUntil;
+            if (hide) {
+                for (U e : units) {
+                    if (e.team() != c.team() && e.team() < 2 && !e.dead && (rift.bush(e.x, e.y) == bush || dist(c.x, c.y, e.x, e.y) <= 150)) {
+                        hide = false;
+                        break;
+                    }
+                }
+            }
+            if (hide) {
+                for (double[] r : revealed.values()) {
+                    if ((int) r[0] != c.team() && now < r[4] && dist(c.x, c.y, r[1], r[2]) <= r[3]) {
+                        hide = false;
+                    }
+                }
+            }
+            c.hidden = hide;
+        }
+    }
+
+    private double[] waypoint(U u, double tx, double ty) {
+        if (rift.clear(u.x, u.y, tx, ty)) {
+            u.path = null;
+            return null;
+        }
+        if (u.path == null || dist(u.pathX, u.pathY, tx, ty) > 150) {
+            u.path = rift.path(u.x, u.y, tx, ty);
+            u.pathAt = 0;
+            u.pathX = tx;
+            u.pathY = ty;
+        }
+        while (u.pathAt < u.path.length - 1 && dist(u.x, u.y, u.path[u.pathAt][0], u.path[u.pathAt][1]) < 60) {
+            u.pathAt++;
+        }
+        return u.pathAt < u.path.length ? u.path[u.pathAt] : null;
+    }
+
+    private void riftStep(U u) {
+        switch (u.role) {
+            case "tropa":
+                minionStep(u);
+                break;
+            case "torre":
+            case "nexo":
+                towerStep(u);
+                break;
+            case "monstro":
+                monsterStep(u);
+                break;
+            case "objetivo":
+                objectiveStep(u);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private boolean valid(U u, U t) {
+        return t != null && !t.dead && t.targetable() && t.visible() && t.team() != u.team();
+    }
+
+    /** Called to a champion, else the nearest minion, then structures, then champions. */
+    private U minionAim(U u) {
+        if (valid(u, u.called) && now < u.calledUntil && dist(u.x, u.y, u.called.x, u.called.y) <= rules.num(700, "tropas", "alcance_alerta")) {
+            return u.called;
+        }
+        U best = null;
+        double far = 0;
+        for (U e : units) {
+            if (e.team() == u.team() || e.team() > 1 || e.dead || !e.targetable() || !e.visible()) {
+                continue;
+            }
+            double d = dist(u.x, u.y, e.x, e.y);
+            if (d > rules.num(700, "tropas", "alcance_alerta")) {
+                continue;
+            }
+            double rank = d + ("tropa".equals(e.role) ? 0 : e.npc ? 1000 : 2000);
+            if (best == null || rank < far) {
+                best = e;
+                far = rank;
+            }
+        }
+        return best;
+    }
+
+    private void minionStep(U u) {
+        if (now >= u.lookAt - 1e-9 || !valid(u, u.aim)) {
+            u.lookAt = now + rules.num(1, "tropas", "agro") / 4;
+            u.aim = minionAim(u);
+        }
+        if (u.aim != null) {
+            chase(u, u.aim);
+            return;
+        }
+        while (u.routeAt < u.route.length - 1 && dist(u.x, u.y, u.route[u.routeAt][0], u.route[u.routeAt][1]) < 100) {
+            u.routeAt++;
+        }
+        moveTo(u, u.route[u.routeAt][0], u.route[u.routeAt][1], u.moveSpeed() * DT);
+    }
+
+    private void towerStep(U u) {
+        if (now < u.nextAttack - 1e-9) {
+            return;
+        }
+        double reach = u.attackRange();
+        U aim = valid(u, u.called) && now < u.calledUntil && dist(u.x, u.y, u.called.x, u.called.y) <= reach + u.called.radius() ? u.called : null;
+        if (aim == null) {
+            double far = Double.MAX_VALUE;
+            for (U e : units) {
+                if (e.team() == u.team() || e.team() > 1 || e.dead || !e.targetable() || !e.visible()) {
+                    continue;
+                }
+                double d = dist(u.x, u.y, e.x, e.y);
+                if (d <= reach + e.radius()) {
+                    // minions first (the super ones above all), champions when nothing else is around
+                    double rank = d + ("tropa".equals(e.role) ? "super".equals(e.kind) ? -2000 : 0 : e.role != null ? 1000 : 2000);
+                    if (rank < far) {
+                        aim = e;
+                        far = rank;
+                    }
+                }
+            }
+        }
+        if (aim == null) {
+            return;
+        }
+        Map<String, Object> ramp = rules.map("torres", "ataques_seguidos");
+        @SuppressWarnings("unchecked")
+        List<Number> steps = (List<Number>) ramp.get("valores");
+        u.streak = aim == u.aim ? u.streak + 1 : 0;
+        u.aim = aim;
+        double mult = steps.get(Math.min(u.streak, steps.size() - 1)).doubleValue();
+        u.nextAttack = now + 1 / Math.max(0.1, u.attackSpeed());
+        u.facing = Math.atan2(aim.y - u.y, aim.x - u.x);
+        Map<String, Object> t = "nexo".equals(u.role) ? rules.map("torres", "nexo") : rules.map("torres", "tipos", u.kind);
+        deal(u, aim, rules.towerDamage(t, clock()) * mult, "fisico", "Torre (sofrido)", ATTACK, 0);
+    }
+
+    private void monsterStep(U u) {
+        U aim = null;
+        for (Map.Entry<U, Double> e : u.lastHitBy.entrySet()) {
+            U c = e.getKey();
+            if (!c.dead && now - e.getValue() <= 4 && dist(c.x, c.y, u.homeX, u.homeY) <= 1000 && c.targetable()
+                    && (aim == null || e.getValue() > u.lastHitBy.get(aim))) {
+                aim = c;
+            }
+        }
+        if ("Aronguejo".equals(u.kind)) {
+            if (aim != null) {
+                double d = Math.max(1e-6, dist(u.x, u.y, aim.x, aim.y));
+                moveTo(u, u.x + (u.x - aim.x) / d * 100, u.y + (u.y - aim.y) / d * 100, u.moveSpeed() * DT);
+            }
+            return;
+        }
+        if (aim != null) {
+            chase(u, aim);
+        } else if (dist(u.x, u.y, u.homeX, u.homeY) > 30) {
+            moveTo(u, u.homeX, u.homeY, u.moveSpeed() * DT);
+            u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.2 * DT);
+        }
+    }
+
+    private void objectiveStep(U u) {
+        if (now < u.nextAttack - 1e-9) {
+            return;
+        }
+        U aim = null;
+        double far = Double.MAX_VALUE;
+        double[] pit = "barao".equals(u.kind) ? rift.baronPit : rift.dragonPit;
+        for (U c : units) {
+            if (c.npc || c.dead || !c.targetable()) {
+                continue;
+            }
+            double d = dist(c.x, c.y, u.x, u.y);
+            boolean in = dist(c.x, c.y, pit[0], pit[1]) <= pit[2] || u.lastHitBy.containsKey(c) && d <= u.attackRange();
+            if (in && d < far) {
+                aim = c;
+                far = d;
+            }
+        }
+        if (aim == null) {
+            return;
+        }
+        u.nextAttack = now + 1 / Math.max(0.1, u.attackSpeed());
+        u.facing = Math.atan2(aim.y - u.y, aim.x - u.x);
+        deal(u, aim, u.stat(Stats.ATTACK_DAMAGE), "fisico", u.f.name, ATTACK, 0);
+        if (!"barao".equals(u.kind)) {
+            return;
+        }
+        Map<String, Object> b = rules.map("objetivos", "barao");
+        Map<String, Object> gaze = map(b.get("olhar"));
+        Map<String, Object> rot = map(b.get("corrosao"));
+        Map<String, Object> venom = map(b.get("veneno"));
+        for (U c : near(aim.team(), pit[0], pit[1], pit[2])) {
+            corrode(c, rot);
+        }
+        aim.gazeUntil = now + num(gaze.get("duracao"), 5);
+        aim.poisonUntil = now + num(venom.get("duracao"), 5);
+        u.cycle++;
+        if (u.cycle >= (int) num(map(b.get("ciclo")).get("golpes"), 5)) {
+            u.cycle = 0;
+            baronAbility(u, b, aim);
+        }
+    }
+
+    private void corrode(U c, Map<String, Object> rot) {
+        double step = num(rot.get("por_golpe"), 3);
+        double until = now + num(rot.get("duracao"), 5);
+        c.corrosion = now < c.corrosionUntil ? Math.min(num(rot.get("max"), 50), c.corrosion + step) : step;
+        c.corrosionUntil = until;
+        c.statMods.removeIf(m -> "corrosao".equals(m.length > 3 ? m[3] : null));
+        c.statMods.add(new Object[] {Stats.ARMOR, -c.corrosion, until, "corrosao"});
+        c.statMods.add(new Object[] {Stats.MAGIC_RESIST, -c.corrosion, until, "corrosao"});
+    }
+
+    @SuppressWarnings("unchecked")
+    private void baronAbility(U u, Map<String, Object> b, U aim) {
+        List<Map<String, Object>> abilities = (List<Map<String, Object>>) b.get("habilidades");
+        Map<String, Object> ab = abilities.get(u.attacks++ % abilities.size());
+        Map<String, Object> d = map(ab.get("dano"));
+        event(u, "usou " + ab.get("nome"));
+        deal(u, aim, num(d.get("base"), 0) + num(d.get("dda"), 0) * u.stat(Stats.ATTACK_DAMAGE), type(d), u.f.name + " · " + ab.get("nome"), ABILITY, 0);
+        if (ab.get("arremessa") != null) {
+            airborne(aim, num(ab.get("arremessa"), 1), u);
+        }
+        if (ab.get("lentidao") != null) {
+            aim.slows.add(new double[] {num(ab.get("lentidao"), 0.3), now + num(ab.get("duracao"), 1)});
+        }
+    }
+
     // ------------------------------------------------------------------ mechanics of the sheets
 
     /** Taunt: the target walks to who cast it and attacks it. */
@@ -6864,7 +7883,7 @@ public class Arena {
                     changeForm(u, on ? form : null);
                 }
             }
-            if (u.owner != null && (now >= u.summonUntil || u.owner.dead && !Boolean.FALSE.equals(u.summon.get("morre_com_dono")))) {
+            if (u.owner != null && u.summon != null && (now >= u.summonUntil || u.owner.dead && !Boolean.FALSE.equals(u.summon.get("morre_com_dono")))) {
                 u.dead = true;
             }
             if (u.attachedTo != null) {
@@ -7113,6 +8132,7 @@ public class Arena {
             in.y = clampY(aimed ? ty : owner.y + 120 * (k + 1) * Math.sin(owner.facing));
             U s = start(units.size() + newSummons.size(), in, Set.of());
             s.owner = owner;
+            s.npc = true;
             s.summon = spec;
             s.summonUntil = now + val(spec, "duracao", rank, owner.f.level, 10);
             if ("mina".equals(spec.get("comportamento"))) {
@@ -7450,9 +8470,16 @@ public class Arena {
         Frame f = new Frame();
         f.t = Math.round(now * 1000) / 1000.0;
         for (U u : units) {
-            if (u.owner != null) {
+            if (u.npc) {
                 if (!u.dead) {
-                    f.shapes.add(circle("inv" + u.idx, u.f.name + " (" + u.owner.f.champion + ")", u.team(), u.x, u.y, u.radius()));
+                    Shape s = circle("inv" + u.idx, u.owner != null ? u.f.name + " (" + u.owner.f.champion + ")" : u.f.name,
+                            u.team() > 1 ? -1 : u.team(), u.x, u.y, u.radius());
+                    if (u.role != null) {
+                        s.role = u.role;
+                        s.hp = round(u.hp);
+                        s.maxHp = round(u.maxHp);
+                    }
+                    f.shapes.add(s);
                 }
                 continue;
             }
@@ -7466,6 +8493,9 @@ public class Arena {
             uf.state = u.dead ? "dead" : now < u.stasisUntil ? "stasis" : now < u.airUntil ? "air" : now < u.stunUntil ? "stun"
                     : u.forced != null ? "displaced" : u.dash != null ? "dash" : now < u.busyUntil ? u.busyState : u.busyState;
             uf.invisible = !u.visible();
+            if (rift != null) {
+                uf.gold = round(u.gold);
+            }
             Map<String, Object> res = map(u.kit("recurso"));
             if (res != null) {
                 uf.resource = round(u.resource);
@@ -7633,7 +8663,7 @@ public class Arena {
     private int fighting(int team) {
         int n = 0;
         for (U x : units) {
-            if (x.team() == team && !x.dead && !x.escaped && x.owner == null) {
+            if (x.team() == team && !x.dead && !x.escaped && !x.npc) {
                 n++;
             }
         }
@@ -7698,7 +8728,7 @@ public class Arena {
     private int alive(int team) {
         int n = 0;
         for (U x : units) {
-            if (x.team() == team && !x.dead && x.owner == null) {
+            if (x.team() == team && !x.dead && !x.npc) {
                 n++;
             }
         }
@@ -7727,7 +8757,7 @@ public class Arena {
     }
 
     private double clampY(double y) {
-        return Math.max(-halfWidth + 40, Math.min(halfWidth - 40, y));
+        return Math.max(midY - halfWidth + 40, Math.min(midY + halfWidth - 40, y));
     }
 
     private double clampX(double x) {

@@ -357,6 +357,7 @@ public class EffectTestService {
     /** Runs a batch: every job's fight and its reference, the ones not cached in parallel. */
     public List<Outcome> evaluate(Request req) {
         BuildRepository.Build build = buildOf(req);
+        build.objectives = req.objectives;
         String buildKey = hash(write(build)) + "@" + req.minute;
         Reference ref = req.reference == null ? new Reference() : req.reference;
         double at = combat.minuteOf(combatant(req, build));

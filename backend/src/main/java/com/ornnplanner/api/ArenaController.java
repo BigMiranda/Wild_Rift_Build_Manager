@@ -291,6 +291,21 @@ public class ArenaController {
         return out;
     }
 
+    /** Scenarios of the full map ready to fill. */
+    @GetMapping("/templates")
+    public List<com.ornnplanner.arena.rift.RiftTemplates.Template> templates() {
+        return com.ornnplanner.arena.rift.RiftTemplates.all(arena.riftMap());
+    }
+
+    /** The numbers of the objectives, for what the planner shows before any fight. */
+    @GetMapping("/rift-rules")
+    public Map<String, Object> riftRules() {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("elementos", arena.riftRules().map("objetivos", "dragao", "elementos"));
+        m.put("mao_do_barao", arena.riftRules().map("objetivos", "mao_do_barao"));
+        return m;
+    }
+
     @GetMapping("/kits")
     public Map<String, Object> kits() {
         return arena.kits();

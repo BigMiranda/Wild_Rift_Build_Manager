@@ -172,6 +172,8 @@ public final class EffectModel {
         public String readMode;
         /** Starts of {@link #STARTS} (null = 8). */
         public Integer starts;
+        /** The objectives of the planner's selector, on top of the build. */
+        public ArenaModel.ObjectiveBuffs objectives;
     }
 
     /** What a fight says about the build tested. */

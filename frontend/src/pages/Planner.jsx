@@ -7,6 +7,7 @@ import BuildBar from '../components/BuildBar.jsx';
 import TimelineTable from '../components/TimelineTable.jsx';
 import StatChart from '../components/StatChart.jsx';
 import { PassivesPanel, RelevanceReport, StatSheet, pointAt } from '../components/MomentPanels.jsx';
+import ObjectivesPicker, { emptyObjectives, hasObjectives, useObjectiveRules, withObjectives } from '../components/ObjectivesPicker.jsx';
 import { PASSIVES_VIEW } from '../passives.js';
 import { ALIGN_ITEM, EFFECTIVE_VIEW, PASSIVE_GOLD_BY_TIER, effectiveGold } from '../effective.js';
 import EffectiveBreakdown, { AlignToggle } from '../components/EffectiveBreakdown.jsx';
@@ -140,6 +141,8 @@ export default function Planner({ meta, items }) {
   const [chartStat, setChartStat] = useState('Max Health');
   /** Tab of the moment panel next to the stat sheet: item relevance or passives held. */
   const [momentTab, setMomentTab] = useState('relevance');
+  /** What the "Objectives" selector puts on top of the sheet and of the effectiveness fights. */
+  const [objectives, setObjectives] = useState(emptyObjectives);
   // The quick item comparison: a purchase of the sequence (null = the next purchase) and the extra candidates.
   const [quick, setQuick] = useState(null);
   /** Rune / spell catalog loaded, and which "Preparações" editor is open (runes | spells). */
@@ -375,7 +378,9 @@ export default function Planner({ meta, items }) {
   // Moment inspected by the stat sheet and the relevance report: the clicked one, or the last purchase.
   const lastStep = result?.steps[result.steps.length - 1];
   const moment = selectedMinute ?? lastStep?.minute ?? null;
-  const point = result && moment != null ? pointAt(result.series, moment) : null;
+  const objectiveRules = useObjectiveRules();
+  const rawPoint = result && moment != null ? pointAt(result.series, moment) : null;
+  const point = withObjectives(rawPoint, objectives, objectiveRules);
 
   return (
     <div className={`layout${sidebarOpen ? '' : ' collapsed'}`}>
@@ -600,6 +605,7 @@ export default function Planner({ meta, items }) {
 
         {point && (
           <div className="grid-2 moment-panels">
+            <ObjectivesPicker value={objectives} onChange={setObjectives} compact />
             <StatSheet point={point} itemsById={itemsById} />
             <div className="moment-tabbed">
               <div className="chips moment-tabs" role="tablist" aria-label={t('moment.tabs')}>
@@ -620,7 +626,7 @@ export default function Planner({ meta, items }) {
                 </section>
               )}
               {momentTab === 'effectiveness' && (
-                <EffectivenessPanel build={payload} buildId={draft.id} name={draft.name} minute={point.minute} items={items} builds={builds} folders={folders}
+                <EffectivenessPanel objectives={hasObjectives(objectives) ? objectives : null} build={payload} buildId={draft.id} name={draft.name} minute={point.minute} items={items} builds={builds} folders={folders}
                   compareKey={`${compareIds.join(',')}|${condKey}`}
                   compare={compareIds.map((id, i) => ({
                     id, name: buildName(id), color: SERIES_COLORS[(i + 1) % SERIES_COLORS.length],

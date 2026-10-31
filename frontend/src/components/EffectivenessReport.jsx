@@ -283,7 +283,7 @@ const mixLabel = (mix) => Object.entries(mix ?? {}).filter(([, v]) => v > 0)
  * effectiveness of each item (with × without, × only its flat stats, × the same gold in pure stats) and the
  * comparison of candidates for one purchase.
  */
-export function EffectivenessPanel({ build, buildId, name, minute, items, builds, folders, compare = [], compareKey = '' }) {
+export function EffectivenessPanel({ objectives, build, buildId, name, minute, items, builds, folders, compare = [], compareKey = '' }) {
   const names = useTestNames();
   const [kind, setKind] = useState('basico');
   const [report, setReport] = useState(null);
@@ -311,7 +311,7 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
   const [cmp, setCmp] = useState({ slot: '', candidates: [], test: 'atirador_alimentado', rows: null });
   const stop = useRef(false);
   const at = minute == null ? null : Math.round(minute * 100) / 100;
-  const base = { build, buildId: build ? null : buildId, minute: at, reference: ref };
+  const base = { build, buildId: build ? null : buildId, minute: at, reference: ref, objectives };
   const itemsById = useMemo(() => new Map((items ?? []).map((i) => [i.id, i])), [items]);
 
   useEffect(() => {

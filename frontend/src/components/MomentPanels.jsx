@@ -113,7 +113,9 @@ export function RelevanceReport({ point, prices, itemsById, draft, overlay }) {
     const passiveGold = x ? x.passiveGold : c.passiveGold;
     return { ...c, passiveGold, gold: c.flatGold + passiveGold, passiveList: x?.passives };
   });
-  const grand = rows.reduce((s, r) => s + r.gold, 0) + forgeGold;
+  // The objectives on the sheet are a source of their own: no item gets the credit.
+  const objectiveGold = Object.entries(point.objectiveDelta ?? {}).reduce((sum, [k, v]) => sum + v * (prices[k] ?? 0), 0);
+  const grand = rows.reduce((s, r) => s + r.gold, 0) + forgeGold + objectiveGold;
   rows.sort((a, b) => b.gold - a.gold);
   const share = (g) => (grand > 0 ? (g / grand) * 100 : 0);
 
@@ -121,6 +123,7 @@ export function RelevanceReport({ point, prices, itemsById, draft, overlay }) {
     <section className="panel">
       <h3>{t('report.title', { time: mmss(point.minute) })}</h3>
       <p className="muted" style={{ marginTop: 0 }}>{t('report.help')}</p>
+      {objectiveGold > 0 && <p><strong>{t('objectives.title')}</strong>: {n0(objectiveGold)} ({n0(share(objectiveGold))}%)</p>}
       {draft && rows.length > 0 && (
         <div className="pass-sources">
           <label className="check" title={t('report.passHelp')}>

@@ -1245,3 +1245,8 @@ td .arch-tag { display: inline; margin-left: 4px; }
 .eff-legend button { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; font-size: 0.75em; }
 .eff-legend button.off { opacity: 0.4; text-decoration: line-through; }
 .eff-legend .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+
+.objectives-picker { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 6px 0; }
+.objectives-picker.compact { font-size: .85em; }
+.arena-map-choice { margin: 6px 0; }
+.arena-map-choice summary { cursor: pointer; font-weight: 600; }

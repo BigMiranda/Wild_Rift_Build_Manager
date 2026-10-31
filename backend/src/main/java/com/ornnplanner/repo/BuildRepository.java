@@ -176,6 +176,9 @@ public class BuildRepository {
     }
 
     public static class Build {
+        /** Objectives on top of the build in a reading of it (the planner's selector); never stored. */
+        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+        public com.ornnplanner.arena.ArenaModel.ObjectiveBuffs objectives;
         public Long id;
         public long folderId;
         public String name;
