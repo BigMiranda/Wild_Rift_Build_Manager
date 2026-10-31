@@ -1,0 +1,56 @@
+# Ouro efetivo das passivas (patch 7.3d): como o modo "estimado pelos números do momento" converte o que uma passiva faz
+# em ouro, e como o modo "medido num cenário" procura o ouro equivalente. São estimativas de uso, não dados do jogo:
+# mudar um número aqui muda o valor mostrado, sem mexer em código.
+#
+# O que entra (linhas de /api/lab/effect-values, calculadas pelas fórmulas da luta em cada minuto):
+#   dano por golpe ou por segundo  o dano numa troca de referência ÷ o dano que 1 ponto de DdA (físico e verdadeiro) ou de
+#                                  PdH (mágico) dá nessa mesma troca × o preço do ponto
+#   redução de resistência         a % de penetração equivalente × o preço do ponto de penetração % × `reducao.fator`
+#   escudo por gatilho             a quantidade × o preço do escudo (precos_status.yml, a mesma base da Vida) × disponibilidade
+#   cura                           a quantidade × o preço da Vida: é a conta de status (precos_status.yml), sem fator
+#   Feridas, corte de escudo e o resto sem número: seguem o valor por tier (PASSIVE_GOLD_BY_TIER, no frontend)
+patch: "7.3d"
+
+# A troca de referência: o que acontece numa luta típica.
+troca:
+  duracao: 10              # s
+  ataques: 8               # ataques básicos causados
+  ataques_recebidos: 10    # ataques básicos sofridos (reflexo)
+  habilidades: 5           # habilidades de dano usadas
+  razao_dda: 1.0           # dano por ponto de DdA em cada habilidade
+  razao_pdh: 1.0           # dano por ponto de PdH em cada habilidade
+  vida_alvo: 3000          # Vida do alvo, para efeitos em % da Vida do alvo
+
+reducao:
+  fator: 0.75              # a redução leva alguns acertos para chegar ao máximo: vale 75% da penetração igual
+
+# Disponibilidade de um escudo por gatilho: gatilho × recarga × duração.
+escudo:
+  gatilho:                 # chance de o escudo estar em uso quando importa, pelo `quando` de combate_7_3d.yml
+    vida_abaixo: 0.8
+    ativo: 0.9
+    combate: 1.0
+    inicio: 1.0
+    ao_sofrer_dano: 0.8
+    ao_causar_dano: 0.8
+    ao_atacar: 0.8
+    ao_controlar: 0.7
+    ao_imobilizar: 0.7
+    ao_ser_imobilizado: 0.6
+    ao_usar_ult: 0.7
+    ao_conjurar: 0.8
+    periodico: 0.9
+    padrao: 0.7
+  janela_recarga: 30       # s: recarga até aqui conta inteira; acima, janela ÷ recarga
+  duracao_cheia: 3         # s: duração daqui para cima conta inteira; abaixo, duração ÷ este valor
+
+# Modo medido: busca binária do ouro em status puros que dá o mesmo ganho.
+busca:
+  ouro_maximo: 6000
+  tolerancia: 0.01         # fração do resultado com a passiva
+  passos: 6                # no máximo, por passiva e minuto
+  cesta_defesa:            # partes do ouro (mesma leitura da Efetividade: `status puros`)
+    Max Health: 0.3334
+    Armor: 0.3333
+    Magic Resistance: 0.3333
+  variacao_minima: 0.005   # abaixo disso no tempo até morrer, a passiva é de dano: compara o dano causado (DdA ou PdH)

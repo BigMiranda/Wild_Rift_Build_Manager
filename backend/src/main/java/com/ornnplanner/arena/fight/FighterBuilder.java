@@ -46,6 +46,9 @@ public class FighterBuilder {
          */
         @com.fasterxml.jackson.annotation.JsonIgnore
         public Map<Long, com.ornnplanner.engine.Model.ItemDef> replaceItems;
+        /** Items held differently: passives off (with their fight effects and triggers), flat stats on top. */
+        @com.fasterxml.jackson.annotation.JsonIgnore
+        public Map<Long, com.ornnplanner.engine.Model.ItemEdit> edits;
     }
 
     /** A combatant resolved: its build, inventory, level and minute. */
@@ -59,6 +62,12 @@ public class FighterBuilder {
         Combatant c;
         /** The synthetic items of {@link Combatant#replaceItems} held, by their id. */
         Map<Long, com.ornnplanner.engine.Model.ItemDef> extra = new LinkedHashMap<>();
+        Map<Long, com.ornnplanner.engine.Model.ItemEdit> edits = Map.of();
+
+        boolean off(Long itemId, String passive) {
+            com.ornnplanner.engine.Model.ItemEdit e = itemId == null ? null : edits.get(itemId);
+            return e != null && e.off.contains(passive);
+        }
     }
 
     private final BuildRepository builds;
@@ -138,7 +147,7 @@ public class FighterBuilder {
         Resolved r = resolve(c);
         List<Triggered> all = discover(r, formsOff);
         Build base = variant(r.build, all, null, formsOff);
-        MinutePoint p0 = planner.snapshot(base, r.items, r.level, r.minute, r.extra);
+        MinutePoint p0 = planner.snapshot(base, r.items, r.level, r.minute, r.extra, r.edits);
         ArenaBuild out = new ArenaBuild();
         out.fighter = fighter(r, base, p0);
         // The planner's sheet with every effect the fight decides off (the fighter's start) and all of them on at once.
@@ -150,7 +159,7 @@ public class FighterBuilder {
                     setSwitch(on, t, true);
                 }
             }
-            out.fighter.sheetAllOn = new LinkedHashMap<>(planner.snapshot(on, r.items, r.level, r.minute, r.extra).total);
+            out.fighter.sheetAllOn = new LinkedHashMap<>(planner.snapshot(on, r.items, r.level, r.minute, r.extra, r.edits).total);
         } else {
             out.fighter.sheetAllOn = new LinkedHashMap<>(p0.total);
         }
@@ -158,7 +167,7 @@ public class FighterBuilder {
             if (!t.fightTriggered()) {
                 continue;
             }
-            MinutePoint p1 = planner.snapshot(variant(r.build, all, t, formsOff), r.items, r.level, r.minute, r.extra);
+            MinutePoint p1 = planner.snapshot(variant(r.build, all, t, formsOff), r.items, r.level, r.minute, r.extra, r.edits);
             p1.total.forEach((stat, v) -> {
                 double d = v - p0.total.getOrDefault(stat, 0.0);
                 if (Math.abs(d) > 1e-9) {
@@ -190,6 +199,9 @@ public class FighterBuilder {
                 if (!e.hasConditional) {
                     continue;
                 }
+                if (r.off(id, e.passive != null ? e.passive : e.name)) {
+                    continue;
+                }
                 String key = com.ornnplanner.seed.ItemEffectCatalog.key(name, e.name);
                 Boolean on = b.itemSetup == null ? null : b.itemSetup.conditional.get(key);
                 out.add(triggered(key, name, e.name, "item", on != null ? on : e.defaultOn, id));
@@ -201,6 +213,9 @@ public class FighterBuilder {
                 }
             }
             for (String passive : shopConditionalPassives(id)) {
+                if (r.off(id, passive)) {
+                    continue;
+                }
                 out.add(triggered(name + "|" + passive, name, passive, "loja", purchase == null || purchase, id));
             }
         }
@@ -335,12 +350,12 @@ public class FighterBuilder {
         Map<String, Map<String, Double>> out = new LinkedHashMap<>();
         Map<String, Boolean> allOff = new LinkedHashMap<>();
         forms.forEach(f -> allOff.put(f, false));
-        Map<String, Double> off = planner.snapshot(withDelayedOn(r.build, forms, allOff), r.items, r.level, r.minute, r.extra).total;
+        Map<String, Double> off = planner.snapshot(withDelayedOn(r.build, forms, allOff), r.items, r.level, r.minute, r.extra, r.edits).total;
         for (String form : forms) {
             Map<String, Boolean> one = new LinkedHashMap<>(allOff);
             one.put(form, true);
             Map<String, Double> on = planner.snapshot(withDelayedOn(r.build, java.util.Set.of(), one), r.items, r.level,
-                    r.minute, r.extra).total;
+                    r.minute, r.extra, r.edits).total;
             Map<String, Double> delta = new LinkedHashMap<>();
             on.forEach((k, v) -> {
                 double d = v - off.getOrDefault(k, 0.0);
@@ -373,6 +388,7 @@ public class FighterBuilder {
             }
         }
         Resolved r = new Resolved();
+        r.edits = c.edits == null ? Map.of() : c.edits;
         r.build = build;
         r.point = p;
         r.c = c;
@@ -463,8 +479,11 @@ public class FighterBuilder {
             if (!c.rune) {
                 f.items.put(c.itemName, c.itemId);
             }
+            com.ornnplanner.engine.Model.ItemDef def = c.rune || r.edits.isEmpty() ? null : planner.referenceData().items.get(c.itemId);
             for (Map<String, Object> e : fx) {
-                f.effects.add(new ItemEffect(c.itemName, e));
+                if (def == null || !r.off(c.itemId, CombatCatalog.passiveOf(def, e))) {
+                    f.effects.add(new ItemEffect(c.itemName, e));
+                }
             }
             // An item / rune whose heal the fight models (Desespero Eterno, Aurora e Crepúsculo, Aperto...) keeps it out
             // of the pool.

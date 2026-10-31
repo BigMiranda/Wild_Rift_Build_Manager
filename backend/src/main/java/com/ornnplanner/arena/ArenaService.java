@@ -280,6 +280,7 @@ public class ArenaService {
             c.activations = slot.activations;
             c.excludeItems = slot.excludeItems;
             c.replaceItems = slot.replaceItems;
+            c.edits = slot.edits;
             // The champion's name decides its sheet; the sheet's form effects are switched by the arena itself.
             Map<String, Object> kit = (Map<String, Object>) kits.get(combat.championName(c));
             Set<String> forms = new LinkedHashSet<>();

@@ -1181,3 +1181,10 @@ tr.report-total td { border-top: 1px solid var(--border-strong); }
 }
 .tile:hover .tile-compare, .tile-compare.on { opacity: 1; }
 .tile-compare.on { background: var(--gold); color: var(--accent-ink); }
+
+/* Passive values (effective gold) */
+.pv-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 8px 0; }
+.pv-legend { flex-basis: 100%; }
+.pv-src { margin-left: 6px; padding: 0 4px; border-radius: 3px; font-size: 10px; background: var(--surface-3); color: var(--text-2); }
+.pv-src.estimado { color: #6cb8f0; }
+.pv-src.medido { color: #6fcf97; }

@@ -4,6 +4,7 @@ import { ALIGN_SLOT, FORGE_COLOR, itemColor, itemPassiveColor } from '../effecti
 import ItemIcon from './ItemIcon.jsx';
 import { useItemReader } from './BuildDock.jsx';
 import { statColor } from './StatIcon.jsx';
+import { PassiveSource } from './PassiveValueBar.jsx';
 
 const signed = (v) => (v > 0 ? `+${n0(v)}` : n0(v));
 const signedPct = (v) => (v == null ? '' : `${v > 0 ? '+' : ''}${pct(v)}`);
@@ -90,7 +91,8 @@ export default function EffectiveBreakdown({ columns, compact = false, align }) 
                     ✦ {p.name}
                     {p.known
                       ? `: ${p.parts.map((q) => `${label(q.stat)} +${n1(q.amount)}`).join(', ')} = ${n0(p.gold)}`
-                      : ` ≈ ${n0(p.gold)}*`}
+                      : ` ≈ ${n0(p.gold)}${p.source ? '' : '*'}`}
+                    <PassiveSource passive={p} />
                   </span>
                 ))}
               </div>

@@ -186,11 +186,33 @@ public class PlannerService {
      */
     public com.ornnplanner.engine.Model.MinutePoint snapshot(Build build, List<Long> items, int level, double minute,
                                                              Map<Long, ItemDef> extra) {
+        return snapshot(build, items, level, minute, extra, Map.of());
+    }
+
+    /** The same, with items held differently ({@code edits}: passives off, flat stats on top). */
+    public com.ornnplanner.engine.Model.MinutePoint snapshot(Build build, List<Long> items, int level, double minute,
+                                                             Map<Long, ItemDef> extra,
+                                                             Map<Long, com.ornnplanner.engine.Model.ItemEdit> edits) {
         ReferenceData ref = referenceData();
         if (extra != null) {
             ref.items.putAll(extra);
         }
         applyItemEffects(build, ref);
+        if (edits != null) {
+            edits.forEach((id, e) -> {
+                ItemDef it = ref.items.get(id);
+                if (it != null) {
+                    List<com.ornnplanner.engine.Model.StatLine> lines = new ArrayList<>();
+                    for (com.ornnplanner.engine.Model.StatLine l : it.stats) {
+                        if (l.passive == null || !e.off.contains(l.passive)) {
+                            lines.add(l);
+                        }
+                    }
+                    e.extra.forEach((stat, v) -> lines.add(com.ornnplanner.engine.Model.StatLine.flat(stat, v)));
+                    ref.items.put(id, it.withStats(lines));
+                }
+            });
+        }
         EngineInput in = input(build);
         double t = Math.max(minute, 0.01);
         in.itemIds = new ArrayList<>(items);

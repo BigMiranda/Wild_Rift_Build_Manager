@@ -9,6 +9,9 @@
 # build; aqui ficam só os efeitos que acontecem na luta. Valores de Campeões corpo a corpo quando o texto diferencia.
 #
 # Tipos (campo `tipo`):
+# `passiva` diz a qual passiva da loja o efeito pertence, quando o item tem mais de uma que faz algo na luta (sem o
+# campo: a primeira passiva do item que não dá status). O "medido num cenário" desliga uma passiva por esse nome.
+#
 #   ao_contato     ataques causam `dano` (+ `pdh` x PdH, + `vida_atual_alvo` x Vida atual do alvo) de `dano_tipo`
 #   a_cada_ataque  todo `n`º ataque causa `dano` (+ `dda_base`, `vida`, `dano_nv15`) de `dano_tipo`
 #   lamina         Lâmina Arcana: o ataque depois de uma habilidade causa dano extra (recarga 1,5s): `dda_base`, `dda`,
@@ -45,13 +48,13 @@ itens:
   Orbe do Oblívio: [{tipo: feridas, pct: 0.4, gatilho: magico}]
   Morellonomicon: [{tipo: feridas, pct: 0.5, gatilho: magico}]
   Colete Espinhoso:
-  - {tipo: feridas, pct: 0.4, gatilho: qualquer}
-  - {tipo: feridas, pct: 0.4, ao_ser_atingido: true}
-  - {tipo: espinhos, dano: 4, armadura_bonus: 0.06, dano_tipo: magico}
+  - {passiva: "Entrelaçar", tipo: feridas, pct: 0.4, gatilho: qualquer}
+  - {passiva: "Entrelaçar", tipo: feridas, pct: 0.4, ao_ser_atingido: true}
+  - {passiva: "Espinhos", tipo: espinhos, dano: 4, armadura_bonus: 0.06, dano_tipo: magico}
   Armadura de Espinhos:
-  - {tipo: feridas, pct: 0.5, gatilho: qualquer}
-  - {tipo: feridas, pct: 0.5, ao_ser_atingido: true}
-  - {tipo: espinhos, dano: 20, armadura_bonus: 0.06, vida_bonus: 0.01, dano_tipo: magico}
+  - {passiva: "Entrelaçar", tipo: feridas, pct: 0.5, gatilho: qualquer}
+  - {passiva: "Entrelaçar", tipo: feridas, pct: 0.5, ao_ser_atingido: true}
+  - {passiva: "Espinhos", tipo: espinhos, dano: 20, armadura_bonus: 0.06, vida_bonus: 0.01, dano_tipo: magico}
 
   # ------------------------------------------------------------- Corte de escudo
   Presa da Serpente: [{tipo: corta_escudo, base: 0.40, dda_bonus: 0.001, max: 0.60}]
@@ -66,10 +69,10 @@ itens:
   Mandato Imperial: [{tipo: amplifica_alvo, marca: true, pct: 0.07, duracao: 4}]
   Lembranças do Lorde Dominik: [{tipo: amplifica, alvo_vida_bonus: 1200, max: 0.12}]
   Tormento de Liandry:
-  - {tipo: amplifica, pct_por_s: 0.02, max: 0.06}
-  - {tipo: queimadura, vida_max_alvo_por_s: 0.02, duracao: 3, dano_tipo: magico}
+  - {passiva: "Loucura", tipo: amplifica, pct_por_s: 0.02, max: 0.06}
+  - {passiva: "Tormento", tipo: queimadura, vida_max_alvo_por_s: 0.02, duracao: 3, dano_tipo: magico}
   Máscara Assustadora: [{tipo: amplifica, pct_por_s: 0.02, max: 0.06}]
-  Criafendas: [{tipo: amplifica, pct_por_s: 0.02, max: 0.08}]
+  Criafendas: [{passiva: "Corrupção do Vazio", tipo: amplifica, pct_por_s: 0.02, max: 0.08}]
   Passos Imortais: [{tipo: amplifica, pct: 0.05, vida_alta: true}]
   Lança de Shojin: [{tipo: amplifica, pct_por_s: 0.03, max: 0.12, so_habilidade: true}]
 
@@ -87,16 +90,16 @@ itens:
   Terminus: [{tipo: ao_contato, dano: 30, dano_tipo: magico}]
   Arco Recurvo: [{tipo: ao_contato, dano: 15, dano_tipo: fisico}]
   Dente de Na'Shor: [{tipo: ao_contato, dano: 15, pdh: 0.2, dano_tipo: magico}]
-  Espada do Rei Destruído: [{tipo: ao_contato, vida_atual_alvo: 0.08, dano_tipo: fisico}]
+  Espada do Rei Destruído: [{passiva: "Golpes Destrutivos", tipo: ao_contato, vida_atual_alvo: 0.08, dano_tipo: fisico}]
   Hidra Titânica: [{tipo: a_cada_ataque, n: 2, dano: 25, vida_bonus: 0.03, dano_tipo: fisico}]
   Mata-Cráquens: [{tipo: a_cada_ataque, n: 3, dano: 150, dano_nv15: 210, dano_tipo: fisico}]
-  Quebracascos: [{tipo: a_cada_ataque, n: 4, dda_base: 1.6, vida: 0.05, dano_tipo: fisico}]
+  Quebracascos: [{passiva: "Marujo", tipo: a_cada_ataque, n: 4, dda_base: 1.6, vida: 0.05, dano_tipo: fisico}]
   Chuva de Canivete: [{tipo: a_cada_ataque, n: 4, dano: 100, dano_tipo: magico}]  # fonte_7_3d: nota de patch (120 → 100)
   Canhão Fumegante: [{tipo: a_cada_ataque, n: 4, dano: 80, dano_tipo: magico}]
-  Faca de Statikk: [{tipo: a_cada_ataque, n: 3, dano: 60, dano_tipo: magico}]
+  Faca de Statikk: [{passiva: "Eletrocentelha", tipo: a_cada_ataque, n: 3, dano: 60, dano_tipo: magico}]
   Muramana:
-  - {tipo: ao_contato, mana: 0.015, dano_tipo: fisico}
-  - {tipo: golpe, mana: 0.035, gatilho: habilidade, recarga: 0, dano_tipo: fisico}
+  - {passiva: "Choque", tipo: ao_contato, mana: 0.015, dano_tipo: fisico}
+  - {passiva: "Choque", tipo: golpe, mana: 0.035, gatilho: habilidade, recarga: 0, dano_tipo: fisico}
   Gume do Infinito: [{tipo: critico, mult: 2.3}]
 
   # ------------------------------------------------------------- Lâmina Arcana
@@ -112,7 +115,7 @@ itens:
   Tocha de Chamas Negras: [{tipo: queimadura, por_s: 20, pdh_por_s: 0.02, duracao: 3, dano_tipo: magico}]
   Cinzas do Destino: [{tipo: queimadura, por_s: 1.67, duracao: 3, dano_tipo: magico}]
   Égide de Fogo Solar: [{tipo: aura, a_cada: 1, dano: 20, vida_bonus: 0.015, dano_tipo: magico}]
-  Resplendor Vazio: [{tipo: aura, a_cada: 1, dano: 20, dano_nv15: 30, vida_bonus: 0.01, dano_tipo: magico}]
+  Resplendor Vazio: [{passiva: "Imolar", tipo: aura, a_cada: 1, dano: 20, dano_nv15: 30, vida_bonus: 0.01, dano_tipo: magico}]
   Brasa de Bami: [{tipo: aura, a_cada: 1, dano: 10, dano_nv15: 20, dano_tipo: magico}]
   Desespero Eterno: [{tipo: aura, a_cada: 4, vida_max: 0.03, cura_do_dano: 2.5, dano_tipo: magico}]
 
@@ -123,7 +126,7 @@ itens:
   Eco de Luden: [{tipo: golpe, gatilho: habilidade, recarga: 9, dano: 155, pdh: 0.128, dano_tipo: magico}]
   Alternador Hextec: [{tipo: golpe, gatilho: qualquer, recarga: 20, dano: 25, dano_nv15: 60, dano_tipo: magico}]
   Estilhaço de Kircheis: [{tipo: golpe, gatilho: ataque, recarga: 10, dano: 40, dano_tipo: magico}]
-  Ápice da Tempestade: [{tipo: golpe, gatilho: habilidade, recarga: 25, dano: 125, pdh: 0.10, dano_tipo: magico}]
+  Ápice da Tempestade: [{passiva: "Dilúvio", tipo: golpe, gatilho: habilidade, recarga: 25, dano: 125, pdh: 0.10, dano_tipo: magico}]
   Manto da Aurora: [{tipo: golpe, gatilho: habilidade, recarga: 3, dano: 40, vida_bonus: 0.025, dano_tipo: magico}]
 
   # ------------------------------------------------------------- Ataques fortalecidos
@@ -131,11 +134,11 @@ itens:
   Céu Dividido: [{tipo: lumescudo, mult: 1.6, recarga: 6, cura_dda_base: 1.25, cura_vida_perdida: 0.06}]
 
   # ------------------------------------------------------------- Ativos de dano
-  Hemodrenário: [{tipo: ativo, recarga: 12, dda_base: 1.75, cura_dda: 0.20, dano_tipo: fisico}]
+  Hemodrenário: [{passiva: "Corte Sedento (Ativo)", tipo: ativo, recarga: 12, dda_base: 1.75, cura_dda: 0.20, dano_tipo: fisico}]
   Quebrapassos: [{tipo: ativo, recarga: 25, dda: 1.0, dano_tipo: fisico}]
   Força do Vendaval: [{tipo: ativo, recarga: 60, dano: 120, dano_nv15: 375, dda_bonus: 1.05, dano_tipo: fisico}]
   Explocinturão Hextec: [{tipo: ativo, recarga: 30, dano: 100, pdh: 0.10, dano_tipo: magico}]
-  Redenção: [{tipo: ativo, recarga: 60, vida_max_alvo: 0.10, dano_tipo: verdadeiro}]
+  Redenção: [{passiva: "Intervenção (Ativo)", tipo: ativo, recarga: 60, vida_max_alvo: 0.10, dano_tipo: verdadeiro}]
 
 # Feitiços da build usados na luta (automaticamente): Incendiar e Exaustão no começo, no alvo; Barreira e Curar
 # abaixo de 35% de Vida.

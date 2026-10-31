@@ -540,7 +540,7 @@ public class EffectTestService {
 
     private Arena.Input buildInput(ArenaModel.Slot slot) {
         String key = "build|" + hash(write(slot.build)) + "|" + slot.minute + "|" + slot.excludeItems + "|"
-                + (slot.replaceItems == null ? "" : write(slot.replaceItems));
+                + (slot.replaceItems == null ? "" : write(slot.replaceItems)) + "|" + (slot.edits == null ? "" : write(slot.edits));
         if (inputs.size() > 400) {
             inputs.clear();
         }
@@ -662,16 +662,63 @@ public class EffectTestService {
 
     /** The item's gold in pure stats (Health, Armor, Magic Resist by the shares of {@code mix}), at their gold prices. */
     ItemDef pureStats(ItemDef it, Map<String, Double> mix) {
-        Map<String, Double> prices = planner.referenceData().statPrices;
         int idx = Math.max(0, MIXES.indexOf(mix));
         ItemDef d = synthetic(it, -(2_000_000L + it.id * 100 + idx), "Ouro de " + it.name + " em status");
+        goldStats(it.cost, mix).forEach((stat, v) -> d.stats.add(StatLine.flat(stat, v)));
+        return d;
+    }
+
+    /** What an amount of gold buys in pure stats, by the shares of {@code mix}, at the gold prices. */
+    public Map<String, Double> goldStats(double gold, Map<String, Double> mix) {
+        Map<String, Double> prices = planner.referenceData().statPrices;
+        Map<String, Double> out = new LinkedHashMap<>();
         mix.forEach((stat, share) -> {
             double price = prices.getOrDefault(stat, 0.0);
             if (share != null && share > 0 && price > 0) {
-                d.stats.add(StatLine.flat(stat, it.cost * share / price));
+                out.put(stat, gold * share / price);
             }
         });
-        return d;
+        return out;
+    }
+
+    /** The build at a minute with items held differently, in a scenario (preset key or "u:<id>"), cached. */
+    public Measures fightWith(BuildRepository.Build build, double minute, String testKey, Map<Long, com.ornnplanner.engine.Model.ItemEdit> edits) {
+        Job job = new Job();
+        job.testKey = testKey;
+        Test test = testOf(job);
+        String key = "edit|" + hash(write(build)) + "@" + minute + "|" + hash(write(test)) + "|" + write(edits);
+        Measures m = results.get(key);
+        if (m == null) {
+            ArenaModel.Slot s = slot(build, minute);
+            s.edits = edits.isEmpty() ? null : edits;
+            Fight f = fight(s, test);
+            m = measure(arena.runInputs(f.inputs, f.duration), f);
+            results.put(key, m);
+        }
+        return m;
+    }
+
+    /** The build at a minute, held as {@code edits} says, in its champion's slot of a saved arena scenario. */
+    public Measures savedScenario(long id, BuildRepository.Build build, double minute, Map<Long, com.ornnplanner.engine.Model.ItemEdit> edits) {
+        ArenaModel.Scenario sc = arena.find(id);
+        int slot = -1;
+        for (int k = 0; k < sc.fighters.size() && slot < 0; k++) {
+            Long b = sc.fighters.get(k).buildId;
+            if (b != null && builds.findBuild(b).map(x -> java.util.Objects.equals(build.unitCode, x.unitCode)).orElse(false)) {
+                slot = k;
+            }
+        }
+        if (slot < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "O cenário não tem esse campeão.");
+        }
+        ArenaModel.Slot s = sc.fighters.get(slot);
+        s.buildId = null;
+        s.build = build;
+        s.minute = minute;
+        s.excludeItems = null;
+        s.edits = edits.isEmpty() ? null : edits;
+        double duration = ArenaService.duration(sc);
+        return measure(arena.runQuiet(sc), slot, 0, 0, duration);
     }
 
     private static ItemDef synthetic(ItemDef it, long id, String name) {
@@ -791,7 +838,12 @@ public class EffectTestService {
     }
 
     public static Measures measure(ArenaModel.Result r, int attackers, int allies, double duration) {
-        ArenaModel.FighterStats me = r.fighters.get(0);
+        return measure(r, 0, attackers, allies, duration);
+    }
+
+    /** The same, for fighter {@code index}. */
+    static Measures measure(ArenaModel.Result r, int index, int attackers, int allies, double duration) {
+        ArenaModel.FighterStats me = r.fighters.get(index);
         Measures m = new Measures();
         double elapsed = Math.max(1e-6, r.duration);
         m.fightLength = r.duration;
@@ -943,7 +995,7 @@ public class EffectTestService {
         return o instanceof Number ? ((Number) o).doubleValue() : def;
     }
 
-    private static String write(Object o) {
+    static String write(Object o) {
         try {
             return JSON.writeValueAsString(o);
         } catch (JsonProcessingException e) {
@@ -959,7 +1011,7 @@ public class EffectTestService {
         }
     }
 
-    private static String hash(String s) {
+    static String hash(String s) {
         try {
             byte[] d = MessageDigest.getInstance("SHA-1").digest(s.getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();

@@ -5363,6 +5363,7 @@ public class Arena {
         for (ItemEffect e : u.f.effects) {
             Map<String, Object> p = e.p;
             String type = type(p);
+            int firstLine = u.r.effectValues.size();
             switch (e.kind()) {
                 case "ao_contato": {
                     Calc c = new Calc().flat(num(p.get("dano"), 0), null).ratio(p, "pdh", st(u, Stats.ABILITY_POWER), AP)
@@ -5520,6 +5521,10 @@ public class Arena {
                     }
                     break;
             }
+            for (Map<String, Object> m : u.r.effectValues.subList(firstLine, u.r.effectValues.size())) {
+                m.put("kind", e.kind());   // what the gold estimate of a passive reads
+                m.put("spec", p);
+            }
         }
         // the planner's conditional effects: when they turn on and what they give (shields, heals, stats)
         for (T t : u.trigs) {
@@ -5542,6 +5547,13 @@ public class Arena {
                         "medido pelo planejador: os status da build com o efeito ligado menos desligado, neste minuto (Forja Viva"
                                 + " e o resto da build incluídos); " + (t.d.buildOn ? "ligado na build: já está nos status da ficha"
                                 : "desligado na build: fora dos status da ficha"));
+                Map<String, Object> m = u.r.effectValues.get(u.r.effectValues.size() - 1);
+                m.put("kind", "gatilho");
+                m.put("effect", t.d.effect);
+                m.put("delta", new LinkedHashMap<>(t.d.delta));
+                if (t.d.spec != null) {
+                    m.put("spec", t.d.spec);
+                }
             }
         }
     }

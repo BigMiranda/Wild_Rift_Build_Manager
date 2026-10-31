@@ -22,6 +22,30 @@ public class CombatCatalog {
     private final Map<String, Map<String, Object>> triggers = new LinkedHashMap<>();
 
     @SuppressWarnings("unchecked")
+    /**
+     * The passive of the shop a combat effect belongs to: its {@code passiva}, or the first named passive of the item
+     * that gives no stats (the first named one if they all do); null = the item names none.
+     */
+    public static String passiveOf(com.ornnplanner.engine.Model.ItemDef item, Map<String, Object> effect) {
+        Object named = effect.get("passiva");
+        if (named != null) {
+            return String.valueOf(named);
+        }
+        String first = null;
+        for (com.ornnplanner.engine.Model.PassiveText p : item.passives) {
+            if (p.name == null) {
+                continue;
+            }
+            if (first == null) {
+                first = p.name;
+            }
+            if (item.stats.stream().noneMatch(l -> p.name.equals(l.passive))) {
+                return p.name;
+            }
+        }
+        return first;
+    }
+
     public CombatCatalog(@Value("${planner.seed.combat:classpath:seed/combate_7_3d.yml}") Resource file) {
         try (InputStream in = file.getInputStream()) {
             Map<String, Object> root = new Yaml().load(in);

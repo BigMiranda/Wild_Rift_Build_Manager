@@ -327,3 +327,68 @@ candidato mais caro atrasa os seguintes exatamente pela conta do ouro (Δ custo 
 "Não cabe aqui" (regra dos espaços); escolher um minuto no gráfico o põe no meio da sequência.
 
 Testes: 207 → 211 (10 opcionais pulados). Golden sem mudança. `npm run build` limpo.
+
+## Complemento 2: ouro efetivo das passivas ✅
+
+Seletor **"Valor das passivas"** (`PassiveValueBar.jsx`) no gráfico de ouro efetivo e na aba Ouro efetivo, com a legenda do
+que está na tela. O modo vale também para a Relevância e para a leitura de item da barra fixa. O padrão agora é
+"Estimado"; a escolha fica no navegador.
+
+- **Por tier:** sem camada nenhuma, é o `effective.js` de antes. Comparei o arquivo antigo e o novo no Node, com uma
+  amostra: resultado idêntico.
+- **Estimado** (`PassiveValueService.estimate`, `POST /api/passives/estimate`): as linhas de `/api/lab/effect-values` em
+  cada minuto amostrado, convertidas por `seed/equivalencias_passivas_7_3d.yml`. Dano vira DdA ou PdH numa troca de
+  referência, redução vira penetração equivalente, escudo por gatilho vira Vida × disponibilidade. Feridas, corte de
+  escudo e o que não tem número seguem por tier. A conta aparece no `title` do selo da passiva.
+- **Medido** (`POST /api/passives/measure`): com o botão "Medir", num cenário de teste, no relatório Básico ou num cenário
+  salvo da Arena. Roda a luta com e sem a passiva, e `GoldSearch` procura o ouro em status puros que dá o mesmo ganho.
+  Usa `EffectTestService.goldStats`, a mesma função da leitura "mesmo ouro" da Efetividade. Sem mudança no tempo até morrer,
+  a passiva é tratada como de dano: compara o dano causado e a cesta vira DdA ou PdH. Uma passiva que piora o resultado
+  fica negativa. Minutos: cada compra e a cada 2 min, interpolados. Até a medida terminar, a tela segue no modo anterior;
+  com "Parar", também, e o que rodou fica em cache no servidor.
+
+**O que precisou mudar por baixo:**
+- `combate_7_3d.yml`: o campo `passiva` diz a qual passiva o efeito pertence, nos 12 itens em que isso é ambíguo. Antes o
+  efeito só conhecia o item, e não dava para desligar "só ela".
+- `Model.ItemEdit` (passivas desligadas e status por cima) no `snapshot` do planejador, no `FighterBuilder` e no `Slot`.
+  Tira as linhas de status da passiva, os efeitos de combate e os gatilhos dela.
+- `describeEffects` da Arena marca cada linha com `kind` e `spec`. É descritivo: o golden não mudou.
+
+**Decisões:**
+- Passiva só de status fica fora de estimado e medido: a conta de status já é a medida. Vale também para gatilho que só
+  dá status (Tolerância).
+- Passiva com status e efeito de luta: no estimado soma os dois; no medido a medida substitui o todo.
+- Linha da loja sem nome ("Só é possível carregar um item de Lâmina Arcana") é regra, não passiva: em estimado e medido
+  vale 0. Por tier ela segue contando 900, como antes.
+- Passiva sem efeito modelado na luta não é medida: segue no valor anterior.
+- A primeira calibragem da troca (3 habilidades, razão de PdH 0,7) dava Espinhos 13.155 contra 3.577 medidos; passou a 5
+  habilidades e razão 1,0, só no YAML.
+
+**Big Carry v1 aos 23:30, relatório Básico:**
+
+| passiva | por tier (ou status) | estimado | medido | desligar tira |
+|---|---|---|---|---|
+| Coração de Aço · Consumo Colossal | 7.188 (status) | 8.459 | 2.705 | 28,3% |
+| Égide de Fogo Solar · Imolar | 900 | 4.590 | 3.964 (dano) | 14,2% |
+| Desespero Eterno · Angústia | 9.148 (status) | 11.893 | ≥ 6.000 (teto da busca) | 71,4% |
+| Armadura de Espinhos · Espinhos | 900 | 5.525 | 3.577 (dano) | 12,9% |
+| Armadura de Espinhos · Entrelaçar | 900 | 900 (tier) | 0 | 0% |
+| Esmagadores · Persistência Noxiana | ≈ 1.690 (status) | 676 | 3.128 | 31,1% |
+| Duplaguarda · Tolerância | 4.095 (status) | 4.095 | 4.095 | fora: só status |
+
+Total da build: aproveitado 62.967 no medido. **O que mais mudou entre tier e medido:** Consumo Colossal (−4.483), Imolar
+(+3.064), Angústia (−3.148 ou menos), Espinhos (+2.677), Persistência Noxiana (+1.438) e Entrelaçar (−900: os bonecos não se
+curam, então Feridas não mudam nada; contra quem cura o valor seria outro).
+
+**Tempos:** estimativa de 1 minuto 0,5 s. Medido da build inteira: 58 s para 92 leituras (passiva × minuto) no Básico.
+Primeira vez; repetir vem do cache.
+
+**Limites:** a Vida da Consumo Colossal vale menos medida do que pelos preços porque a cesta de status puros rende mais
+tempo de vida por ouro do que Vida sozinha. A busca para em 6.000 de ouro (`busca.ouro_maximo`). Valor negativo aparece no
+número e no detalhe, mas a barra empilhada do gráfico não desenha parte negativa. Builds comparadas ficam no estimado: o
+medido é só da build aberta.
+
+**Testes novos (`PassiveValueTest`):** a busca acha o valor em curvas sintéticas conhecidas (reta e raiz), avisa o teto e
+não luta num empate; a estimativa usa os números do momento e Feridas seguem por tier; passiva só de status fica fora dos
+dois modos; sem a passiva, medido dá 0; a mesma build dá a mesma leitura. O "por tier idêntico" foi conferido no Node, porque
+não há teste de frontend.

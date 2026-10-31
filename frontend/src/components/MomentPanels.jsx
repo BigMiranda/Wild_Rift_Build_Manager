@@ -9,6 +9,7 @@ import RichText from './RichText.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
 import PassiveCompare from './PassiveCompare.jsx';
 import { findRune, runeIcon } from '../runes.js';
+import { effectiveGold } from '../effective.js';
 import { PASSIVE_GOLD_BY_TIER, acquiredPassives, passiveColor, passiveSince, pointItemIds } from '../passives.js';
 
 /** Series point at (or right before) a minute. */
@@ -96,7 +97,7 @@ function EffectiveSheet({ total }) {
  * How much each item (and each of its passives) adds to the build at a moment, in gold value, plus Ornn's Living
  * Forge on top. Share = part of the build's whole bonus value.
  */
-export function RelevanceReport({ point, prices, itemsById, draft }) {
+export function RelevanceReport({ point, prices, itemsById, draft, overlay }) {
   const read = useItemReader();
   const [passOpen, setPassOpen] = useState(false);
   const [enabled, setEnabled] = useState([]);
@@ -105,7 +106,13 @@ export function RelevanceReport({ point, prices, itemsById, draft }) {
   const toggle = (key) => setEnabled((e) => (e.includes(key) ? e.filter((k) => k !== key) : [...e, key]));
   const passing = passOpen && enabled.length > 0 && passed.rel;
   const forgeGold = Object.entries(point.forge ?? {}).reduce((sum, [k, v]) => sum + v * (prices[k] ?? 0), 0);
-  const rows = (point.contributions ?? []).map((c) => ({ ...c, gold: c.flatGold + c.passiveGold }));
+  // With the passive values on, a passive without stats counts as in the effective gold; by tier the report is the stats'.
+  const eff = overlay ? effectiveGold(point, itemsById, prices, overlay) : null;
+  const rows = (point.contributions ?? []).map((c) => {
+    const x = eff?.items.find((i) => i.purchaseIndex === c.purchaseIndex);
+    const passiveGold = x ? x.passiveGold : c.passiveGold;
+    return { ...c, passiveGold, gold: c.flatGold + passiveGold, passiveList: x?.passives };
+  });
   const grand = rows.reduce((s, r) => s + r.gold, 0) + forgeGold;
   rows.sort((a, b) => b.gold - a.gold);
   const share = (g) => (grand > 0 ? (g / grand) * 100 : 0);
@@ -172,7 +179,7 @@ export function RelevanceReport({ point, prices, itemsById, draft }) {
                     </td>
                     <td className="l"><StatList stats={r.flat} /></td>
                     <td>{n0(r.flatGold)}</td>
-                    <td>{r.passiveGold ? n0(r.passiveGold) : '—'}</td>
+                    <td title={r.passiveList?.map((p) => `${p.name}: ${n0(p.gold)}${p.detail ? ` (${p.detail})` : ''}`).join('\n')}>{r.passiveGold ? n0(r.passiveGold) : '—'}</td>
                     <td><strong>{n0(r.gold)}</strong></td>
                     <td className="l share-col"><ShareBar value={share(r.gold)} /></td>
                     <td>{cost ? pct((r.gold / cost) * 100) : '—'}</td>

@@ -56,6 +56,9 @@ public final class ArenaModel {
          */
         @JsonIgnore
         public Map<Long, com.ornnplanner.engine.Model.ItemDef> replaceItems;
+        /** Items held differently (passives off, flat stats on top), for the measured value of a passive; never stored. */
+        @JsonIgnore
+        public Map<Long, com.ornnplanner.engine.Model.ItemEdit> edits;
     }
 
     /**

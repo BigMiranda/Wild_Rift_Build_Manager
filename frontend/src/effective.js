@@ -10,14 +10,16 @@ export { PASSIVE_GOLD_BY_TIER };
  * - Passives not catalogued yet (text only): a provisional value by the item's tier (passiveGoldOf). Passives with the same name are
  *   unique: held twice, they count once.
  * - Ornn's Living Forge is shown apart (it belongs to the champion, amplifying the items).
+ * `overlay` (passiveValues.js) replaces the tier's value by an estimate or a measure; without it, this is the whole account.
  */
 
 /** Chart "stat" that shows the effective gold of each item as stacked bars. */
 export const EFFECTIVE_VIEW = 'EFFECTIVE';
 
 const norm = (s) => (s ?? '').trim().toLowerCase();
+const SHIELDS = new Set(['Shield', 'Magic Shield', 'Physical Shield']);
 
-export function effectiveGold(point, itemsById, prices) {
+export function effectiveGold(point, itemsById, prices, overlay) {
   const price = (stat) => prices?.[stat] ?? 0;
   const seenUnknown = new Set();
   const contributions = point?.contributions ?? [];
@@ -38,12 +40,34 @@ export function effectiveGold(point, itemsById, prices) {
       }
       e.gold += p.gold;
     }
+    if (overlay) {
+      for (const e of known.values()) {
+        const o = overlay(c.itemName, e.name);
+        if (o?.gold == null) continue;
+        // a measure is the whole passive; an estimate replaces the shields' gold (its availability), the stats stay
+        const kept = o.whole ? 0 : e.parts.filter((x) => !SHIELDS.has(x.stat)).reduce((a, x) => a + x.gold, 0);
+        e.gold = kept + o.gold;
+        e.source = o.source;
+        e.detail = o.detail;
+        e.label = o.label;
+      }
+    }
     const passives = [...known.values()];
     (item?.passives ?? []).forEach((p, i) => {
       const k = p.name ? norm(p.name) : `${c.itemId}#${i}`;
       if (known.has(k) || seenUnknown.has(k)) return;
       seenUnknown.add(k);
-      passives.push({ name: p.name || item.name, parts: [], gold: passiveGoldOf(item), known: false });
+      if (!overlay) {
+        passives.push({ name: p.name || item.name, parts: [], gold: passiveGoldOf(item), known: false });
+        return;
+      }
+      // a line with no name is a shop rule ("only one Spellblade item"), not a passive
+      if (!p.name) return;
+      const o = overlay(c.itemName, p.name);
+      passives.push({
+        name: p.name, parts: [], gold: o?.gold ?? passiveGoldOf(item), known: false, source: o?.gold != null ? o.source : 'tier',
+        detail: o?.detail, label: o?.label,
+      });
     });
     const statGold = stats.reduce((a, s) => a + s.gold, 0);
     const passiveGold = passives.reduce((a, p) => a + p.gold, 0);

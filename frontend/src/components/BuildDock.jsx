@@ -9,6 +9,8 @@ import InventorySlots from './InventorySlots.jsx';
 import RichText from './RichText.jsx';
 import { saleAccount } from './BuildBar.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
+import { effectiveGold } from '../effective.js';
+import { PassiveSource } from './PassiveValueBar.jsx';
 
 /** Opens an item in the dock's reader from anywhere on the page (reports, chart tooltips...): `open(itemId)`. */
 export const ItemReaderContext = createContext(() => {});
@@ -66,7 +68,7 @@ function PendingSale({ point, sales }) {
   );
 }
 
-export default function BuildDock({ point, itemsById, selected, readerId, onRead, onShop, draft, sales = [], testInArena }) {
+export default function BuildDock({ point, itemsById, selected, readerId, onRead, onShop, draft, sales = [], testInArena, overlay, prices }) {
   const [statsOpen, setStatsOpen] = useState(loadOpen);
   const [passivesOpen, setPassivesOpen] = useState(() => {
     try {
@@ -180,17 +182,19 @@ export default function BuildDock({ point, itemsById, selected, readerId, onRead
         </div>
       )}
       {reader && (
-        <ItemReader item={reader} point={point} values={valuesOf(values, reader.name)} onClose={() => onRead(null)} />
+        <ItemReader item={reader} point={point} values={valuesOf(values, reader.name)} onClose={() => onRead(null)} overlay={overlay} prices={prices} />
       )}
     </div>
   );
 }
 
 /** Full reading of an item, as in the shop, plus what it adds to the build at the moment inspected. */
-export function ItemReader({ item, point, onClose, values = [] }) {
+export function ItemReader({ item, point, onClose, values = [], overlay, prices }) {
   const { flat, modeled } = describeStats(item);
   const held = (point?.contributions ?? []).filter((c) => !c.rune && c.itemId === item.id);
-  const gold = held.reduce((a, c) => a + c.flatGold + c.passiveGold, 0);
+  // with the passive values on, the item's worth is the effective gold's; by tier, what it adds in stats
+  const eff = overlay && point ? effectiveGold(point, new Map([[item.id, item]]), prices, overlay).items.filter((x) => x.itemId === item.id) : [];
+  const gold = eff.length ? eff.reduce((a, x) => a + x.effective, 0) : held.reduce((a, c) => a + c.flatGold + c.passiveGold, 0);
   const parts = held.flatMap((c) => c.passiveParts ?? []);
   return (
     <div className="item-reader" role="dialog" aria-label={item.name}>
@@ -244,6 +248,9 @@ export function ItemReader({ item, point, onClose, values = [] }) {
               {held.length === 0 ? <small className="muted">{t('dock.notHeld')}</small> : (
                 <>
                   <p>{t('eff.worthOfCost', { worth: n0(gold), cost: n0(item.cost) })}{item.cost > 0 ? ` · ${pct((gold / item.cost) * 100)}` : ''}</p>
+                  {eff.flatMap((x) => x.passives).filter((p) => p.source && !p.known).map((p) => (
+                    <p key={p.name} className="passive" title={p.detail ?? undefined}>{p.name}: {n0(p.gold)} <PassiveSource passive={p} /></p>
+                  ))}
                   {values.length > 0 && (
                     <ul className="effect-values" title={t('passives.valuesTitle')}>
                       {values.map((v, k) => <DockValue key={k} v={v} />)}

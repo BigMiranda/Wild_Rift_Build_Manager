@@ -264,10 +264,40 @@ public final class Model {
             return tabs != null && tabs.contains("Botas");
         }
 
+        /** The same item with other stat lines (its own id and name). */
+        public ItemDef withStats(List<StatLine> lines) {
+            ItemDef d = new ItemDef();
+            d.id = id;
+            d.name = name;
+            d.cost = cost;
+            d.category = category;
+            d.image = image;
+            d.sourcePatch = sourcePatch;
+            d.edited = edited;
+            d.section = section;
+            d.tabs = tabs;
+            d.active = active;
+            d.marker = marker;
+            d.summary = summary;
+            d.group = group;
+            d.capture = capture;
+            d.passives = passives;
+            d.stats = new ArrayList<>(lines);
+            d.components = components;
+            d.exclusiveGroups = exclusiveGroups;
+            return d;
+        }
+
         /** Completed item (upgraded tier or an evolution): cannot be held twice. */
         public boolean finished() {
             return "aprimorado".equals(section) || "evolucao".equals(section);
         }
+    }
+
+    /** An item held differently (the measured value of a passive): passives off and flat stats on top. */
+    public static class ItemEdit {
+        public java.util.Set<String> off = new java.util.TreeSet<>();
+        public Map<String, Double> extra = new java.util.TreeMap<>();
     }
 
     public static class StatGrowth {

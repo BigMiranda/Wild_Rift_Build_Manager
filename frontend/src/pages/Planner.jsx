@@ -28,6 +28,8 @@ import BuildTestPanels from '../components/BuildTestPanels.jsx';
 import TestInArena from '../components/TestInArena.jsx';
 import { EffectivenessPanel } from '../components/EffectivenessReport.jsx';
 import QuickCompare, { MAX_COMPARED } from '../components/QuickCompare.jsx';
+import PassiveValueBar from '../components/PassiveValueBar.jsx';
+import { usePassiveValues } from '../passiveValues.js';
 import ItemSetupExport, { configurableItems, explicitItemSetup } from '../components/ItemSetupExport.jsx';
 
 const emptyBuild = (folderId) => ({
@@ -230,6 +232,10 @@ export default function Planner({ meta, items }) {
     // condKey stands for the open build's choices, so editing its other fields does not recalculate the compared builds
   }, [compareIds, items, builds, condKey]);
 
+  const passiveValues = usePassiveValues({
+    build: draft ? toPayload(draft) : null, result, compareIds, compareResults, itemsById,
+  });
+
   /** `patch` is an object or a function of the current draft (use the latter when it depends on the draft). */
   const update = (patch) => {
     setDraft((d) => ({ ...d, ...(typeof patch === 'function' ? patch(d) : patch) }));
@@ -396,6 +402,7 @@ export default function Planner({ meta, items }) {
       <main className="main">
         <ItemReaderContext.Provider value={setReaderId}>
         <BuildDock point={point} itemsById={itemsById} selected={selectedMinute != null} readerId={readerId} draft={payload}
+          overlay={point ? passiveValues.overlayAt('active', point.minute) : undefined} prices={result?.statPrices}
           sales={[...(result?.steps ?? []), ...(result?.ignored ?? [])].filter((x) => x.saleTiming)}
           testInArena={<TestInArena compact buildId={draft.id} buildName={draft.name} minute={point?.minute ?? null} builds={builds} />}
           onRead={setReaderId} onShop={() => shopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
@@ -584,7 +591,7 @@ export default function Planner({ meta, items }) {
             <StatChart
               series={chartSeries} stat={chartStat} onStatChange={setChartStat} xpTable={meta.xpTable}
               selectedMinute={moment} onSelectMinute={setSelectedMinute} itemsById={itemsById}
-              align={effAlign} onAlignChange={setEffAlign}
+              align={effAlign} onAlignChange={setEffAlign} passiveValues={passiveValues}
             />
           </section>
         )}
@@ -621,17 +628,18 @@ export default function Planner({ meta, items }) {
                       : { buildId: id }),
                   }))} />
               )}
-              {momentTab === 'relevance' && <RelevanceReport point={point} prices={result.statPrices} itemsById={itemsById} draft={payload} />}
+              {momentTab === 'relevance' && <RelevanceReport point={point} prices={result.statPrices} itemsById={itemsById} draft={payload} overlay={passiveValues.overlayAt('active', point.minute)} />}
               {momentTab === 'effective' && (
                 <section className="panel">
                   <h3>{t('eff.title', { time: mmss(point.minute), level: point.level })}</h3>
                   <p className="muted" style={{ marginTop: 0 }}>{t('eff.help', { mid: n0(PASSIVE_GOLD_BY_TIER.tier_medio), full: n0(PASSIVE_GOLD_BY_TIER.aprimorado) })}</p>
                   {compareIds.length > 0 && <AlignToggle value={effAlign} onChange={setEffAlign} />}
+                  <PassiveValueBar pv={passiveValues} />
                   <EffectiveBreakdown
                     align={effAlign}
                     columns={chartSeries.filter((s) => s.result).map((s) => ({
                       key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length],
-                      eff: effectiveGold(pointAt(s.result.series, point.minute), itemsById, s.result.statPrices),
+                      eff: effectiveGold(pointAt(s.result.series, point.minute), itemsById, s.result.statPrices, passiveValues.overlayAt(s.key, point.minute)),
                     }))}
                   />
                 </section>

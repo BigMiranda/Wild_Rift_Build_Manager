@@ -6,6 +6,7 @@ import { PASSIVES_VIEW, acquiredPassives, passiveColor, pointItemIds } from '../
 import ItemIcon from './ItemIcon.jsx';
 import PassiveCompare, { PassiveLight } from './PassiveCompare.jsx';
 import EffectiveBreakdown, { AlignToggle, EffectiveLight } from './EffectiveBreakdown.jsx';
+import PassiveValueBar from './PassiveValueBar.jsx';
 import { ALIGN_SLOT, EFFECTIVE_VIEW, FORGE_COLOR, effectiveGold, itemColor, itemPassiveColor } from '../effective.js';
 import { StatIcon, statColor } from './StatIcon.jsx';
 
@@ -28,7 +29,7 @@ export function levelUps(xpTable, xpPerMin, untilMinute) {
  * The "passives" view shows the passives held instead: stacked bars, one block per passive (its gold estimate), one
  * stack per build.
  */
-export default function StatChart({ series, stat, onStatChange, xpTable, selectedMinute, onSelectMinute, itemsById, align, onAlignChange }) {
+export default function StatChart({ series, stat, onStatChange, xpTable, selectedMinute, onSelectMinute, itemsById, align, onAlignChange, passiveValues }) {
   const lines = series.filter((s) => s.result && s.result.series.length > 0);
   const maxMinute = Math.ceil(Math.max(1, ...lines.map((s) => s.result.series[s.result.series.length - 1].minute)));
   const wrapRef = useRef(null);
@@ -74,8 +75,9 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
             <AlignToggle value={align} onChange={onAlignChange} />
             <EffectiveBars
               lines={lines} itemsById={itemsById} maxMinute={maxMinute} plotWidth={plotWidth} align={align}
-              selectedMinute={selectedMinute} onSelectMinute={onSelectMinute}
+              selectedMinute={selectedMinute} onSelectMinute={onSelectMinute} overlayAt={passiveValues?.overlayAt}
             />
+            {passiveValues && <PassiveValueBar pv={passiveValues} />}
           </>
         ) : stat === PASSIVES_VIEW ? (
           <PassiveBars
@@ -396,8 +398,8 @@ function statesByMinute(lines, fn) {
  * slots in use -- (gold of its stats, its passives in a lighter tone on top of the same block), plus one block for the
  * champion's passive (Ornn's Living Forge) at the top.
  */
-function EffectiveBars({ lines, itemsById, maxMinute, plotWidth, align, selectedMinute, onSelectMinute }) {
-  const { minutes, at } = statesByMinute(lines, (s, p) => effectiveGold(p, itemsById, s.result.statPrices));
+function EffectiveBars({ lines, itemsById, maxMinute, plotWidth, align, selectedMinute, onSelectMinute, overlayAt }) {
+  const { minutes, at } = statesByMinute(lines, (s, p) => effectiveGold(p, itemsById, s.result.statPrices, p ? overlayAt?.(s.key, p.minute) : undefined));
   // Stack order (bottom to top): purchase order; in build order the boots go last, right below the champion's passive.
   const order = new Map();  // build -> [{ key, name }]
   for (const s of lines) {
