@@ -186,12 +186,36 @@ export function ComparativeResult({ report, series, names }) {
 
 /**
  * The complete report's sweeps: a line chart of the index per dimension, one line per build (`series`: {key, name, color,
- * outcomes}), with the break points.
+ * outcomes, thin}), with the break points. A `thin` series is a build only in the charts: a light line, no break point
+ * of its own, and its name in the legend, where a click hides or shows any build in every chart.
  */
-export function SweepResult({ report, series }) {
+export function SweepResult({ report, series: all }) {
+  const [hidden, setHidden] = useState(() => new Set());
+  const series = all.filter((b) => !hidden.has(b.key));
+  const many = all.length > 8;
+  const toggle = (key) => setHidden((h) => {
+    const next = new Set(h);
+    if (!next.delete(key)) next.add(key);
+    return next;
+  });
   const k0 = report.tests.length;
   let k = k0;
   return (
+    <>
+    {all.length > 1 && (
+      <div className="eff-legend">
+        {all.map((b) => (
+          <button key={b.key} className={hidden.has(b.key) ? 'off' : ''} aria-pressed={!hidden.has(b.key)} onClick={() => toggle(b.key)}>
+            <span className="dot" style={{ background: b.color }} />{b.name}
+          </button>
+        ))}
+        {all.some((b) => b.thin) && (
+          <button className="link" onClick={() => setHidden(hidden.size ? new Set() : new Set(all.filter((b) => b.thin).map((b) => b.key)))}>
+            {t(hidden.size ? 'efx.legend.showAll' : 'efx.legend.onlyMain')}
+          </button>
+        )}
+      </div>
+    )}
     <div className="eff-sweeps">
       {(report.sweeps ?? []).map((s) => {
         const from = k;
@@ -204,18 +228,22 @@ export function SweepResult({ report, series }) {
           });
           return p;
         });
-        const breaks = series.map((b) => ({ b, br: breakPoint(pts.map((p) => p.stage), pts.map((p) => p[b.key])) }));
+        const breaks = series.filter((b) => !b.thin).map((b) => ({ b, br: breakPoint(pts.map((p) => p.stage), pts.map((p) => p[b.key])) }));
         return (
           <div key={s.key} className="eff-sweep">
             <h5>{s.name}</h5>
-            <div style={{ width: '100%', height: 150 }}>
+            <div style={{ width: '100%', height: many ? 220 : 150 }}>
               <ResponsiveContainer>
                 <LineChart data={pts} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2a3240" />
                   <XAxis dataKey="stage" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v, n) => [n0(v), n]} labelFormatter={(l) => `${s.name}: ${l}`} />
-                  {series.map((b) => <Line key={b.key} type="monotone" dataKey={b.key} name={b.name} stroke={b.color} dot isAnimationActive={false} connectNulls />)}
+                  <Tooltip formatter={(v, n) => [n0(v), n]} labelFormatter={(l) => `${s.name}: ${l}`} itemSorter={(x) => -(x.value ?? 0)}
+                    contentStyle={{ fontSize: 11, padding: '4px 8px' }} itemStyle={{ padding: 0 }} wrapperStyle={{ zIndex: 5 }} />
+                  {series.map((b) => (
+                    <Line key={b.key} type="monotone" dataKey={b.key} name={b.name} stroke={b.color} dot={!b.thin} isAnimationActive={false} connectNulls
+                      strokeWidth={b.thin ? 1 : 2} strokeOpacity={b.thin ? 0.55 : 1} />
+                  ))}
                   {breaks.filter((x) => x.br).map((x) => <ReferenceDot key={x.b.key} x={x.br.stage} y={x.br.to} r={5} fill="#d64545" stroke="none" />)}
                 </LineChart>
               </ResponsiveContainer>
@@ -230,6 +258,7 @@ export function SweepResult({ report, series }) {
         );
       })}
     </div>
+    </>
   );
 }
 
@@ -273,6 +302,9 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
     .map((c) => `${c.name} (${archetypeLabel(saved[c.id])})`);
   const [outcomes, setOutcomes] = useState(null);
   const [others, setOthers] = useState([]);
+  const [chartOnly, setChartOnly] = useState([]);
+  const [chartBuilds, setChartBuilds] = useState('todas');
+  const [skipped, setSkipped] = useState(0);
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
   const [perItem, setPerItem] = useState(null);
@@ -287,7 +319,7 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
     api.get(`/api/effect/reports/${kind}`).then((r) => { if (live) setReport(r); }).catch((e) => setError(e.message));
     return () => { live = false; };
   }, [kind]);
-  useEffect(() => { setOutcomes(null); setOthers([]); setPerItem(null); setCmp((c) => ({ ...c, rows: null })); }, [at, kind, ref.kind, ref.buildId, ref.folderId, compareKey]);
+  useEffect(() => { setOutcomes(null); setOthers([]); setChartOnly([]); setPerItem(null); setCmp((c) => ({ ...c, rows: null })); }, [at, kind, ref.kind, ref.buildId, ref.folderId, compareKey, chartBuilds]);
 
   const go = async (jobs, done) => {
     stop.current = false;
@@ -304,18 +336,32 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
     setBusy(null);
   };
 
-  /** The report of the open build, then of each build compared, with one progress bar. */
+  /** Saved builds that go only to the charts: all of them, or those of the same champion or archetype. */
+  const extraBuilds = () => {
+    if (kind !== 'completo' || chartBuilds === 'marcadas') return [];
+    const taken = new Set([buildId, ...compare.map((c) => c.id)]);
+    const open = builds.find((b) => b.id === buildId);
+    return builds.filter((b) => !taken.has(b.id) && b.unitCode !== 'RAGDOLL'
+      && (chartBuilds === 'todas' || (chartBuilds === 'campeao' ? b.unitCode === (open?.unitCode ?? build?.unitCode) : saved[b.id]?.key === archetype?.key)));
+  };
+
+  /**
+   * The report of the open build, then of each build compared, with one progress bar; then the sweeps of the builds that
+   * go only to the charts. Their scenarios are left out (the charts do not read them), and each joins the charts as it ends.
+   */
   const runReport = async () => {
     const jobs = reportJobs(report, kind === 'completo');
-    const total = jobs.length * (1 + compare.length);
+    const sweepJobs = jobs.slice(report.tests.length);
+    const extra = extraBuilds();
+    const total = jobs.length * (1 + compare.length) + sweepJobs.length * extra.length;
     let before = 0;
     let spent = 0;
-    const one = async (b) => {
+    const one = async (b, list = jobs, size = 6) => {
       let last = 0;
-      const out = await runJobs({ ...b, minute: at, reference: ref }, jobs, {
-        onProgress: (d, _, ms) => { last = ms; setBusy({ done: before + d, total, ms: spent + ms }); }, stop: () => stop.current,
+      const out = await runJobs({ ...b, minute: at, reference: ref }, list, {
+        size, onProgress: (d, _, ms) => { last = ms; setBusy({ done: before + d, total, ms: spent + ms }); }, stop: () => stop.current,
       });
-      before += jobs.length;
+      before += list.length;
       spent += last;
       return out;
     };
@@ -323,6 +369,8 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
     setError(null);
     setOutcomes(null);
     setOthers([]);
+    setChartOnly([]);
+    setSkipped(0);
     setBusy({ done: 0, total, ms: 0 });
     try {
       setOutcomes(await one(build ? { build } : { buildId }));
@@ -331,6 +379,19 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
         if (stop.current) break;
         rest.push({ key: `b${c.id}`, name: c.name, color: c.color, outcomes: await one(await c.request()) });
         setOthers([...rest]);
+      }
+      const lines = [];
+      for (let i = 0; i < extra.length && !stop.current; i++) {
+        const b = extra[i];
+        try {
+          const out = await one({ buildId: b.id }, sweepJobs, 24);
+          lines.push({ key: `c${b.id}`, name: b.name, color: `hsl(${(i * 137.5) % 360} 65% 62%)`, thin: true,
+            outcomes: [...new Array(report.tests.length).fill(null), ...out] });
+          setChartOnly([...lines]);
+        } catch {
+          before += sweepJobs.length;   // a build that cannot run yet (no gold or XP per minute) stays out of the charts
+          setSkipped((n) => n + 1);
+        }
       }
     } catch (e) {
       setError(e.message);
@@ -341,6 +402,7 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
   const onOpenRef = (list) => list.map((o, i) => overReference(o, outcomes[i]?.reference));
   const series = outcomes ? [{ key: 'open', name: name ?? '', color: SERIES_COLORS[0], outcomes },
     ...others.map((s) => ({ ...s, outcomes: onOpenRef(s.outcomes) }))] : [];
+  const chartSeries = outcomes ? [...series, ...chartOnly.map((s) => ({ ...s, outcomes: onOpenRef(s.outcomes) }))] : [];
 
   const runPerItem = async () => {
     setError(null);
@@ -424,6 +486,13 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
           ))}
         </div>
         <ReferencePicker value={ref} onChange={setRef} builds={builds} folders={folders} />
+        {kind === 'completo' && (
+          <label className="inline" title={t('efx.chartBuildsTitle')}>{t('efx.chartBuilds')}
+            <select value={chartBuilds} onChange={(e) => setChartBuilds(e.target.value)}>
+              {['todas', 'campeao', 'arquetipo', 'marcadas'].map((k) => <option key={k} value={k}>{t(`efx.chartBuilds.${k}`)}</option>)}
+            </select>
+          </label>
+        )}
         <button className="primary" onClick={runReport} disabled={!report || !!busy || !build}>{t('efx.run')}</button>
         <Progress busy={busy} onStop={() => { stop.current = true; }} />
       </div>
@@ -443,7 +512,9 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
           {buildId && report.tests[0] && (
             <button className="link" onClick={() => openFight({ testKey: report.tests[0].key })}>{t('efx.openFirst', { name: outcomes[0]?.testName ?? '' })}</button>
           )}
-          {kind === 'completo' && <SweepResult report={report} series={series} />}
+          {kind === 'completo' && chartOnly.length > 0 && <p className="muted small">{t('efx.chartsHelp', { name: name ?? '', n: chartOnly.length })}</p>}
+          {kind === 'completo' && skipped > 0 && <p className="muted small">{t('efx.chartsSkipped', { n: skipped })}</p>}
+          {kind === 'completo' && <SweepResult report={report} series={chartSeries} />}
         </>
       )}
 

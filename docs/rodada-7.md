@@ -436,3 +436,17 @@ Testes: 229 → 235, mais 1 opcional (11 pulados). Golden sem mudança. `npm run
 - **Migração:** v24 (`ai_result`). Na cópia do banco: "schema 23 → 24; 36 builds, 178 policies", tudo preservado, com cenários, IAs e combos abrindo.
 - **Conferido na tela** (banco de desenvolvimento): relatório com "1.000+", "sustenta", "> 180 s", taxa líquida e cura cortada; leitura por item com "Leitura: Comportamento fixo"; seletor Automático
   com o motivo e "Fixar esta"; "Treinar automaticamente" e a fila; arquétipo na lista de builds; classes no painel do campeão. O Ranking por arquétipo, a "IA da classe" na tela e a opção "Escala com o minuto" só foram compilados: não abri nem usei nenhum deles (a função da classe e a do cenário têm teste no backend).
+
+## Ajuste: todas as builds nos gráficos
+
+Os gráficos do relatório Completo (as varreduras) mostravam só a build aberta e as marcadas em "comparar". Agora o seletor **"Builds nos gráficos"** põe também as outras builds salvas:
+**Todas** (padrão), **Mesmo campeão**, **Mesmo arquétipo** ou **Só as marcadas**.
+
+- As builds só dos gráficos rodam apenas as varreduras, no minuto da build aberta, contra a referência dela. Entram nos gráficos conforme terminam, e "Parar" mantém o que já rodou.
+- A tabela lado a lado segue com as marcadas em "comparar": com dezenas de colunas ela não se leria.
+- Com muitas linhas: a build aberta e as marcadas ficam fortes, com ponto de quebra; as outras ficam finas e sem ponto. A legenda esconde ou mostra uma build em todos os gráficos, e "Só as principais" limpa o resto. O gráfico fica mais alto, e a dica ordena do maior para o menor índice.
+- Uma build que não pode rodar (sem ouro ou XP por minuto) fica de fora, com um aviso.
+
+**Conferido na tela** (banco de desenvolvimento, Big Carry v1): 1.261 lutas pedidas, menos de 1 min na primeira vez, 25 linhas nos 10 gráficos; "Só as principais" deixa 1, a legenda esconde uma, "Só as marcadas" volta ao comportamento antigo; "Mesmo campeão" dá 20 linhas, todas de Ornn; "Mesmo arquétipo" dá 21, incluindo o Rumble Redutor Off Tank.
+
+**Limite:** o relatório Básico não tem gráficos de linha, então nada muda nele. Builds que chegam ao teto de 1000 se sobrepõem no topo dos gráficos.
