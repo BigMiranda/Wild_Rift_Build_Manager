@@ -1188,3 +1188,51 @@ tr.report-total td { border-top: 1px solid var(--border-strong); }
 .pv-src { margin-left: 6px; padding: 0 4px; border-radius: 3px; font-size: 10px; background: var(--surface-3); color: var(--text-2); }
 .pv-src.estimado { color: #6cb8f0; }
 .pv-src.medido { color: #6fcf97; }
+
+/* Pickers in the shop's style (over the page; a sheet from the bottom on a narrow screen) */
+.picker-open { white-space: nowrap; }
+.picker-open.picker-value { flex: 1; display: inline-flex; align-items: center; gap: 6px; text-align: left; }
+.picker-panel {
+  position: fixed; z-index: 3000; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: 8px; box-shadow: 0 12px 40px rgba(0, 0, 0, .6); overflow: hidden;
+}
+.picker-heading { margin: 8px 0 4px; color: var(--gold-bright); font-size: 13px; }
+.picker-sheet-head { display: flex; justify-content: flex-end; padding: 4px 6px 0; }
+.picker-chosen { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 12px; }
+.picker-limit { padding: 0 12px; }
+.shop.picker-shop { grid-template-columns: 112px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); flex: 1; min-height: 0; height: auto; }
+.picker-shop .shop-rail { padding: 8px 0; overflow-y: auto; }
+.picker-shop .shop-rail button { font-size: 12px; padding: 6px 8px; }
+.picker-shop .shop-grid-scroll { max-height: none; }
+.picker-shop .shop-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+.picker-filters { margin-bottom: 8px; flex-wrap: wrap; }
+.tile:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 1px; border-radius: 4px; }
+.tile.marked .item-icon { border-color: var(--gold-bright); box-shadow: 0 0 0 2px var(--gold); }
+.tile:disabled { opacity: .45; }
+.tile-ready { font-size: 10px; color: var(--text-2); }
+.tile-nofit { position: absolute; top: 2px; right: 2px; color: #e07070; font-size: 14px; line-height: 1; text-shadow: 0 1px 2px #000; }
+.fx-marks { position: absolute; top: -4px; right: -4px; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.fx-marks.inline { position: static; flex-direction: row; }
+.fx-mark { padding: 0 3px; border-radius: 3px; font-size: 9px; line-height: 13px; font-weight: 700; color: #0b1320; background: #c8aa6e; white-space: nowrap; }
+.fx-armadura, .fx-penf { background: #e0a060; }
+.fx-rm, .fx-penm { background: #8ab4f0; }
+.fx-feridas { background: #e07070; }
+.fx-escudo { background: #6fcf97; }
+.fx-sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
+.tile.fx-source { flex-direction: row; align-items: center; gap: 8px; text-align: left; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; }
+.tile.fx-source.marked { border-color: var(--gold-bright); }
+.fx-source-text { display: flex; flex-direction: column; min-width: 0; flex: 1; font-size: 12px; }
+@media (max-width: 640px) {
+  .picker-panel { left: 0 !important; right: 0; bottom: 0; top: auto !important; width: 100% !important; height: 80vh !important; border-radius: 12px 12px 0 0; }
+  .shop.picker-shop { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .picker-shop .shop-rail { flex-direction: row; overflow-x: auto; padding: 4px; }
+  .picker-shop .shop-rail button { white-space: nowrap; flex: none; }
+  .picker-shop .shop-grid-wrap { min-height: 0; }
+}
+
+@media (max-width: 640px) {
+  .app-header { flex-wrap: wrap; height: auto; gap: 4px 8px; padding: 6px 10px; }
+  .app-header h1 { flex-basis: 100%; }
+  .app-header nav { flex-wrap: wrap; }
+  .app-header .settings { flex-wrap: wrap; }
+}

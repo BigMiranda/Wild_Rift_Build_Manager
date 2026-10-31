@@ -6,6 +6,7 @@ import { reportJobs, runJobs, weightedIndex } from '../effectiveness.js';
 import EffectPicker, { applied } from './EffectPicker.jsx';
 import ItemIcon from './ItemIcon.jsx';
 import MinuteInput from './MinuteInput.jsx';
+import { CandidatePicker } from './ShopPicker.jsx';
 
 export const MAX_COMPARED = 4;
 const CRITERIA = ['mista', 'fisica', 'magica', 'ouro', 'indice'];
@@ -171,10 +172,7 @@ export default function QuickCompare({ build, slot, atMinute, ids, onIds, onClos
         <button className={`opt${fxOpen || chosen.length ? ' on' : ''}`} onClick={() => setFxOpen((o) => !o)}>
           {t('qc.under')}{chosen.length > 0 ? ` (${chosen.length})` : ''}
         </button>
-        <select value="" onChange={(e) => e.target.value && add(Number(e.target.value))} aria-label={t('qc.add')} disabled={ids.length >= MAX_COMPARED}>
-          <option value="">{t('qc.add')}</option>
-          {(items ?? []).filter((i) => i.section === 'aprimorado').map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-        </select>
+        <CandidatePicker build={build} slot={slot} atMinute={atMinute} value={ids} onChange={onIds} max={MAX_COMPARED} items={items} />
         <button onClick={suggest} disabled={noCandidates || suggested?.loading}>{t('qc.suggest')}</button>
         <button onClick={runBasic} disabled={!cards.length || !!basicBusy}>
           {basicBusy ? t('qc.basicRunning', { done: basicBusy.done, total: basicBusy.total }) : t('qc.basic')}

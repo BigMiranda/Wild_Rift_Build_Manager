@@ -76,6 +76,9 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
 - `arena/QuickCompareService` (`api/QuickCompareController`) — the planner's quick item comparison: no fight, one
   timeline per candidate plus the cached zero-second `SeenBy` run. `PlannerService.withItem` is the one swap of an
   item in a slot, shared with the effectiveness candidates.
+- `arena/PassiveValueService` (+ `GoldSearch`, `api/PassiveValueController`) — what passives are worth in gold: estimated
+  from the arena's effect values through `equivalencias_passivas_<patch>.yml`, or measured with one passive off
+  (`Model.ItemEdit`; `passiva` in `combate_<patch>.yml` says which passive an effect belongs to).
 - `engine/ShopRuleCheck` — the single check of when the shop sells an item (upgraded boots from 10:00,
   `regras_loja.yml`); the planner's timeline applies it, `/api/meta` sends it to the shop screen.
 - `seed/` — `SchemaManager` (migrations), `CatalogImporter` (YAML → SQLite), catalogs for champions, runes, item

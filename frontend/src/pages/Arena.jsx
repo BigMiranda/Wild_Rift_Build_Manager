@@ -1,5 +1,6 @@
 import { Fragment, Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
+import ItemPicker from '../components/ShopPicker.jsx';
 import { t } from '../i18n.js';
 import { n0, n1 } from '../format.js';
 import MinuteInput from '../components/MinuteInput.jsx';
@@ -1194,6 +1195,8 @@ function DummySlot({ index, slot, onChange, onRemove }) {
             <input type="number" min={0} value={d.attackDamage} onChange={num('attackDamage')} style={{ width: 60 }} />
           </label>
         )}
+        <ItemPicker value={d.items ?? []} max={6} filter={(i) => i.section === 'aprimorado'} onChange={(items) => set({ items })}
+          label={d.items?.length ? t('arena.dummy.items', { n: d.items.length }) : t('efx.addItem')} />
       </div>
     </div>
   );

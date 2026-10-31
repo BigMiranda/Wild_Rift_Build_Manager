@@ -1,3 +1,4 @@
+import ItemPicker from '../components/ShopPicker.jsx';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { currentLang, statLabel } from '../i18n.js';
@@ -262,11 +263,10 @@ function ItemsAdmin({ items, run }) {
             <p className="muted" style={{ marginTop: 0 }}>{a('recipeHelp')}</p>
             {editing.components.map((c, idx) => (
               <div className="row" key={idx} style={{ marginBottom: 4 }}>
-                <select value={c.itemId} onChange={(e) => setComp(idx, { itemId: Number(e.target.value) })} style={{ flex: 1 }}>
-                  {items.filter((i) => i.id !== editing.id).sort((x, y) => x.name.localeCompare(y.name)).map((i) => (
-                    <option key={i.id} value={i.id}>{i.name} ({n0(i.cost)}g)</option>
-                  ))}
-                </select>
+                <ItemPicker single items={items} value={c.itemId != null ? [c.itemId] : []} filter={(i) => i.id !== editing.id}
+                  onChange={(ids) => setComp(idx, { itemId: ids[0] })} className="picker-value"
+                  label={<><ItemIcon id={c.itemId} size={20} /> {items.find((i) => i.id === c.itemId)?.name ?? '—'} ({n0(items.find((i) => i.id === c.itemId)?.cost ?? 0)}g)</>}
+                  title={a('addComp')} />
                 <input type="number" min="1" style={{ width: 70 }} value={c.quantity} onChange={(e) => setComp(idx, { quantity: Number(e.target.value) })} aria-label={a('qty')} />
                 <button className="icon danger" aria-label={a('removeComp')} onClick={() => setEditing({ ...editing, components: editing.components.filter((_, k) => k !== idx) })}>✕</button>
               </div>

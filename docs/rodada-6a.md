@@ -392,3 +392,50 @@ medido é só da build aberta.
 não luta num empate; a estimativa usa os números do momento e Feridas seguem por tier; passiva só de status fica fora dos
 dois modos; sem a passiva, medido dá 0; a mesma build dá a mesma leitura. O "por tier idêntico" foi conferido no Node, porque
 não há teste de frontend.
+
+## Complemento 3: seletores no estilo da loja ✅
+
+**Um componente só.** A grade da loja saiu do `Shop.jsx` para `components/ShopBrowser.jsx` (abas, busca, grade, setas): a loja
+do planejador e todo seletor usam a mesma. `components/ShopPicker.jsx` traz o painel sobreposto (`PickerPopover`), os chips
+do que foi escolhido, o `ItemPicker` e o `CandidatePicker`.
+
+- **Painel:** ancorado ao botão, fecha com Esc ou clique fora e devolve o foco ao botão. A busca recebe o foco ao abrir.
+- **Teclado:** ↓ da busca vai à grade, setas andam entre os itens, Enter escolhe, Esc fecha. Foco visível nos itens.
+- **Tela estreita (até 640 px):** folha que sobe de baixo, abas em faixa horizontal, grade rolando.
+- **Sob efeitos (`EffectPicker`):** chips de filtro (redução de Armadura, redução de RM, penetração física e mágica,
+  Feridas, corte de escudo), marca do efeito no canto de cada item (dois efeitos, duas marcas), seções "Itens" e "Passivas
+  e habilidades de campeões", com as iniciais do campeão, o nome e o efeito. O ajuste de valor e o campo do status seguem
+  na lista logo abaixo do botão, sempre visível. **Decisão:** com um filtro ligado, a grade ignora a aba ("Todas as abas"),
+  senão "penetração física" dava 0 itens na aba Defesa.
+- **+ candidato (`CandidatePicker`):** filtro "Cabe no espaço" ligado por padrão, pela linha do tempo e pelas regras da loja
+  (`POST /api/quick/fits`, uma linha do tempo por item, cerca de 0,5 s); filtro "Mesma aba do item atual"; custo e "pronto
+  m:ss" em cada item; marcados e limite de 4 (itens desabilitados ao chegar nele).
+
+**Lugares trocados** (`grep -n "<select"` em `frontend/src`, 62 ocorrências revistas):
+
+| arquivo | componente | o que escolhe | agora |
+|---|---|---|---|
+| `components/EffectPicker.jsx` | `EffectPicker` (Visão sob efeitos em `BuildTestPanels`, Ranking, "Sob efeitos" do comparador) | efeitos | painel de efeitos |
+| `components/QuickCompare.jsx` | `QuickCompare` | candidatos | `CandidatePicker` |
+| `components/EffectivenessReport.jsx` | `EffectivenessPanel`, comparar para um espaço | candidatos | `CandidatePicker` |
+| `pages/Effectiveness.jsx` | `BotEditor` (atacante e aliado) | itens do boneco | `ItemPicker` (até 6) |
+| `pages/Arena.jsx` | editor do boneco no slot | itens do boneco (novo: a Arena não tinha) | `ItemPicker` (até 6) |
+| `pages/Admin.jsx` | receita do item | componente | `ItemPicker` de um só |
+
+**Diferença do que o prompt listou:** "Efetividade (cenários de teste e editor do boneco atacante)" não tinha `EffectPicker`;
+lá o que existe são os itens do boneco, já trocados.
+
+**Ficaram de fora, com motivo (não escolhem item nem efeito):** idioma e siglas; builds, pastas, cenários, combos, bonecos e
+varreduras salvos; seletores de modo, função, tipo, critério, cérebro, alvo e objetivo. `pages/Arena.jsx:1603`, nas ordens da
+linha do tempo, lista os ativos e feitiços **daquele lutador**: são poucos e incluem feitiços, que não estão na loja.
+
+**Conferido na tela** (banco de desenvolvimento):
+- candidatos na 3ª compra da Big Carry: 102 cabem (0,55 s), Defesa 29 de 30 com o filtro, "pronto 8:34" nos itens;
+- busca "randuin", ↓ foca o item, Enter escolhe, chip "Presságio de Randuin", "1 de 4", Esc fecha e o foco volta ao botão;
+- efeitos: filtro "Penetração física" dá 13 itens de todas as abas e 4 passivas de campeões; Rancor de Serylda entra na lista com
+  "% Penetração de Armadura 35%" editável; clique fora fecha;
+- boneco da Efetividade ("1 de 6"), boneco da Arena (grava `items` no cenário, botão vira "Itens (1)") e Admin (escolhe um e fecha);
+- **375 × 812:** folha de 375 × 650 no pé da tela, grade rolando, sem rolagem lateral.
+
+**Achado na tela de 375 px:** a página inteira ficava com 1.004 px de largura, porque o cabeçalho não quebrava linha (a aba
+Efetividade piorou isso). Agora ele quebra até 640 px. Outras telas não foram revistas nessa largura.

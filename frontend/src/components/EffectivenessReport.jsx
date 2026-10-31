@@ -6,6 +6,7 @@ import { SERIES_COLORS, mmss, n0, n1 } from '../format.js';
 import { breakPoint, effectMeta, gain, reportJobs, runJobs, weakPoints, weightedIndex } from '../effectiveness.js';
 import ItemIcon from './ItemIcon.jsx';
 import { openInArena } from './TestInArena.jsx';
+import { CandidatePicker } from './ShopPicker.jsx';
 
 /** Names of the scenarios a report may hold (presets and the user's), by key. */
 export function useTestNames() {
@@ -454,11 +455,8 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
             {(report?.tests ?? []).map((e) => <option key={e.key} value={e.key}>{names[e.key] ?? e.key}</option>)}
           </select>
         </label>
-        <select value="" onChange={(e) => e.target.value && setCmp({ ...cmp, candidates: [...new Set([...cmp.candidates, Number(e.target.value)])], rows: null })}
-          aria-label={t('efx.addCandidate')}>
-          <option value="">{t('efx.addCandidate')}</option>
-          {(items ?? []).filter((i) => i.section === 'aprimorado').map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-        </select>
+        <CandidatePicker build={build} slot={cmp.slot === '' ? null : Number(cmp.slot)} items={items} value={cmp.candidates} label={t('efx.addCandidate')}
+          onChange={(candidates) => setCmp({ ...cmp, candidates, rows: null })} />
         <button onClick={runCompare} disabled={!report || !!busy || cmp.slot === '' || cmp.candidates.length === 0}>{t('efx.compareRun')}</button>
       </div>
       <div className="chips">

@@ -23,6 +23,12 @@ public class QuickCompareController {
         return quick.compare(req);
     }
 
+    /** Which upgraded items fit there by the shop's rules, and when each would be ready. */
+    @PostMapping("/fits")
+    public java.util.Map<Long, QuickCompareService.Fit> fits(@RequestBody QuickCompareService.Request req) {
+        return quick.fits(req);
+    }
+
     /** The best items of the shop tab that fit there, by the criterion. */
     @PostMapping("/suggest")
     public QuickCompareService.Result suggest(@RequestBody QuickCompareService.Request req) {

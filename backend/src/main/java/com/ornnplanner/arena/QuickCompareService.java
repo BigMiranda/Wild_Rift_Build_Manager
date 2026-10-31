@@ -170,6 +170,47 @@ public class QuickCompareService {
         return out;
     }
 
+    /** Whether an item fits a purchase and when it would be ready there. */
+    public static class Fit {
+        public boolean fits;
+        public Double readyAt;
+    }
+
+    /** Every upgraded item of the shop in the slot, by the shop's rules: one timeline each (the candidates' picker). */
+    public Map<Long, Fit> fits(Request req) {
+        BuildRepository.Build build = buildOf(req);
+        Long current = currentItem(build, req.slot);
+        TimelineResult before = planner.calculate(build);
+        List<ItemDef> list = new ArrayList<>();
+        for (ItemDef it : planner.referenceData().items.values()) {
+            if ("aprimorado".equals(it.section)) {
+                list.add(it);
+            }
+        }
+        List<java.util.concurrent.Callable<Fit>> runs = new ArrayList<>();
+        for (ItemDef it : list) {
+            runs.add(() -> {
+                Swap s = swap(build, req.slot, req.atMinute, it.id, before);
+                Fit f = new Fit();
+                f.fits = s.step != null && s.step.violations.isEmpty();
+                f.readyAt = s.step == null ? null : s.step.minute;
+                return f;
+            });
+        }
+        List<Fit> done = ArenaService.parallel(runs);
+        Map<Long, Fit> out = new LinkedHashMap<>();
+        for (int i = 0; i < list.size(); i++) {
+            out.put(list.get(i).id, done.get(i));
+        }
+        if (current != null) {
+            out.computeIfPresent(current, (k, f) -> {
+                f.fits = true;
+                return f;
+            });
+        }
+        return out;
+    }
+
     /**
      * The best items of the slot's shop tab that fit by the shop's rules, by the criterion. Quick measures only: the
      * timeline and the planner's sheet at the minute (no fight, no zero-second run), so the ones picked are read again

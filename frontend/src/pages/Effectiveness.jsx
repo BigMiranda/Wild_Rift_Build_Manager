@@ -4,6 +4,7 @@ import { statLabel, t } from '../i18n.js';
 import { n0, n1 } from '../format.js';
 import { BOT_STATS, ROLES, effectMeta, newBot, newTest, testKey } from '../effectiveness.js';
 import ItemIcon from '../components/ItemIcon.jsx';
+import ItemPicker from '../components/ShopPicker.jsx';
 import MinuteInput from '../components/MinuteInput.jsx';
 import { ReferencePicker, ttd } from '../components/EffectivenessReport.jsx';
 import { openInArena } from '../components/TestInArena.jsx';
@@ -157,7 +158,6 @@ function BotEditor({ bot, onChange, items, meta, onRemove }) {
   const role = meta.roles[bot.role];
   const pulses = bot.pulses ?? role?.pulses ?? [];
   const setPulse = (i, patch) => set({ pulses: pulses.map((p, k) => (k === i ? { ...p, ...patch } : p)) });
-  const shop = (items ?? []).filter((i) => i.section === 'aprimorado' || i.section === 'evolucao');
   const byId = new Map((items ?? []).map((i) => [i.id, i]));
   return (
     <div className="eff-bot">
@@ -197,12 +197,8 @@ function BotEditor({ bot, onChange, items, meta, onRemove }) {
             <ItemIcon id={id} size={20} /> {byId.get(id)?.name ?? id} ✕
           </button>
         ))}
-        {(bot.items ?? []).length < 6 && (
-          <select value="" onChange={(e) => e.target.value && set({ items: [...(bot.items ?? []), Number(e.target.value)] })} aria-label={t('efx.addItem')}>
-            <option value="">{t('efx.addItem')}</option>
-            {shop.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-          </select>
-        )}
+        <ItemPicker items={items} value={bot.items ?? []} max={6} label={t('efx.addItem')} filter={(i) => i.section === 'aprimorado'}
+          onChange={(ids) => set({ items: ids })} />
       </div>
       <div>
         <label className="check">

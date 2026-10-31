@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
+import { buildTiles } from '../shopModel.js';
 import ItemIcon from './ItemIcon.jsx';
+import ShopBrowser from './ShopBrowser.jsx';
+import { ChosenChips, PickerPopover, useShopItems } from './ShopPicker.jsx';
+import { ChampionAvatar } from './ChampionPicker.jsx';
 
 /**
  * Picks the effects a build is seen under: items and champion passives / abilities (GET /api/lab/effect-sources), each
@@ -26,36 +30,93 @@ const scaled = (e, stat) => {
   const v = (e.base ?? 0) + (e.per ?? 0) * (Number(stat) || 0);
   return e.max != null ? Math.min(e.max, v) : v;
 };
+const plain = (s) => String(s ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 const round = (v, d = 1) => Math.round(v * 10 ** d) / 10 ** d;
+
+/** What an effect does, for the filters and the marks on the items. */
+const GROUPS = {
+  reduz_armadura: 'armadura', reduz_rm: 'rm', pen_armadura_pct: 'penf', pen_armadura: 'penf', pen_magica_pct: 'penm', pen_magica: 'penm',
+  feridas: 'feridas', corta_escudo: 'escudo',
+};
+const FILTERS = ['armadura', 'rm', 'penf', 'penm', 'feridas', 'escudo'];
+const groupsOf = (s) => [...new Set(s.effects.map((e) => GROUPS[e.kind]).filter(Boolean))];
+const Mark = ({ g }) => <span className={`fx-mark fx-${g}`} title={t(`fx.filter.${g}`)}>{t(`fx.mark.${g}`)}</span>;
 
 export default function EffectPicker({ chosen, onChange }) {
   const [sources, setSources] = useState([]);
   const [error, setError] = useState(null);
+  const [filters, setFilters] = useState([]);
+  const shop = useShopItems();
   useEffect(() => {
     effectSources().then(setSources).catch((e) => setError(e.message));
   }, []);
 
-  const add = (name) => {
-    const s = sources.find((x) => x.name === name);
-    if (!s || chosen.some((c) => c.name === name)) return;
-    onChange([...chosen, { ...s, effects: s.effects.map((e) => ({ ...e, stat: '' })) }]);
+  const toggle = (s) => {
+    if (chosen.some((c) => c.name === s.name)) onChange(chosen.filter((c) => c.name !== s.name));
+    else onChange([...chosen, { ...s, effects: s.effects.map((e) => ({ ...e, stat: '' })) }]);
   };
   const remove = (name) => onChange(chosen.filter((c) => c.name !== name));
   const edit = (name, k, patch) => onChange(chosen.map((c) => (c.name !== name ? c
     : { ...c, effects: c.effects.map((e, i) => (i !== k ? e : { ...e, ...patch })) })));
 
-  const free = sources.filter((s) => !chosen.some((c) => c.name === s.name));
-  const items = free.filter((s) => s.group === 'item');
-  const champs = free.filter((s) => s.group === 'campeao');
+  const pass = (s) => filters.length === 0 || groupsOf(s).some((g) => filters.includes(g));
+  const byItem = useMemo(() => new Map(sources.filter((s) => s.itemId != null).map((s) => [s.itemId, s])), [sources]);
+  const tiles = useMemo(() => buildTiles(shop.filter((i) => byItem.has(i.id))), [shop, byItem]);
+  const sourceOf = (x) => byItem.get(x.preferredId);
+  const others = sources.filter((s) => s.itemId == null || !shop.some((i) => i.id === s.itemId));
+  const isOn = (s) => chosen.some((c) => c.name === s.name);
   return (
     <div className="effect-picker">
-      <label className="inline" title={t('fx.addTitle')}>{t('fx.add')}
-        <select value="" onChange={(e) => add(e.target.value)}>
-          <option value="">+</option>
-          {items.length > 0 && <optgroup label={t('fx.items')}>{items.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}</optgroup>}
-          {champs.length > 0 && <optgroup label={t('fx.champions')}>{champs.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}</optgroup>}
-        </select>
-      </label>
+      <PickerPopover label={t('fx.add')} title={t('fx.addTitle')}>
+        {() => (
+          <>
+            <ChosenChips chosen={chosen.map((c) => ({
+              key: c.name, name: c.name, icon: c.itemId != null ? <ItemIcon id={c.itemId} size={18} /> : <ChampionAvatar name={c.champion ?? c.name} size={18} />,
+              onRemove: () => remove(c.name),
+            }))} />
+            <div className="shop picker-shop">
+              <ShopBrowser
+                tiles={tiles} iconSize={52} autoFocus filter={(x) => pass(sourceOf(x))} marked={(x) => isOn(sourceOf(x))}
+                heading={t('fx.items')} allTabs={filters.length > 0}
+                toolbar={(
+                  <div className="chips picker-filters" role="group" aria-label={t('fx.filters')}>
+                    {FILTERS.map((g) => (
+                      <button key={g} type="button" className={filters.includes(g) ? 'active' : ''} aria-pressed={filters.includes(g)}
+                        onClick={() => setFilters((f) => (f.includes(g) ? f.filter((x) => x !== g) : [...f, g]))}>
+                        <Mark g={g} /> {t(`fx.filter.${g}`)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                decorate={(x) => <span className="fx-marks">{groupsOf(sourceOf(x)).map((g) => <Mark key={g} g={g} />)}</span>}
+                tileProps={(x) => ({ type: 'button', title: x.name, onClick: () => toggle(sourceOf(x)) })}
+                after={(query) => {
+                  const q = plain(query.trim());
+                  const list = others.filter((s) => pass(s) && (!q || plain(`${s.name} ${s.champion ?? ''}`).includes(q)));
+                  if (list.length === 0) return null;
+                  return (
+                    <section>
+                      <h4 className="picker-heading">{t('fx.championAbilities')}</h4>
+                      <div className="fx-sources">
+                        {list.map((s) => (
+                          <button key={s.name} type="button" className={`tile fx-source${isOn(s) ? ' marked' : ''}`} aria-pressed={isOn(s)} onClick={() => toggle(s)}>
+                            <ChampionAvatar name={s.champion ?? s.name} size={32} />
+                            <span className="fx-source-text">
+                              <span>{s.name}</span>
+                              <small className="muted">{s.effects.map((e) => t(`fx.kind.${e.kind}`)).join(' · ')}</small>
+                            </span>
+                            <span className="fx-marks inline">{groupsOf(s).map((g) => <Mark key={g} g={g} />)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  );
+                }}
+              />
+            </div>
+          </>
+        )}
+      </PickerPopover>
       {error && <p className="error">{error}</p>}
       {chosen.length > 0 && (
         <ul className="effect-list">

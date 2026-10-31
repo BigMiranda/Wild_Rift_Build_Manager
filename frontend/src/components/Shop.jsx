@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { statLabel, t, violationText } from '../i18n.js';
 import { mmss, n0, pct, statValue } from '../format.js';
-import { DEFAULT_TAB, MARKERS, TABS, buildTiles, describeStats, earliestMinute, markerLabel, sectionsFor, variantLabel } from '../shopModel.js';
+import { MARKERS, buildTiles, describeStats, earliestMinute, markerLabel, variantLabel } from '../shopModel.js';
 import ItemIcon from './ItemIcon.jsx';
+import ShopBrowser from './ShopBrowser.jsx';
 import RichText from './RichText.jsx';
 import { StatIcon, statColor } from './StatIcon.jsx';
 
@@ -15,13 +16,10 @@ import { StatIcon, statColor } from './StatIcon.jsx';
  * shows what that purchase adds to the build instead of the preview. Picking another item clears it (`onPurchaseClear`).
  */
 export default function Shop({ items, buildPayload, ownedIds, purchase, onPurchaseClear, onAdd, shopRules, comparing = [], onToggleCompare }) {
-  const [tab, setTab] = useState(DEFAULT_TAB);
-  const [query, setQuery] = useState('');
   const [selectedKey, setSelectedKey] = useState(null);
   const [variantId, setVariantId] = useState(null);
 
   const tiles = useMemo(() => buildTiles(items), [items]);
-  const sections = sectionsFor(tiles, tab, query);
   const itemsById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const ownedByTile = useMemo(() => {
     const counts = new Map();
@@ -57,66 +55,42 @@ export default function Shop({ items, buildPayload, ownedIds, purchase, onPurcha
 
   return (
     <div className="shop">
-      <nav className="shop-rail" aria-label={t('settings.lang')}>
-        {TABS.map((x) => (
-          <button key={x} className={!query && tab === x ? 'active' : ''} onClick={() => { setTab(x); setQuery(''); }}>
-            {t(`tab.${x}`)}
-          </button>
-        ))}
-      </nav>
-
-      <div className="shop-grid-wrap">
-        <input
-          type="search" className="shop-search" placeholder={t('shop.search')} value={query}
-          onChange={(e) => setQuery(e.target.value)} aria-label={t('shop.search')}
-        />
-        <div className="shop-grid-scroll">
-          {sections.length === 0 && <p className="muted">{t('shop.none')}</p>}
-          {sections.map((s) => (
-            <section key={s.key}>
-              <h4 className="shop-section">{s.label}</h4>
-              <div className="shop-grid">
-                {s.tiles.map((x) => {
-                  const marker = MARKERS[x.base.marker];
-                  const from = earliestMinute(x.base, shopRules);
-                  return (
-                    <button
-                      key={x.key}
-                      className={`tile${x.key === selectedKey ? ' selected' : ''}`}
-                      onClick={() => { onPurchaseClear(); setSelectedKey(x.key); setVariantId(x.preferredId); }}
-                      onDoubleClick={() => onAdd(x.key === selectedKey && variant ? variant.id : x.preferredId)}
-                      title={`${t('shop.dblclick', { name: x.name })}${from > 0 ? ` · ${t('shop.ruleFrom', { time: mmss(from) })}` : ''}`}
-                    >
-                      <span className="tile-icon">
-                        <ItemIcon id={x.iconId} size={64} />
-                        <span className="tile-cost">{x.cost}</span>
-                        {ownedByTile.has(x.key) && <span className="tile-owned" aria-label={t('shop.owned')}>×{ownedByTile.get(x.key)}</span>}
-                        {x.base.active && <span className="tile-active" title={t('shop.activeItem')} aria-label={t('shop.activeItem')}>◆</span>}
-                        {onToggleCompare && x.base.section === 'aprimorado' && (
-                          <span role="checkbox" tabIndex={0} aria-checked={comparing.includes(x.preferredId)} aria-label={t('qc.shopBox', { name: x.name })}
-                            title={t('qc.shopBox', { name: x.name })} className={`tile-compare${comparing.includes(x.preferredId) ? ' on' : ''}`}
-                            onClick={(e) => { e.stopPropagation(); onToggleCompare(x.preferredId); }}
-                            onDoubleClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => {
-                              if (e.key === ' ' || e.key === 'Enter') {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                onToggleCompare(x.preferredId);
-                              }
-                            }}>⇄</span>
-                        )}
-                        {from > 0 && <span className="tile-rule" aria-label={t('shop.ruleFrom', { time: mmss(from) })}>{mmss(from)}</span>}
-                        {marker && <span className={`tile-marker ${x.base.marker}`} title={markerLabel(x.base.marker)} aria-label={markerLabel(x.base.marker)}>{marker.badge}</span>}
-                      </span>
-                      <span className="tile-name">{x.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
-      </div>
+      <ShopBrowser
+        tiles={tiles} selectedKey={selectedKey}
+        tileProps={(x) => {
+          const from = earliestMinute(x.base, shopRules);
+          return {
+            onClick: () => { onPurchaseClear(); setSelectedKey(x.key); setVariantId(x.preferredId); },
+            onDoubleClick: () => onAdd(x.key === selectedKey && variant ? variant.id : x.preferredId),
+            title: `${t('shop.dblclick', { name: x.name })}${from > 0 ? ` · ${t('shop.ruleFrom', { time: mmss(from) })}` : ''}`,
+          };
+        }}
+        decorate={(x) => {
+          const marker = MARKERS[x.base.marker];
+          const from = earliestMinute(x.base, shopRules);
+          return (
+            <>
+              {ownedByTile.has(x.key) && <span className="tile-owned" aria-label={t('shop.owned')}>×{ownedByTile.get(x.key)}</span>}
+              {x.base.active && <span className="tile-active" title={t('shop.activeItem')} aria-label={t('shop.activeItem')}>◆</span>}
+              {onToggleCompare && x.base.section === 'aprimorado' && (
+                <span role="checkbox" tabIndex={0} aria-checked={comparing.includes(x.preferredId)} aria-label={t('qc.shopBox', { name: x.name })}
+                  title={t('qc.shopBox', { name: x.name })} className={`tile-compare${comparing.includes(x.preferredId) ? ' on' : ''}`}
+                  onClick={(e) => { e.stopPropagation(); onToggleCompare(x.preferredId); }}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onToggleCompare(x.preferredId);
+                    }
+                  }}>⇄</span>
+              )}
+              {from > 0 && <span className="tile-rule" aria-label={t('shop.ruleFrom', { time: mmss(from) })}>{mmss(from)}</span>}
+              {marker && <span className={`tile-marker ${x.base.marker}`} title={markerLabel(x.base.marker)} aria-label={markerLabel(x.base.marker)}>{marker.badge}</span>}
+            </>
+          );
+        }}
+      />
 
       <aside className="shop-detail" aria-live="polite">
         {!selected && <p className="shop-empty">{t('shop.selectHint')}</p>}
