@@ -93,7 +93,7 @@ a "sobra por segundo" de quem sustenta.
   passivas comparam, porque elas precisam de um valor também quando ninguém morre.
 - **Comparativo:** a tela recalcula pela taxa da referência aberta (`overReference`).
 
-### ⚠ Desvio do prompt: a taxa do índice é em % da Vida
+### Desvio do prompt, confirmado pelo usuário: a taxa do índice é em % da Vida
 
 O prompt pede `taxa da referência ÷ taxa da build`. Com a taxa em dano por segundo, **a Vida não conta**: um item só de Vida
 não muda a taxa, e o índice dele seria 100. O resultado contradiz o tempo até morrer, contra o Atirador alimentado:
@@ -412,8 +412,6 @@ Testes: 229 → 235, mais 1 opcional (11 pulados). Golden sem mudança. `npm run
 ## Para o usuário
 
 **Precisa de decisão:**
-- **Índice em % da Vida (desvio do prompt, Parte 2).** O prompt pede a taxa em dano por segundo. Com ela, um item só de Vida não muda o índice, e o Soldado (17,9 s) passa da Big
-  Carry (20,1 s) contra o Atirador. Deixei `indice.taxa: por_vida`. Para seguir o prompt ao pé da letra, troque para `bruta` em `efetividade_7_3d.yml`.
 - **O teto de 1000 achata os fortes.** A Big Carry fica em "1000+" ou "sustenta" em 8 de 10 cenários, e as varreduras dela saem retas em 1000, sem ponto de quebra (o atacante de
   referência não dá conta dela). Para separar builds desse nível, suba `indice.teto` ou fortaleça o atacante de referência.
 
@@ -428,6 +426,8 @@ Testes: 229 → 235, mais 1 opcional (11 pulados). Golden sem mudança. `npm run
 - **Rotas e classes** vêm das páginas `WR:` da wiki, não do jogo. Alcance de ataque é do LoL. Um print confirmaria os casos que importam.
 - **Limiares de arquétipo e pesos do perfil são meus**, ajustados nas suas builds, em `classificacao_7_3d.yml`.
 - **Selos da loja e Shyvana** (pendências da 6.a) seguem abertos.
+
+**Decidido em 31/10/2026:** o índice fica em % da Vida (`indice.taxa: por_vida`), confirmado pelo usuário. Com dano por segundo, um item só de Vida não mudaria o índice, e uma build que dura mais poderia ter índice menor.
 
 ## Fechamento
 
