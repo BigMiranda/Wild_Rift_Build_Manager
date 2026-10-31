@@ -39,6 +39,11 @@
 # rota reta, sem para onde ir: quem foge vive até a parede, e o tempo até morrer passaria a medir a caminhada (com 400
 # de Vida a mais, o Ornn sem itens ia de 2,8 s para 20,8 s contra o mesmo atacante).
 #
+# Cura dos atacantes: como um campeão de verdade, por itens reais. Atiradores: Sedenta por Sangue (Roubo de Vida). Lutadores:
+# Hemodrenário (Vampirismo Universal). Magos de Liandry + Maldição e de 1000 de PdH: Criafendas. O DdA e o PdH desses itens
+# foram descontados do preset, para o total seguir o mesmo. Os atacantes não morrem, então a cura deles não muda o tempo até
+# a build morrer: ela aparece como "cura cortada" e no valor medido do corta-cura (o dano que fica).
+#
 # Medidas (as mesmas para todo cenário): tempo até morrer; vida efetiva contra aquele atacante (o dano bruto recebido
 # até morrer); dano mitigado %; escudo absorvido; cura (e a perdida para Feridas Dolorosas); dano devolvido (o que a
 # build causou aos atacantes) e tempo de controle aplicado neles; com aliados, a % do dano inimigo que a build absorveu
@@ -99,17 +104,17 @@ cenarios:
     nome: Crítico
     grupo: 1x1
     duracao: 180
-    nota: 100% de crítico e 300 de DdA, só ataques básicos
+    nota: 100% de crítico e 300 de DdA, só ataques básicos, com o Roubo de Vida da Sedenta por Sangue (os 75 de DdA dela estão nos 300)
     atacantes:
-    - {nome: Atirador crítico, funcao: atirador, vida: 8000, armadura: 60, rm: 60, dda: 300, velocidade_ataque: 2.5,
-       status: {"% Critical Rate": 100}, pulsos: []}
+    - {nome: Atirador crítico, funcao: atirador, vida: 8000, armadura: 60, rm: 60, dda: 225, velocidade_ataque: 2.5,
+       status: {"% Critical Rate": 100}, itens: [Sedenta por Sangue], pulsos: []}
   anti_tanque_fisico:
     nome: Anti-tanque físico
     grupo: 1x1
     duracao: 180
     atacantes:
-    - {nome: Lutador anti-tanque, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 250, velocidade_ataque: 1.5,
-       itens: [Espada do Rei Destruído, Ruptor Divino, Lembranças do Lorde Dominik]}
+    - {nome: Lutador anti-tanque, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 210, velocidade_ataque: 1.5,
+       itens: [Espada do Rei Destruído, Ruptor Divino, Lembranças do Lorde Dominik, Hemodrenário]}
   liandry:
     nome: Tormento de Liandry
     grupo: 1x1
@@ -123,7 +128,7 @@ cenarios:
     duracao: 180
     atacantes:
     - {nome: Mago de Liandry e Maldição, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
-       status: {Ability Power: 600}, itens: [Tormento de Liandry, Maldição Sanguinária]}
+       status: {Ability Power: 530}, itens: [Tormento de Liandry, Maldição Sanguinária, Criafendas]}
   cajado_vazio:
     nome: Cajado do Vazio
     grupo: 1x1
@@ -137,15 +142,15 @@ cenarios:
     duracao: 180
     atacantes:
     - {nome: Mago de 1000 PdH, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
-       status: {Ability Power: 1000}, itens: [Cajado do Vazio]}
+       status: {Ability Power: 930}, itens: [Cajado do Vazio, Criafendas]}
   misto:
     nome: Misto
     grupo: 1x1
     duracao: 180
     nota: ataques físicos e habilidades mágicas
     atacantes:
-    - {nome: Lutador misto, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 300, velocidade_ataque: 1.5,
-       status: {Ability Power: 500},
+    - {nome: Lutador misto, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 260, velocidade_ataque: 1.5,
+       status: {Ability Power: 500}, itens: [Hemodrenário],
        pulsos: [{nome: Golpe mágico, tipo: dano, dano_tipo: magico, base: 150, pdh: 0.7, a_cada: 5, alcance: 350}]}
   verdadeiro:
     nome: Verdadeiro
@@ -153,17 +158,18 @@ cenarios:
     duracao: 180
     nota: ataques físicos fracos e habilidades de Dano Verdadeiro
     atacantes:
-    - {nome: Lutador verdadeiro, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 200, velocidade_ataque: 1.2,
+    - {nome: Lutador verdadeiro, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 160, velocidade_ataque: 1.2,
+       itens: [Hemodrenário],
        pulsos: [{nome: Golpe verdadeiro, tipo: dano, dano_tipo: verdadeiro, base: 400, dda: 0.5, a_cada: 3, alcance: 300}]}
   atirador_alimentado:
     nome: Atirador alimentado
     grupo: 1x1
     duracao: 180
-    nota: muito DdA e crítico, com Lembranças do Lorde Dominik
+    nota: muito DdA e crítico, com Lembranças do Lorde Dominik e o Roubo de Vida da Sedenta por Sangue
     atacantes:
-    - {nome: Atirador alimentado, funcao: atirador, vida: 8000, armadura: 60, rm: 60, dda: 250, velocidade_ataque: 1.5,
+    - {nome: Atirador alimentado, funcao: atirador, vida: 8000, armadura: 60, rm: 60, dda: 175, velocidade_ataque: 1.5,
        status: {"% Critical Rate": 25},
-       itens: [Gume do Infinito, Lembranças do Lorde Dominik, Canhão Fumegante, Dança da Morte]}
+       itens: [Gume do Infinito, Lembranças do Lorde Dominik, Canhão Fumegante, Dança da Morte, Sedenta por Sangue]}
   cinco_contra_um:
     nome: 5 contra 1
     grupo: equipe
@@ -173,8 +179,8 @@ cenarios:
        status: {"% Critical Rate": 50}}
     - {nome: Mago, funcao: mago, vida: 6000, armadura: 50, rm: 50, dda: 60, velocidade_ataque: 0.7,
        status: {Ability Power: 600, "% Magic Penetration": 20}}
-    - {nome: Lutador, funcao: lutador, vida: 6000, armadura: 60, rm: 60, dda: 250, velocidade_ataque: 1.2,
-       status: {"% Armor Penetration": 20}}
+    - {nome: Lutador, funcao: lutador, vida: 6000, armadura: 60, rm: 60, dda: 210, velocidade_ataque: 1.2,
+       status: {"% Armor Penetration": 20}, itens: [Hemodrenário]}
     - {nome: Assassino, funcao: assassino, vida: 6000, armadura: 50, rm: 50, dda: 280, velocidade_ataque: 1.2,
        status: {Armor Penetration: 18}}
     - {nome: Tanque, funcao: tanque, vida: 8000, armadura: 120, rm: 80, dda: 100, velocidade_ataque: 0.7,
@@ -189,8 +195,8 @@ cenarios:
        status: {"% Critical Rate": 50}}
     - {nome: Mago, funcao: mago, vida: 6000, armadura: 50, rm: 50, dda: 60, velocidade_ataque: 0.7,
        status: {Ability Power: 600, "% Magic Penetration": 20}}
-    - {nome: Lutador, funcao: lutador, vida: 6000, armadura: 60, rm: 60, dda: 250, velocidade_ataque: 1.2,
-       status: {"% Armor Penetration": 20}}
+    - {nome: Lutador, funcao: lutador, vida: 6000, armadura: 60, rm: 60, dda: 210, velocidade_ataque: 1.2,
+       status: {"% Armor Penetration": 20}, itens: [Hemodrenário]}
     - {nome: Assassino, funcao: assassino, vida: 6000, armadura: 50, rm: 50, dda: 280, velocidade_ataque: 1.2,
        status: {Armor Penetration: 18}}
     - {nome: Tanque, funcao: tanque, vida: 8000, armadura: 120, rm: 80, dda: 100, velocidade_ataque: 0.7,

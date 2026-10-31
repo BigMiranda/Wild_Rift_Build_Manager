@@ -498,6 +498,9 @@ public final class ArenaModel {
         /** Damage dealt by type after resistances (fisico, magico, verdadeiro). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public Map<String, Double> damageByType = new LinkedHashMap<>();
+        /** Damage dealt by how it got there: reflexo (thorns), aura_queimadura (auras, burns), golpes (attacks, abilities, procs). */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, Double> dealtByKind = new LinkedHashMap<>();
         /** Spans [from, to] (s) it spent immobilized (stun, knock-up, displacement). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public List<double[]> controlSpans = new ArrayList<>();

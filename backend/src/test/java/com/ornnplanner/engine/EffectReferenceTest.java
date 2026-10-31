@@ -105,8 +105,8 @@ class EffectReferenceTest {
         ArenaModel.Scenario weak = effect.scenario(at, grows);
         at.minute = 25.0;
         ArenaModel.Scenario full = effect.scenario(at, grows);
-        assertEquals(300, full.fighters.get(1).dummy.attackDamage, 1e-9, "the preset's stats at the full minute");
-        assertEquals(120, weak.fighters.get(1).dummy.attackDamage, 1e-9, "10 / 25 of them at 10:00");
+        assertEquals(225, full.fighters.get(1).dummy.attackDamage, 1e-9, "the preset's base at the full minute (its item stays)");
+        assertEquals(90, weak.fighters.get(1).dummy.attackDamage, 1e-9, "10 / 25 of it at 10:00");
         assertNotEquals(early.fighters.get(1).dummy.attackDamage, weak.fighters.get(1).dummy.attackDamage);
     }
 

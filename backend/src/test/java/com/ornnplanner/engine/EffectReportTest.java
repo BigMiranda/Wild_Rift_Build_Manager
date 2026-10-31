@@ -2,6 +2,7 @@ package com.ornnplanner.engine;
 
 import com.ornnplanner.arena.EffectModel;
 import com.ornnplanner.arena.EffectTestService;
+import com.ornnplanner.arena.PassiveValueService;
 import com.ornnplanner.repo.BuildRepository;
 import com.ornnplanner.service.PlannerService;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,8 @@ class EffectReportTest {
     BuildRepository builds;
     @Autowired
     PlannerService planner;
+    @Autowired
+    PassiveValueService passives;
 
     private final StringBuilder out = new StringBuilder();
 
@@ -127,6 +130,13 @@ class EffectReportTest {
             w += rep.tests.get(i).weight;
         }
         line("índice ponderado: %.0f", sum / w);
+        line("devolvido: reflexo / aura e queimadura / golpes; cura do atacante (cortada):");
+        for (EffectModel.Outcome x : o) {
+            if (x.error == null) {
+                line("- %s: %.0f / %.0f / %.0f; %.0f (%.0f)", x.testName, x.build.returnedThorns, x.build.returnedAuras, x.build.returnedHits,
+                        x.build.enemyHealed, x.build.enemyHealCut);
+            }
+        }
     }
 
     private void complete(EffectModel.Request base, EffectModel.Report rep) {
@@ -206,7 +216,29 @@ class EffectReportTest {
         }
     }
 
+    /** Each anti-heal passive of the build, measured against the fed marksman. */
+    private void antiHeal(EffectModel.Request base) {
+        List<EffectModel.HeldItem> items = effect.itemsAt(base);
+        for (EffectModel.HeldItem it : items) {
+            if (!it.name.contains("Espinh")) {
+                continue;
+            }
+            PassiveValueService.MeasureRequest req = new PassiveValueService.MeasureRequest();
+            req.buildId = base.buildId;
+            req.scenario.kind = "teste";
+            req.scenario.key = "atirador_alimentado";
+            PassiveValueService.Job j = new PassiveValueService.Job();
+            j.minute = builds.findBuild(base.buildId).map(b -> b.matchEnd != null ? b.matchEnd : 23.5).orElse(23.5);
+            j.itemId = it.id;
+            j.passive = "Entrelaçar";
+            req.jobs.add(j);
+            PassiveValueService.Reading r = passives.measure(req).get(0);
+            line("- Entrelaçar de %s contra Atirador alimentado: %.0f de ouro (tira %.1f%%; %s)", it.name, r.gold, r.lossPct, r.damage ? "dano" : "tempo");
+        }
+    }
+
     private void perItem(EffectModel.Request base0, EffectModel.Report rep) {
+        antiHeal(base0);
         modes(base0, rep);
         EffectModel.Request base = new EffectModel.Request();
         base.buildId = base0.buildId;

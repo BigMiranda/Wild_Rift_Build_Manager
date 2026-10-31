@@ -74,7 +74,7 @@ Soldado v8 contra o Atirador caiu de 29,2 s para 17,9 s: os 29,2 s já incluíam
 
 **Testes novos (`EffectReferenceTest`, catálogo do seed num banco novo):** 🎯 a mesma build aos 19:00 e aos 26:00 (nível 15) tem
 a mesma referência, com a mesma Vida e o mesmo dano recebido; o atacante não muda com o minuto, a menos que o cenário escale
-(120 de DdA aos 10:00, 300 aos 25:00); o Ornn sem itens morre onde a luta acontece.
+(a base de DdA do preset cheia aos 25:00 e 40% dela aos 10:00); o Ornn sem itens morre onde a luta acontece.
 
 Testes: 217 → 220 (10 opcionais pulados). Golden sem mudança. `npm run build` limpo.
 
@@ -215,3 +215,67 @@ Coração Congelado 505, Manto da Meia-noite 440.
 os três modos repetem o mesmo resultado.
 
 Testes: 223 → 225 (10 opcionais pulados). Golden sem mudança. `npm run build` limpo.
+
+## Parte 4 — Bonecos que se curam ✅
+
+### Itens
+
+Por itens reais do catálogo. O DdA e o PdH dos itens foram descontados da base do preset, para o total seguir o mesmo.
+
+| preset | item novo | cura que ele traz | base |
+|---|---|---|---|
+| Crítico | Sedenta por Sangue | 15% de Roubo de Vida | DdA 300 → 225 (total segue 300) |
+| Atirador alimentado | Sedenta por Sangue | 15% de Roubo de Vida | DdA 250 → 175 (total segue 410) |
+| Anti-tanque físico | Hemodrenário | 8% de Vampirismo Universal (já tinha 12% de Roubo de Vida) | DdA 250 → 210 |
+| Misto, Verdadeiro, Lutador de 5 contra 1 e da luta de equipe | Hemodrenário | 8% de Vampirismo Universal | DdA −40 |
+| Liandry + Maldição, 1000 de PdH + Cajado | Criafendas | Vampirismo Universal com a Corrupção do Vazio no máximo | PdH −70 |
+
+O atacante de referência das varreduras não mudou. A Criafendas ainda soma Vida, PdH pela Infusão do Vazio e o aumento de dano da
+Corrupção, então esses dois magos ficaram um pouco mais fortes: a referência do 1000 de PdH foi de 6,4 s para 5,4 s. Os magos
+continuam matando o tanque sem RM em menos de 60 s (o 🎯 da Parte 2 segue passando).
+
+### Por que o corta-cura precisava de uma medida nova
+
+Só dar cura aos bonecos não bastaria. Eles não morrem, então cortar a cura deles não muda em nada quando a build morre: o Entrelaçar
+continuaria valendo 0. Por isso:
+
+- **Medidas novas:** `enemyHealed` (a cura dos atacantes) e `enemyHealCut` (o que as Feridas cortaram).
+- **Valor medido das passivas:** a segunda métrica passou de "dano causado" para **dano causado menos a cura do atacante**. É o dano que
+  fica. Cortar a cura aparece como mais dano que fica, e a busca de ouro já lê isso como passiva de dano.
+- **Dano devolvido separado** (`FighterStats.dealtByKind`, descritivo): reflexo, aura e queimadura, golpes (ataques, habilidades e
+  efeitos ao acertar). A tela mostra o reflexo na célula e os três no `title`, e ganhou a coluna "Cura cortada".
+
+**Correção de passagem:** a chave de cache do valor medido não incluía o modo de leitura da Parte 3. Mudar o modo devolveria o valor
+antigo.
+
+### Antes e depois
+
+🎯 **Entrelaçar da Armadura de Espinhos (Big Carry v1, 23:30, contra Atirador alimentado):** antes **0**; agora **3.728 de ouro**
+(desligar tira 7,0% do dano que fica).
+
+Big Carry v1, dano devolvido e cura do atacante:
+
+| cenário | reflexo | aura e queimadura | golpes | cura do atacante | cortada |
+|---|---|---|---|---|---|
+| Crítico | 13.969 | 21.022 | 24.607 | 1.980 | 1.980 |
+| Anti-tanque físico | 5.295 | 18.051 | 16.138 | 3.888 | 3.679 |
+| Liandry + Maldição | 5.720 | 28.691 | 35.418 | 2.193 | 2.193 |
+| 1000 de PdH + Cajado | 5.720 | 27.798 | 34.911 | 1.740 | 1.740 |
+| Misto | 12.285 | 32.390 | 37.032 | 630 | 630 |
+| Verdadeiro | 9.909 | 32.390 | 37.032 | 1.284 | 1.284 |
+| Atirador alimentado | 1.996 | 4.940 | 3.984 | 716 | 716 |
+
+Índices depois da Parte 4 (só o que mudou em relação à Parte 2):
+
+| cenário | Big Carry v1 | Soldado v8 | Manopla dos Glacinatas |
+|---|---|---|---|
+| Liandry + Maldição | 1000+ (12/s → 20/s) | 617 → 516 | 185 |
+| 1000 de PdH + Cajado | sustenta → **1000+** (7/s) | 883 → 952 | 243 → 288 |
+| **ponderado** | 932 | 729 → **725** | 428 → **432** |
+
+Os demais não mudam, e a ordem entre as três builds continua a mesma. A Armadura de Espinhos segue com "passiva +0%" na tabela por item:
+ali a leitura é de tempo de vida, e o valor do corta-cura está na medida acima.
+
+**Teste novo (`PassiveValueTest`):** 🎯 o Entrelaçar vale mais de 0 contra o Atirador alimentado e é lido como dano.
+
+Testes: 225 → 226 (10 opcionais pulados). Golden sem mudança. `npm run build` limpo.

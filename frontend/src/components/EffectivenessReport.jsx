@@ -100,7 +100,7 @@ export function BasicResult({ report, outcomes, names }) {
             <tr>
               <th>{t('efx.col.test')}</th><th>{t('efx.col.weight')}</th><th>{t('efx.col.index')}</th><th>{t('efx.col.ttd')}</th>
               <th>{t('efx.col.ref')}</th><th title={t('efx.col.netTitle')}>{t('efx.col.net')}</th><th>{t('efx.col.ehp')}</th><th>{t('efx.col.mitigated')}</th><th>{t('efx.col.shield')}</th>
-              <th>{t('efx.col.heal')}</th><th>{t('efx.col.dealt')}</th><th>{t('efx.col.cc')}</th><th>{t('efx.col.team')}</th>
+              <th>{t('efx.col.heal')}</th><th>{t('efx.col.dealt')}</th><th title={t('efx.col.cutTitle')}>{t('efx.col.cut')}</th><th>{t('efx.col.cc')}</th><th>{t('efx.col.team')}</th>
             </tr>
           </thead>
           <tbody>
@@ -119,7 +119,10 @@ export function BasicResult({ report, outcomes, names }) {
                   <td>{m ? `${n0(m.mitigatedPct)}%` : '—'}</td>
                   <td>{m ? n0(m.shieldAbsorbed) : '—'}</td>
                   <td>{m ? <>{n0(m.healed)}{m.healLost > 0.5 && <small className="muted"> (−{n0(m.healLost)})</small>}</> : '—'}</td>
-                  <td>{m ? n0(m.dealt) : '—'}</td>
+                  <td title={m ? t('efx.returned', { thorns: n0(m.returnedThorns), auras: n0(m.returnedAuras), hits: n0(m.returnedHits) }) : undefined}>
+                    {m ? <>{n0(m.dealt)}{m.returnedThorns > 0.5 && <small className="muted"> ({t('efx.returnedThorns', { v: n0(m.returnedThorns) })})</small>}</> : '—'}
+                  </td>
+                  <td>{m ? <>{n0(m.enemyHealCut)}{m.enemyHealed + m.enemyHealCut > 0.5 && <small className="muted"> / {n0(m.enemyHealed + m.enemyHealCut)}</small>}</> : '—'}</td>
                   <td>{m ? `${n1(m.controlApplied)} s` : '—'}</td>
                   <td>{m?.absorbedShare != null ? t('efx.teamCell', { share: n0(m.absorbedShare), alive: n1(m.alliesAlive) }) : '—'}</td>
                 </tr>

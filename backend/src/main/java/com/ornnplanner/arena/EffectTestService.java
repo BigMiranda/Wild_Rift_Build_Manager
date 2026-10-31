@@ -1027,6 +1027,13 @@ public class EffectTestService {
         m.healLost = me.healLost;
         m.healOver = me.healOver;
         m.dealt = me.dealt;
+        m.returnedThorns = me.dealtByKind.getOrDefault("reflexo", 0.0);
+        m.returnedAuras = me.dealtByKind.getOrDefault("aura_queimadura", 0.0);
+        m.returnedHits = me.dealtByKind.getOrDefault("golpes", 0.0);
+        for (int k = 0; k < attackers; k++) {
+            m.enemyHealed += r.fighters.get(1 + k).healed;
+            m.enemyHealCut += r.fighters.get(1 + k).healLost;
+        }
         m.controlApplied = me.events.getOrDefault("controle_causado", 0.0);
         m.netRate = (me.taken - me.healed - me.healOver - me.shieldAbsorbed) / elapsed;
         m.surplus = Math.max(0, -m.netRate);
@@ -1089,6 +1096,11 @@ public class EffectTestService {
             out.healed += m.healed / n;
             out.healLost += m.healLost / n;
             out.dealt += m.dealt / n;
+            out.returnedThorns += m.returnedThorns / n;
+            out.returnedAuras += m.returnedAuras / n;
+            out.returnedHits += m.returnedHits / n;
+            out.enemyHealed += m.enemyHealed / n;
+            out.enemyHealCut += m.enemyHealCut / n;
             out.controlApplied += m.controlApplied / n;
             out.fightLength += m.fightLength / n;
             out.maxHealth += m.maxHealth / n;

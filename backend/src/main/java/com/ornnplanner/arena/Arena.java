@@ -4074,6 +4074,7 @@ public class Arena {
         t.r.mitigated += amped - amped * mult;
         a.r.damageBySource.merge(source, dmg, Double::sum);
         if (dmg > 0) {
+            a.r.dealtByKind.merge(kind == REFLECT ? "reflexo" : kind == DOT ? "aura_queimadura" : "golpes", dmg, Double::sum);
             a.r.damageByType.merge(type, dmg, Double::sum);
             a.r.damageBySourceType.computeIfAbsent(source, k -> new LinkedHashMap<>()).merge(type, dmg, Double::sum);
         }

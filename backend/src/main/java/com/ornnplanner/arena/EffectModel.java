@@ -201,8 +201,14 @@ public final class EffectModel {
         public double healLost;
         /** Healing that found its health full. */
         public double healOver;
-        /** Damage the build dealt to the attackers (returned). */
+        /** Damage the build dealt to the attackers (returned), and that by how it got there. */
         public double dealt;
+        public double returnedThorns;
+        public double returnedAuras;
+        public double returnedHits;
+        /** Healing of the attackers, and what the build's Grievous Wounds cut from it. */
+        public double enemyHealed;
+        public double enemyHealCut;
         /** Seconds of crowd control it applied to them. */
         public double controlApplied;
         /** With allies: share of the enemies' raw damage the build took, and the allies' mean time alive. */

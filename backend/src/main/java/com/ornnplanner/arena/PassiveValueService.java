@@ -391,7 +391,7 @@ public class PassiveValueService {
     public List<Reading> measure(MeasureRequest req) {
         BuildRepository.Build b = buildOf(req.build, req.buildId);
         Scenario sc = req.scenario == null ? new Scenario() : req.scenario;
-        String key = EffectTestService.hash(EffectTestService.write(b)) + "|" + sc.kind + "|" + sc.key + "|" + sc.id;
+        String key = EffectTestService.hash(EffectTestService.write(b)) + "|" + sc.kind + "|" + sc.key + "|" + sc.id + "|" + sc.readMode;
         if (readings.size() > 20000) {
             readings.clear();
         }
@@ -451,7 +451,10 @@ public class PassiveValueService {
         return r;
     }
 
-    /** {durability, damage dealt} of the build in the scenario. */
+    /**
+     * {durability, damage dealt net of the attackers' healing} of the build in the scenario. The attackers never die, so
+     * cutting their healing changes no time to die: it shows as more damage that stays dealt.
+     */
     private double[] score(BuildRepository.Build b, Scenario sc, double minute, Map<Long, ItemEdit> edits) {
         String kind = sc.kind == null ? "basico" : sc.kind;
         if ("arena".equals(kind)) {
@@ -459,11 +462,11 @@ public class PassiveValueService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha um cenário salvo.");
             }
             Measures m = effect.savedScenario(sc.id, b, minute, edits);
-            return new double[] {m.durability, m.dealt};
+            return new double[] {m.durability, m.dealt - m.enemyHealed};
         }
         if ("teste".equals(kind)) {
             Measures m = effect.fightWith(b, minute, sc.key, edits, sc.readMode);
-            return new double[] {m.durability, m.dealt};
+            return new double[] {m.durability, m.dealt - m.enemyHealed};
         }
         EffectModel.Report rep = effect.report("basico");
         double ttd = 0;
@@ -472,7 +475,7 @@ public class PassiveValueService {
         for (EffectModel.Entry e : rep.tests) {
             Measures m = effect.fightWith(b, minute, e.key, edits, sc.readMode);
             ttd += e.weight * m.durability;
-            dealt += e.weight * m.dealt;
+            dealt += e.weight * (m.dealt - m.enemyHealed);
             w += e.weight;
         }
         return new double[] {w > 0 ? ttd / w : 0, w > 0 ? dealt / w : 0};

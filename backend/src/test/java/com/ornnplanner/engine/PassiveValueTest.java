@@ -87,6 +87,15 @@ class PassiveValueTest {
         return values.measure(q).get(0);
     }
 
+    /** 🎯 The attackers heal, so cutting it is worth gold: they never die, it shows as damage that stays dealt. */
+    @Test
+    void cuttingTheAttackersHealingIsWorthGold() {
+        Reading r = measure(build("corta-cura", "Coração de Aço", "Armadura de Espinhos"), "Armadura de Espinhos", "Entrelaçar", 26, "atirador_alimentado");
+        System.out.printf("Entrelaçar: %.0f gold, %.1f%% of the score%n", r.gold, r.lossPct);
+        assertTrue(r.gold > 0, "Entrelaçar is worth " + r.gold);
+        assertTrue(r.damage, "it reads as damage: the time to die does not change");
+    }
+
     /** The search finds the gold on a known curve, says when the range ends and needs no fight for a tie. */
     @Test
     void theGoldSearchFindsTheValueOnASyntheticCurve() {
