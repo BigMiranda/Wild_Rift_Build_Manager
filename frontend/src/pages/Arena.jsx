@@ -1554,6 +1554,7 @@ function hitShape(s, x, y, pad) {
     const across = -dx * Math.sin(s.angle) + dy * Math.cos(s.angle);
     return Math.abs(along) <= len / 2 + pad && Math.abs(across) <= (s.width ?? 40) / 2 + pad;
   }
+  if (s.kind === 'zone') return insideRings(s.rings, x, y);
   if (s.kind === 'cone') {
     const d = Math.hypot(x - s.x, y - s.y);
     let a = Math.atan2(y - s.y, x - s.x) - s.angle;
@@ -1561,6 +1562,19 @@ function hitShape(s, x, y, pad) {
     return d <= s.radius + pad && Math.abs(a) <= s.arc / 2;
   }
   return false;
+}
+
+/** Even-odd test of a point against the outline of a zone (its second ring, when there is one, is a hole). */
+function insideRings(rings, x, y) {
+  let inside = false;
+  (rings ?? []).forEach((ring) => {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [ax, ay] = ring[i];
+      const [bx, by] = ring[j];
+      if ((ay > y) !== (by > y) && x < ((bx - ax) * (y - ay)) / (by - ay) + ax) inside = !inside;
+    }
+  });
+  return inside;
 }
 
 /** Which fighter and cooldown a map shape comes from: "Ruptura Vulcânica (Ornn)" -> Ornn's "1"; null when unknown. */
@@ -1584,6 +1598,12 @@ function ShapeView({ s, lit }) {
   const color = lit ? '#ffffff' : s.team < 0 ? '#9a8f7a' : TEAM[s.team];
   const fill = s.team < 0 ? 'rgba(154,143,122,.6)' : TEAM_SOFT[s.team];
   const sw = lit ? 18 : 6;
+  if (s.kind === 'zone') {
+    // Zones of one ability differ by outline and fill: the first is solid, the next ones dashed and lighter.
+    const d = (s.rings ?? []).map((r) => `M ${r.map((p) => p.join(' ')).join(' L ')} Z`).join(' ');
+    return <path d={d} fillRule="evenodd" fill={fill} fillOpacity={s.zone ? 0.45 : 1} stroke={color} strokeWidth={sw}
+      strokeDasharray={s.zone ? '24 16' : undefined} />;
+  }
   if (s.kind === 'circle') return <circle cx={s.x} cy={s.y} r={s.radius ?? 20} fill={fill} stroke={color} strokeWidth={sw} />;
   if (s.kind === 'rect') {
     const deg = (s.angle * 180) / Math.PI;

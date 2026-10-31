@@ -21,9 +21,22 @@
 #   forma         linha (projétil reto) | area (círculo no lançador ou num ponto) | cone | avanco (o lançador avança) |
 #                 alvo (precisa de um alvo no alcance) | ataque (fortalece o próximo ataque) | proprio (efeito em si) |
 #                 canal (efeito repetido por um tempo, que acompanha o lançador) | campo (área que fica no chão) |
-#                 elemental (ultimate do Ornn) | empurrao (Condenar da Vayne) | tudo_ou_nada (ultimate do K'Sante)
+#                 elemental (ultimate do Ornn) | empurrao (Condenar da Vayne) | tudo_ou_nada (ultimate do K'Sante) |
+#                 zonas (hitbox real: uma ou várias zonas, veja abaixo)
 #   recarga       por rank; conjuracao: tempo parado antes do efeito; atraso: tempo até o efeito depois da conjuração
 #   alcance, largura, raio, raio_interno, angulo (graus), velocidade, duracao, intervalo (canal / campo)
+#   zonas         lista de zonas, da mais específica para a mais geral: o alvo recebe só a primeira em que está, salvo
+#                 `acumula: true`. Cada zona: nome (aparece no cartão da habilidade), forma, dano (mapa ou nome em `danos`),
+#                 efeitos. Formas: circulo (raio) | anel (raio_interno, raio) | setor (angulo, raio, raio_interno) |
+#                 retangulo (comprimento, largura, centro) | capsula (comprimento, largura, centro: linha de pontas
+#                 redondas) | poligono (vertices: [[x, y], ...]) | arco ou corrente (pontos: [[x, y], ...], largura).
+#                 Coordenadas relativas: origem em quem lança (ou no ponto mirado), +x para onde mira. O alvo é testado
+#                 pelo círculo do corpo dele contra a forma. Num canal ou campo, a primeira zona é a hitbox.
+#   origem        lancador (padrão) | ponto (centro no ponto mirado, até `alcance`)
+#   no tempo      atraso (detona depois) | expande: {de, em} (cresce de `de` vezes o tamanho até o tamanho cheio em `em` s) |
+#                 move: {velocidade, velocidade_final, aceleracao, distancia} (a forma viaja) | segue: true (presa a quem
+#                 lançou) | duracao + intervalo (fica no chão e acerta a cada intervalo). Quem move ou cresce acerta cada
+#                 alvo uma vez.
 #   dano          {tipo: fisico | magico | verdadeiro, base, dda, dda_base, dda_bonus, pdh, vida_max_alvo, vida_bonus,
 #                 arm_bonus, rm_bonus, vida_max}; listas são por rank; chave_nv15 = valor no nível 15 (pelo nível)
 #   efeitos       aplicados em quem é atingido: lentidao + duracao, atordoa, arremessa (no ar), puxa, fragil, marca,
@@ -142,15 +155,17 @@ campeoes:
     habilidades:
       "1":
         nome: Dizimar
-        forma: area
+        forma: zonas
         recarga: [9.5, 8, 6.5, 5]
         conjuracao: 0.75         # WR: giro depois de 0,75s, sem atacar
         raio: 460
-        raio_interno: 240
-        dano: {tipo: fisico, base: [50, 90, 130, 170], dda: [1.0, 1.15, 1.3, 1.45]}
-        interno: 0.35            # o cabo causa 35% e não aplica Hemorragia
-        efeitos: {acumulos: 1, cura_vida_perdida: 0.15, cura_max: 0.45}
-        fontes: "WR"
+        danos:
+          lamina: {tipo: fisico, base: [50, 90, 130, 170], dda: [1.0, 1.15, 1.3, 1.45]}
+          cabo: {tipo: fisico, base: [17.5, 31.5, 45.5, 59.5], dda: [0.35, 0.4025, 0.455, 0.5075]}   # WR: 35% da lâmina, sem Hemorragia nem cura
+        zonas:
+          - {nome: lâmina, forma: anel, raio_interno: 240, raio: 460, dano: lamina, efeitos: {acumulos: 1, cura_vida_perdida: 0.15, cura_max: 0.45}}
+          - {nome: cabo, forma: circulo, raio: 240, dano: cabo}
+        fontes: "recarga, dano, cabo: WR; raios 240 / 460: WR (os números) e PC (qual é qual)"
       "2":
         nome: Ataque Mutilador
         forma: ataque
@@ -163,13 +178,13 @@ campeoes:
         fontes: "WR"
       "3":
         nome: Apreender
-        forma: cone
+        forma: zonas
         recarga: [18, 16, 14, 12]
         conjuracao: 0.25
         alcance: 450
-        angulo: 50
         trava: 0.4
-        efeitos: {puxa: 150, lentidao: 0.4, duracao: 1.5}
+        zonas:
+          - {forma: setor, angulo: 50, raio: 450, efeitos: {puxa: 150, lentidao: 0.4, duracao: 1.5}}
         fontes: "WR (o tempo da puxada não aparece: puxa até 150 à frente do Darius)"
       "R":
         nome: Guilhotina de Noxus
@@ -267,6 +282,8 @@ campeoes:
         intervalo: 0.25
         alcance: 600
         angulo: 64
+        zonas:
+          - {forma: setor, angulo: 64, raio: 600}
         dano: {tipo: magico, base: [120, 160, 200, 240], pdh: 1.1, vida_max_alvo: [0.06, 0.08, 0.10, 0.12]}   # total
         fontes: "WR; alcance, ângulo: PC"
       "2":
@@ -297,14 +314,16 @@ campeoes:
         recarga: [80, 70, 60]
         conjuracao: 0.25
         alcance: 1700
-        comprimento: 1000
-        largura: 390
+        comprimento: 1310        # do início ao fim da fileira
+        largura: 410
+        zonas:
+          - {forma: capsula, comprimento: 900, largura: 410, centro: true}   # PC: 6 foguetes de raio 205, a 180 um do outro
         atraso: 0.75
         duracao: 4.5
         intervalo: 0.5
         dano: {tipo: magico, base: [70, 105, 140], pdh: 0.2}    # por pulso
         efeitos: {lentidao: 0.45, duracao: 0.5}
-        fontes: "recarga, conjuração, dano, duração: WR; alcance, comprimento, largura: PC"
+        fontes: "recarga, conjuração, dano, duração: WR; alcance, fileira de foguetes, largura: PC"
 
   Vayne:
     raio: 65                 # PC
@@ -347,6 +366,8 @@ campeoes:
         velocidade_projetil: 2200
         distancia: 475
         velocidade: 1000          # EST: velocidade do empurrão
+        zonas:
+          - {nome: corredor, forma: capsula, comprimento: 475, largura: 130}   # EST: o corpo do alvo; a parede é testada por ele ao ser empurrado
         dano: {tipo: fisico, base: [50, 80, 110, 140], dda_bonus: 0.55}
         terreno: {dano: {tipo: fisico, base: [105, 145, 185, 225], dda_bonus: 0.75}, atordoa: 1.5}
         marca: true

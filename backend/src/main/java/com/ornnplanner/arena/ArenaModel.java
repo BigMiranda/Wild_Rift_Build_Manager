@@ -423,7 +423,7 @@ public final class ArenaModel {
     /** Anything that is not a champion: projectiles, areas, fields, pillars, the elemental. */
     public static class Shape {
         public String id;
-        /** circle | rect | cone | line */
+        /** circle | rect | cone | line | zone (the outline in {@link #rings}) */
         public String kind;
         public int team;
         /** What it is, shown on hover: "Ruptura Vulcânica (Ornn)", "Pilar de magma"... */
@@ -436,6 +436,12 @@ public final class ArenaModel {
         /** Direction in radians (rect, cone, line). */
         public Double angle;
         public Double arc;
+        /** Zone of the ability (0 = the first of the sheet): zones are told apart on the map. */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public Integer zone;
+        /** The outline in world points: one ring, or two for a form with a hole (the second one is the hole). */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public List<double[][]> rings;
     }
 
     public static class Frame {
@@ -592,6 +598,9 @@ public final class ArenaModel {
         public List<String> cc = new ArrayList<>();
         /** Shield given (on the user or allies). */
         public double shield;
+        /** Targets hit by each zone of the ability. */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public Map<String, Integer> zones = new LinkedHashMap<>();
     }
 
     /**

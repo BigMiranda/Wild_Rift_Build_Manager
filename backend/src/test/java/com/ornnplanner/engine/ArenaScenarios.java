@@ -188,6 +188,15 @@ final class ArenaScenarios {
         for (com.fasterxml.jackson.databind.JsonNode f : result.path("fighters")) {
             ((com.fasterxml.jackson.databind.node.ObjectNode) f).remove(DESCRIPTIVE);
         }
+        // the outline of a zone is its drawing: what a zone does shows in the numbers
+        for (com.fasterxml.jackson.databind.JsonNode frame : result.path("frames")) {
+            java.util.Iterator<com.fasterxml.jackson.databind.JsonNode> shapes = frame.path("shapes").elements();
+            while (shapes.hasNext()) {
+                if ("zone".equals(shapes.next().path("kind").asText())) {
+                    shapes.remove();
+                }
+            }
+        }
     }
 
     /** Short readable line to tell what changed when a fingerprint differs. */

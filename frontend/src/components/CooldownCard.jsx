@@ -35,6 +35,8 @@ function useText(u) {
     const by = Object.entries(u.targets ?? {}).map(([n, d]) => `${n} ${n0(d)}`).join(', ');
     parts.push(t('arena.card.damage', { n: n0(u.damage), by }));
   }
+  const zones = Object.entries(u.zones ?? {});
+  if (zones.length) parts.push(t('arena.card.zones', { list: zones.map(([z, n]) => `${z} ×${n}`).join(', ') }));
   (u.cc ?? []).forEach((c) => parts.push(c));
   if (u.shield >= 0.5) parts.push(t('arena.card.shield', { n: n0(u.shield) }));
   return parts.length ? parts.join(' · ') : t('arena.card.nothing');

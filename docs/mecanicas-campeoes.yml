@@ -1,0 +1,4593 @@
+# Mecânicas por campeão (levantamento automático pelos textos de campeoes_7_3b.yml)
+# Heurística por palavras-chave: serve para priorizar o motor; confirmar campeão a campeão na Etapa 7.
+contagem_habilidades:
+  lentidao: 160
+  marca_acumulos: 115
+  avanco: 114
+  arremesso: 93
+  buff_aliado: 83
+  cura: 71
+  escudo: 65
+  ataque_fortalecido: 60
+  reconjuracao: 59
+  atordoamento: 55
+  enraizar: 45
+  canal_carga: 40
+  terreno: 36
+  empurrao: 36
+  invocacao: 34
+  zona_no_chao: 32
+  puxao: 28
+  reflexo_ou_area_externa: 25
+  transformacao: 16
+  invisibilidade: 16
+  provocar: 15
+  execucao: 14
+  teleporte: 14
+  invulneravel: 7
+  silencio: 7
+  encanto: 6
+  global: 6
+  roubo_status: 3
+  medo: 2
+  retorno_tempo: 2
+  sono: 2
+  supressao: 2
+  polimorfo: 1
+  imparavel: 1
+  cegueira: 1
+campeoes_por_mecanica:
+  lentidao:
+  - Aatrox
+  - Ambessa
+  - Amumu
+  - Ashe
+  - Aurelion Sol
+  - Aurora
+  - Bardo
+  - Blitzcrank
+  - Brand
+  - Braum
+  - Caitlyn
+  - Camille
+  - Cho'Gath
+  - Darius
+  - Diana
+  - Dr. Mundo
+  - Draven
+  - Ekko
+  - Evelynn
+  - Fiddlesticks
+  - Fiora
+  - Fizz
+  - Galio
+  - Garen
+  - Gnar
+  - Gragas
+  - Gwen
+  - Heimerdinger
+  - Hwei
+  - Irelia
+  - Jarvan IV
+  - Jhin
+  - K'Sante
+  - Kalista
+  - Karma
+  - Kassadin
+  - Kayle
+  - Kayn
+  - Kha'Zix
+  - Kindred
+  - Kog'Maw
+  - Lee Sin
+  - Leona
+  - Lillia
+  - Lissandra
+  - Lulu
+  - Lux
+  - Maokai
+  - Master Yi
+  - Mel
+  - Milio
+  - Miss Fortune
+  - Mordekaiser
+  - Morgana
+  - Nami
+  - Nautilus
+  - Nocturne
+  - Norra
+  - Nunu e Willump
+  - Olaf
+  - Ornn
+  - Pantheon
+  - Poppy
+  - Pyke
+  - Rammus
+  - Rengar
+  - Rumble
+  - Ryze
+  - Senna
+  - Seraphine
+  - Sett
+  - Shen
+  - Shyvana
+  - Singed
+  - Sion
+  - Skarner
+  - Smolder
+  - Sona
+  - Soraka
+  - Swain
+  - Syndra
+  - Taliyah
+  - Talon
+  - Teemo
+  - Thresh
+  - Tristana
+  - Tryndamere
+  - Twisted Fate
+  - Twitch
+  - Urgot
+  - Varus
+  - Vel'Koz
+  - Vex
+  - Vi
+  - Viego
+  - Viktor
+  - Vladimir
+  - Volibear
+  - Warwick
+  - Xin Zhao
+  - Yunara
+  - Yuumi
+  - Zed
+  - Zeri
+  - Zilean
+  - Zoe
+  avanco:
+  - Aatrox
+  - Ahri
+  - Akali
+  - Akshan
+  - Alistar
+  - Ambessa
+  - Annie
+  - Aurora
+  - Bardo
+  - Braum
+  - Camille
+  - Darius
+  - Diana
+  - Ekko
+  - Fiora
+  - Fizz
+  - Galio
+  - Gnar
+  - Gragas
+  - Graves
+  - Gwen
+  - Hecarim
+  - Irelia
+  - Jarvan IV
+  - Jax
+  - Jayce
+  - Jinx
+  - K'Sante
+  - Kai'Sa
+  - Kalista
+  - Kayn
+  - Kha'Zix
+  - Kindred
+  - Lee Sin
+  - Leona
+  - Lillia
+  - Lissandra
+  - Lucian
+  - Malphite
+  - Maokai
+  - Nami
+  - Nautilus
+  - Nilah
+  - Nocturne
+  - Norra
+  - Nunu e Willump
+  - Olaf
+  - Orianna
+  - Ornn
+  - Pantheon
+  - Poppy
+  - Pyke
+  - Rakan
+  - Rammus
+  - Rell
+  - Renekton
+  - Rengar
+  - Riven
+  - Samira
+  - Shen
+  - Singed
+  - Sion
+  - Skarner
+  - Taliyah
+  - Talon
+  - Teemo
+  - Thresh
+  - Tristana
+  - Twisted Fate
+  - Urgot
+  - Vayne
+  - Vex
+  - Vi
+  - Viego
+  - Volibear
+  - Warwick
+  - Wukong
+  - Xayah
+  - Xin Zhao
+  - Yasuo
+  - Yone
+  - Yunara
+  - Yuumi
+  - Zed
+  - Zeri
+  marca_acumulos:
+  - Ahri
+  - Akali
+  - Alistar
+  - Ambessa
+  - Ashe
+  - Aurelion Sol
+  - Bardo
+  - Blitzcrank
+  - Brand
+  - Braum
+  - Caitlyn
+  - Cho'Gath
+  - Corki
+  - Darius
+  - Diana
+  - Draven
+  - Ezreal
+  - Graves
+  - Hwei
+  - Irelia
+  - Jax
+  - Jinx
+  - K'Sante
+  - Kai'Sa
+  - Kalista
+  - Karma
+  - Kassadin
+  - Kayle
+  - Kennen
+  - Kindred
+  - Lee Sin
+  - Lillia
+  - Lucian
+  - Lux
+  - Mel
+  - Milio
+  - Miss Fortune
+  - Mordekaiser
+  - Nidalee
+  - Norra
+  - Orianna
+  - Ornn
+  - Pyke
+  - Rammus
+  - Rell
+  - Rumble
+  - Senna
+  - Shyvana
+  - Sivir
+  - Skarner
+  - Smolder
+  - Sona
+  - Swain
+  - Talon
+  - Tristana
+  - Twitch
+  - Varus
+  - Veigar
+  - Vel'Koz
+  - Vex
+  - Vi
+  - Viktor
+  - Vladimir
+  - Volibear
+  - Warwick
+  - Wukong
+  - Yasuo
+  - Yone
+  - Yuumi
+  - Zed
+  - Zeri
+  arremesso:
+  - Aatrox
+  - Akshan
+  - Alistar
+  - Ambessa
+  - Amumu
+  - Annie
+  - Aurelion Sol
+  - Blitzcrank
+  - Brand
+  - Braum
+  - Cho'Gath
+  - Dr. Mundo
+  - Draven
+  - Ekko
+  - Fizz
+  - Galio
+  - Gnar
+  - Gragas
+  - Gwen
+  - Heimerdinger
+  - Janna
+  - Jarvan IV
+  - Kalista
+  - Katarina
+  - Kayn
+  - Kennen
+  - Lee Sin
+  - Lissandra
+  - Lulu
+  - Malphite
+  - Maokai
+  - Milio
+  - Nami
+  - Nautilus
+  - Nidalee
+  - Nocturne
+  - Nunu e Willump
+  - Ornn
+  - Pantheon
+  - Poppy
+  - Rakan
+  - Rell
+  - Riven
+  - Ryze
+  - Samira
+  - Singed
+  - Sion
+  - Sivir
+  - Skarner
+  - Syndra
+  - Taliyah
+  - Talon
+  - Thresh
+  - Twisted Fate
+  - Twitch
+  - Urgot
+  - Vel'Koz
+  - Vi
+  - Wukong
+  - Xayah
+  - Xin Zhao
+  - Yasuo
+  - Yone
+  - Ziggs
+  - Zilean
+  - Zyra
+  escudo:
+  - Akshan
+  - Ambessa
+  - Annie
+  - Blitzcrank
+  - Braum
+  - Camille
+  - Diana
+  - Ekko
+  - Galio
+  - Garen
+  - Hwei
+  - Janna
+  - Jarvan IV
+  - K'Sante
+  - Kai'Sa
+  - Karma
+  - Kassadin
+  - Lee Sin
+  - Lucian
+  - Lulu
+  - Lux
+  - Mel
+  - Milio
+  - Mordekaiser
+  - Morgana
+  - Nautilus
+  - Nilah
+  - Nunu e Willump
+  - Olaf
+  - Orianna
+  - Pantheon
+  - Poppy
+  - Rakan
+  - Rell
+  - Renekton
+  - Riven
+  - Rumble
+  - Senna
+  - Seraphine
+  - Sett
+  - Shen
+  - Singed
+  - Sion
+  - Sivir
+  - Skarner
+  - Smolder
+  - Sona
+  - Soraka
+  - Thresh
+  - Urgot
+  - Vex
+  - Vi
+  - Viktor
+  - Volibear
+  - Yasuo
+  - Yone
+  - Yuumi
+  - Zilean
+  ataque_fortalecido:
+  - Aatrox
+  - Akali
+  - Alistar
+  - Ambessa
+  - Blitzcrank
+  - Caitlyn
+  - Camille
+  - Cho'Gath
+  - Darius
+  - Dr. Mundo
+  - Draven
+  - Ekko
+  - Evelynn
+  - Fiora
+  - Fizz
+  - Galio
+  - Garen
+  - Gragas
+  - Gwen
+  - Hecarim
+  - Jax
+  - Jayce
+  - Kassadin
+  - Kayle
+  - Kha'Zix
+  - Kindred
+  - Leona
+  - Lucian
+  - Lux
+  - Maokai
+  - Mel
+  - Milio
+  - Nami
+  - Nasus
+  - Nilah
+  - Nocturne
+  - Pantheon
+  - Poppy
+  - Rell
+  - Renekton
+  - Rengar
+  - Rumble
+  - Seraphine
+  - Shen
+  - Shyvana
+  - Skarner
+  - Sona
+  - Twisted Fate
+  - Vayne
+  - Vex
+  - Vi
+  - Viktor
+  - Volibear
+  - Warwick
+  - Wukong
+  - Xayah
+  - Zeri
+  cura:
+  - Aatrox
+  - Ahri
+  - Alistar
+  - Ambessa
+  - Bardo
+  - Camille
+  - Cho'Gath
+  - Darius
+  - Dr. Mundo
+  - Ekko
+  - Fiddlesticks
+  - Fiora
+  - Gragas
+  - Gwen
+  - Hecarim
+  - Irelia
+  - Katarina
+  - Kayle
+  - Kayn
+  - Kha'Zix
+  - Kindred
+  - Lillia
+  - Lissandra
+  - Lucian
+  - Maokai
+  - Master Yi
+  - Milio
+  - Mordekaiser
+  - Morgana
+  - Nami
+  - Nidalee
+  - Nilah
+  - Nocturne
+  - Nunu e Willump
+  - Pyke
+  - Renekton
+  - Rengar
+  - Senna
+  - Seraphine
+  - Sivir
+  - Smolder
+  - Sona
+  - Soraka
+  - Swain
+  - Varus
+  - Viego
+  - Vladimir
+  - Volibear
+  - Warwick
+  - Wukong
+  - Xin Zhao
+  - Yuumi
+  - Zilean
+  reconjuracao:
+  - Aatrox
+  - Ahri
+  - Akali
+  - Akshan
+  - Ambessa
+  - Annie
+  - Ashe
+  - Aurelion Sol
+  - Aurora
+  - Blitzcrank
+  - Camille
+  - Dr. Mundo
+  - Draven
+  - Evelynn
+  - Fiddlesticks
+  - Fizz
+  - Garen
+  - Gragas
+  - Gwen
+  - Heimerdinger
+  - Jax
+  - K'Sante
+  - Kayn
+  - Lissandra
+  - Lucian
+  - Milio
+  - Miss Fortune
+  - Mordekaiser
+  - Nocturne
+  - Nunu e Willump
+  - Ornn
+  - Pantheon
+  - Pyke
+  - Rakan
+  - Renekton
+  - Sion
+  - Skarner
+  - Swain
+  - Taliyah
+  - Talon
+  - Thresh
+  - Twisted Fate
+  - Urgot
+  - Vel'Koz
+  - Vex
+  - Warwick
+  - Yasuo
+  - Yone
+  - Zoe
+  buff_aliado:
+  - Akshan
+  - Alistar
+  - Bardo
+  - Braum
+  - Caitlyn
+  - Fiora
+  - Galio
+  - Hwei
+  - Janna
+  - Jarvan IV
+  - Jhin
+  - K'Sante
+  - Kai'Sa
+  - Kalista
+  - Karma
+  - Kayle
+  - Leona
+  - Lissandra
+  - Lucian
+  - Lulu
+  - Lux
+  - Milio
+  - Morgana
+  - Nami
+  - Nilah
+  - Nocturne
+  - Nunu e Willump
+  - Orianna
+  - Ornn
+  - Pyke
+  - Rakan
+  - Rell
+  - Ryze
+  - Senna
+  - Seraphine
+  - Shen
+  - Singed
+  - Sivir
+  - Smolder
+  - Sona
+  - Soraka
+  - Thresh
+  - Warwick
+  - Yuumi
+  - Zilean
+  - Zoe
+  atordoamento:
+  - Alistar
+  - Ambessa
+  - Amumu
+  - Annie
+  - Ashe
+  - Aurelion Sol
+  - Bardo
+  - Brand
+  - Braum
+  - Camille
+  - Ekko
+  - Fiora
+  - Gnar
+  - Gragas
+  - Heimerdinger
+  - Irelia
+  - Jax
+  - K'Sante
+  - Kennen
+  - Leona
+  - Lissandra
+  - Morgana
+  - Nautilus
+  - Pantheon
+  - Poppy
+  - Pyke
+  - Rell
+  - Renekton
+  - Riven
+  - Ryze
+  - Seraphine
+  - Sett
+  - Sion
+  - Skarner
+  - Sona
+  - Syndra
+  - Taliyah
+  - Thresh
+  - Twisted Fate
+  - Urgot
+  - Vayne
+  - Veigar
+  - Viego
+  - Viktor
+  - Volibear
+  - Zilean
+  enraizar:
+  - Akshan
+  - Ambessa
+  - Caitlyn
+  - Camille
+  - Dr. Mundo
+  - Fiora
+  - Fizz
+  - Hwei
+  - Jhin
+  - Jinx
+  - K'Sante
+  - Kai'Sa
+  - Karma
+  - Kayn
+  - Leona
+  - Lissandra
+  - Lucian
+  - Lux
+  - Maokai
+  - Mel
+  - Milio
+  - Morgana
+  - Nautilus
+  - Nunu e Willump
+  - Ornn
+  - Rengar
+  - Ryze
+  - Samira
+  - Senna
+  - Seraphine
+  - Singed
+  - Soraka
+  - Swain
+  - Taliyah
+  - Varus
+  - Volibear
+  - Xayah
+  - Yuumi
+  - Zilean
+  - Zyra
+  canal_carga:
+  - Akshan
+  - Ashe
+  - Aurelion Sol
+  - Diana
+  - Dr. Mundo
+  - Fiddlesticks
+  - Galio
+  - Hecarim
+  - Heimerdinger
+  - Janna
+  - Jhin
+  - K'Sante
+  - Kai'Sa
+  - Kalista
+  - Kayn
+  - Master Yi
+  - Miss Fortune
+  - Norra
+  - Nunu e Willump
+  - Poppy
+  - Rumble
+  - Sett
+  - Shen
+  - Sion
+  - Twisted Fate
+  - Urgot
+  - Vel'Koz
+  - Vi
+  - Viego
+  - Viktor
+  - Vladimir
+  - Yuumi
+  - Zilean
+  zona_no_chao:
+  - Aatrox
+  - Akali
+  - Ashe
+  - Aurelion Sol
+  - Aurora
+  - Camille
+  - Cho'Gath
+  - Fiddlesticks
+  - Gnar
+  - Heimerdinger
+  - Karma
+  - Kog'Maw
+  - Lissandra
+  - Lulu
+  - Miss Fortune
+  - Morgana
+  - Nasus
+  - Nilah
+  - Norra
+  - Orianna
+  - Poppy
+  - Rengar
+  - Shen
+  - Singed
+  - Swain
+  - Syndra
+  - Tristana
+  - Twisted Fate
+  - Twitch
+  - Viktor
+  - Vladimir
+  - Zilean
+  empurrao:
+  - Caitlyn
+  - Camille
+  - Draven
+  - Fizz
+  - Gnar
+  - Gragas
+  - Graves
+  - Hecarim
+  - Janna
+  - Jayce
+  - K'Sante
+  - Karma
+  - Lee Sin
+  - Maokai
+  - Milio
+  - Ornn
+  - Poppy
+  - Rammus
+  - Ryze
+  - Shyvana
+  - Sion
+  - Syndra
+  - Taliyah
+  - Thresh
+  - Tristana
+  - Urgot
+  - Vayne
+  - Vel'Koz
+  - Vi
+  - Viego
+  - Xin Zhao
+  terreno:
+  - Akshan
+  - Bardo
+  - Camille
+  - Galio
+  - Gnar
+  - Graves
+  - Irelia
+  - Jarvan IV
+  - K'Sante
+  - Kayn
+  - Lillia
+  - Nautilus
+  - Nunu e Willump
+  - Ornn
+  - Poppy
+  - Riven
+  - Sion
+  - Skarner
+  - Smolder
+  - Taliyah
+  - Talon
+  - Thresh
+  - Vayne
+  - Viego
+  - Warwick
+  - Yasuo
+  - Zeri
+  - Zoe
+  invocacao:
+  - Annie
+  - Aurelion Sol
+  - Bardo
+  - Caitlyn
+  - Diana
+  - Fiddlesticks
+  - Gwen
+  - Hecarim
+  - Janna
+  - Jhin
+  - Kennen
+  - Leona
+  - Lissandra
+  - Maokai
+  - Nidalee
+  - Ornn
+  - Rakan
+  - Soraka
+  - Swain
+  - Teemo
+  - Veigar
+  - Volibear
+  - Wukong
+  - Xayah
+  - Yuumi
+  - Zoe
+  - Zyra
+  puxao:
+  - Aatrox
+  - Amumu
+  - Aurelion Sol
+  - Blitzcrank
+  - Camille
+  - Darius
+  - Hwei
+  - Jarvan IV
+  - K'Sante
+  - Mordekaiser
+  - Nautilus
+  - Nilah
+  - Pyke
+  - Rell
+  - Rumble
+  - Sett
+  - Skarner
+  - Swain
+  - Thresh
+  - Urgot
+  - Varus
+  - Viktor
+  - Warwick
+  - Xayah
+  reflexo_ou_area_externa:
+  - Aatrox
+  - Aurelion Sol
+  - Aurora
+  - Darius
+  - Draven
+  - Fiddlesticks
+  - Gragas
+  - Gwen
+  - Heimerdinger
+  - Hwei
+  - Karma
+  - Leona
+  - Lillia
+  - Mel
+  - Norra
+  - Ornn
+  - Pantheon
+  - Rammus
+  - Senna
+  - Sett
+  - Smolder
+  - Vex
+  provocar:
+  - Akshan
+  - Ashe
+  - Corki
+  - Galio
+  - Lux
+  - Maokai
+  - Rammus
+  - Rumble
+  - Samira
+  - Shen
+  - Skarner
+  - Smolder
+  - Taliyah
+  - Urgot
+  - Zeri
+  invisibilidade:
+  - Akali
+  - Akshan
+  - Aurora
+  - Evelynn
+  - Jhin
+  - Kha'Zix
+  - Nidalee
+  - Pyke
+  - Rengar
+  - Senna
+  - Teemo
+  - Twitch
+  - Viego
+  - Wukong
+  execucao:
+  - Akshan
+  - Darius
+  - Draven
+  - Garen
+  - Gwen
+  - Jhin
+  - Kalista
+  - Mel
+  - Pyke
+  - Smolder
+  - Syndra
+  - Urgot
+  - Vladimir
+  - Yunara
+  teleporte:
+  - Ambessa
+  - Ekko
+  - Fiddlesticks
+  - Lissandra
+  - Norra
+  - Ryze
+  - Shen
+  - Twisted Fate
+  - Vex
+  - Viego
+  - Yasuo
+  - Yone
+  - Zoe
+  transformacao:
+  - Aatrox
+  - Diana
+  - Evelynn
+  - Gnar
+  - Kennen
+  - Lissandra
+  - Maokai
+  - Nidalee
+  - Senna
+  - Shyvana
+  - Twitch
+  - Volibear
+  silencio:
+  - Blitzcrank
+  - Cho'Gath
+  - Fiddlesticks
+  - Garen
+  - Kassadin
+  - Rumble
+  - Soraka
+  invulneravel:
+  - Bardo
+  - Kayle
+  - Kindred
+  - Mel
+  - Yunara
+  - Zilean
+  global:
+  - Fiddlesticks
+  - Lillia
+  - Nocturne
+  - Ornn
+  - Senna
+  - Twisted Fate
+  encanto:
+  - Ahri
+  - Evelynn
+  - Rakan
+  - Seraphine
+  - Viego
+  roubo_status:
+  - Draven
+  - Mordekaiser
+  - Rell
+  medo:
+  - Darius
+  - Kha'Zix
+  retorno_tempo:
+  - Ekko
+  - Zilean
+  sono:
+  - Lillia
+  - Zoe
+  supressao:
+  - Skarner
+  - Warwick
+  polimorfo:
+  - Lulu
+  imparavel:
+  - Olaf
+  cegueira:
+  - Teemo
+por_campeao:
+  Aatrox:
+    P:
+      nome: Postura do Arauto da Morte
+      tags:
+      - cura
+      - ataque_fortalecido
+    '1':
+      nome: A Espada Darkin
+      tags:
+      - arremesso
+      - reconjuracao
+      - zona_no_chao
+    '2':
+      nome: Correntes Infernais
+      tags:
+      - puxao
+      - lentidao
+      - reflexo_ou_area_externa
+    '3':
+      nome: Avanço Umbral
+      tags:
+      - avanco
+    R:
+      nome: Aniquilador de Mundos
+      tags:
+      - cura
+      - transformacao
+  Ahri:
+    P:
+      nome: Furto de Essência
+      tags:
+      - cura
+      - marca_acumulos
+    '1':
+      nome: Orbe da Ilusão
+      tags: []
+    '2':
+      nome: Fogo de Raposa
+      tags:
+      - encanto
+    '3':
+      nome: Encanto
+      tags:
+      - encanto
+    R:
+      nome: Ímpeto Espiritual
+      tags:
+      - avanco
+      - reconjuracao
+  Akali:
+    P:
+      nome: Marca do Assassino
+      tags:
+      - zona_no_chao
+      - ataque_fortalecido
+    '1':
+      nome: Golpe dos Cinco Pontos
+      tags: []
+    '2':
+      nome: Proteção do Crepúsculo
+      tags:
+      - invisibilidade
+    '3':
+      nome: Investida Shuriken
+      tags:
+      - avanco
+      - reconjuracao
+      - marca_acumulos
+    R:
+      nome: Execução Perfeita
+      tags:
+      - avanco
+      - reconjuracao
+  Akshan:
+    P:
+      nome: Lutando Sujo
+      tags:
+      - escudo
+      - canal_carga
+    '1':
+      nome: Bumerangue Vingativo
+      tags:
+      - arremesso
+    '2':
+      nome: Rebeldia
+      tags:
+      - invisibilidade
+      - terreno
+      - buff_aliado
+    '3':
+      nome: Impulso Heroico
+      tags:
+      - avanco
+      - enraizar
+      - provocar
+      - terreno
+      - reconjuracao
+    R:
+      nome: Punição
+      tags:
+      - canal_carga
+      - reconjuracao
+      - execucao
+  Alistar:
+    P:
+      nome: Urro Triunfante
+      tags:
+      - arremesso
+      - atordoamento
+      - cura
+      - buff_aliado
+    '1':
+      nome: Pulverizar
+      tags:
+      - arremesso
+    '2':
+      nome: Cabeçada
+      tags:
+      - avanco
+      - arremesso
+    '3':
+      nome: Atropelar
+      tags:
+      - atordoamento
+      - marca_acumulos
+      - ataque_fortalecido
+    R:
+      nome: Vontade Indestrutível
+      tags: []
+  Ambessa:
+    P:
+      nome: Passo do Cão-dragão
+      tags:
+      - avanco
+      - marca_acumulos
+      - ataque_fortalecido
+    '1':
+      nome: Golpe Ardiloso
+      tags: []
+    '2':
+      nome: Repúdio
+      tags:
+      - enraizar
+      - escudo
+    '3':
+      nome: Lancinar
+      tags:
+      - avanco
+      - lentidao
+      - reconjuracao
+    R:
+      nome: Execução Pública
+      tags:
+      - teleporte
+      - arremesso
+      - atordoamento
+      - cura
+      - ataque_fortalecido
+  Amumu:
+    P:
+      nome: Toque Amaldiçoado
+      tags: []
+    '1':
+      nome: Lançar Bandagens
+      tags:
+      - arremesso
+      - atordoamento
+      - puxao
+    '2':
+      nome: Desespero
+      tags: []
+    '3':
+      nome: Chilique
+      tags:
+      - lentidao
+    R:
+      nome: A Maldição da Múmia Triste
+      tags:
+      - atordoamento
+  Annie:
+    P:
+      nome: Piromania
+      tags:
+      - atordoamento
+    '1':
+      nome: Desintegrar
+      tags:
+      - arremesso
+    '2':
+      nome: Incinerar
+      tags: []
+    '3':
+      nome: Escudo Fundido
+      tags:
+      - escudo
+      - invocacao
+    R:
+      nome: 'Invocar: Tibbers'
+      tags:
+      - avanco
+      - arremesso
+      - invocacao
+      - reconjuracao
+  Ashe:
+    P:
+      nome: Tiro Congelado
+      tags:
+      - lentidao
+      - provocar
+    '1':
+      nome: Concentração
+      tags:
+      - marca_acumulos
+    '2':
+      nome: Rajada
+      tags:
+      - lentidao
+    '3':
+      nome: Olhar do Falcão
+      tags:
+      - reconjuracao
+      - zona_no_chao
+    R:
+      nome: Flecha de Cristal Encantada
+      tags:
+      - atordoamento
+      - canal_carga
+      - reconjuracao
+  Aurelion Sol:
+    P:
+      nome: Criador Cósmico
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Sopro de Luz
+      tags:
+      - marca_acumulos
+    '2':
+      nome: Voo Astral
+      tags:
+      - canal_carga
+      - reconjuracao
+    '3':
+      nome: Singularidade
+      tags:
+      - puxao
+      - invocacao
+      - marca_acumulos
+      - reflexo_ou_area_externa
+    R:
+      nome: Estrela Cadente/Os Céus Caem
+      tags:
+      - arremesso
+      - atordoamento
+      - lentidao
+      - marca_acumulos
+      - zona_no_chao
+  Aurora:
+    P:
+      nome: Abjuração Espiritual
+      tags: []
+    '1':
+      nome: Feitiço Dúplice
+      tags:
+      - reconjuracao
+    '2':
+      nome: Através do Véu
+      tags:
+      - avanco
+      - invisibilidade
+    '3':
+      nome: Estranheza
+      tags:
+      - avanco
+      - lentidao
+    R:
+      nome: Entre Mundos
+      tags:
+      - avanco
+      - lentidao
+      - reconjuracao
+      - zona_no_chao
+      - reflexo_ou_area_externa
+  Bardo:
+    P:
+      nome: Chamado do Viajante
+      tags:
+      - lentidao
+      - invocacao
+      - marca_acumulos
+    '1':
+      nome: Prisão Cósmica
+      tags:
+      - avanco
+      - atordoamento
+      - lentidao
+      - terreno
+    '2':
+      nome: Santuário do Protetor
+      tags:
+      - cura
+      - buff_aliado
+    '3':
+      nome: Jornada Mágica
+      tags:
+      - terreno
+      - buff_aliado
+    R:
+      nome: Têmpera do Destino
+      tags:
+      - invulneravel
+  Blitzcrank:
+    P:
+      nome: Barreira de Mana
+      tags:
+      - escudo
+    '1':
+      nome: Puxão Biônico
+      tags:
+      - puxao
+    '2':
+      nome: Turbo
+      tags:
+      - lentidao
+      - reconjuracao
+    '3':
+      nome: Punho do Poder
+      tags:
+      - arremesso
+      - ataque_fortalecido
+    R:
+      nome: Campo Estático
+      tags:
+      - silencio
+      - marca_acumulos
+  Brand:
+    P:
+      nome: Labareda
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Cauterizar
+      tags:
+      - arremesso
+      - atordoamento
+    '2':
+      nome: Pilar de Chamas
+      tags: []
+    '3':
+      nome: Conflagração
+      tags: []
+    R:
+      nome: Piroclasma
+      tags:
+      - lentidao
+      - marca_acumulos
+  Braum:
+    P:
+      nome: Golpes Concussivos
+      tags:
+      - atordoamento
+      - marca_acumulos
+      - buff_aliado
+    '1':
+      nome: Mordida do Inverno
+      tags:
+      - lentidao
+      - marca_acumulos
+    '2':
+      nome: Eu Te Protejo
+      tags:
+      - avanco
+      - buff_aliado
+    '3':
+      nome: Inquebrável
+      tags:
+      - escudo
+    R:
+      nome: Fissura Glacial
+      tags:
+      - arremesso
+      - lentidao
+  Caitlyn:
+    P:
+      nome: Bem na Mira
+      tags:
+      - invocacao
+      - marca_acumulos
+      - ataque_fortalecido
+    '1':
+      nome: Pacificadora de Piltover
+      tags:
+      - invocacao
+    '2':
+      nome: Armadilha Mecânica Yordle
+      tags:
+      - enraizar
+      - invocacao
+    '3':
+      nome: Rede Calibre 90
+      tags:
+      - empurrao
+      - lentidao
+    R:
+      nome: Ás na Manga
+      tags:
+      - buff_aliado
+  Camille:
+    P:
+      nome: Defesa Adaptativa
+      tags:
+      - escudo
+    '1':
+      nome: Protocolo de Precisão
+      tags:
+      - ataque_fortalecido
+    '2':
+      nome: Varredura Tática
+      tags:
+      - lentidao
+      - cura
+    '3':
+      nome: Disparo de Gancho
+      tags:
+      - avanco
+      - atordoamento
+      - puxao
+      - enraizar
+      - terreno
+      - reconjuracao
+      - ataque_fortalecido
+    R:
+      nome: Ultimato Hextec
+      tags:
+      - avanco
+      - empurrao
+      - zona_no_chao
+  Cho'Gath:
+    P:
+      nome: Carnívoro
+      tags:
+      - cura
+    '1':
+      nome: Ruptura
+      tags:
+      - arremesso
+      - lentidao
+    '2':
+      nome: Grito Selvagem
+      tags:
+      - silencio
+      - zona_no_chao
+    '3':
+      nome: Espinhos Vorpais
+      tags:
+      - lentidao
+      - marca_acumulos
+      - ataque_fortalecido
+    R:
+      nome: Banquete
+      tags:
+      - marca_acumulos
+  Corki:
+    P:
+      nome: Munição Hextec
+      tags: []
+    '1':
+      nome: Bomba de Fósforo
+      tags: []
+    '2':
+      nome: Valquíria
+      tags:
+      - provocar
+    '3':
+      nome: Metralhadora
+      tags: []
+    R:
+      nome: Barragem de Mísseis
+      tags:
+      - marca_acumulos
+  Darius:
+    P:
+      nome: Hemorragia
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Dizimar
+      tags:
+      - cura
+      - reflexo_ou_area_externa
+    '2':
+      nome: Ataque Mutilador
+      tags:
+      - lentidao
+      - ataque_fortalecido
+    '3':
+      nome: Apreender
+      tags:
+      - puxao
+      - lentidao
+    R:
+      nome: Guilhotina de Noxus
+      tags:
+      - avanco
+      - medo
+      - marca_acumulos
+      - execucao
+  Diana:
+    P:
+      nome: Espada de Prata Lunar
+      tags: []
+    '1':
+      nome: Golpe Crescente
+      tags:
+      - transformacao
+    '2':
+      nome: Cascata Lívida
+      tags:
+      - escudo
+    '3':
+      nome: Zênite Lunar
+      tags:
+      - avanco
+    R:
+      nome: Colapso Minguante
+      tags:
+      - lentidao
+      - invocacao
+      - canal_carga
+      - marca_acumulos
+  Dr. Mundo:
+    P:
+      nome: Vai Para Onde Quer
+      tags:
+      - enraizar
+      - cura
+    '1':
+      nome: Serra Infectada
+      tags:
+      - lentidao
+      - cura
+    '2':
+      nome: Choquinho Cardíaco
+      tags:
+      - cura
+      - canal_carga
+      - reconjuracao
+    '3':
+      nome: Traumatismo
+      tags:
+      - arremesso
+      - ataque_fortalecido
+    R:
+      nome: Dosagem Máxima
+      tags:
+      - cura
+  Draven:
+    P:
+      nome: League of Draven
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Revolução do Machado
+      tags:
+      - ataque_fortalecido
+    '2':
+      nome: Adrenalina
+      tags:
+      - roubo_status
+    '3':
+      nome: Sai da Frente
+      tags:
+      - empurrao
+      - lentidao
+    R:
+      nome: Reta da Morte
+      tags:
+      - arremesso
+      - reconjuracao
+      - marca_acumulos
+      - execucao
+      - reflexo_ou_area_externa
+  Ekko:
+    P:
+      nome: Ressonância Revo-Z
+      tags: []
+    '1':
+      nome: Giratempo
+      tags:
+      - arremesso
+      - lentidao
+    '2':
+      nome: Convergência Paralela
+      tags:
+      - atordoamento
+      - lentidao
+      - escudo
+    '3':
+      nome: Mergulho Fásico
+      tags:
+      - avanco
+      - teleporte
+      - ataque_fortalecido
+    R:
+      nome: Cronoquebra
+      tags:
+      - cura
+      - retorno_tempo
+  Evelynn:
+    P:
+      nome: Sombra Demoníaca
+      tags:
+      - invisibilidade
+      - transformacao
+    '1':
+      nome: Espinho de Ódio
+      tags:
+      - reconjuracao
+    '2':
+      nome: Fascinação
+      tags:
+      - lentidao
+      - encanto
+      - ataque_fortalecido
+    '3':
+      nome: Chicotada
+      tags:
+      - transformacao
+    R:
+      nome: Última Carícia
+      tags: []
+  Ezreal:
+    P:
+      nome: Feitiço do Poder Crescente
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Disparo Místico
+      tags: []
+    '2':
+      nome: Fluxo Essencial
+      tags: []
+    '3':
+      nome: Translocação Arcana
+      tags: []
+    R:
+      nome: Barragem Incendiária
+      tags: []
+  Fiddlesticks:
+    P:
+      nome: Um Espantalho Inofensivo
+      tags:
+      - invocacao
+      - global
+    '1':
+      nome: Aterrorizar
+      tags: []
+    '2':
+      nome: Colheita Farta
+      tags:
+      - lentidao
+      - cura
+      - canal_carga
+      - reconjuracao
+    '3':
+      nome: Ceifar
+      tags:
+      - lentidao
+      - silencio
+      - zona_no_chao
+      - reflexo_ou_area_externa
+    R:
+      nome: Tempestade de Corvos
+      tags:
+      - teleporte
+      - invocacao
+      - canal_carga
+  Fiora:
+    P:
+      nome: Dança da Duelista
+      tags:
+      - cura
+    '1':
+      nome: Estocada
+      tags:
+      - avanco
+    '2':
+      nome: Ripostar
+      tags:
+      - atordoamento
+      - enraizar
+    '3':
+      nome: Esgrima
+      tags:
+      - lentidao
+      - ataque_fortalecido
+    R:
+      nome: Desafio Grandioso
+      tags:
+      - cura
+      - buff_aliado
+  Fizz:
+    P:
+      nome: Tridente da Pedra do Mar
+      tags: []
+    '1':
+      nome: Ataque do Ouriço
+      tags:
+      - avanco
+    '2':
+      nome: Onda Devastadora
+      tags:
+      - ataque_fortalecido
+    '3':
+      nome: Brincalhão / Trapaceiro
+      tags:
+      - avanco
+      - reconjuracao
+    R:
+      nome: Lançar Isca
+      tags:
+      - arremesso
+      - empurrao
+      - lentidao
+      - enraizar
+  Galio:
+    P:
+      nome: Esmagada Colossal
+      tags:
+      - ataque_fortalecido
+    '1':
+      nome: Ventos de Guerra
+      tags: []
+    '2':
+      nome: Escudo de Durand
+      tags:
+      - lentidao
+      - provocar
+      - escudo
+      - canal_carga
+    '3':
+      nome: Soco Justiceiro
+      tags:
+      - avanco
+      - arremesso
+      - terreno
+    R:
+      nome: Entrada Heroica
+      tags:
+      - arremesso
+      - escudo
+      - buff_aliado
+  Garen:
+    P:
+      nome: Perseverança
+      tags: []
+    '1':
+      nome: Acerto Decisivo
+      tags:
+      - lentidao
+      - silencio
+      - ataque_fortalecido
+    '2':
+      nome: Coragem
+      tags:
+      - escudo
+    '3':
+      nome: Julgamento
+      tags:
+      - reconjuracao
+    R:
+      nome: Justiça Demaciana
+      tags:
+      - execucao
+  Gnar:
+    P:
+      nome: Fúria Genética
+      tags: []
+    '1':
+      nome: Bumerangue
+      tags:
+      - arremesso
+      - lentidao
+    '2':
+      nome: Hiperativo
+      tags:
+      - atordoamento
+      - transformacao
+      - zona_no_chao
+    '3':
+      nome: Pirueta
+      tags:
+      - avanco
+      - lentidao
+    R:
+      nome: GNAR!
+      tags:
+      - atordoamento
+      - empurrao
+      - lentidao
+      - terreno
+  Gragas:
+    P:
+      nome: Happy Hour
+      tags:
+      - cura
+    '1':
+      nome: Jogar o Barril
+      tags:
+      - avanco
+      - lentidao
+      - reconjuracao
+    '2':
+      nome: Fúria da Bebedeira
+      tags:
+      - ataque_fortalecido
+    '3':
+      nome: Barrigada
+      tags:
+      - avanco
+      - atordoamento
+      - empurrao
+    R:
+      nome: Barril Explosivo
+      tags:
+      - arremesso
+      - reflexo_ou_area_externa
+  Graves:
+    P:
+      nome: Novo Destino
+      tags:
+      - empurrao
+    '1':
+      nome: Fim da Linha
+      tags:
+      - terreno
+    '2':
+      nome: Cortina de Fumaça
+      tags: []
+    '3':
+      nome: Saque Rápido
+      tags:
+      - avanco
+      - marca_acumulos
+    R:
+      nome: Efeito Colateral
+      tags:
+      - empurrao
+  Gwen:
+    P:
+      nome: Mil Retalhos
+      tags:
+      - cura
+    '1':
+      nome: Corte e Recorte
+      tags:
+      - execucao
+      - reflexo_ou_area_externa
+    '2':
+      nome: Névoa Sagrada
+      tags:
+      - invocacao
+    '3':
+      nome: Avanço Afiado
+      tags:
+      - avanco
+      - ataque_fortalecido
+    R:
+      nome: Ponto-Cruz
+      tags:
+      - arremesso
+      - lentidao
+      - reconjuracao
+  Hecarim:
+    P:
+      nome: Caminho da Guerra
+      tags: []
+    '1':
+      nome: Fúria
+      tags:
+      - canal_carga
+    '2':
+      nome: Espírito do Pavor
+      tags:
+      - cura
+    '3':
+      nome: Ataque Devastador
+      tags:
+      - avanco
+      - empurrao
+      - ataque_fortalecido
+    R:
+      nome: Massacre das Sombras
+      tags:
+      - avanco
+      - invocacao
+  Heimerdinger:
+    P:
+      nome: Afinidade Hextec
+      tags: []
+    '1':
+      nome: Torre Evolutiva H-28G
+      tags:
+      - canal_carga
+    '2':
+      nome: Micro-Mísseis Hextec
+      tags: []
+    '3':
+      nome: Granada de Tempestade de Elétrons CH-2
+      tags:
+      - arremesso
+      - atordoamento
+      - lentidao
+      - canal_carga
+      - zona_no_chao
+      - reflexo_ou_area_externa
+    R:
+      nome: MELHORIA!!!
+      tags:
+      - arremesso
+      - atordoamento
+      - lentidao
+      - reconjuracao
+  Hwei:
+    P:
+      nome: Assinatura do Visionário
+      tags:
+      - marca_acumulos
+    '1':
+      nome: 'Tema: Desastre'
+      tags:
+      - lentidao
+      - enraizar
+    '2':
+      nome: 'Tema: Serenidade'
+      tags:
+      - escudo
+      - buff_aliado
+    '3':
+      nome: 'Tema: Tormento'
+      tags:
+      - puxao
+      - lentidao
+      - enraizar
+      - reflexo_ou_area_externa
+    R:
+      nome: Desespero Vertiginoso
+      tags:
+      - lentidao
+      - marca_acumulos
+  Irelia:
+    P:
+      nome: Fervor Ioniano
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Surto da Lâmina
+      tags:
+      - avanco
+      - cura
+      - marca_acumulos
+    '2':
+      nome: Dança Desafiadora
+      tags: []
+    '3':
+      nome: Dueto Impecável
+      tags:
+      - atordoamento
+      - marca_acumulos
+    R:
+      nome: Lâmina da Vanguarda
+      tags:
+      - lentidao
+      - terreno
+      - marca_acumulos
+  Janna:
+    P:
+      nome: Brisa de Impulso
+      tags:
+      - buff_aliado
+    '1':
+      nome: Ventania Uivante
+      tags:
+      - arremesso
+      - invocacao
+      - canal_carga
+    '2':
+      nome: Zéfiro
+      tags:
+      - buff_aliado
+    '3':
+      nome: Olho da Tempestade
+      tags:
+      - escudo
+      - buff_aliado
+    R:
+      nome: Monção
+      tags:
+      - empurrao
+      - buff_aliado
+  Jarvan IV:
+    P:
+      nome: Cadência Marcial
+      tags: []
+    '1':
+      nome: Ataque do Dragão
+      tags:
+      - arremesso
+      - puxao
+    '2':
+      nome: Égide de Ouro
+      tags:
+      - lentidao
+      - escudo
+    '3':
+      nome: Estandarte Demaciano
+      tags:
+      - arremesso
+      - buff_aliado
+    R:
+      nome: Cataclisma
+      tags:
+      - avanco
+      - terreno
+  Jax:
+    P:
+      nome: Investida Implacável
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Salto Atacante
+      tags:
+      - avanco
+    '2':
+      nome: Energizar
+      tags:
+      - avanco
+      - ataque_fortalecido
+    '3':
+      nome: Contra-Ataque
+      tags:
+      - atordoamento
+      - reconjuracao
+    R:
+      nome: Grão-Mestre de Armas
+      tags: []
+  Jayce:
+    P:
+      nome: Capacitor Hextec
+      tags: []
+    '1':
+      nome: Aos Céus!
+      tags:
+      - avanco
+    '2':
+      nome: Campo Elétrico
+      tags: []
+    '3':
+      nome: Golpe Trovejante
+      tags:
+      - empurrao
+    R:
+      nome: Canhão de Mercúrio
+      tags:
+      - ataque_fortalecido
+  Jhin:
+    P:
+      nome: Sussurro
+      tags: []
+    '1':
+      nome: Granada Dançante
+      tags: []
+    '2':
+      nome: Florescer Mortal
+      tags:
+      - enraizar
+      - invocacao
+      - buff_aliado
+    '3':
+      nome: Audiência Cativa
+      tags:
+      - lentidao
+      - invisibilidade
+      - invocacao
+    R:
+      nome: Aclamação
+      tags:
+      - lentidao
+      - canal_carga
+      - execucao
+  Jinx:
+    P:
+      nome: Anime-se!
+      tags: []
+    '1':
+      nome: Trocando!
+      tags:
+      - marca_acumulos
+    '2':
+      nome: Zap!
+      tags: []
+    '3':
+      nome: Mordidinha Flamejante!
+      tags:
+      - avanco
+      - enraizar
+    R:
+      nome: Super Mega Míssil da Morte!
+      tags: []
+  Kai'Sa:
+    P:
+      nome: Segunda Pele
+      tags:
+      - enraizar
+      - marca_acumulos
+      - buff_aliado
+    '1':
+      nome: Chuva Icathiana
+      tags: []
+    '2':
+      nome: Exploradora do Vazio
+      tags:
+      - marca_acumulos
+    '3':
+      nome: Sobrecarga
+      tags:
+      - canal_carga
+    R:
+      nome: Instinto Assassino
+      tags:
+      - avanco
+      - escudo
+  Kalista:
+    P:
+      nome: Aprumo Marcial
+      tags:
+      - avanco
+      - arremesso
+      - buff_aliado
+    '1':
+      nome: Perfurar
+      tags:
+      - avanco
+      - arremesso
+      - canal_carga
+      - marca_acumulos
+    '2':
+      nome: Vigia
+      tags:
+      - marca_acumulos
+      - execucao
+      - buff_aliado
+    '3':
+      nome: Lacerar
+      tags:
+      - lentidao
+      - marca_acumulos
+    R:
+      nome: Chamado do Destino
+      tags:
+      - avanco
+      - arremesso
+      - buff_aliado
+  Karma:
+    P:
+      nome: Mantra
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Chama Interior
+      tags:
+      - lentidao
+    '2':
+      nome: Decisão Absorta
+      tags:
+      - enraizar
+    '3':
+      nome: Inspiração
+      tags:
+      - escudo
+      - buff_aliado
+    R:
+      nome: Abraço Transcendente
+      tags:
+      - empurrao
+      - lentidao
+      - zona_no_chao
+      - reflexo_ou_area_externa
+  Kassadin:
+    P:
+      nome: Pedra do Vazio
+      tags:
+      - escudo
+    '1':
+      nome: Esfera Nula
+      tags:
+      - silencio
+    '2':
+      nome: Lâmina Ínfera
+      tags:
+      - ataque_fortalecido
+    '3':
+      nome: Força de Pulso
+      tags:
+      - lentidao
+    R:
+      nome: Caminhar na Fenda
+      tags:
+      - marca_acumulos
+  Katarina:
+    P:
+      nome: Voracidade
+      tags: []
+    '1':
+      nome: Lâmina Saltitante
+      tags: []
+    '2':
+      nome: Preparação
+      tags:
+      - arremesso
+    '3':
+      nome: Shunpo
+      tags: []
+    R:
+      nome: Lótus da Morte
+      tags:
+      - arremesso
+      - cura
+  Kayle:
+    P:
+      nome: Ascensão Divina
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Explosão Radiante
+      tags:
+      - lentidao
+    '2':
+      nome: Bênção Celestial
+      tags:
+      - cura
+      - buff_aliado
+    '3':
+      nome: Lâmina de Fogo Estelar
+      tags:
+      - ataque_fortalecido
+    R:
+      nome: Sentença Divina
+      tags:
+      - invulneravel
+      - buff_aliado
+  Kayn:
+    P:
+      nome: A Foice Darkin
+      tags:
+      - cura
+      - canal_carga
+    '1':
+      nome: Corte Ceifador
+      tags:
+      - avanco
+    '2':
+      nome: Alcance da Lâmina
+      tags:
+      - arremesso
+      - lentidao
+    '3':
+      nome: Passo das Sombras
+      tags:
+      - lentidao
+      - enraizar
+      - cura
+      - terreno
+    R:
+      nome: Transgressão do Umbral
+      tags:
+      - cura
+      - reconjuracao
+  Kennen:
+    P:
+      nome: Marca da Tormenta
+      tags:
+      - atordoamento
+      - marca_acumulos
+    '1':
+      nome: Shuriken Trovejante
+      tags:
+      - arremesso
+    '2':
+      nome: Surto Elétrico
+      tags:
+      - marca_acumulos
+    '3':
+      nome: Investida Relâmpago
+      tags:
+      - transformacao
+    R:
+      nome: Turbilhão Cortante
+      tags:
+      - invocacao
+      - marca_acumulos
+  Kha'Zix:
+    P:
+      nome: Ameaça Invisível
+      tags:
+      - lentidao
+      - invisibilidade
+      - ataque_fortalecido
+    '1':
+      nome: Sabor de Medo
+      tags:
+      - medo
+    '2':
+      nome: Espinho do Vazio
+      tags:
+      - lentidao
+      - cura
+    '3':
+      nome: Pulo
+      tags:
+      - avanco
+    R:
+      nome: Massacre do Vazio
+      tags:
+      - invisibilidade
+  Kindred:
+    P:
+      nome: Marca Familiar
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Dança de Flechas
+      tags:
+      - avanco
+      - marca_acumulos
+    '2':
+      nome: Frenesi do Lobo
+      tags:
+      - lentidao
+      - cura
+      - marca_acumulos
+      - ataque_fortalecido
+    '3':
+      nome: Pesar Crescente
+      tags:
+      - lentidao
+      - marca_acumulos
+    R:
+      nome: Refúgio da Ovelha
+      tags:
+      - cura
+      - invulneravel
+  Kog'Maw:
+    P:
+      nome: Surpresa Icathiana
+      tags: []
+    '1':
+      nome: Cusparada Cáustica
+      tags: []
+    '2':
+      nome: Barragem Bio-Arcana
+      tags: []
+    '3':
+      nome: Gosma do Vazio
+      tags:
+      - lentidao
+    R:
+      nome: Artilharia Viva
+      tags:
+      - zona_no_chao
+  K'Sante:
+    P:
+      nome: Instinto Valente
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Golpes de Ntofo
+      tags:
+      - atordoamento
+      - puxao
+      - lentidao
+      - marca_acumulos
+    '2':
+      nome: Criador de Caminhos
+      tags:
+      - avanco
+      - atordoamento
+      - empurrao
+      - canal_carga
+      - reconjuracao
+    '3':
+      nome: Passo Forte
+      tags:
+      - avanco
+      - escudo
+      - buff_aliado
+    R:
+      nome: Forma Irrestrita
+      tags:
+      - avanco
+      - empurrao
+      - enraizar
+      - terreno
+  Lee Sin:
+    P:
+      nome: Agitação
+      tags: []
+    '1':
+      nome: Onda Sônica
+      tags:
+      - avanco
+      - marca_acumulos
+    '2':
+      nome: Proteger
+      tags:
+      - avanco
+      - escudo
+    '3':
+      nome: Tempestade
+      tags:
+      - lentidao
+    R:
+      nome: Fúria do Dragão
+      tags:
+      - arremesso
+      - empurrao
+  Leona:
+    P:
+      nome: Luz do Sol
+      tags:
+      - buff_aliado
+    '1':
+      nome: Proteção da Aurora
+      tags:
+      - atordoamento
+      - ataque_fortalecido
+    '2':
+      nome: Eclipse
+      tags: []
+    '3':
+      nome: Lâmina Zênite
+      tags:
+      - avanco
+      - enraizar
+    R:
+      nome: Labareda Solar
+      tags:
+      - atordoamento
+      - lentidao
+      - invocacao
+      - reflexo_ou_area_externa
+  Lillia:
+    P:
+      nome: Ramo Onírico
+      tags:
+      - cura
+    '1':
+      nome: Golpes Florescentes
+      tags:
+      - marca_acumulos
+      - reflexo_ou_area_externa
+    '2':
+      nome: Cuidado! Iiip!
+      tags:
+      - reflexo_ou_area_externa
+    '3':
+      nome: Semente Espiral
+      tags:
+      - avanco
+      - lentidao
+      - terreno
+    R:
+      nome: Cadência de Ninar
+      tags:
+      - lentidao
+      - sono
+      - global
+  Lissandra:
+    P:
+      nome: Submissão Glacinata
+      tags:
+      - lentidao
+      - transformacao
+      - buff_aliado
+    '1':
+      nome: Estilhaço de Gelo
+      tags:
+      - arremesso
+      - lentidao
+    '2':
+      nome: Círculo Ártico
+      tags:
+      - enraizar
+      - zona_no_chao
+    '3':
+      nome: Caminho Glacial
+      tags:
+      - avanco
+      - teleporte
+      - reconjuracao
+    R:
+      nome: Túmulo Congelado
+      tags:
+      - atordoamento
+      - lentidao
+      - cura
+      - invocacao
+  Lucian:
+    P:
+      nome: Disparo Iluminado
+      tags:
+      - enraizar
+      - escudo
+      - cura
+      - ataque_fortalecido
+      - buff_aliado
+    '1':
+      nome: Luz Perfurante
+      tags: []
+    '2':
+      nome: Chama Ardente
+      tags:
+      - marca_acumulos
+      - buff_aliado
+    '3':
+      nome: Perseguição Implacável
+      tags:
+      - avanco
+    R:
+      nome: O Expurgo
+      tags:
+      - reconjuracao
+  Lulu:
+    P:
+      nome: Pix, o Silfo Companheiro
+      tags:
+      - buff_aliado
+    '1':
+      nome: Lança-Purpurina
+      tags:
+      - lentidao
+    '2':
+      nome: Caprichos
+      tags:
+      - polimorfo
+      - zona_no_chao
+      - buff_aliado
+    '3':
+      nome: Socorro, Pix!
+      tags:
+      - escudo
+      - buff_aliado
+    R:
+      nome: Crescimento Virente
+      tags:
+      - arremesso
+      - lentidao
+      - buff_aliado
+  Lux:
+    P:
+      nome: Iluminação
+      tags:
+      - provocar
+      - ataque_fortalecido
+    '1':
+      nome: Ligação da Luz
+      tags:
+      - enraizar
+      - marca_acumulos
+    '2':
+      nome: Barreira Prismática
+      tags:
+      - escudo
+      - buff_aliado
+    '3':
+      nome: Singularidade Lucente
+      tags:
+      - lentidao
+    R:
+      nome: Centelha Final
+      tags: []
+  Malphite:
+    P:
+      nome: Escudo de Granito
+      tags: []
+    '1':
+      nome: Fragmento Sísmico
+      tags: []
+    '2':
+      nome: Trovoada
+      tags: []
+    '3':
+      nome: Estrondar Terreno
+      tags: []
+    R:
+      nome: Força Incontrolável
+      tags:
+      - avanco
+      - arremesso
+  Maokai:
+    P:
+      nome: Seiva Mágica
+      tags:
+      - cura
+      - ataque_fortalecido
+    '1':
+      nome: Esmagamento Espinhoso
+      tags:
+      - empurrao
+      - lentidao
+    '2':
+      nome: Avanço Retorcido
+      tags:
+      - avanco
+      - enraizar
+      - transformacao
+    '3':
+      nome: Atirar Mudas
+      tags:
+      - arremesso
+      - lentidao
+      - provocar
+    R:
+      nome: Garras da Natureza
+      tags:
+      - enraizar
+      - invocacao
+  Master Yi:
+    P:
+      nome: Ataque Duplo
+      tags: []
+    '1':
+      nome: Ataque Alpha
+      tags: []
+    '2':
+      nome: Meditar
+      tags:
+      - cura
+      - canal_carga
+    '3':
+      nome: Estilo Wuju
+      tags: []
+    R:
+      nome: Highlander
+      tags:
+      - lentidao
+  Mel:
+    P:
+      nome: Esplendor Calcinante
+      tags:
+      - escudo
+      - marca_acumulos
+      - execucao
+      - ataque_fortalecido
+    '1':
+      nome: Rajada Radiante
+      tags: []
+    '2':
+      nome: Refutação
+      tags:
+      - invulneravel
+    '3':
+      nome: Armadilha Solar
+      tags:
+      - lentidao
+      - enraizar
+      - reflexo_ou_area_externa
+    R:
+      nome: Eclipse Dourado
+      tags:
+      - marca_acumulos
+  Milio:
+    P:
+      nome: A Todo Vapor!
+      tags:
+      - marca_acumulos
+      - ataque_fortalecido
+      - buff_aliado
+    '1':
+      nome: Ultramega Chute Flamejante
+      tags:
+      - empurrao
+      - lentidao
+    '2':
+      nome: Fogueira Aconchegante
+      tags:
+      - cura
+      - reconjuracao
+      - buff_aliado
+    '3':
+      nome: Abraços Quentinhos
+      tags:
+      - escudo
+      - marca_acumulos
+      - buff_aliado
+    R:
+      nome: Sopro de Vida
+      tags:
+      - arremesso
+      - enraizar
+      - cura
+      - buff_aliado
+  Miss Fortune:
+    P:
+      nome: Batida do Amor
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Dois por Um
+      tags: []
+    '2':
+      nome: Desfilando
+      tags:
+      - marca_acumulos
+    '3':
+      nome: Chuva de Disparos
+      tags:
+      - lentidao
+      - zona_no_chao
+    R:
+      nome: Metendo Bala
+      tags:
+      - canal_carga
+      - reconjuracao
+  Mordekaiser:
+    P:
+      nome: Ascensão das Trevas
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Obliterar
+      tags: []
+    '2':
+      nome: Indestrutível
+      tags:
+      - escudo
+      - cura
+      - reconjuracao
+      - marca_acumulos
+    '3':
+      nome: Aperto Mortal
+      tags:
+      - puxao
+      - lentidao
+    R:
+      nome: Reino da Morte
+      tags:
+      - roubo_status
+  Morgana:
+    P:
+      nome: Sifão da Alma
+      tags:
+      - cura
+    '1':
+      nome: Ligação das Trevas
+      tags:
+      - enraizar
+    '2':
+      nome: Sombra Atormentada
+      tags:
+      - zona_no_chao
+    '3':
+      nome: Escudo Negro
+      tags:
+      - escudo
+      - buff_aliado
+    R:
+      nome: Grilhões da Alma
+      tags:
+      - atordoamento
+      - lentidao
+  Nami:
+    P:
+      nome: Maré Oscilante
+      tags:
+      - buff_aliado
+    '1':
+      nome: Prisão Aquática
+      tags:
+      - arremesso
+    '2':
+      nome: Vazante e Fluxo
+      tags:
+      - avanco
+      - cura
+      - buff_aliado
+    '3':
+      nome: Bênção da Conjuradora
+      tags:
+      - lentidao
+      - ataque_fortalecido
+      - buff_aliado
+    R:
+      nome: Maré Violenta
+      tags:
+      - arremesso
+      - buff_aliado
+  Nasus:
+    P:
+      nome: Devorador de Almas
+      tags: []
+    '1':
+      nome: Ataque Sifão
+      tags:
+      - ataque_fortalecido
+    '2':
+      nome: Murchar
+      tags: []
+    '3':
+      nome: Fogo Espiritual
+      tags:
+      - zona_no_chao
+    R:
+      nome: Fúria das Areias
+      tags: []
+  Nautilus:
+    P:
+      nome: Âncora Impactante
+      tags:
+      - enraizar
+    '1':
+      nome: Lançar Âncora
+      tags:
+      - avanco
+      - arremesso
+      - puxao
+      - terreno
+    '2':
+      nome: Ira do Titã
+      tags:
+      - escudo
+    '3':
+      nome: Correnteza
+      tags:
+      - lentidao
+    R:
+      nome: Carga de Profundidade
+      tags:
+      - arremesso
+      - atordoamento
+  Nidalee:
+    P:
+      nome: Espreitar
+      tags:
+      - arremesso
+      - marca_acumulos
+    '1':
+      nome: Arremessar Lança
+      tags:
+      - arremesso
+    '2':
+      nome: Arapuca
+      tags:
+      - invisibilidade
+      - invocacao
+    '3':
+      nome: Ímpeto Selvagem
+      tags:
+      - cura
+    R:
+      nome: Aspecto do Puma
+      tags:
+      - transformacao
+      - marca_acumulos
+  Nilah:
+    P:
+      nome: Alegria Eterna
+      tags:
+      - escudo
+      - cura
+    '1':
+      nome: Lâmina Sem Forma
+      tags:
+      - avanco
+      - zona_no_chao
+    '2':
+      nome: Véu Jubiloso
+      tags:
+      - buff_aliado
+    '3':
+      nome: Turbilhão
+      tags:
+      - avanco
+      - ataque_fortalecido
+    R:
+      nome: Apoteose
+      tags:
+      - puxao
+      - escudo
+      - cura
+      - buff_aliado
+  Nocturne:
+    P:
+      nome: Lâminas Sombrias
+      tags:
+      - cura
+      - ataque_fortalecido
+    '1':
+      nome: Portador do Anoitecer
+      tags:
+      - arremesso
+    '2':
+      nome: Proteção das Trevas
+      tags:
+      - lentidao
+    '3':
+      nome: Horror Indescritível
+      tags:
+      - lentidao
+    R:
+      nome: Paranoia
+      tags:
+      - avanco
+      - reconjuracao
+      - global
+      - buff_aliado
+  Norra:
+    P:
+      nome: Amados Amuletos
+      tags:
+      - zona_no_chao
+    '1':
+      nome: Pico de Memória
+      tags:
+      - teleporte
+      - lentidao
+      - canal_carga
+    '2':
+      nome: Jornada a Lugar Nenhum
+      tags:
+      - lentidao
+    '3':
+      nome: Encadeamentos de Volta ao Lar
+      tags:
+      - lentidao
+      - marca_acumulos
+      - reflexo_ou_area_externa
+    R:
+      nome: Portalpalooza!
+      tags:
+      - avanco
+      - teleporte
+      - lentidao
+      - reflexo_ou_area_externa
+  Nunu e Willump:
+    P:
+      nome: Chamado de Freljord
+      tags:
+      - buff_aliado
+    '1':
+      nome: Consumir
+      tags:
+      - cura
+    '2':
+      nome: A Maior Bola de Neve de Todas!
+      tags:
+      - avanco
+      - arremesso
+      - lentidao
+      - terreno
+      - reconjuracao
+    '3':
+      nome: Rajada de Bolas de Neve
+      tags:
+      - arremesso
+      - lentidao
+      - enraizar
+      - canal_carga
+    R:
+      nome: Zero Absoluto
+      tags:
+      - lentidao
+      - escudo
+      - canal_carga
+  Olaf:
+    P:
+      nome: Fúria Berserker
+      tags: []
+    '1':
+      nome: Ressaca
+      tags:
+      - lentidao
+    '2':
+      nome: Golpes Nefastos
+      tags:
+      - escudo
+    '3':
+      nome: Balanço Temerário
+      tags:
+      - avanco
+    R:
+      nome: Ragnarok
+      tags:
+      - imparavel
+  Orianna:
+    P:
+      nome: Dando Corda
+      tags:
+      - marca_acumulos
+    '1':
+      nome: 'Comando: Atacar'
+      tags:
+      - avanco
+    '2':
+      nome: 'Comando: Dissonância'
+      tags:
+      - zona_no_chao
+      - buff_aliado
+    '3':
+      nome: 'Comando: Proteger'
+      tags:
+      - escudo
+      - buff_aliado
+    R:
+      nome: 'Comando: Onda de Choque'
+      tags: []
+  Ornn:
+    P:
+      nome: Forja Viva
+      tags:
+      - marca_acumulos
+      - global
+      - buff_aliado
+    '1':
+      nome: Ruptura Vulcânica
+      tags:
+      - lentidao
+      - reflexo_ou_area_externa
+    '2':
+      nome: Fôlego do Fole
+      tags:
+      - empurrao
+      - enraizar
+    '3':
+      nome: Investida Calcinante
+      tags:
+      - avanco
+      - arremesso
+      - terreno
+    R:
+      nome: Chamado do Deus da Forja
+      tags:
+      - avanco
+      - arremesso
+      - lentidao
+      - invocacao
+      - reconjuracao
+  Pantheon:
+    P:
+      nome: Determinação Mortal
+      tags: []
+    '1':
+      nome: Lança Meteórica
+      tags:
+      - arremesso
+    '2':
+      nome: Escudo-Cometa
+      tags:
+      - avanco
+      - atordoamento
+      - ataque_fortalecido
+    '3':
+      nome: Égide Impetuosa
+      tags:
+      - lentidao
+      - escudo
+      - reconjuracao
+    R:
+      nome: Constelação Cadente
+      tags:
+      - avanco
+      - arremesso
+      - lentidao
+      - reflexo_ou_area_externa
+  Poppy:
+    P:
+      nome: Embaixadora de Ferro
+      tags:
+      - arremesso
+      - escudo
+      - ataque_fortalecido
+    '1':
+      nome: Choque do Martelo
+      tags:
+      - lentidao
+    '2':
+      nome: Presença Inabalável
+      tags:
+      - avanco
+      - lentidao
+      - zona_no_chao
+    '3':
+      nome: Investida Heroica
+      tags:
+      - avanco
+      - atordoamento
+      - empurrao
+      - terreno
+    R:
+      nome: Veredito da Guardiã
+      tags:
+      - arremesso
+      - empurrao
+      - lentidao
+      - canal_carga
+  Pyke:
+    P:
+      nome: Dádiva dos Afogados
+      tags:
+      - cura
+    '1':
+      nome: Espeto de Osso
+      tags:
+      - puxao
+      - lentidao
+    '2':
+      nome: Mergulho Fantasma
+      tags:
+      - invisibilidade
+    '3':
+      nome: Ressaca Espectral
+      tags:
+      - avanco
+      - atordoamento
+    R:
+      nome: Morte das Profundezas
+      tags:
+      - reconjuracao
+      - marca_acumulos
+      - execucao
+      - buff_aliado
+  Rakan:
+    P:
+      nome: Plumas Mágicas
+      tags:
+      - avanco
+      - escudo
+      - invocacao
+    '1':
+      nome: Pena Reluzente
+      tags:
+      - arremesso
+      - buff_aliado
+    '2':
+      nome: Entrada Triunfal
+      tags:
+      - avanco
+      - arremesso
+    '3':
+      nome: Dança da Batalha
+      tags:
+      - escudo
+      - reconjuracao
+      - buff_aliado
+    R:
+      nome: Rapidez
+      tags:
+      - encanto
+  Rammus:
+    P:
+      nome: Tatu Blindado Giratório
+      tags: []
+    '1':
+      nome: Bola do Poder
+      tags:
+      - empurrao
+      - lentidao
+    '2':
+      nome: Bola Curva Defensiva
+      tags: []
+    '3':
+      nome: Provocação Enlouquecedora
+      tags:
+      - provocar
+    R:
+      nome: Colisão Ascendente
+      tags:
+      - avanco
+      - lentidao
+      - marca_acumulos
+      - reflexo_ou_area_externa
+  Rell:
+    P:
+      nome: A Ferro e Fogo
+      tags:
+      - marca_acumulos
+      - roubo_status
+    '1':
+      nome: Golpe Estilhaçador
+      tags:
+      - atordoamento
+      - escudo
+    '2':
+      nome: 'Ferromante: Queda Esmagadora'
+      tags:
+      - avanco
+      - arremesso
+      - escudo
+    '3':
+      nome: Investida Absoluta
+      tags:
+      - ataque_fortalecido
+      - buff_aliado
+    R:
+      nome: Tempestade Magnética
+      tags:
+      - puxao
+  Renekton:
+    P:
+      nome: Domínio da Ira
+      tags: []
+    '1':
+      nome: Abater os Indefesos
+      tags:
+      - cura
+    '2':
+      nome: Predador Desumano
+      tags:
+      - atordoamento
+      - escudo
+      - ataque_fortalecido
+    '3':
+      nome: Fatiar e Picar
+      tags:
+      - avanco
+      - reconjuracao
+    R:
+      nome: Dominus
+      tags: []
+  Rengar:
+    P:
+      nome: Predador Oculto
+      tags:
+      - avanco
+      - invisibilidade
+      - ataque_fortalecido
+    '1':
+      nome: Selvageria
+      tags: []
+    '2':
+      nome: Rugido de Batalha
+      tags:
+      - cura
+    '3':
+      nome: Boleadeiras
+      tags:
+      - lentidao
+      - enraizar
+      - zona_no_chao
+    R:
+      nome: Furor da Caçada
+      tags:
+      - invisibilidade
+  Riven:
+    P:
+      nome: Lâmina Rúnica
+      tags: []
+    '1':
+      nome: Asas Quebradas
+      tags:
+      - arremesso
+      - terreno
+    '2':
+      nome: Explosão de Ki
+      tags:
+      - atordoamento
+    '3':
+      nome: Valentia
+      tags:
+      - avanco
+      - escudo
+      - terreno
+    R:
+      nome: Lâmina do Exílio
+      tags: []
+  Rumble:
+    P:
+      nome: Titã do Ferro-Velho
+      tags:
+      - silencio
+      - ataque_fortalecido
+    '1':
+      nome: Cospe-Fogo
+      tags: []
+    '2':
+      nome: Escudo de Sucata
+      tags:
+      - escudo
+    '3':
+      nome: Arpão Elétrico
+      tags:
+      - lentidao
+      - marca_acumulos
+    R:
+      nome: O Equalizador
+      tags:
+      - puxao
+      - lentidao
+      - provocar
+      - canal_carga
+  Ryze:
+    P:
+      nome: Maestria Arcana
+      tags: []
+    '1':
+      nome: Sobrecarregar
+      tags: []
+    '2':
+      nome: Prisão de Runa
+      tags:
+      - lentidao
+      - enraizar
+    '3':
+      nome: Fluxo de Feitiço
+      tags: []
+    R:
+      nome: Portal de Reinos
+      tags:
+      - teleporte
+      - arremesso
+      - atordoamento
+      - empurrao
+      - enraizar
+      - buff_aliado
+  Samira:
+    P:
+      nome: Impulso Audacioso
+      tags:
+      - avanco
+      - arremesso
+      - enraizar
+    '1':
+      nome: Talento Natural
+      tags:
+      - provocar
+    '2':
+      nome: Voragem Afiada
+      tags: []
+    '3':
+      nome: Ímpeto Indomável
+      tags:
+      - avanco
+    R:
+      nome: Gatilho Infernal
+      tags: []
+  Senna:
+    P:
+      nome: Absolvição
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Escuridão Perfurante
+      tags:
+      - lentidao
+      - cura
+      - buff_aliado
+    '2':
+      nome: Abraço Final
+      tags:
+      - enraizar
+    '3':
+      nome: Maldição da Névoa Negra
+      tags:
+      - invisibilidade
+      - transformacao
+      - buff_aliado
+    R:
+      nome: Sombra da Alvorada
+      tags:
+      - escudo
+      - global
+      - reflexo_ou_area_externa
+      - buff_aliado
+  Seraphine:
+    P:
+      nome: Presença de Palco
+      tags:
+      - ataque_fortalecido
+      - buff_aliado
+    '1':
+      nome: Nota Aguda
+      tags: []
+    '2':
+      nome: Som Envolvente
+      tags:
+      - escudo
+      - cura
+      - buff_aliado
+    '3':
+      nome: Ritmo Contagiante
+      tags:
+      - atordoamento
+      - lentidao
+      - enraizar
+    R:
+      nome: Bis
+      tags:
+      - lentidao
+      - encanto
+      - buff_aliado
+  Sett:
+    P:
+      nome: Ousadia da Arena
+      tags: []
+    '1':
+      nome: Pancadaria
+      tags: []
+    '2':
+      nome: Casca-Grossa
+      tags:
+      - escudo
+      - reflexo_ou_area_externa
+    '3':
+      nome: Quebra-Crânio
+      tags:
+      - atordoamento
+      - puxao
+      - lentidao
+      - reflexo_ou_area_externa
+    R:
+      nome: Hora do Show
+      tags:
+      - lentidao
+      - canal_carga
+  Shen:
+    P:
+      nome: Barreira de Ki
+      tags:
+      - escudo
+    '1':
+      nome: Ataque Crepúsculo
+      tags:
+      - lentidao
+      - ataque_fortalecido
+    '2':
+      nome: Refúgio Espiritual
+      tags:
+      - zona_no_chao
+      - buff_aliado
+    '3':
+      nome: Corrida das Sombras
+      tags:
+      - avanco
+      - provocar
+    R:
+      nome: Manter a União
+      tags:
+      - teleporte
+      - escudo
+      - canal_carga
+      - buff_aliado
+  Shyvana:
+    P:
+      nome: Linhagem Dracônica
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Mordida Dupla
+      tags:
+      - lentidao
+      - transformacao
+      - marca_acumulos
+      - ataque_fortalecido
+    '2':
+      nome: Combustão
+      tags:
+      - transformacao
+      - marca_acumulos
+    '3':
+      nome: Hálito Flamejante
+      tags:
+      - transformacao
+      - marca_acumulos
+    R:
+      nome: Descida do Dragão
+      tags:
+      - empurrao
+      - transformacao
+      - marca_acumulos
+  Singed:
+    P:
+      nome: Corrente de Ar Nociva
+      tags: []
+    '1':
+      nome: Rastro de Veneno
+      tags: []
+    '2':
+      nome: Mega Adesivo
+      tags:
+      - arremesso
+      - lentidao
+      - enraizar
+    '3':
+      nome: Lançar
+      tags:
+      - avanco
+      - arremesso
+      - enraizar
+      - escudo
+    R:
+      nome: Poção da Insanidade
+      tags:
+      - zona_no_chao
+      - buff_aliado
+  Sion:
+    P:
+      nome: In Gloria Mori
+      tags:
+      - lentidao
+    '1':
+      nome: Golpe Demolidor
+      tags:
+      - arremesso
+      - atordoamento
+      - lentidao
+      - canal_carga
+      - reconjuracao
+    '2':
+      nome: Fornalha da Alma
+      tags:
+      - escudo
+      - reconjuracao
+    '3':
+      nome: Urro do Assassino
+      tags:
+      - empurrao
+      - lentidao
+    R:
+      nome: Investida Incontrolável
+      tags:
+      - avanco
+      - arremesso
+      - atordoamento
+      - terreno
+      - reconjuracao
+  Sivir:
+    P:
+      nome: Pés Ligeiros
+      tags: []
+    '1':
+      nome: Lâmina Bumerangue
+      tags:
+      - arremesso
+    '2':
+      nome: Ricochete
+      tags: []
+    '3':
+      nome: Escudo de Feitiço
+      tags:
+      - escudo
+      - cura
+    R:
+      nome: Na Caçada
+      tags:
+      - marca_acumulos
+      - buff_aliado
+  Skarner:
+    P:
+      nome: Linhas de Vibração
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Terra Arrasada
+      tags:
+      - arremesso
+      - lentidao
+      - provocar
+      - reconjuracao
+      - ataque_fortalecido
+    '2':
+      nome: Bastião Sísmico
+      tags:
+      - lentidao
+      - escudo
+    '3':
+      nome: Impacto de Ixtal
+      tags:
+      - avanco
+      - atordoamento
+      - puxao
+      - terreno
+      - reconjuracao
+    R:
+      nome: Empalar
+      tags:
+      - puxao
+      - supressao
+  Smolder:
+    P:
+      nome: Treinamento Dracônico
+      tags:
+      - escudo
+      - marca_acumulos
+      - execucao
+      - buff_aliado
+    '1':
+      nome: Super-Hálito Flamejante
+      tags:
+      - provocar
+      - marca_acumulos
+    '2':
+      nome: Atchim!
+      tags:
+      - lentidao
+      - marca_acumulos
+    '3':
+      nome: Voa, Voa, Voa
+      tags:
+      - terreno
+    R:
+      nome: Manhêêê!
+      tags:
+      - lentidao
+      - cura
+      - reflexo_ou_area_externa
+  Sona:
+    P:
+      nome: Power Chord
+      tags:
+      - atordoamento
+      - marca_acumulos
+      - ataque_fortalecido
+    '1':
+      nome: Hino do Valor
+      tags:
+      - ataque_fortalecido
+      - buff_aliado
+    '2':
+      nome: Ária da Perseverança
+      tags:
+      - escudo
+      - cura
+      - buff_aliado
+    '3':
+      nome: Canção da Celeridade
+      tags:
+      - buff_aliado
+    R:
+      nome: Crescendo
+      tags:
+      - atordoamento
+      - lentidao
+  Soraka:
+    P:
+      nome: Salvação
+      tags:
+      - buff_aliado
+    '1':
+      nome: Chamado Estelar
+      tags:
+      - lentidao
+      - cura
+      - invocacao
+      - buff_aliado
+    '2':
+      nome: Infusão Astral
+      tags:
+      - escudo
+      - cura
+      - buff_aliado
+    '3':
+      nome: Equinócio
+      tags:
+      - enraizar
+      - silencio
+    R:
+      nome: Desejo
+      tags:
+      - cura
+      - buff_aliado
+  Swain:
+    P:
+      nome: Bando Voraz
+      tags:
+      - puxao
+      - cura
+      - marca_acumulos
+    '1':
+      nome: Mão da Morte
+      tags: []
+    '2':
+      nome: Visão do Império
+      tags:
+      - lentidao
+      - enraizar
+      - invocacao
+    '3':
+      nome: Nuncamova
+      tags:
+      - puxao
+      - enraizar
+      - reconjuracao
+      - zona_no_chao
+    R:
+      nome: Ascensão Demoníaca
+      tags:
+      - lentidao
+      - reconjuracao
+  Syndra:
+    P:
+      nome: Transcender
+      tags: []
+    '1':
+      nome: Esfera Negra
+      tags: []
+    '2':
+      nome: Força de Vontade
+      tags:
+      - arremesso
+      - lentidao
+      - zona_no_chao
+    '3':
+      nome: Dispersar os Fracos
+      tags:
+      - atordoamento
+      - empurrao
+    R:
+      nome: Poder Irrestrito
+      tags:
+      - arremesso
+      - execucao
+  Taliyah:
+    P:
+      nome: Deslizar em Pedras
+      tags:
+      - terreno
+    '1':
+      nome: Voleio Entrelaçado
+      tags:
+      - arremesso
+      - atordoamento
+      - lentidao
+      - provocar
+      - terreno
+    '2':
+      nome: Empurrão Sísmico
+      tags:
+      - empurrao
+      - terreno
+    '3':
+      nome: Terra Desfiada
+      tags:
+      - avanco
+      - arremesso
+      - atordoamento
+      - lentidao
+    R:
+      nome: Muro da Tecelã
+      tags:
+      - empurrao
+      - enraizar
+      - terreno
+      - reconjuracao
+  Talon:
+    P:
+      nome: Limiar da Lâmina
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Diplomacia Noxiana
+      tags:
+      - avanco
+    '2':
+      nome: Ancinho
+      tags:
+      - arremesso
+      - lentidao
+    '3':
+      nome: Caminho do Assassino
+      tags:
+      - avanco
+      - terreno
+    R:
+      nome: Ataque das Sombras
+      tags:
+      - reconjuracao
+  Teemo:
+    P:
+      nome: Tiro Tóxico
+      tags: []
+    '1':
+      nome: Dardo Ofuscante
+      tags:
+      - cegueira
+    '2':
+      nome: Mover Depressa
+      tags:
+      - avanco
+    '3':
+      nome: Técnicas de Guerrilha
+      tags:
+      - invisibilidade
+    R:
+      nome: Armadilha Venenosa
+      tags:
+      - lentidao
+      - invocacao
+  Thresh:
+    P:
+      nome: Condenação
+      tags: []
+    '1':
+      nome: Sentença
+      tags:
+      - avanco
+      - arremesso
+      - atordoamento
+      - puxao
+      - reconjuracao
+    '2':
+      nome: Passagem Sombria
+      tags:
+      - arremesso
+      - puxao
+      - escudo
+      - buff_aliado
+    '3':
+      nome: Esfolar
+      tags:
+      - puxao
+      - empurrao
+      - lentidao
+    R:
+      nome: A Caixa
+      tags:
+      - lentidao
+      - terreno
+  Tristana:
+    P:
+      nome: Tiro Certeiro
+      tags: []
+    '1':
+      nome: Tiro Rápido
+      tags: []
+    '2':
+      nome: Salto-Foguete
+      tags:
+      - avanco
+      - lentidao
+      - marca_acumulos
+      - zona_no_chao
+    '3':
+      nome: Carga Explosiva
+      tags:
+      - marca_acumulos
+    R:
+      nome: Tiro Destruidor
+      tags:
+      - empurrao
+  Tryndamere:
+    P:
+      nome: Fúria da Batalha
+      tags: []
+    '1':
+      nome: Sanguinário
+      tags: []
+    '2':
+      nome: Grito Zombador
+      tags:
+      - lentidao
+    '3':
+      nome: Corte Giratório
+      tags: []
+    R:
+      nome: Fúria Sem Fim
+      tags: []
+  Twisted Fate:
+    P:
+      nome: Dados Viciados
+      tags: []
+    '1':
+      nome: Curingas
+      tags:
+      - arremesso
+    '2':
+      nome: Escolha uma Carta
+      tags:
+      - atordoamento
+      - lentidao
+      - reconjuracao
+      - zona_no_chao
+      - ataque_fortalecido
+    '3':
+      nome: Baralho Marcado
+      tags:
+      - avanco
+    R:
+      nome: Destino
+      tags:
+      - teleporte
+      - canal_carga
+      - reconjuracao
+      - global
+  Twitch:
+    P:
+      nome: Veneno Mortal
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Emboscada
+      tags:
+      - invisibilidade
+    '2':
+      nome: Tonel de Veneno
+      tags:
+      - arremesso
+      - lentidao
+      - marca_acumulos
+      - zona_no_chao
+    '3':
+      nome: Contaminar
+      tags:
+      - marca_acumulos
+    R:
+      nome: Passando Fogo
+      tags:
+      - transformacao
+  Urgot:
+    P:
+      nome: Chamas Ecoantes
+      tags: []
+    '1':
+      nome: Carga Corrosiva
+      tags:
+      - lentidao
+    '2':
+      nome: Expurgar
+      tags:
+      - lentidao
+      - reconjuracao
+    '3':
+      nome: Desdém
+      tags:
+      - avanco
+      - arremesso
+      - atordoamento
+      - empurrao
+      - escudo
+    R:
+      nome: Pior que a Morte
+      tags:
+      - puxao
+      - lentidao
+      - provocar
+      - canal_carga
+      - reconjuracao
+      - execucao
+  Varus:
+    P:
+      nome: Vingança Viva
+      tags: []
+    '1':
+      nome: Flecha Perfurante
+      tags:
+      - puxao
+      - lentidao
+    '2':
+      nome: Aljava da Ruína
+      tags:
+      - marca_acumulos
+    '3':
+      nome: Chuva de Flechas
+      tags:
+      - lentidao
+      - cura
+    R:
+      nome: Corrente da Corrupção
+      tags:
+      - enraizar
+      - marca_acumulos
+  Vayne:
+    P:
+      nome: Caçadora Noturna
+      tags: []
+    '1':
+      nome: Rolamento
+      tags:
+      - avanco
+      - terreno
+      - ataque_fortalecido
+    '2':
+      nome: Dardos de Prata
+      tags: []
+    '3':
+      nome: Condenar
+      tags:
+      - atordoamento
+      - empurrao
+      - terreno
+    R:
+      nome: Hora Final
+      tags: []
+  Veigar:
+    P:
+      nome: Poder Maligno Fenomenal
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Golpe Maligno
+      tags: []
+    '2':
+      nome: Matéria Escura
+      tags:
+      - invocacao
+      - marca_acumulos
+    '3':
+      nome: Horizonte de Eventos
+      tags:
+      - atordoamento
+    R:
+      nome: Explosão Primordial
+      tags: []
+  Vel'Koz:
+    P:
+      nome: Desconstrução Orgânica
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Fissão Plasmática
+      tags:
+      - lentidao
+      - reconjuracao
+    '2':
+      nome: Fenda do Vazio
+      tags:
+      - marca_acumulos
+    '3':
+      nome: Ruptura Tectônica
+      tags:
+      - arremesso
+      - empurrao
+    R:
+      nome: Raio Desintegrador de Formas de Vida
+      tags:
+      - lentidao
+      - canal_carga
+      - marca_acumulos
+  Vex:
+    P:
+      nome: Destruição e Escuridão
+      tags:
+      - avanco
+      - teleporte
+      - marca_acumulos
+      - ataque_fortalecido
+    '1':
+      nome: Rajada Mistral
+      tags: []
+    '2':
+      nome: Espaço Pessoal
+      tags:
+      - escudo
+    '3':
+      nome: Penumbra Iminente
+      tags:
+      - lentidao
+      - reflexo_ou_area_externa
+    R:
+      nome: Onda Sombria
+      tags:
+      - avanco
+      - reconjuracao
+      - marca_acumulos
+  Vi:
+    P:
+      nome: Pancada Certeira
+      tags: []
+    '1':
+      nome: Quebra-Cofres
+      tags:
+      - avanco
+      - empurrao
+      - lentidao
+      - canal_carga
+    '2':
+      nome: Blindagem
+      tags:
+      - escudo
+      - marca_acumulos
+    '3':
+      nome: Força Implacável
+      tags:
+      - ataque_fortalecido
+    R:
+      nome: Saque e Enterrada
+      tags:
+      - arremesso
+      - empurrao
+  Viego:
+    P:
+      nome: Dominação Monárquica
+      tags:
+      - encanto
+      - cura
+      - canal_carga
+    '1':
+      nome: Espada do Rei Destruído
+      tags: []
+    '2':
+      nome: Posse Espectral
+      tags:
+      - avanco
+      - atordoamento
+      - lentidao
+      - canal_carga
+    '3':
+      nome: Domínio Atormentado
+      tags:
+      - invisibilidade
+      - terreno
+    R:
+      nome: Destruidor de Corações
+      tags:
+      - teleporte
+      - empurrao
+      - lentidao
+  Viktor:
+    P:
+      nome: Gloriosa Evolução
+      tags: []
+    '1':
+      nome: Poder do Sifão
+      tags:
+      - escudo
+      - ataque_fortalecido
+    '2':
+      nome: Campo Gravítico
+      tags:
+      - atordoamento
+      - lentidao
+      - marca_acumulos
+      - zona_no_chao
+    '3':
+      nome: Raio Hextec
+      tags:
+      - puxao
+      - canal_carga
+    R:
+      nome: Tempestade Arcana
+      tags:
+      - canal_carga
+  Vladimir:
+    P:
+      nome: Pacto Vermelho
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Transfusão
+      tags:
+      - cura
+      - marca_acumulos
+    '2':
+      nome: Poça de Sangue
+      tags:
+      - lentidao
+      - cura
+      - zona_no_chao
+    '3':
+      nome: Maré de Sangue
+      tags:
+      - lentidao
+      - canal_carga
+      - execucao
+    R:
+      nome: Hemopraga
+      tags:
+      - cura
+  Volibear:
+    P:
+      nome: A Tempestade Implacável
+      tags:
+      - marca_acumulos
+    '1':
+      nome: Esmagamento Trovejante
+      tags:
+      - atordoamento
+      - enraizar
+      - ataque_fortalecido
+    '2':
+      nome: Fúria Selvagem
+      tags:
+      - cura
+    '3':
+      nome: Divisor de Céus
+      tags:
+      - lentidao
+      - escudo
+      - invocacao
+    R:
+      nome: Emissário da Tempestade
+      tags:
+      - avanco
+      - lentidao
+      - transformacao
+  Warwick:
+    P:
+      nome: Fome Eterna
+      tags:
+      - cura
+    '1':
+      nome: Presas da Fera
+      tags:
+      - avanco
+      - puxao
+      - cura
+    '2':
+      nome: Caçada Sangrenta
+      tags:
+      - terreno
+      - marca_acumulos
+      - buff_aliado
+    '3':
+      nome: Uivo Primitivo
+      tags:
+      - lentidao
+      - reconjuracao
+    R:
+      nome: Coerção Infinita
+      tags:
+      - avanco
+      - supressao
+      - cura
+      - ataque_fortalecido
+  Wukong:
+    P:
+      nome: Pele de Pedra
+      tags:
+      - cura
+      - marca_acumulos
+    '1':
+      nome: Cajado Dourado
+      tags:
+      - invocacao
+      - ataque_fortalecido
+    '2':
+      nome: Guerreiro Trapaceiro
+      tags:
+      - avanco
+      - invisibilidade
+      - invocacao
+    '3':
+      nome: Resplendor das Nuvens
+      tags:
+      - avanco
+      - invocacao
+    R:
+      nome: Ciclone
+      tags:
+      - arremesso
+  Xayah:
+    P:
+      nome: Cortes Certeiros
+      tags:
+      - avanco
+      - invocacao
+      - ataque_fortalecido
+    '1':
+      nome: Punhais Duplos
+      tags:
+      - arremesso
+    '2':
+      nome: Plumagem Mortífera
+      tags: []
+    '3':
+      nome: Invocadora das Lâminas
+      tags:
+      - puxao
+      - enraizar
+    R:
+      nome: Tempestade de Plumas
+      tags:
+      - avanco
+      - arremesso
+  Xin Zhao:
+    P:
+      nome: Determinação
+      tags:
+      - cura
+    '1':
+      nome: Golpe de Três Garras
+      tags:
+      - arremesso
+    '2':
+      nome: Vento Vira Relâmpago
+      tags:
+      - lentidao
+    '3':
+      nome: Investida Audaciosa
+      tags:
+      - avanco
+      - lentidao
+    R:
+      nome: Guarda Crescente
+      tags:
+      - empurrao
+  Yasuo:
+    P:
+      nome: Estilo do Errante
+      tags:
+      - escudo
+      - marca_acumulos
+    '1':
+      nome: Tempestade de Aço
+      tags:
+      - avanco
+      - arremesso
+      - marca_acumulos
+    '2':
+      nome: Parede de Vento
+      tags:
+      - terreno
+    '3':
+      nome: Espada Ágil
+      tags:
+      - avanco
+      - reconjuracao
+    R:
+      nome: Último Suspiro
+      tags:
+      - teleporte
+      - arremesso
+      - marca_acumulos
+  Yone:
+    P:
+      nome: Estilo do Caçador
+      tags: []
+    '1':
+      nome: Aço Mortal
+      tags:
+      - avanco
+      - arremesso
+      - marca_acumulos
+    '2':
+      nome: Fenda Espiritual
+      tags:
+      - escudo
+    '3':
+      nome: Desatar da Alma
+      tags:
+      - avanco
+      - reconjuracao
+      - marca_acumulos
+    R:
+      nome: Destino Selado
+      tags:
+      - teleporte
+      - arremesso
+  Yunara:
+    P:
+      nome: Voto às Primeiras Terras
+      tags: []
+    '1':
+      nome: Cultivação do Espírito
+      tags: []
+    '2':
+      nome: Arco do Julgamento
+      tags:
+      - lentidao
+      - execucao
+    '3':
+      nome: Passos de Kanmei
+      tags:
+      - avanco
+      - invulneravel
+    R:
+      nome: Transcendência do Eu
+      tags:
+      - avanco
+      - invulneravel
+  Yuumi:
+    P:
+      nome: Amizade Felina
+      tags:
+      - cura
+      - buff_aliado
+    '1':
+      nome: Projétil Errante
+      tags:
+      - lentidao
+      - invocacao
+      - canal_carga
+      - buff_aliado
+    '2':
+      nome: Você e Eu!
+      tags:
+      - avanco
+      - enraizar
+      - escudo
+      - cura
+      - buff_aliado
+    '3':
+      nome: Frenética
+      tags:
+      - escudo
+      - buff_aliado
+    R:
+      nome: Capítulo Final
+      tags:
+      - lentidao
+      - escudo
+      - cura
+      - canal_carga
+      - marca_acumulos
+      - buff_aliado
+  Zed:
+    P:
+      nome: Desprezo pelos Fracos
+      tags: []
+    '1':
+      nome: Shuriken Laminado
+      tags: []
+    '2':
+      nome: Sombra Viva
+      tags:
+      - avanco
+    '3':
+      nome: Corte Sombrio
+      tags:
+      - lentidao
+    R:
+      nome: Marca Fatal
+      tags:
+      - avanco
+      - marca_acumulos
+  Zeri:
+    P:
+      nome: Bateria Viva
+      tags: []
+    '1':
+      nome: Eletrocutar!
+      tags:
+      - lentidao
+    '2':
+      nome: Laser de Ultrachoque
+      tags:
+      - lentidao
+      - terreno
+    '3':
+      nome: Faísca Acelerada
+      tags:
+      - avanco
+      - terreno
+      - ataque_fortalecido
+    R:
+      nome: Impacto Eletrizante
+      tags:
+      - provocar
+      - marca_acumulos
+  Ziggs:
+    P:
+      nome: Pavio Curto
+      tags: []
+    '1':
+      nome: Bomba Saltitante
+      tags:
+      - arremesso
+    '2':
+      nome: Carga Concentrada
+      tags:
+      - arremesso
+    '3':
+      nome: Campo Minado de Hexplosivos
+      tags: []
+    R:
+      nome: Bomba Megainfernal
+      tags:
+      - arremesso
+  Zilean:
+    P:
+      nome: Tempo Engarrafado
+      tags:
+      - buff_aliado
+    '1':
+      nome: Bomba-Relógio
+      tags:
+      - arremesso
+      - atordoamento
+      - enraizar
+      - canal_carga
+    '2':
+      nome: Tempo Distorcido
+      tags:
+      - escudo
+      - buff_aliado
+    '3':
+      nome: Miragem Temporal
+      tags:
+      - lentidao
+      - zona_no_chao
+    R:
+      nome: Alteração Temporal
+      tags:
+      - cura
+      - invulneravel
+      - retorno_tempo
+      - buff_aliado
+  Zoe:
+    P:
+      nome: Brililim!
+      tags: []
+    '1':
+      nome: Estrela Desviada!
+      tags:
+      - reconjuracao
+    '2':
+      nome: Roubo Arcano
+      tags:
+      - buff_aliado
+    '3':
+      nome: Bolha do Soninho
+      tags:
+      - lentidao
+      - sono
+      - invocacao
+      - terreno
+    R:
+      nome: Salto Dimensional
+      tags:
+      - teleporte
+  Zyra:
+    P:
+      nome: Jardim de Espinhos
+      tags: []
+    '1':
+      nome: Farpas Mortais
+      tags: []
+    '2':
+      nome: Crescimento Desenfreado
+      tags: []
+    '3':
+      nome: Pântano das Raízes
+      tags:
+      - enraizar
+    R:
+      nome: Espinhos Sufocantes
+      tags:
+      - arremesso
+      - invocacao

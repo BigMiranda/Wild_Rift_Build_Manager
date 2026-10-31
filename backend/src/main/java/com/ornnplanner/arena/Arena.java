@@ -22,6 +22,7 @@ import com.ornnplanner.arena.fight.DamageRules;
 import com.ornnplanner.arena.fight.FighterBuilder;
 import com.ornnplanner.arena.fight.Delay;
 import com.ornnplanner.arena.fight.Fighter;
+import com.ornnplanner.arena.fight.HitShape;
 import com.ornnplanner.arena.fight.ItemEffect;
 import com.ornnplanner.arena.fight.Ledger;
 import com.ornnplanner.engine.Stats;
@@ -562,7 +563,54 @@ public class Arena {
         double interval;
         double nextTick;
         boolean terrain;
+        /** Its hit area when the sheet draws one (null = the plain rectangle or circle). */
+        HitShape shape;
         java.util.function.Consumer<U> onTick;
+    }
+
+    /**
+     * An ability made of zones on the map: where it is, how it changes over time, and who it already hit. Each zone is
+     * tried in the sheet's order and a target takes only the first it is in, unless the zone says {@code acumula}.
+     */
+    private final class ZoneCast {
+        String id;
+        String label;
+        String slot;
+        String source;
+        U owner;
+        int rank;
+        boolean strong;
+        final List<HitShape> shapes = new ArrayList<>();
+        final List<Map<String, Object>> specs = new ArrayList<>();
+        double x;
+        double y;
+        double angle;
+        /** First hit, and when it ends (the same instant for a single hit). */
+        double from;
+        double until;
+        /** Seconds between hits of a zone that stays (0 = one hit, or once per target while it moves or grows). */
+        double interval;
+        double nextTick;
+        /** Tied to the caster (its position and facing). */
+        boolean follows;
+        /** Travels along its angle: speed now, its limit, its acceleration, and the distance left. */
+        double speed;
+        double maxSpeed;
+        double accel;
+        double left;
+        /** Grows from {@code growFrom} to 1 times its size over {@code growIn} seconds. */
+        double growFrom = 1;
+        double growIn;
+        /** Moves or grows: it tests every step and hits each target once. */
+        boolean sweeps;
+        final Set<U> hit = new HashSet<>();
+
+        double scale() {
+            if (growIn <= 0) {
+                return 1;
+            }
+            return growFrom + (1 - growFrom) * Math.min(1, Math.max(0, now - from) / growIn);
+        }
     }
 
     /** Ornn's lava elemental. */
@@ -611,6 +659,7 @@ public class Arena {
     private final Side[] sides = {new Side(), new Side()};
     private final List<Projectile> projectiles = new ArrayList<>();
     private final List<Field> fields = new ArrayList<>();
+    private final List<ZoneCast> zoneCasts = new ArrayList<>();
     private final List<Elemental> elementals = new ArrayList<>();
     private final List<Shape> flashes = new ArrayList<>();
     private final PriorityQueue<Timed> timed = new PriorityQueue<>(
@@ -620,6 +669,7 @@ public class Arena {
     private long seq;
     private long ids;
     private long elementalIds;
+    private long zoneIds;
     private double now;
     private double halfWidth;
     private double length;
@@ -761,6 +811,7 @@ public class Arena {
             moveProjectiles();
             moveElementals();
             tickFields();
+            tickZones();
             tickPeriodic();
             tickSafeZone();
             trackEvents();
@@ -1566,7 +1617,7 @@ public class Arena {
     // ------------------------------------------------------------------ predictions (observation schema 3)
 
     /** Shapes of abilities that are aimed at a place, so the target can step out before they land. */
-    static final Set<String> AIMED = Set.of("linha", "cone", "area", "canal", "avanco", "campo", "elemental");
+    static final Set<String> AIMED = Set.of("linha", "cone", "area", "canal", "avanco", "campo", "elemental", "zonas");
 
     /** Seconds a target needs to react before it starts stepping out of a skillshot it sees coming. */
     static final double REACTION = 0.2;
@@ -1673,6 +1724,25 @@ public class Arena {
         return ef != null && (ef.get("atordoa") != null || ef.get("arremessa") != null || ef.get("puxa") != null);
     }
 
+    /** Effects that leave a mark on the target. */
+    private static boolean leavesMark(Map<String, Object> ef) {
+        return ef.get("fragil") != null || ef.get("acumulos") != null || Boolean.TRUE.equals(ef.get("marca"));
+    }
+
+    /** Some zone of the ability has effects that pass the test. */
+    private static boolean zoneEffect(Map<String, Object> ab, java.util.function.Predicate<Map<String, Object>> test) {
+        List<Map<String, Object>> zs = zones(ab);
+        if (zs != null) {
+            for (Map<String, Object> z : zs) {
+                Map<String, Object> ef = map(z.get("efeitos"));
+                if (ef != null && test.test(ef)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /** The side's Brittle is on the target. */
     private static boolean brittleOn(U u, U t, double now) {
         return t.brittleBy != null && now < t.brittleUntil && t.brittleBy.team() == u.team() && map(t.brittleBy.kit("fragil")) != null;
@@ -1724,7 +1794,7 @@ public class Arena {
     private boolean consumes(U u, U t, Map<String, Object> ab, boolean recast) {
         Map<String, Object> rec = map(ab.get("reconjurar"));
         Map<String, Object> ef = recast && rec != null ? map(rec.get("efeitos")) : map(ab.get("efeitos"));
-        boolean immobilize = immobilizesNow(ef) || !recast && (immobilizesNow(map(ab.get("ultimo_golpe")))
+        boolean immobilize = immobilizesNow(ef) || !recast && zoneEffect(ab, Arena::immobilizesNow) || !recast && (immobilizesNow(map(ab.get("ultimo_golpe")))
                 || immobilizesNow(map(ab.get("terreno"))));
         if (immobilize && brittleOn(u, t, now)) {
             return true;
@@ -1743,7 +1813,7 @@ public class Arena {
     private boolean applies(U u, Map<String, Object> ab, boolean recast) {
         Map<String, Object> rec = map(ab.get("reconjurar"));
         Map<String, Object> ef = recast && rec != null ? map(rec.get("efeitos")) : map(ab.get("efeitos"));
-        if (ef != null && (ef.get("fragil") != null || ef.get("acumulos") != null || Boolean.TRUE.equals(ef.get("marca")))) {
+        if (ef != null && leavesMark(ef) || !recast && zoneEffect(ab, Arena::leavesMark)) {
             return true;
         }
         Map<String, Object> last = map(ab.get("ultimo_golpe"));
@@ -1799,6 +1869,19 @@ public class Arena {
             case "area": {
                 double radius = num(ab.get("raio"), 300);
                 return new double[] {hitChance(t, cast, radius + r - d), cast};
+            }
+            case "zonas": {
+                double time = cast + num(ab.get("atraso"), 0);
+                if (d - r > zoneRange(ab)) {
+                    return new double[] {0, time};
+                }
+                // aimed straight at the target: the way out of the zone it has the longest way out of
+                double lx = "ponto".equals(ab.get("origem")) ? 0 : d;
+                double out = 0;
+                for (Map<String, Object> z : zones(ab)) {
+                    out = Math.max(out, HitShape.of(z).escape(lx, 0, r));
+                }
+                return new double[] {hitChance(t, time, out), time};
             }
             case "canal": {
                 double dur = num(ab.get("duracao"), 1);
@@ -2434,6 +2517,8 @@ public class Arena {
                 return d <= 700;
             case "area":
                 return d <= num(ab.get("raio"), 300);
+            case "zonas":
+                return d <= zoneRange(ab);
             case "cone":
             case "canal":
                 return d <= num(ab.get("alcance"), 500);
@@ -2609,6 +2694,9 @@ public class Arena {
                 }
                 break;
             }
+            case "zonas":
+                startZones(u, slot, ab, rank, tx, ty, strong, label, source);
+                break;
             case "canal":
                 channel(u, slot, ab, rank, strong, label, source);
                 break;
@@ -2803,6 +2891,8 @@ public class Arena {
         }
         double advance = num(ab.get("avanca"), 0);
         double start = now;
+        List<Map<String, Object>> sheetZones = zones(ab);
+        HitShape zone = sheetZones == null ? null : HitShape.of(sheetZones.get(0));
         for (int k = 1; k <= ticks; k++) {
             boolean last = k == ticks;
             boolean first = k == 1;
@@ -2821,7 +2911,9 @@ public class Arena {
                 double range = num(ab.get("alcance"), 500);
                 Double angle = ab.get("angulo") == null ? null : Math.toRadians(num(ab.get("angulo"), 60));
                 double width = num(ab.get("largura"), 300);
-                if (angle != null) {
+                if (zone != null) {
+                    flashZone(zone, 0, label, u, u.x, u.y, u.facing);
+                } else if (angle != null) {
                     flash("cone", label, u, u.x, u.y, range, null, u.facing, angle);
                 } else {
                     flash("rect", label, u, u.x + Math.cos(u.facing) * range / 2, u.y + Math.sin(u.facing) * range / 2,
@@ -2829,7 +2921,8 @@ public class Arena {
                 }
                 Map<String, Object> d = map(ab.get("dano"));
                 for (U v : enemies(u)) {
-                    boolean in = angle != null ? inCone(u.x, u.y, u.facing, range + v.radius(), angle, v.x, v.y)
+                    boolean in = zone != null ? zone.hitsAt(u.x, u.y, u.facing, v.x, v.y, v.radius())
+                            : angle != null ? inCone(u.x, u.y, u.facing, range + v.radius(), angle, v.x, v.y)
                             : inRect(u.x + Math.cos(u.facing) * range / 2, u.y + Math.sin(u.facing) * range / 2, u.facing,
                             range, width + 2 * v.radius(), v.x, v.y);
                     if (!in) {
@@ -3035,6 +3128,8 @@ public class Arena {
         f.angle = a;
         f.length = len;
         f.width = num(ab.get("largura"), 390);
+        List<Map<String, Object>> sheetZones = zones(ab);
+        f.shape = sheetZones == null ? null : HitShape.of(sheetZones.get(0));
         f.from = now + num(ab.get("atraso"), 0.75);
         f.until = f.from + num(ab.get("duracao"), 4.5);
         f.interval = num(ab.get("intervalo"), 0.5);
@@ -3170,6 +3265,10 @@ public class Arena {
             double a = Math.atan2(v.y - u.y, v.x - u.x);
             double dist = num(ab.get("distancia"), 475);
             Map<String, Object> wall = map(ab.get("terreno"));
+            List<Map<String, Object>> corridor = zones(ab);
+            if (corridor != null) {
+                flashZone(HitShape.of(corridor.get(0)), 0, label, u, v.x, v.y, a);   // the way the target is pushed along
+            }
             forcedMove(u, v, "empurrao", v.x + Math.cos(a) * dist, v.y + Math.sin(a) * dist, num(ab.get("velocidade"), 1000), () -> {
                 Map<String, Object> wd = map(wall.get("dano"));
                 deal(u, v, formula(wd, u, v, rank), type(wd), source + " (parede)", ABILITY, 0);
@@ -3861,13 +3960,207 @@ public class Arena {
             }
             f.nextTick += f.interval;
             for (U v : enemies(f.owner)) {
-                boolean in = "rect".equals(f.kind) ? inRect(f.x, f.y, f.angle, f.length, f.width + 2 * v.radius(), v.x, v.y)
+                boolean in = f.shape != null ? f.shape.hitsAt(f.x, f.y, f.angle, v.x, v.y, v.radius())
+                        : "rect".equals(f.kind) ? inRect(f.x, f.y, f.angle, f.length, f.width + 2 * v.radius(), v.x, v.y)
                         : dist(f.x, f.y, v.x, v.y) <= f.radius + v.radius();
                 if (in) {
                     f.onTick.accept(v);
                 }
             }
         }
+    }
+
+    /** The zones of a sheet (null = the ability has none). */
+    @SuppressWarnings("unchecked")
+    static List<Map<String, Object>> zones(Map<String, Object> ab) {
+        Object z = ab.get("zonas");
+        return z instanceof List && !((List<?>) z).isEmpty() ? (List<Map<String, Object>>) z : null;
+    }
+
+    /** How far a target can be for a zone ability to reach it: the aimed range, or what its zones cover from the caster. */
+    private static double zoneRange(Map<String, Object> ab) {
+        if ("ponto".equals(ab.get("origem"))) {
+            return num(ab.get("alcance"), 800);
+        }
+        double far = 0;
+        for (Map<String, Object> z : zones(ab)) {
+            far = Math.max(far, HitShape.of(z).reach());
+        }
+        return far;
+    }
+
+    /** A zone with its damage ({@code dano} may name an entry of the sheet's {@code danos}) and effects, for hitAbility. */
+    private static Map<String, Object> zoneSpec(Map<String, Object> ab, Map<String, Object> z) {
+        Map<String, Object> spec = new LinkedHashMap<>();
+        Object d = z.get("dano");
+        Map<String, Object> named = map(ab.get("danos"));
+        spec.put("dano", d instanceof String && named != null ? named.get(d) : d != null ? d : ab.get("dano"));
+        spec.put("efeitos", z.get("efeitos") != null ? z.get("efeitos") : ab.get("efeitos"));
+        return spec;
+    }
+
+    /**
+     * Puts the zones of an ability on the map. From the caster or the aimed point ({@code origem: ponto}), with their
+     * forms in time: atraso (lands later), expande (grows), move (travels), segue (tied to the caster), duracao with
+     * intervalo (stays and hits again).
+     */
+    private void startZones(U u, String slot, Map<String, Object> ab, int rank, double tx, double ty, boolean strong,
+                            String label, String source) {
+        ZoneCast c = new ZoneCast();
+        c.id = "zona-" + (zoneIds++);
+        c.label = label;
+        c.slot = slot;
+        c.source = source;
+        c.owner = u;
+        c.rank = rank;
+        c.strong = strong;
+        c.angle = u.facing;
+        c.x = u.x;
+        c.y = u.y;
+        if ("ponto".equals(ab.get("origem"))) {
+            double d = Math.min(num(ab.get("alcance"), 800), dist(u.x, u.y, tx, ty));
+            c.x = clampX(u.x + Math.cos(u.facing) * d);
+            c.y = clampY(u.y + Math.sin(u.facing) * d);
+        }
+        for (Map<String, Object> z : zones(ab)) {
+            c.shapes.add(HitShape.of(z));
+            Map<String, Object> spec = zoneSpec(ab, z);
+            spec.put("_nome", z.get("nome"));
+            spec.put("_acumula", z.get("acumula"));
+            c.specs.add(spec);
+        }
+        c.from = now + num(ab.get("atraso"), 0);
+        double lasts = num(ab.get("duracao"), 0);
+        c.until = c.from + lasts;
+        c.interval = lasts > 0 ? num(ab.get("intervalo"), 0.5) : 0;
+        c.nextTick = c.from;
+        c.follows = Boolean.TRUE.equals(ab.get("segue"));
+        Map<String, Object> move = map(ab.get("move"));
+        if (move != null) {
+            c.speed = num(move.get("velocidade"), 1000);
+            c.maxSpeed = num(move.get("velocidade_final"), c.speed);
+            c.accel = num(move.get("aceleracao"), 0);
+            c.left = num(move.get("distancia"), 1000);
+            c.sweeps = true;
+            c.interval = 0;
+            c.until = Double.MAX_VALUE;
+        }
+        Map<String, Object> grow = map(ab.get("expande"));
+        if (grow != null) {
+            c.growFrom = num(grow.get("de"), 0);
+            c.growIn = num(grow.get("em"), 1);
+            c.sweeps = true;
+            c.interval = 0;
+            c.until = Math.max(c.until, c.from + c.growIn);
+        }
+        zoneCasts.add(c);
+        if (now >= c.from - 1e-9) {
+            pulseZones(c);
+            if (!c.sweeps && c.interval <= 0) {
+                zoneCasts.remove(c);
+            }
+        }
+    }
+
+    private void tickZones() {
+        for (ZoneCast c : new ArrayList<>(zoneCasts)) {
+            if (c.follows && !c.owner.dead) {
+                c.x = c.owner.x;
+                c.y = c.owner.y;
+                c.angle = c.owner.facing;
+            }
+            if (now >= c.from - 1e-9 && c.left > 0) {
+                c.speed = Math.min(c.maxSpeed, c.speed + c.accel * DT);
+                double s = Math.min(c.speed * DT, c.left);
+                c.x += Math.cos(c.angle) * s;
+                c.y += Math.sin(c.angle) * s;
+                c.left -= s;
+                if (c.left <= 1e-6) {
+                    c.until = now;
+                }
+            }
+            if (now >= c.from - 1e-9 && (c.sweeps || now >= c.nextTick - 1e-9)) {
+                pulseZones(c);
+            }
+            if (now >= c.until - 1e-9 && now >= c.from - 1e-9) {
+                zoneCasts.remove(c);
+            }
+        }
+    }
+
+    /** One hit of the zones: every enemy takes the first zone it is in (and any that adds up). */
+    private void pulseZones(ZoneCast c) {
+        c.nextTick += c.interval > 0 ? c.interval : 1e9;
+        double scale = c.scale();
+        List<HitShape> shapes = c.shapes;
+        if (scale != 1) {
+            shapes = new ArrayList<>();
+            for (HitShape s : c.shapes) {
+                shapes.add(s.scaled(scale));
+            }
+        }
+        if (!c.sweeps) {
+            for (int i = 0; i < shapes.size(); i++) {
+                flashZone(shapes.get(i), i, c.label, c.owner, c.x, c.y, c.angle);
+            }
+        }
+        U u = c.owner;
+        double mult = c.strong && "calor".equals(resType(u)) ? 1.5 : 1;
+        int hits = 0;
+        for (U v : enemies(u)) {
+            if (c.sweeps && c.hit.contains(v)) {
+                continue;
+            }
+            boolean any = false;
+            for (int i = 0; i < shapes.size(); i++) {
+                if (shapes.get(i).hitsAt(c.x, c.y, c.angle, v.x, v.y, v.radius())) {
+                    Map<String, Object> spec = c.specs.get(i);
+                    noteZone(u, c.slot, spec.get("_nome"), i);
+                    hitAbility(u, v, spec, c.rank, c.source, mult, c.slot);
+                    any = true;
+                    if (!Boolean.TRUE.equals(spec.get("_acumula"))) {
+                        break;
+                    }
+                }
+            }
+            if (any) {
+                c.hit.add(v);
+                hits++;
+            }
+        }
+        if (!c.sweeps) {
+            renektonFury(u, c.slot, hits, c.strong);
+        }
+    }
+
+    /** Which zone hit, for the cooldown card (the use's {@code zones}) and the events. */
+    private void noteZone(U u, String slot, Object name, int index) {
+        String zone = name == null ? "zona " + (index + 1) : String.valueOf(name);
+        count(u, "zona:" + slot + ":" + zone);
+        ArenaModel.Use use = u.lastUse.get(slot);
+        if (use != null) {
+            use.zones.merge(zone, 1, Integer::sum);
+        }
+    }
+
+    private void flashZone(HitShape shape, int zone, String label, U owner, double x, double y, double angle) {
+        if (recordFrames) {
+            flashes.add(zoneShape("fz" + (zoneIds++), shape, zone, label, owner.team(), x, y, angle));
+        }
+    }
+
+    private static Shape zoneShape(String id, HitShape shape, int zone, String label, int team, double x, double y, double angle) {
+        Shape s = new Shape();
+        s.id = id;
+        s.kind = "zone";
+        s.team = team;
+        s.label = label;
+        s.x = round(x);
+        s.y = round(y);
+        s.angle = angle;
+        s.zone = zone;
+        s.rings = shape.worldOutline(x, y, angle);
+        return s;
     }
 
     private boolean blocked(double x, double y, double r) {
@@ -6443,9 +6736,18 @@ public class Arena {
             if (now < fl.from && !fl.terrain) {
                 continue;
             }
-            f.shapes.add("rect".equals(fl.kind)
-                    ? rect(fl.id, fl.label, fl.owner.team(), fl.x, fl.y, fl.length, fl.width, fl.angle)
+            f.shapes.add(fl.shape != null ? zoneShape(fl.id, fl.shape, 0, fl.label, fl.owner.team(), fl.x, fl.y, fl.angle)
+                    : "rect".equals(fl.kind) ? rect(fl.id, fl.label, fl.owner.team(), fl.x, fl.y, fl.length, fl.width, fl.angle)
                     : circle(fl.id, fl.label, fl.terrain ? -1 : fl.owner.team(), fl.x, fl.y, fl.radius));
+        }
+        for (ZoneCast c : zoneCasts) {
+            if (now >= c.from - 1e-9) {
+                double scale = c.scale();
+                for (int i = 0; i < c.shapes.size(); i++) {
+                    HitShape shape = scale == 1 ? c.shapes.get(i) : c.shapes.get(i).scaled(scale);
+                    f.shapes.add(zoneShape(c.id + "-" + i, shape, i, c.label, c.owner.team(), c.x, c.y, c.angle));
+                }
+            }
         }
         for (Elemental e : elementals) {
             Shape s = rect("elemental-" + e.id, "Elemental de lava (Ornn)" + (e.redirected ? ", devolvido" : ""),

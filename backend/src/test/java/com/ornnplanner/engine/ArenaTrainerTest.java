@@ -97,7 +97,7 @@ class ArenaTrainerTest {
         for (long seed = 1; seed <= 8; seed++) {
             Trainer.Config cfg = new Trainer.Config();
             cfg.population = 32;
-            cfg.generations = 30;
+            cfg.generations = 45;
             cfg.episodesPerGeneration = 12;
             cfg.seed = seed;
             Network net = train(cfg, pool, new ArrayList<>());
@@ -118,7 +118,7 @@ class ArenaTrainerTest {
         for (long seed = 1; seed <= 3; seed++) {
             Trainer.Config cfg = new Trainer.Config();
             cfg.population = 32;
-            cfg.generations = 30;
+            cfg.generations = 45;
             cfg.episodesPerGeneration = 12;
             cfg.seed = seed;
             List<Trainer.Generation> log = new ArrayList<>();
