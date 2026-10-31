@@ -649,6 +649,22 @@ public class Arena {
     private boolean describeEffects;
     /** The fight ends when this fighter dies (null = when a side is down): the effectiveness tests stop at the build. */
     private Integer stopWhenDead;
+    /** Keeps what the policies did as orders also without frames (the recording of a fixed behavior). */
+    private boolean recordOrders;
+    /** This fighter holds at 1 health (null = none): a recording covers the whole fight, whatever replays it. */
+    private Integer holdAtOne;
+
+    /** Writes {@link Result#policyOrders} also without frames. */
+    public Arena recordOrders() {
+        recordOrders = true;
+        return this;
+    }
+
+    /** Fighter {@code index} never dies: it holds at 1 health. */
+    public Arena holdAtOne(int index) {
+        holdAtOne = index;
+        return this;
+    }
 
     /** Ends the fight as soon as fighter {@code index} dies. */
     public Arena stopWhenDead(int index) {
@@ -944,7 +960,7 @@ public class Arena {
                     endCombo(u, "aborted", "interrompido: " + ActionSpace.describe(a));
                     if (a == ActionSpace.DODGE) {
                         dodge(u, turn.threat());
-                    } else if ("done".equals(instant(turn, a)) && recordFrames) {
+                    } else if ("done".equals(instant(turn, a)) && (recordFrames || recordOrders)) {
                         result.policyOrders.add(asOrder(turn, a));
                     }
                     return;
@@ -965,7 +981,7 @@ public class Arena {
                     throw new IllegalStateException(u.f.champion + ": invalid action, " + ActionSpace.describe(a));
                 }
                 if ("done".equals(instant(turn, a))) {
-                    if (recordFrames && !(u.policy instanceof ScriptedPolicy)) {
+                    if ((recordFrames || recordOrders) && !(u.policy instanceof ScriptedPolicy)) {
                         result.policyOrders.add(asOrder(turn, a));
                     }
                     if (now < u.busyUntil || u.dash != null) {
@@ -1018,7 +1034,7 @@ public class Arena {
         Turn turn = new Turn(u, false);
         turn.only = action;
         if (u.policy.decide(turn.obs, turn).action == action && "done".equals(useSpellNimbus(u, "Purificar", null, null, null))) {
-            if (recordFrames) {
+            if (recordFrames || recordOrders) {
                 result.policyOrders.add(asOrder(turn, action));
             }
         }
@@ -4102,7 +4118,7 @@ public class Arena {
             }
         }
         t.hp -= left;
-        if (t.hp < 1 && t.in.dummy != null && t.in.dummy.immortal) {
+        if (t.hp < 1 && (t.in.dummy != null && t.in.dummy.immortal || holdAtOne != null && holdAtOne == t.idx)) {
             t.hp = 1;   // a test attacker: the fight goes on until the build tested dies
         }
         if (t.hp <= 0 && !revive(t)) {
@@ -6013,7 +6029,7 @@ public class Arena {
 
     /** A cast of a combo as an order of the timeline ("turn into a timeline"). */
     private void comboOrder(U u, String type, String slot, U t, String name) {
-        if (!recordFrames) {
+        if (!recordFrames && !recordOrders) {
             return;
         }
         Action o = new Action();

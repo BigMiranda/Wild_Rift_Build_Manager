@@ -109,7 +109,7 @@ const JOBS_PER_BATCH = 8;
  */
 export function usePassiveValues({ build, result, compareIds, compareResults, itemsById }) {
   const [mode, setModeState] = useState(loadMode);
-  const [scenario, setScenario] = useState({ kind: 'basico', label: null });
+  const [scenario, setScenario] = useState({ kind: 'basico', label: null, readMode: 'fixo' });
   const [estimates, setEstimates] = useState({});
   const [measure, setMeasure] = useState(null);
   const [busy, setBusy] = useState(null);
@@ -151,7 +151,7 @@ export function usePassiveValues({ build, result, compareIds, compareResults, it
     return () => { live = false; };
   }, [mode, compareKey]);
 
-  const scenarioKey = JSON.stringify([scenario.kind, scenario.key, scenario.id]);
+  const scenarioKey = JSON.stringify([scenario.kind, scenario.key, scenario.id, scenario.readMode]);
   const runMeasure = async () => {
     const samples = estimates.active?.samples;
     if (!samples || !build) return;

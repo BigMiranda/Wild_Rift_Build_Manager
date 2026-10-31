@@ -18,6 +18,9 @@ export const BOT_STATS = ['Ability Power', '% Critical Rate', '% Armor Penetrati
 
 export const ROLES = ['atirador', 'mago', 'lutador', 'assassino', 'tanque', 'suporte'];
 
+/** How a reading treats the build's decisions: the same ones in both fights, a mean of starts, or as each one plays. */
+export const READ_MODES = ['fixo', 'largadas', 'como_joga'];
+
 /** The key a report entry uses for a scenario: the preset key, or "u:<id>" for one of the user's. */
 export const testKey = (test) => (test.key ? test.key : `u:${test.id}`);
 

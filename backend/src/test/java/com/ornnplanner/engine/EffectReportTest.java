@@ -87,6 +87,7 @@ class EffectReportTest {
         EffectModel.Request r = new EffectModel.Request();
         r.buildId = base.buildId;
         r.minute = base.minute;
+        r.readMode = base.readMode;
         r.jobs = jobs;
         return effect.evaluate(r);
     }
@@ -170,7 +171,47 @@ class EffectReportTest {
         }
     }
 
-    private void perItem(EffectModel.Request base, EffectModel.Report rep) {
+    /** With × without each item in each mode: how many readings say the item makes the build worse. */
+    private void modes(EffectModel.Request base, EffectModel.Report rep) {
+        List<EffectModel.HeldItem> items = effect.itemsAt(base);
+        line("## Modos de leitura (com × sem, %d itens × %d cenários)", items.size(), rep.tests.size());
+        for (String mode : EffectModel.READ_MODES) {
+            EffectModel.Request r = new EffectModel.Request();
+            r.buildId = base.buildId;
+            r.minute = base.minute;
+            r.readMode = mode;
+            List<EffectModel.Job> jobs = new ArrayList<>();
+            for (EffectModel.Entry e : rep.tests) {
+                jobs.add(job(e.key, null));
+                items.forEach(it -> jobs.add(job(e.key, variant("sem", it.id, null))));
+            }
+            long t0 = System.nanoTime();
+            List<EffectModel.Outcome> o = run(r, jobs);
+            double ms = (System.nanoTime() - t0) / 1e6;
+            int negative = 0;
+            int k = 0;
+            StringBuilder worst = new StringBuilder();
+            for (EffectModel.Entry e : rep.tests) {
+                EffectModel.Outcome with = o.get(k++);
+                for (EffectModel.HeldItem it : items) {
+                    EffectModel.Outcome without = o.get(k++);
+                    double g = 100 * (with.build.durability / without.build.durability - 1);
+                    if (g < -0.5) {
+                        negative++;
+                        worst.append(String.format(Locale.ROOT, " %s × %s %+.0f%%;", it.name, with.testName, g));
+                    }
+                }
+            }
+            line("- %s: %d leituras negativas de %d (%.0f ms):%s", mode, negative, items.size() * rep.tests.size(), ms, worst);
+        }
+    }
+
+    private void perItem(EffectModel.Request base0, EffectModel.Report rep) {
+        modes(base0, rep);
+        EffectModel.Request base = new EffectModel.Request();
+        base.buildId = base0.buildId;
+        base.minute = base0.minute;
+        base.readMode = EffectModel.FIXED;
         long t0 = System.nanoTime();
         List<EffectModel.HeldItem> items = effect.itemsAt(base);
         List<EffectModel.Job> jobs = new ArrayList<>();

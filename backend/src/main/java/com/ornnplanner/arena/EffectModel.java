@@ -141,6 +141,15 @@ public final class EffectModel {
         public Long folderId;
     }
 
+    /**
+     * How a reading treats the build's decisions. FIXED: the decisions of the build as it is, in time, replayed in every
+     * variant. STARTS: the mean of several starts (distance and side). AS_PLAYED: each variant decides for itself.
+     */
+    public static final String FIXED = "fixo";
+    public static final String STARTS = "largadas";
+    public static final String AS_PLAYED = "como_joga";
+    public static final java.util.List<String> READ_MODES = java.util.List.of(FIXED, STARTS, AS_PLAYED);
+
     /** One run asked for: a scenario (given, preset key or the user's id), an optional sweep stage and a variant. */
     public static class Job {
         /** Free tag the screen uses to put the answer back in place. */
@@ -159,6 +168,10 @@ public final class EffectModel {
         public Double minute;
         public Reference reference;
         public List<Job> jobs = new ArrayList<>();
+        /** {@link #AS_PLAYED} when null: a report shows the build as it plays. The per-item screens ask for {@link #FIXED}. */
+        public String readMode;
+        /** Starts of {@link #STARTS} (null = 8). */
+        public Integer starts;
     }
 
     /** What a fight says about the build tested. */
@@ -214,6 +227,8 @@ public final class EffectModel {
         public boolean sustains;
         /** por_vida (in % of each one's max health) | bruta (in damage per second): which rate the index compared. */
         public String rateMode;
+        /** The reading mode these measures came from. */
+        public String readMode;
         /** Candidate runs: whether the candidate is held at the minute (bought by then). */
         public Boolean held;
         public String error;

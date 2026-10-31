@@ -159,3 +159,59 @@ contra o Atirador alimentado (+86% com o item, antes −15%).
 `theIndexOfAFightToTheDeathIsTheTimeRatio` (`EffectReferenceTest`).
 
 Testes: 220 → 223 (10 opcionais pulados). Golden sem mudança. `npm run build` limpo.
+
+## Parte 3 — Leituras por item estáveis ✅
+
+### Modos
+
+O modo é escolhido na tela ("Leitura"), e cada resultado mostra qual foi usado (`Outcome.readMode`).
+
+| modo | o que faz | usado em |
+|---|---|---|
+| **Comportamento fixo** (`fixo`) | Grava as decisões da build como está e reproduz nas duas lutas | padrão: por item, candidatos, comparador rápido e valor medido das passivas |
+| **Média de largadas** (`largadas`) | As duas lutas em 8 largadas (distância −200 a +300, lado ±100 a ±300) e a média | opção |
+| **Como joga** (`como_joga`) | Cada luta decide por si | opção; continua sendo o relatório normal |
+
+**Como o fixo funciona:**
+- A gravação usa `Arena.recordOrders()` (os `policyOrders` também sem quadros) com a build presa em 1 de Vida (`holdAtOne`), para as
+  ordens cobrirem a luta inteira mesmo que a variante dure mais que a original.
+- A reprodução usa as ordens da linha do tempo já existentes, com o Roteiro sem habilidades automáticas para andar e atacar.
+- **As duas lutas são reproduzidas**, a "com" e a "sem". Comparar a reprodução com a luta original misturaria o efeito do item com o
+  da reprodução.
+- Uma ordem em recarga espera; a de um item que a variante não tem é descartada (`useItem` já devolvia `drop`).
+
+**Decisão:** o modo fixo não vale para cenário salvo da Arena no valor medido das passivas. Ele tem cérebros e ordens próprios e
+roda como está; a tela esconde o seletor nesse caso.
+
+### Resultado
+
+**A maior parte da instabilidade já tinha sumido com a Parte 1.** O caso do prompt, a Big Carry durando 15% mais sem o Coração de
+Aço contra o Atirador alimentado, vinha da fuga: agora é +86% nos três modos.
+
+Big Carry v1, com × sem, 6 itens × 10 cenários:
+
+| modo | leituras negativas | tempo |
+|---|---|---|
+| Comportamento fixo | 1 de 60 | 1,2 s |
+| Média de largadas | 0 de 60 | 4,2 s |
+| Como joga | 1 de 60 | 0,3 s |
+
+A reprodução muda 14 das 60 leituras em relação a "Como joga". Exemplos (`durability`, sem o item):
+
+| item | cenário | como joga | fixo |
+|---|---|---|---|
+| Coração de Aço | Misto | 264,6 | **194,1** |
+| Égide de Fogo Solar | Crítico | 60,8 | **66,5** |
+| Égide de Fogo Solar | 1000 de PdH + Cajado | 401,6 | **464,4** |
+
+**A leitura negativa que sobrou** é Esmagadores Acorrentados contra o Atirador alimentado: −5% em "fixo" e em "como joga". As decisões
+são iguais; a build com o item recebe mais dano por segundo (517/s contra 481/s). A causa não foi identificada (ver "Para o usuário").
+Na média de largadas o item dá +6%.
+
+**Candidatos** no lugar da Armadura de Espinhos, contra o Atirador alimentado: Presságio de Randuin 667, Armadura de Espinhos 536,
+Coração Congelado 505, Manto da Meia-noite 440.
+
+**Testes novos (`EffectReferenceTest`):** 🎯 a Cota de Malha nunca dá valor negativo no modo fixo (3 builds × 4 cenários com ataques físicos);
+os três modos repetem o mesmo resultado.
+
+Testes: 223 → 225 (10 opcionais pulados). Golden sem mudança. `npm run build` limpo.

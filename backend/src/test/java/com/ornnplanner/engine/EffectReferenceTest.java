@@ -120,6 +120,53 @@ class EffectReferenceTest {
         assertTrue(o.reference.timeToDeath < 6, "dead where the fight is, in " + o.reference.timeToDeath + " s");
     }
 
+    private EffectModel.Outcome withMode(BuildRepository.Build b, String test, String mode, Long without) {
+        EffectModel.Request req = new EffectModel.Request();
+        req.build = b;
+        req.minute = 26.0;
+        req.readMode = mode;
+        EffectModel.Job job = new EffectModel.Job();
+        job.testKey = test;
+        if (without != null) {
+            job.variant = new EffectModel.Variant();
+            job.variant.kind = "sem";
+            job.variant.itemId = without;
+        }
+        req.jobs = List.of(job);
+        EffectModel.Outcome o = effect.evaluate(req).get(0);
+        assertEquals(null, o.error);
+        assertEquals(mode, o.readMode);
+        return o;
+    }
+
+    /** 🎯 Fixed behavior: an item of defensive stats only is never worth less than nothing against a physical attacker. */
+    @Test
+    void aPureArmorItemIsNeverNegativeWithFixedBehavior() {
+        for (String armor : List.of("Cota de Malha")) {
+            for (String others : List.of("Coração de Aço", "Égide de Fogo Solar", "Armadura de Espinhos")) {
+                BuildRepository.Build b = build(others, armor);
+                for (String test : List.of("critico", "anti_tanque_fisico", "atirador_alimentado", "verdadeiro")) {
+                    double with = withMode(b, test, EffectModel.FIXED, null).build.durability;
+                    double without = withMode(b, test, EffectModel.FIXED, ids.get(armor)).build.durability;
+                    System.out.printf("%s + %s, %s: %.1f with, %.1f without%n", others, armor, test, with, without);
+                    assertTrue(with >= without - 1e-9, armor + " on " + others + " against " + test + ": " + with + " < " + without);
+                }
+            }
+        }
+    }
+
+    /** The modes answer differently and each repeats itself: the mean of starts runs the fight from several places. */
+    @Test
+    void readingModesRepeat() {
+        BuildRepository.Build b = build("Coração de Aço", "Égide de Fogo Solar");
+        for (String mode : EffectModel.READ_MODES) {
+            EffectModel.Outcome once = withMode(b, "atirador_alimentado", mode, null);
+            EffectModel.Outcome again = withMode(b, "atirador_alimentado", mode, null);
+            assertEquals(once.build.durability, again.build.durability, 1e-9, mode);
+            assertTrue(once.build.durability > 0, mode);
+        }
+    }
+
     /** 🎯 The mage presets kill a late game tank with no magic resist items in less than 60 s. */
     @Test
     void magesKillATankWithoutMagicResist() {

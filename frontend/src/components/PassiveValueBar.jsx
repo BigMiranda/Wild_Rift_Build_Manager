@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { n1 } from '../format.js';
 import { effectMeta } from '../effectiveness.js';
+import { ReadModePicker } from './EffectivenessReport.jsx';
 import { PV_MEASURED, PV_MODES, PV_TIER } from '../passiveValues.js';
 
 /** "Valor das passivas": by tier, estimated or measured in a scenario, with the legend of what is on screen. */
@@ -19,17 +20,18 @@ export default function PassiveValueBar({ pv }) {
   const value = pv.scenario.kind === 'basico' ? 'basico' : pv.scenario.kind === 'arena' ? `a:${pv.scenario.id}` : `t:${pv.scenario.key}`;
   const pick = (v) => {
     if (v === 'basico') {
-      pv.setScenario({ kind: 'basico', label: t('efx.kind.basico') });
+      pv.setScenario({ ...pv.scenario, kind: 'basico', key: null, id: null, label: t('efx.kind.basico') });
     } else if (v.startsWith('a:')) {
       const id = Number(v.slice(2));
-      pv.setScenario({ kind: 'arena', id, label: saved.find((s) => s.id === id)?.name });
+      pv.setScenario({ ...pv.scenario, kind: 'arena', key: null, id, label: saved.find((s) => s.id === id)?.name });
     } else {
       const key = v.slice(2);
-      pv.setScenario({ kind: 'teste', key, label: tests.find((x) => x.key === key)?.name });
+      pv.setScenario({ ...pv.scenario, kind: 'teste', key, id: null, label: tests.find((x) => x.key === key)?.name });
     }
   };
   const shown = pv.mode === PV_TIER ? t('pv.legend.tier') : pv.measured
-    ? t('pv.legend.measured', { name: pv.measured.label ?? t('efx.kind.basico') }) : t('pv.legend.estimated');
+    ? `${t('pv.legend.measured', { name: pv.measured.label ?? t('efx.kind.basico') })}${pv.scenario.kind === 'arena' ? '' : ` · ${t(`efx.read.${pv.scenario.readMode}`)}`}`
+    : t('pv.legend.estimated');
   return (
     <div className="pv-bar">
       <span className="chips" role="group" aria-label={t('pv.title')}>
@@ -47,6 +49,7 @@ export default function PassiveValueBar({ pv }) {
             {tests.map((x) => <option key={x.key} value={`t:${x.key}`}>{x.name}</option>)}
             {saved.map((s) => <option key={s.id} value={`a:${s.id}`}>{t('pv.arena', { name: s.name })}</option>)}
           </select>
+          {pv.scenario.kind !== 'arena' && <ReadModePicker value={pv.scenario.readMode} onChange={(readMode) => pv.setScenario({ ...pv.scenario, readMode })} />}
           <button className="primary" onClick={pv.runMeasure} disabled={!!pv.busy}>{t('pv.measure')}</button>
           {pv.busy && (
             <>

@@ -3,7 +3,7 @@ import { CartesianGrid, Line, LineChart, ReferenceDot, ResponsiveContainer, Tool
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { SERIES_COLORS, mmss, n0, n1 } from '../format.js';
-import { breakPoint, effectMeta, gain, indexText, overReference, reportJobs, runJobs, weakPoints, weightedIndex } from '../effectiveness.js';
+import { READ_MODES, breakPoint, effectMeta, gain, indexText, overReference, reportJobs, runJobs, weakPoints, weightedIndex } from '../effectiveness.js';
 import ItemIcon from './ItemIcon.jsx';
 import { openInArena } from './TestInArena.jsx';
 import { CandidatePicker } from './ShopPicker.jsx';
@@ -63,6 +63,17 @@ export const netRate = (m) => (m == null ? '—' : m.netRate <= 0 ? t('efx.susta
 
 /** The index as text, for tables. */
 export const indexLabel = (o) => indexText(o, t, n0);
+
+/** "Como ler": the reading mode of a per-item reading, with what each one means in its title. */
+export function ReadModePicker({ value, onChange }) {
+  return (
+    <label className="inline" title={t(`efx.read.${value}.help`)}>{t('efx.read')}
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        {READ_MODES.map((m) => <option key={m} value={m}>{t(`efx.read.${m}`)}</option>)}
+      </select>
+    </label>
+  );
+}
 
 /** A horizontal bar of an index (100 = the reference). */
 function IndexBar({ outcome }) {
@@ -244,6 +255,7 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
   const [kind, setKind] = useState('basico');
   const [report, setReport] = useState(null);
   const [ref, setRef] = useState({ kind: 'proprio' });
+  const [readMode, setReadMode] = useState('fixo');
   const [outcomes, setOutcomes] = useState(null);
   const [others, setOthers] = useState([]);
   const [busy, setBusy] = useState(null);
@@ -267,7 +279,7 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
     setError(null);
     setBusy({ done: 0, total: jobs.length, ms: 0 });
     try {
-      const out = await runJobs(base, jobs, {
+      const out = await runJobs({ ...base, readMode }, jobs, {
         onProgress: (d, total, ms) => setBusy({ done: d, total, ms }), stop: () => stop.current,
       });
       done(out);
@@ -359,7 +371,7 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
           });
         }
       }
-      setPerItem({ held, rows });
+      setPerItem({ held, rows, readMode });
     });
   };
 
@@ -371,7 +383,7 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
         jobs.push({ testKey: e.key, variant: { kind: 'candidato', slot: Number(cmp.slot), candidateId: c } });
       }
     }
-    go(jobs, (out) => setCmp((x) => ({ ...x, rows: out, ranTests: report.tests.filter((y) => x.test === 'all' || y.key === x.test) })));
+    go(jobs, (out) => setCmp((x) => ({ ...x, rows: out, readMode, ranTests: report.tests.filter((y) => x.test === 'all' || y.key === x.test) })));
   };
 
   const openFight = async (job) => {
@@ -420,9 +432,13 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
 
       <h4>{t('efx.perItem')}</h4>
       <p className="muted small">{t('efx.perItemHelp')}</p>
-      <button onClick={runPerItem} disabled={!report || !!busy || !build}>{t('efx.perItemRun')}</button>
+      <div className="row">
+        <ReadModePicker value={readMode} onChange={setReadMode} />
+        <button onClick={runPerItem} disabled={!report || !!busy || !build}>{t('efx.perItemRun')}</button>
+      </div>
       {perItem && (
         <div className="table-wrap">
+          <small className="muted">{t('efx.read.used', { mode: t(`efx.read.${perItem.readMode}`) })}</small>
           <table className="data eff-table">
             <thead><tr><th>{t('efx.col.item')}</th><th>{t('efx.col.test')}</th><th>{t('efx.col.value')}</th><th>{t('efx.col.passive')}</th><th>{t('efx.col.gold')}</th></tr></thead>
             <tbody>
@@ -472,6 +488,7 @@ export function EffectivenessPanel({ build, buildId, name, minute, items, builds
           </button>
         ))}
       </div>
+      {cmp.rows && <small className="muted">{t('efx.read.used', { mode: t(`efx.read.${cmp.readMode}`) })}</small>}
       {cmp.rows && <CompareResult cmp={cmp} itemsById={itemsById} />}
     </section>
   );

@@ -138,7 +138,7 @@ export default function QuickCompare({ build, slot, atMinute, ids, onIds, onClos
       const jobs = cards.flatMap((c) => reportJobs(report, false).map((j) => ({
         ...j, variant: { kind: 'candidato', slot, atMinute: slot == null ? atMinute : null, candidateId: c.itemId },
       })));
-      const out = await runJobs({ build, minute: result.minute }, jobs, {
+      const out = await runJobs({ build, minute: result.minute, readMode: 'fixo' }, jobs, {
         size: 12, onProgress: (done, total) => setBasicBusy({ done, total }),
       });
       const n = report.tests.length;
@@ -200,7 +200,7 @@ export default function QuickCompare({ build, slot, atMinute, ids, onIds, onClos
         </button>
         <CandidatePicker build={build} slot={slot} atMinute={atMinute} value={ids} onChange={onIds} max={MAX_COMPARED} items={items} />
         <button onClick={suggest} disabled={noCandidates || suggested?.loading}>{t('qc.suggest')}</button>
-        <button onClick={runBasic} disabled={!cards.length || !!basicBusy}>
+        <button onClick={runBasic} disabled={!cards.length || !!basicBusy} title={t('efx.read.used', { mode: t('efx.read.fixo') })}>
           {basicBusy ? t('qc.basicRunning', { done: basicBusy.done, total: basicBusy.total }) : t('qc.basic')}
         </button>
       </div>

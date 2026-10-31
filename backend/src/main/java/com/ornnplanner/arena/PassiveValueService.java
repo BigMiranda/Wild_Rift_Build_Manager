@@ -82,6 +82,8 @@ public class PassiveValueService {
         public String kind = "basico";
         public String key;
         public Long id;
+        /** fixo (the default) | largadas | como_joga. A saved scenario has its own brains and orders: it plays as it is. */
+        public String readMode;
     }
 
     public static class Job {
@@ -460,7 +462,7 @@ public class PassiveValueService {
             return new double[] {m.durability, m.dealt};
         }
         if ("teste".equals(kind)) {
-            Measures m = effect.fightWith(b, minute, sc.key, edits);
+            Measures m = effect.fightWith(b, minute, sc.key, edits, sc.readMode);
             return new double[] {m.durability, m.dealt};
         }
         EffectModel.Report rep = effect.report("basico");
@@ -468,7 +470,7 @@ public class PassiveValueService {
         double dealt = 0;
         double w = 0;
         for (EffectModel.Entry e : rep.tests) {
-            Measures m = effect.fightWith(b, minute, e.key, edits);
+            Measures m = effect.fightWith(b, minute, e.key, edits, sc.readMode);
             ttd += e.weight * m.durability;
             dealt += e.weight * m.dealt;
             w += e.weight;

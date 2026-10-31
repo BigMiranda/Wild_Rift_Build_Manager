@@ -3,6 +3,7 @@ package com.ornnplanner.arena;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ornnplanner.arena.ArenaModel.Action;
 import com.ornnplanner.arena.EffectModel.Bot;
 import com.ornnplanner.arena.EffectModel.HeldItem;
 import com.ornnplanner.arena.EffectModel.Job;
@@ -114,6 +115,8 @@ public class EffectTestService {
                 }
             });
     private final Map<String, Arena.Input> inputs = new java.util.concurrent.ConcurrentHashMap<>();
+    /** The recorded decisions of a build in a scenario (the fixed behavior readings). */
+    private final Map<String, List<Action>> recordings = new java.util.concurrent.ConcurrentHashMap<>();
 
     @SuppressWarnings("unchecked")
     public EffectTestService(ArenaService arena, FighterBuilder combat, PlannerService planner, BuildRepository builds,
@@ -358,55 +361,134 @@ public class EffectTestService {
         Reference ref = req.reference == null ? new Reference() : req.reference;
         double at = combat.minuteOf(combatant(req, build));
         double refMinute = combat.levelStart(combatant(req, build));
+        String mode = readMode(req.readMode);
+        double[][] offsets = offsets(mode, req.starts);
+        record(build, req, at, buildKey, mode);
         List<Outcome> out = new ArrayList<>();
         Map<String, Fight> todo = new LinkedHashMap<>();
-        List<String[]> keys = new ArrayList<>();   // per job: build fight key, reference fight keys...
+        List<List<List<String>>> keys = new ArrayList<>();   // per job: the build's fight keys, the reference's
         for (Job job : req.jobs) {
             Outcome o = new Outcome();
             o.tag = job.tag;
+            o.readMode = mode;
             out.add(o);
             try {
                 Test test = scaled(testOf(job), at);
                 o.testName = test.name;
                 Variant v = job.variant == null ? new Variant() : job.variant;
                 String tk = hash(write(test));
-                String bk = buildKey + "|" + tk + "|" + write(v);
-                plan(todo, bk, () -> fight(slotFor(build, req.minute, v), test));
+                String bk = buildKey + "|" + tk + "|" + write(v) + "|" + mode;
+                List<String> mine = new ArrayList<>();
+                if (EffectModel.FIXED.equals(mode)) {
+                    mine.add(bk);
+                    plan(todo, bk, () -> replay(slotFor(build, req.minute, v), test, recordings.get(buildKey + "|" + tk)));
+                } else {
+                    for (int k = 0; k < offsets.length; k++) {
+                        double[] at0 = offsets[k];
+                        mine.add(bk + "|" + k);
+                        plan(todo, bk + "|" + k, () -> fight(slotFor(build, req.minute, v), test, at0));
+                    }
+                }
                 if ("candidato".equals(v.kind)) {
                     o.held = holds(candidate(build, v), req.minute, v.candidateId);
                 }
                 List<String> refKeys = new ArrayList<>();
                 for (BuildRepository.Build rb : referenceBuilds(build, ref)) {
                     boolean own = rb == build;
-                    String rk = hash(write(rb)) + "@" + (own ? refMinute : req.minute) + "|" + tk + "|ref:" + (own ? "proprio" : "build");
-                    refKeys.add(rk);
-                    plan(todo, rk, () -> fight(own ? noItems(build, refMinute) : slot(rb, req.minute), test));
+                    for (int k = 0; k < offsets.length; k++) {
+                        double[] at0 = offsets[k];
+                        String rk = hash(write(rb)) + "@" + (own ? refMinute : req.minute) + "|" + tk + "|ref:" + (own ? "proprio" : "build") + "|" + k;
+                        refKeys.add(rk);
+                        plan(todo, rk, () -> fight(own ? noItems(build, refMinute) : slot(rb, req.minute), test, at0));
+                    }
                 }
-                List<String> all = new ArrayList<>();
-                all.add(bk);
-                all.addAll(refKeys);
-                keys.add(all.toArray(new String[0]));
+                keys.add(List.of(mine, refKeys));
             } catch (ResponseStatusException e) {
                 o.error = e.getReason();
-                keys.add(new String[0]);
+                keys.add(null);
             }
         }
         run(todo);
         for (int i = 0; i < out.size(); i++) {
-            String[] k = keys.get(i);
-            Outcome o = out.get(i);
-            if (k.length == 0) {
+            if (keys.get(i) == null) {
                 continue;
             }
-            o.build = results.get(k[0]);
-            List<Measures> refs = new ArrayList<>();
-            for (int j = 1; j < k.length; j++) {
-                refs.add(results.get(k[j]));
-            }
-            o.reference = mean(refs);
+            Outcome o = out.get(i);
+            o.build = mean(measuresOf(keys.get(i).get(0)));
+            o.reference = mean(measuresOf(keys.get(i).get(1)));
             setIndex(o);
         }
         return out;
+    }
+
+    private List<Measures> measuresOf(List<String> keys) {
+        List<Measures> out = new ArrayList<>();
+        keys.forEach(k -> out.add(results.get(k)));
+        return out;
+    }
+
+    private static String readMode(String mode) {
+        if (mode == null || mode.isBlank()) {
+            return EffectModel.AS_PLAYED;
+        }
+        if (!EffectModel.READ_MODES.contains(mode)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Modo de leitura desconhecido: " + mode);
+        }
+        return mode;
+    }
+
+    /** Where the attackers start, from where a test puts them: one place, or (the mean of starts) distance and side varied. */
+    private static double[][] offsets(String mode, Integer starts) {
+        if (!EffectModel.STARTS.equals(mode)) {
+            return new double[][] {{0, 0}};
+        }
+        int n = Math.max(2, Math.min(16, starts == null ? 8 : starts));
+        double[][] out = new double[n][];
+        for (int k = 0; k < n; k++) {
+            out[k] = new double[] {-200 + 500.0 * k / (n - 1), (k % 2 == 0 ? 1 : -1) * (100 + 100 * (k % 3))};
+        }
+        return out;
+    }
+
+    /** The decisions of the build as it is in each scenario of a batch (fixed behavior), the ones not recorded yet in parallel. */
+    private void record(BuildRepository.Build build, Request req, double at, String buildKey, String mode) {
+        if (!EffectModel.FIXED.equals(mode)) {
+            return;
+        }
+        Map<String, Fight> todo = new LinkedHashMap<>();
+        for (Job job : req.jobs) {
+            try {
+                Test test = scaled(testOf(job), at);
+                String key = buildKey + "|" + hash(write(test));
+                if (!recordings.containsKey(key) && !todo.containsKey(key)) {
+                    todo.put(key, fight(slot(build, req.minute), test));
+                }
+            } catch (ResponseStatusException e) {
+                // the job reports its own error
+            }
+        }
+        List<String> keys = new ArrayList<>(todo.keySet());
+        List<Callable<List<Action>>> runs = new ArrayList<>();
+        keys.forEach(k -> runs.add(() -> arena.recordOrders(todo.get(k).inputs, todo.get(k).duration)));
+        List<List<Action>> done = ArenaService.parallel(runs);
+        if (recordings.size() > 2000) {
+            recordings.clear();
+        }
+        for (int i = 0; i < keys.size(); i++) {
+            recordings.put(keys.get(i), done.get(i));
+        }
+    }
+
+    /**
+     * The fight with the recorded decisions: the casts as orders of the timeline (an order that cannot be done yet
+     * waits, one of an item it does not hold is dropped), chasing and attacking in between, in every variant alike.
+     */
+    private Fight replay(ArenaModel.Slot s, Test test, List<Action> orders) {
+        s.brain = "script";
+        s.autoAbilities = false;
+        Fight f = fight(s, test);
+        f.actions = orders;
+        return f;
     }
 
     /**
@@ -465,6 +547,7 @@ public class EffectTestService {
     /** A fight to run: its inputs (prepared on the calling thread: builds and the database) and what to read. */
     private static final class Fight {
         List<Arena.Input> inputs;
+        List<Action> actions = List.of();
         int attackers;
         int allies;
         double duration;
@@ -485,7 +568,7 @@ public class EffectTestService {
         List<Callable<Measures>> runs = new ArrayList<>();
         for (String k : keys) {
             Fight f = todo.get(k);
-            runs.add(() -> measure(arena.runInputs(f.inputs, f.duration), f));
+            runs.add(() -> measure(arena.runInputs(f.inputs, f.actions, f.duration), f));
         }
         List<Measures> done = ArenaService.parallel(runs);
         for (int i = 0; i < keys.size(); i++) {
@@ -494,6 +577,11 @@ public class EffectTestService {
     }
 
     private Fight fight(ArenaModel.Slot buildSlot, Test test) {
+        return fight(buildSlot, test, new double[] {0, 0});
+    }
+
+    /** {@code offset}: added to where each attacker starts (x along the lane, away from the build; y across it). */
+    private Fight fight(ArenaModel.Slot buildSlot, Test test, double[] offset) {
         Fight f = new Fight();
         f.duration = Math.max(5, Math.min(ArenaService.MAX_DURATION, test.duration <= 0 ? 60 : test.duration));
         f.inputs = new ArrayList<>();
@@ -503,8 +591,8 @@ public class EffectTestService {
         f.inputs.add(me);
         placeBots(test, (team, bot, x, y) -> {
             Arena.Input in = botInput(bot, team).copy();
-            in.x = x;
-            in.y = y;
+            in.x = team == 1 ? x + offset[0] : x;
+            in.y = team == 1 ? y + offset[1] : y;
             f.inputs.add(in);
         });
         f.attackers = test.attackers.size();
@@ -581,7 +669,7 @@ public class EffectTestService {
     }
 
     private Arena.Input buildInput(ArenaModel.Slot slot) {
-        String key = "build|" + hash(write(slot.build)) + "|" + slot.minute + "|" + slot.excludeItems + "|"
+        String key = "build|" + hash(write(slot.build)) + "|" + slot.minute + "|" + slot.brain + "|" + slot.autoAbilities + "|" + slot.excludeItems + "|"
                 + (slot.replaceItems == null ? "" : write(slot.replaceItems)) + "|" + (slot.edits == null ? "" : write(slot.edits));
         if (inputs.size() > 400) {
             inputs.clear();
@@ -726,21 +814,41 @@ public class EffectTestService {
         return out;
     }
 
-    /** The build at a minute with items held differently, in a scenario (preset key or "u:<id>"), cached. */
-    public Measures fightWith(BuildRepository.Build build, double minute, String testKey, Map<Long, com.ornnplanner.engine.Model.ItemEdit> edits) {
+    /** The build at a minute with items held differently, in a scenario (preset key or "u:<id>"), by a reading mode, cached. */
+    public Measures fightWith(BuildRepository.Build build, double minute, String testKey, Map<Long, com.ornnplanner.engine.Model.ItemEdit> edits,
+                              String readMode) {
         Job job = new Job();
         job.testKey = testKey;
-        Test test = testOf(job);
-        String key = "edit|" + hash(write(build)) + "@" + minute + "|" + hash(write(test)) + "|" + write(edits);
+        Test test = scaled(testOf(job), minute);
+        String mode = readMode == null ? EffectModel.FIXED : readMode(readMode);
+        String buildKey = hash(write(build)) + "@" + minute;
+        String key = "edit|" + buildKey + "|" + hash(write(test)) + "|" + write(edits) + "|" + mode;
         Measures m = results.get(key);
         if (m == null) {
-            ArenaModel.Slot s = slot(build, minute);
-            s.edits = edits.isEmpty() ? null : edits;
-            Fight f = fight(s, test);
-            m = measure(arena.runInputs(f.inputs, f.duration), f);
+            if (EffectModel.FIXED.equals(mode)) {
+                List<Action> orders = recordings.computeIfAbsent(buildKey + "|" + hash(write(test)), k -> {
+                    Fight f = fight(slot(build, minute), test);
+                    return arena.recordOrders(f.inputs, f.duration);
+                });
+                Fight f = replay(edited(build, minute, edits), test, orders);
+                m = measure(arena.runInputs(f.inputs, f.actions, f.duration), f);
+            } else {
+                List<Measures> all = new ArrayList<>();
+                for (double[] offset : offsets(mode, null)) {
+                    Fight f = fight(edited(build, minute, edits), test, offset);
+                    all.add(measure(arena.runInputs(f.inputs, f.duration), f));
+                }
+                m = mean(all);
+            }
             results.put(key, m);
         }
         return m;
+    }
+
+    private static ArenaModel.Slot edited(BuildRepository.Build build, double minute, Map<Long, com.ornnplanner.engine.Model.ItemEdit> edits) {
+        ArenaModel.Slot s = slot(build, minute);
+        s.edits = edits.isEmpty() ? null : edits;
+        return s;
     }
 
     /** The build at a minute, held as {@code edits} says, in its champion's slot of a saved arena scenario. */
@@ -985,6 +1093,10 @@ public class EffectTestService {
             out.fightLength += m.fightLength / n;
             out.maxHealth += m.maxHealth / n;
             out.died |= m.died;
+            if (m.absorbedShare != null) {
+                out.absorbedShare = (out.absorbedShare == null ? 0 : out.absorbedShare) + m.absorbedShare / n;
+                out.alliesAlive = (out.alliesAlive == null ? 0 : out.alliesAlive) + m.alliesAlive / n;
+            }
         }
         return out;
     }

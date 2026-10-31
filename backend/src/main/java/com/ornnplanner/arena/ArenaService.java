@@ -142,7 +142,26 @@ public class ArenaService {
 
     /** A fight of prepared champions without frames (numbers only): the effectiveness tests reuse their inputs. */
     public ArenaModel.Result runInputs(List<Arena.Input> inputs, double duration) {
-        return new Arena(catalog, map).withoutFrames().stopWhenDead(0).run(inputs, List.of(), duration);
+        return runInputs(inputs, List.of(), duration);
+    }
+
+    /** The same with orders of the timeline. */
+    public ArenaModel.Result runInputs(List<Arena.Input> inputs, List<ArenaModel.Action> actions, double duration) {
+        return new Arena(catalog, map).withoutFrames().stopWhenDead(0).run(inputs, actions, duration);
+    }
+
+    /**
+     * What fighter 0 decides over the whole fight, as orders of the timeline: it holds at 1 health, so the orders also
+     * cover a fight that lasts longer than this one would.
+     */
+    public List<ArenaModel.Action> recordOrders(List<Arena.Input> inputs, double duration) {
+        List<ArenaModel.Action> out = new ArrayList<>();
+        for (ArenaModel.Action a : new Arena(catalog, map).withoutFrames().recordOrders().holdAtOne(0).run(inputs, List.of(), duration).policyOrders) {
+            if (a.fighter == 0) {
+                out.add(a);
+            }
+        }
+        return out;
     }
 
     /** The same fight without frames (numbers only). */
