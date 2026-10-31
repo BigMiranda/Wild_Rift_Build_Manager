@@ -666,5 +666,8 @@ public final class ArenaModel {
         /** Combos run, with their steps and how each ended. */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public List<ComboReport> combos = new ArrayList<>();
+        /** What the automatic brain picked for each slot that has it, and why. */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public List<AutoBrain.Choice> brainChoices = new ArrayList<>();
     }
 }

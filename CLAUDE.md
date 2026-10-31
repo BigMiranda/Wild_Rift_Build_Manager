@@ -39,6 +39,8 @@ Opt-in tests, gated by system properties (skipped by default):
 - `-Dplanner.builds.copy=data/ornn-planner.db` (+ `-Dplanner.builds.patch=7_3d`, `-Dplanner.builds.out=…`) —
   `SavedBuildsReportTest`: runs the planner on every build of a copy of the database and writes purchases and stats,
   to diff two patches or rule changes.
+- `-Dauto.report=data/ornn-planner.db` (+ `-Dauto.scenario=2 -Dauto.fighter=0 -Dauto.classGenerations=15`) — `AutoTrainReportTest`: on a
+  copy, the automatic brain's choice in a saved scenario, a "Treinar automaticamente" until the clean victory, and the class AIs.
 - `-Darena.golden.write=true` — **re-records** the golden files in `src/test/resources/arena/`
   (`ArenaRegressionTest`: SHA-256 fingerprints of full fight results for ~35 scenarios; `ArenaPolicyMigrationTest`:
   `golden-ai-v2.txt`). Only re-record when a behavior change is intended, and say so; a golden mismatch otherwise
@@ -73,6 +75,14 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   `immortal`), fights stop when the build dies (`Arena.stopWhenDead`), cached and run in parallel. Presets in
   `efetividade_<patch>.yml`; the user's scenarios and report settings in table `effect_test`. Item variants (only flat
   stats, same gold in pure stats) are synthetic items passed through `Slot.replaceItems` → `FighterBuilder`.
+  Fights use `tactical_stand` (`ai/StandPolicy`: no running away). The index is the reference's net damage rate over the build's, in %
+  of max health per second, capped; `durability` is what per-item readings compare. Reading modes (`EffectModel.READ_MODES`): the
+  fixed behavior records the build's decisions (`Arena.recordOrders`, `holdAtOne`) and replays them in both fights.
+- `arena/AutoBrain` (+ `AiResultRepository`, table `ai_result`) — the `auto` brain: picks a saved AI from the history, in the order and
+  by the criteria of `ia_automatica_<patch>.yml`, at the end of `ArenaService.prepare`. `class:<Class>` in `arena_policy.champion` is an
+  AI of a class (`ArenaTrainingService.startClass`); `startAuto` is "Treinar automaticamente".
+- `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
+  build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.
 - `arena/QuickCompareService` (`api/QuickCompareController`) — the planner's quick item comparison: no fight, one
   timeline per candidate plus the cached zero-second `SeenBy` run. `PlannerService.withItem` is the one swap of an
   item in a slot, shared with the effectiveness candidates.
@@ -89,7 +99,7 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
 **Data lives in YAML seeds, not code** (`backend/src/main/resources/seed/`, patch-suffixed; current patch **7.3d**,
 suffix `_7_3d`): `loja_7_3d.yml` (171 shop items; header documents each field), `precos_status.yml`,
 `efeitos_itens_7_3d.yml`, `campeoes_7_3d.yml`, `runas_7_3d.yml` (+ `runas/` icons), `feiticos_7_3d.yml`,
-`combate_7_3d.yml`, `kits_7_3d.yml`, `efetividade_7_3d.yml`, `regras_loja.yml`. `application.properties` and the `@Value` defaults point at
+`combate_7_3d.yml`, `kits_7_3d.yml`, `efetividade_7_3d.yml`, `classificacao_7_3d.yml`, `ia_automatica_7_3d.yml`, `regras_loja.yml`. `application.properties` and the `@Value` defaults point at
 the current patch; older `_7_3` and `_7_3b` files stay as history. New game data or modeled effects usually mean editing these
 files plus a test, not Java. `LojaCatalogTest` enforces catalog consistency (components exist and cost less, every
 stat has a price).

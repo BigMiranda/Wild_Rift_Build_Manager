@@ -62,6 +62,7 @@ public class ArenaService {
     private final JdbcTemplate jdbc;
     private final PolicyRepository policies;
     private final ComboRepository combos;
+    private final AutoBrain auto;
     private final Map<String, Object> kits = new LinkedHashMap<>();
     private final Map<String, Object> map = new LinkedHashMap<>();
     private static final ObjectMapper JSON = new ObjectMapper()
@@ -69,7 +70,7 @@ public class ArenaService {
 
     @SuppressWarnings("unchecked")
     public ArenaService(FighterBuilder combat, CombatCatalog catalog, BuildRepository builds, RuneCatalog runes,
-                        JdbcTemplate jdbc, PolicyRepository policies, ComboRepository combos,
+                        JdbcTemplate jdbc, PolicyRepository policies, ComboRepository combos, AutoBrain auto,
                         @Value("${planner.seed.kits:classpath:seed/kits_7_3d.yml}") Resource kitsFile) {
         this.combat = combat;
         this.catalog = catalog;
@@ -78,6 +79,7 @@ public class ArenaService {
         this.jdbc = jdbc;
         this.policies = policies;
         this.combos = combos;
+        this.auto = auto;
         try (InputStream in = kitsFile.getInputStream()) {
             Map<String, Object> root = new Yaml().load(in);
             kits.putAll((Map<String, Object>) root.get("campeoes"));
@@ -96,8 +98,31 @@ public class ArenaService {
     }
 
     public ArenaModel.Result run(Scenario sc) {
+        return run(sc, "tela");
+    }
+
+    /** The fight, written to the history of the AIs that played it. */
+    public ArenaModel.Result run(Scenario sc, String source) {
         List<Arena.Input> inputs = prepare(sc);
-        return new Arena(catalog, map).withSafeZone(sc.safeZone).run(inputs, sc.actions == null ? List.of() : sc.actions, duration(sc));
+        ArenaModel.Result r = new Arena(catalog, map).withSafeZone(sc.safeZone).run(inputs, sc.actions == null ? List.of() : sc.actions, duration(sc));
+        for (Arena.Input in : inputs) {
+            if (in.autoChoice != null) {
+                r.brainChoices.add(in.autoChoice);
+            }
+        }
+        auto.record(sc, inputs, r, source);
+        return r;
+    }
+
+    /** What the automatic brain would pick for each slot that has it, without running the fight. */
+    public List<AutoBrain.Choice> autoChoices(Scenario sc) {
+        List<AutoBrain.Choice> out = new ArrayList<>();
+        for (Arena.Input in : prepare(sc)) {
+            if (in.autoChoice != null) {
+                out.add(in.autoChoice);
+            }
+        }
+        return out;
     }
 
     /**
@@ -347,6 +372,14 @@ public class ArenaService {
             }
             inputs.add(in);
         }
+        // the automatic brain looks at the whole scenario: every fighter must be ready
+        for (int k = 0; k < inputs.size(); k++) {
+            if (AutoBrain.AUTO.equals(sc.fighters.get(k).brain) && sc.fighters.get(k).dummy == null) {
+                Arena.Input in = inputs.get(k);
+                in.autoChoice = auto.choose(sc, inputs, k);
+                in.policy = policy(in.autoChoice.brain, in);
+            }
+        }
         return inputs;
     }
 
@@ -373,6 +406,9 @@ public class ArenaService {
         if (STAND.equals(brain)) {
             return new com.ornnplanner.arena.ai.StandPolicy(in.priority);
         }
+        if (AutoBrain.AUTO.equals(brain)) {
+            return new TacticalPolicy(in.priority);   // replaced by the automatic's choice at the end of prepare
+        }
         if (brain.startsWith("ai:")) {
             long id;
             try {
@@ -386,7 +422,7 @@ public class ArenaService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A IA v" + r.version + " de " + r.champion
                         + " foi treinada para outra versão da arena; treine de novo.");
             }
-            if (!r.champion.equalsIgnoreCase(in.f.champion)) {
+            if (!r.champion.equalsIgnoreCase(in.f.champion) && !r.champion.startsWith(AutoBrain.CLASS_PREFIX)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A IA v" + r.version + " é de " + r.champion
                         + ", não de " + in.f.champion + ".");
             }

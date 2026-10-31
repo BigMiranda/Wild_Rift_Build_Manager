@@ -30,7 +30,7 @@ const FOCUS = ['nearest', 'lowest_hp', 'lowest_effective_hp', 'most_damage', 'or
 // Scenarios saved before team plans have none (teams: null): each champion picks its own target, as before.
 const newPlan = () => ({ focus: 'nearest', order: [], shared: true, switchBelow: 0.25, chainCc: false });
 const emptyScenario = () => ({ id: null, name: t('arena.newName'), note: '', duration: 40, fighters: [newSlot(0), newSlot(1)], actions: [], teams: [newPlan(), newPlan()] });
-const newSlot = (team) => ({ team, buildId: null, minute: null, x: null, y: null, target: null, followTeam: true, autoAbilities: true, priority: ['R', '3', '1', '2'], brain: 'script', activations: {} });
+const newSlot = (team) => ({ team, buildId: null, minute: null, x: null, y: null, target: null, followTeam: true, autoAbilities: true, priority: ['R', '3', '1', '2'], brain: 'auto', activations: {} });
 
 function loadDraft() {
   try {
@@ -337,6 +337,7 @@ export default function Arena() {
                 <FighterSlot key={i} index={i} slot={f} builds={builds} names={names} fighters={sc.fighters} planned={sc.teams != null}
                   stats={result?.fighters?.[i]} onChange={(p) => setFighter(i, p)} onRemove={() => removeFighter(i)}
                   policies={policies} brainOrders={(result?.policyOrders ?? []).filter((o) => o.fighter === i).length}
+                  choice={result?.brainChoices?.find((c) => c.fighter === i)}
                   onToTimeline={() => toTimeline(i)} />
               )))}
               <button className="link" onClick={() => addFighter(team)}>{t('arena.addFighter')}</button>
@@ -345,6 +346,8 @@ export default function Arena() {
         </div>
         {error && <p className="error">{error}</p>}
       </section>
+
+      <AutoTrain sc={sc} result={result} names={names} onDone={() => { loadPolicies(); setSc((s) => ({ ...s })); }} />
 
       <Profiler id="arena-stage" onRender={onStageRender}>
       <section className="panel arena-stage">
@@ -394,6 +397,156 @@ export default function Arena() {
       )}
       {result && <FightReport result={result} names={names} time={time} onItemValues={itemValues} />}
     </div>
+  );
+}
+
+/** An AI of a class: trained with every saved build of the class's champions that have an ability sheet. */
+function ClassTrain({ sc, fighter, common, disabled, onJob, onError }) {
+  const [profiles, setProfiles] = useState([]);
+  const [builds, setBuilds] = useState([]);
+  const [kits, setKits] = useState({});
+  const [cls, setCls] = useState('Tanque');
+  useEffect(() => {
+    Promise.all([api.get('/api/champions/profiles'), api.get('/api/builds'), api.get('/api/arena/kits')]).then(([p, b, k]) => {
+      setProfiles(p);
+      setBuilds(b);
+      setKits(k.campeoes ?? {});
+    }).catch(() => {});
+  }, []);
+  const withSheet = profiles.filter((p) => kits[p.name]);
+  const classes = [...new Set(withSheet.flatMap((p) => p.mainClasses))].sort();
+  const champions = withSheet.filter((p) => p.mainClasses.includes(cls));
+  const chosen = builds.filter((b) => champions.some((p) => p.code === b.unitCode));
+  const start = async () => {
+    try {
+      onJob(await api.post('/api/arena/train/class', { ...common, fighter, className: cls, builds: chosen.map((b) => b.id) }));
+    } catch (e) {
+      onError(e.message);
+    }
+  };
+  if (classes.length === 0) return null;
+  return (
+    <div className="row" title={t('arena.classTrain.title')}>
+      <label className="inline">{t('arena.classTrain.label')}
+        <select value={cls} onChange={(e) => setCls(e.target.value)} disabled={disabled}>
+          {classes.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </label>
+      <small className="muted">{t('arena.classTrain.builds', { n: chosen.length, list: champions.map((p) => p.name).join(', ') })}</small>
+      <button onClick={start} disabled={disabled || chosen.length === 0}>{t('arena.classTrain.run')}</button>
+    </div>
+  );
+}
+
+const ALWAYS_KEY = `${STORE}-auto-train`;
+const PENDING = ['queued', 'running', 'stopping'];
+
+/**
+ * "Treinar automaticamente": when the automatic brain played and its side lost, a training in the background from the
+ * champion's or its class's best AI, until a clean victory or the end of its budget. One training at a time (the others
+ * wait in line); "sempre treinar sozinho" asks by itself, once per scenario, and is remembered in the browser.
+ */
+function AutoTrain({ sc, result, names, onDone }) {
+  const [always, setAlways] = useState(() => {
+    try {
+      return localStorage.getItem(ALWAYS_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [line, setLine] = useState([]);
+  const [note, setNote] = useState(null);
+  const [error, setError] = useState(null);
+  const asked = useRef(new Set());
+  const mine = useRef(new Set());
+  const lost = (result?.brainChoices ?? []).filter((c) => sc.fighters[c.fighter] && result.winner !== sc.fighters[c.fighter].team);
+
+  const refresh = useCallback(async () => {
+    const all = await api.get('/api/arena/train');
+    setLine(all.filter((j) => PENDING.includes(j.status)));
+    for (const j of all) {
+      if (mine.current.has(j.id) && !PENDING.includes(j.status)) {
+        mine.current.delete(j.id);
+        const text = j.status === 'done'
+          ? t(j.victory ? 'arena.autoTrain.won' : 'arena.autoTrain.notWon', { champion: j.champion, v: j.policy?.version ?? '?', s: n0((j.finishedAt - j.startedAt) / 1000) })
+          : t('arena.autoTrain.stopped', { champion: j.champion, msg: j.message ?? j.status });
+        setNote(text);
+        try {
+          if (window.Notification?.permission === 'granted') new Notification(t('arena.autoTrain.title'), { body: text });
+        } catch {
+          /* no notifications: the line on the page says it */
+        }
+        onDone();
+      }
+    }
+  }, [onDone]);
+  useEffect(() => { refresh().catch(() => {}); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (line.length === 0 && mine.current.size === 0) return undefined;
+    const timer = setInterval(() => refresh().catch((e) => setError(e.message)), 1500);
+    return () => clearInterval(timer);
+  }, [line.length, refresh]);
+
+  const train = useCallback(async (fighter) => {
+    setError(null);
+    asked.current.add(`${JSON.stringify(sc.fighters.map((f) => [f.buildId, f.minute, f.x, f.y]))}:${fighter}`);
+    try {
+      window.Notification?.requestPermission?.();
+      const job = await api.post('/api/arena/train/auto', { scenario: sc, fighter });
+      mine.current.add(job.id);
+      await refresh();
+    } catch (e) {
+      setError(e.message);
+    }
+  }, [sc, refresh]);
+
+  useEffect(() => {
+    if (!always) return;
+    for (const c of lost) {
+      if (!asked.current.has(`${JSON.stringify(sc.fighters.map((f) => [f.buildId, f.minute, f.x, f.y]))}:${c.fighter}`)) train(c.fighter);
+    }
+  }, [always, result]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const remember = (on) => {
+    setAlways(on);
+    try {
+      localStorage.setItem(ALWAYS_KEY, on ? '1' : '0');
+    } catch {
+      /* session only */
+    }
+  };
+  const cancel = async (j) => {
+    await api.del(j.kind === 'chain' ? `/api/arena/train/chain/${j.id}` : `/api/arena/train/${j.id}`);
+    await refresh();
+  };
+  if (lost.length === 0 && line.length === 0 && !note && !always) return null;
+  return (
+    <section className="panel arena-auto-train">
+      {lost.length > 0 && <p className="warn">{t('arena.autoTrain.lost')}</p>}
+      <div className="row">
+        {lost.map((c) => (
+          <button key={c.fighter} className="primary" onClick={() => train(c.fighter)} title={t('arena.autoTrain.buttonTitle')}>
+            {t('arena.autoTrain.button', { name: names[c.fighter] })}
+          </button>
+        ))}
+        <label className="check" title={t('arena.autoTrain.alwaysTitle')}>
+          <input type="checkbox" checked={always} onChange={(e) => remember(e.target.checked)} />{t('arena.autoTrain.always')}
+        </label>
+      </div>
+      {note && <p className="muted">{note}</p>}
+      {error && <p className="error">{error}</p>}
+      {line.length > 0 && (
+        <ul className="arena-queue">
+          {line.map((j) => (
+            <li key={j.id}>
+              <small>{t(`arena.autoTrain.${j.status === 'queued' ? 'queued' : 'running'}`, { name: j.champion ?? j.scenario ?? '' })}
+                {j.generations ? ` · ${j.generation}/${j.generations}` : ''}{j.startedFrom ? ` · ${t('arena.autoTrain.from', { from: j.startedFrom })}` : ''}</small>
+              {' '}<button className="link" onClick={() => cancel(j)}>{t('arena.train.cancel')}</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -459,7 +612,7 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
         if (!RUNNING.includes(j.status)) {
           onTrained();
           // stopped by a victory: the slot takes the winning version and the screen runs the fight again
-          if (j.status === 'done' && j.victory && j.policy) onUse(j.fighter, j.policy.id);
+          if (j.status === 'done' && j.victory && j.policy && !j.champion?.startsWith('class:')) onUse(j.fighter, j.policy.id);
         }
       } catch (e) {
         setError(e.message);
@@ -653,7 +806,7 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
       <div className="row">
         <label className="inline">{t('arena.train.stopWhen')}
           <select value={stopWhen} disabled={busy} onChange={(e) => setStopWhen(e.target.value)}>
-            {['generations', 'plateau', 'victory'].map((w) => <option key={w} value={w}>{t(`arena.train.stopWhen.${w}`)}</option>)}
+            {['generations', 'plateau', 'victory', 'clean_victory'].map((w) => <option key={w} value={w}>{t(`arena.train.stopWhen.${w}`)}</option>)}
           </select>
         </label>
         {stopWhen === 'victory' && (
@@ -684,7 +837,7 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
         {mode === 'chain' && !chainRunning && <button className="primary" onClick={startChain} disabled={busy}>{t('arena.train.chainRun')}</button>}
       </div>
       <p className="muted"><small>
-        {stopWhen === 'victory' ? t(mode === 'chain' ? 'arena.train.victoryHelpChain' : 'arena.train.victoryHelp')
+        {stopWhen === 'clean_victory' ? t('arena.train.cleanHelp') : stopWhen === 'victory' ? t(mode === 'chain' ? 'arena.train.victoryHelpChain' : 'arena.train.victoryHelp')
           : stopWhen === 'generations' ? t('arena.train.generationsHelp')
             : plateau.pct > 0 ? t('arena.train.plateauHelp', { p: plateau.pct, w: plateau.window, min: plateau.min }) : t('arena.train.plateauOff')}
       </small></p>
@@ -716,6 +869,7 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
         </div>
       )}
       {levels && <LevelsTable job={levels} />}
+      {mode === 'single' && <ClassTrain sc={sc} fighter={fighter} common={common} disabled={busy} onJob={setJob} onError={setError} />}
       {mode === 'single' && rules && <GuidelinesEditor rules={rules} champion={champion}
         onSaved={setRules} onError={setError} />}
       {mode === 'chain' && chain && (
@@ -1099,9 +1253,16 @@ function TeamPlanEditor({ team, plan, fighters, names, onChange, onEnable }) {
   );
 }
 
-function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onChange, onRemove, policies, brainOrders, onToTimeline }) {
+/** Why the automatic brain picked what it did, in words. */
+function choiceText(c, name) {
+  if (c.kind === 'tatico') return t('arena.autoBrain.tatico', { name });
+  const how = c.time == null ? '' : t(c.clean && !c.died ? 'arena.autoBrain.clean' : !c.died ? 'arena.autoBrain.alive' : 'arena.autoBrain.won', { s: n1(c.time) });
+  return t(`arena.autoBrain.${c.kind}`, { v: c.version, owner: c.owner, how });
+}
+
+function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onChange, onRemove, policies, brainOrders, onToTimeline, choice }) {
   const enemies = fighters.map((f, i) => ({ f, i })).filter(({ f }) => f.team !== slot.team);
-  const mine = policies.filter((p) => champKey(p.champion) === champKey(names[index]));
+  const mine = policies.filter((p) => champKey(p.champion) === champKey(names[index]) || p.id === choice?.policyId);
   const brain = slot.brain ?? 'script';
   if (slot.dummy) return <DummySlot index={index} slot={slot} onChange={onChange} onRemove={onRemove} />;
   const build = builds.find((b) => b.id === slot.buildId);
@@ -1142,6 +1303,7 @@ function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onC
         </label>
         <label className="inline" title={t('arena.brainTitle')}>{t('arena.brain')}
           <select value={brain} onChange={(e) => onChange({ brain: e.target.value })}>
+            <option value="auto">{t('arena.brain.auto')}</option>
             <option value="script">{t('arena.brain.script')}</option>
             <option value="tactical">{t('arena.brain.tactical')}</option>
             {brain === 'tactical_stand' && <option value="tactical_stand">{t('arena.brain.stand')}</option>}
@@ -1153,6 +1315,12 @@ function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onC
           <button className="link" title={t('arena.toTimelineTitle')} onClick={onToTimeline}>{t('arena.toTimeline', { n: brainOrders })}</button>
         )}
       </div>
+      {brain === 'auto' && choice && (
+        <div className="row">
+          <small className="muted">{choiceText(choice, names[index])}</small>
+          <button className="link" title={t('arena.autoBrain.fixTitle')} onClick={() => onChange({ brain: choice.brain })}>{t('arena.autoBrain.fix')}</button>
+        </div>
+      )}
       <div className="row" title={t('arena.priorityTitle')}>
         <small className="muted">{t('arena.priority')}</small>
         <DragList className="inline" items={slot.priority?.length ? slot.priority : ['R', '3', '1', '2']}

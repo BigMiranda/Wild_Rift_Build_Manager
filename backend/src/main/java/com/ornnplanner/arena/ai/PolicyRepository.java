@@ -215,6 +215,11 @@ public class PolicyRepository {
         this.gamePatch = gamePatch;
     }
 
+    /** Patch of the game data now (null in tests that build the repository by hand). */
+    public String gamePatch() {
+        return gamePatch;
+    }
+
     /** Saved policies, newest version first (a champion's only when given). */
     public List<Record> list(String champion) {
         return champion == null || champion.isBlank()

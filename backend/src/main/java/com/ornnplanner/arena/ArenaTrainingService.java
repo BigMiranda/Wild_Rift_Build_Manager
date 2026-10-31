@@ -46,9 +46,11 @@ public class ArenaTrainingService {
         public long seed = 1;
         /**
          * Stop rule: generations (all of them, the best by selection) | plateau | victory (when its side wins the
-         * scenario's own fight, as the screen shows it).
+         * scenario's own fight, as the screen shows it) | clean_victory (and the champion ends alive, every enemy dead).
          */
         public String stopWhen = "generations";
+        /** Starts from the champion's best AI, else its class's, instead of zero weights. */
+        public boolean warmStart;
         /** victory: the champion must also end the fight alive. */
         public boolean aliveToo;
         /** Plateau: least gain in points over the window, after a minimum of generations (0 = off). */
@@ -59,6 +61,21 @@ public class ArenaTrainingService {
         public String level = ArenaTraining.LEVEL_ALONE;
         /** Share of the training pool that starts from a drill. */
         public double drills = ArenaTraining.DRILLS;
+    }
+
+    /** An AI of a class: trained with several champions of the class, on the same scenario's shape. */
+    public static class ClassRequest {
+        /** The scenario it fights: its slot {@link #fighter} takes each build of {@link #builds} in turn. */
+        public Scenario scenario;
+        public int fighter;
+        /** Tanque, Lutador... */
+        public String className;
+        public List<Long> builds = new ArrayList<>();
+        public String objective = "win_fast";
+        public int generations = 30;
+        public int population = 32;
+        public int episodesPerGeneration = 8;
+        public long seed = 1;
     }
 
     /** "Comparar níveis": the same training (seed, budget) at each level, and the numbers of each on validation. */
@@ -79,6 +96,10 @@ public class ArenaTrainingService {
     public static class Job {
         public final String kind = "single";
         public String id;
+        /** Asked for by "Treinar automaticamente". */
+        public boolean auto;
+        /** The version it started from, in words (null = zero weights). */
+        public volatile String startedFrom;
         /** queued | running | done | failed | cancelled */
         public volatile String status = "queued";
         public String champion;
@@ -108,6 +129,7 @@ public class ArenaTrainingService {
     private final ArenaService arena;
     private final PolicyRepository policies;
     private final GuidelineRepository guidelines;
+    private final AutoBrain auto;
     private final Map<String, LevelsJob> levelJobs = new ConcurrentHashMap<>();
     private final ArenaTraining training;
     private final ArenaChain chains;
@@ -120,7 +142,9 @@ public class ArenaTrainingService {
         return t;
     });
 
-    public ArenaTrainingService(ArenaService arena, PolicyRepository policies, CombatCatalog catalog, GuidelineRepository guidelines) {
+    public ArenaTrainingService(ArenaService arena, PolicyRepository policies, CombatCatalog catalog, GuidelineRepository guidelines,
+                                AutoBrain auto) {
+        this.auto = auto;
         this.arena = arena;
         this.policies = policies;
         this.guidelines = guidelines;
@@ -161,6 +185,77 @@ public class ArenaTrainingService {
                 run(job, req, inputs);
             } catch (Throwable e) {
                 log.warn("Arena training {} failed", job.id, e);
+                job.status = "failed";
+                job.message = "falhou: " + e.getMessage();
+                job.finishedAt = System.currentTimeMillis();
+            }
+        });
+        return job;
+    }
+
+    /** "Treinar automaticamente": the default budget, from the champion's or its class's best AI, until a clean victory. */
+    public Job startAuto(Scenario sc, int fighter) {
+        TrainRequest req = new TrainRequest();
+        req.scenario = sc;
+        req.fighter = fighter;
+        Map<String, Object> b = auto.budget();
+        req.objective = String.valueOf(b.get("objetivo"));
+        req.generations = ((Number) b.get("geracoes")).intValue();
+        req.population = ((Number) b.get("populacao")).intValue();
+        req.episodesPerGeneration = ((Number) b.get("episodios")).intValue();
+        req.stopWhen = "clean_victory";
+        req.warmStart = true;
+        Job job = start(req);
+        job.auto = true;
+        return job;
+    }
+
+    /** Trains an AI of a class: the training's episodes play the builds of its champions in turn. */
+    public Job startClass(ClassRequest req) {
+        Scenario sc = req.scenario;
+        if (sc == null || sc.fighters == null || req.fighter < 0 || req.fighter >= sc.fighters.size() || req.builds.isEmpty()
+                || req.className == null || req.className.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha a classe, as builds e o lugar delas no cenário.");
+        }
+        List<List<Arena.Input>> variants = new ArrayList<>();
+        for (Long build : req.builds) {
+            Scenario c = new ObjectMapper().convertValue(sc, Scenario.class);
+            c.fighters.get(req.fighter).buildId = build;
+            variants.add(arena.prepare(c));
+        }
+        String key = AutoBrain.CLASS_PREFIX + req.className;
+        Job job = new Job();
+        job.id = String.valueOf(ids.incrementAndGet());
+        job.champion = key;
+        job.fighter = req.fighter;
+        job.objective = objective(req.objective);
+        job.scenario = sc.name;
+        job.generations = generations(req.generations);
+        job.startedAt = System.currentTimeMillis();
+        job.message = "na fila";
+        jobs.put(job.id, job);
+        runner.submit(() -> {
+            try {
+                if (job.cancel) {
+                    return;
+                }
+                job.status = "running";
+                ArenaTraining.StageSpec st = new ArenaTraining.StageSpec();
+                st.variants = variants;
+                st.classKey = key;
+                st.actions = sc.actions == null ? List.of() : sc.actions;
+                st.duration = ArenaService.duration(sc);
+                st.me = req.fighter;
+                st.objective = job.objective;
+                st.scenario = sc.name;
+                st.generations = job.generations;
+                st.population = Math.max(4, Math.min(128, req.population));
+                st.episodesPerGeneration = Math.max(1, Math.min(ArenaTraining.POOL, req.episodesPerGeneration));
+                st.seed = req.seed;
+                st.previous = policies.best(key, job.objective).orElse(null);
+                finish(job, training.trainStage(st, listener(job)));
+            } catch (Throwable e) {
+                log.warn("Arena class training {} failed", job.id, e);
                 job.status = "failed";
                 job.message = "falhou: " + e.getMessage();
                 job.finishedAt = System.currentTimeMillis();
@@ -220,8 +315,35 @@ public class ArenaTrainingService {
         st.drills = Math.max(0, Math.min(1, req.drills));
         st.stopAtScenarioWin = victory(req.stopWhen);
         st.aliveToo = req.aliveToo;
+        st.cleanWin = "clean_victory".equals(req.stopWhen);
         st.plateau = plateau(req.stopWhen, req.plateauPct, req.plateauWindow, req.minGenerations);
-        ArenaTraining.StageResult r = training.trainStage(st, new ArenaTraining.Listener() {
+        PolicyRepository.Record from = req.warmStart ? auto.warmStart(job.champion) : null;
+        if (from != null && ArenaChain.fits(from)) {
+            st.start = from.weights.network();
+            st.parentId = from.id;
+            job.startedFrom = "IA v" + from.version + (from.champion.startsWith(AutoBrain.CLASS_PREFIX)
+                    ? " da classe " + from.champion.substring(AutoBrain.CLASS_PREFIX.length()) : " de " + from.champion);
+        } else {
+            from = null;
+        }
+        ArenaTraining.StageResult r = training.trainStage(st, listener(job));
+        if (r.kept) {
+            job.policy = from.withoutWeights();
+            job.victory = true;
+            job.status = "done";
+            job.message = "já vence o cenário: mantida a " + job.startedFrom;
+            job.finishedAt = System.currentTimeMillis();
+            remember(sc, req.fighter, from.id);
+            return;
+        }
+        finish(job, r);
+        if (r.policy != null) {
+            remember(sc, req.fighter, r.policy.id);
+        }
+    }
+
+    private ArenaTraining.Listener listener(Job job) {
+        return new ArenaTraining.Listener() {
             @Override
             public void message(String text) {
                 job.message = text;
@@ -242,7 +364,24 @@ public class ArenaTrainingService {
             public boolean cancelled() {
                 return job.cancel;
             }
-        });
+        };
+    }
+
+    /** The version trained, in the scenario's own fight: it goes to the history, where the automatic brain finds it. */
+    private void remember(Scenario sc, int fighter, long policyId) {
+        Slot slot = sc.fighters.get(fighter);
+        String brain = slot.brain;
+        slot.brain = "ai:" + policyId;
+        try {
+            arena.run(sc, "treino");
+        } catch (RuntimeException e) {
+            log.warn("Trained version {} not written to the history: {}", policyId, e.getMessage());
+        } finally {
+            slot.brain = brain;
+        }
+    }
+
+    private void finish(Job job, ArenaTraining.StageResult r) {
         if (r.cancelled) {
             job.status = "cancelled";
             job.message = "cancelado na geração " + job.generation;
@@ -309,6 +448,7 @@ public class ArenaTrainingService {
         spec.maxRounds = Math.max(1, Math.min(20, req.maxRounds));
         spec.stopAtScenarioWin = victory(req.stopWhen);
         spec.aliveToo = req.aliveToo;
+        spec.cleanWin = "clean_victory".equals(req.stopWhen);
         spec.plateau = plateau(req.stopWhen, req.plateauPct, req.plateauWindow, req.minGenerations);
         ArenaChain.Job job = new ArenaChain.Job();
         job.id = "c" + ids.incrementAndGet();
@@ -321,6 +461,11 @@ public class ArenaTrainingService {
             try {
                 spec.variants = variants(sc, base);
                 chains.run(job, spec);
+                for (ArenaChain.Stage s : job.stages) {
+                    if (s.policy != null && ("accepted".equals(s.status) || "won".equals(s.status))) {
+                        remember(sc, s.slot, s.policy.id);
+                    }
+                }
             } catch (Throwable e) {
                 log.warn("Arena chain training {} failed", job.id, e);
                 job.status = "failed";
@@ -488,14 +633,14 @@ public class ArenaTrainingService {
         return Math.max(1, Math.min(200, n));
     }
 
-    static final List<String> STOP_RULES = List.of("generations", "plateau", "victory");
+    static final List<String> STOP_RULES = List.of("generations", "plateau", "victory", "clean_victory");
 
-    /** Whether the stop rule is a victory in the scenario's own fight (generations | plateau | victory). */
+    /** Whether the stop rule is a victory in the scenario's own fight (a clean one included). */
     private static boolean victory(String stopWhen) {
         if (stopWhen != null && !STOP_RULES.contains(stopWhen)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Critério de parada desconhecido: " + stopWhen + ".");
         }
-        return "victory".equals(stopWhen);
+        return "victory".equals(stopWhen) || "clean_victory".equals(stopWhen);
     }
 
     /** The plateau rule, only when the stop rule is the plateau (otherwise off: all the generations run). */

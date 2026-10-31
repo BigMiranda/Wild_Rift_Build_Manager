@@ -21,6 +21,7 @@
 -- Version 20: arena_policy.game_patch (the game data patch a version was trained on).
 -- Version 22: arena_policy.arena_rules (the fight rules a version was trained with).
 -- Version 23: effectiveness tests and report settings saved by the user (effect_test).
+-- Version 24: what each AI did in each fight (ai_result), read by the automatic brain.
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -239,6 +240,27 @@ CREATE TABLE IF NOT EXISTS effect_test (
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS ai_result (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    policy_id     INTEGER,                        -- the AI played; NULL = the tactical rules (the automatic fell back to them)
+    champion      TEXT NOT NULL,
+    scenario_key  TEXT NOT NULL,                  -- fingerprint of the fight from this champion's side
+    enemies       TEXT NOT NULL,                  -- JSON: enemy champions, sorted
+    enemy_classes TEXT NOT NULL,                  -- JSON: their classes, sorted
+    map           TEXT NOT NULL,
+    minute        REAL NOT NULL,
+    impression    TEXT NOT NULL,                  -- champions, builds and minutes, objectives, positions in bands
+    won           INTEGER NOT NULL,
+    clean         INTEGER NOT NULL,               -- every enemy died
+    died          INTEGER NOT NULL,
+    duration      REAL NOT NULL,
+    health        REAL NOT NULL,                  -- share of its health at the end
+    game_patch    TEXT,
+    source        TEXT NOT NULL,                  -- tela | treino
+    created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ai_result_champion ON ai_result (champion);
 
 CREATE TABLE IF NOT EXISTS arena_guideline (
     champion    TEXT PRIMARY KEY COLLATE NOCASE,

@@ -1,0 +1,15 @@
+# Cérebro "Automático" e treino automático (patch 7.3d).
+
+# O que faz uma IA ser melhor que outra, nesta ordem. Cada critério só desempata o anterior:
+#   vitoria_limpa_sem_morrer  venceu, o campeão terminou vivo e todos os adversários morreram
+#   vitoria_sem_morrer        venceu e o campeão terminou vivo
+#   vitoria                   o lado venceu
+#   mais_rapido               menos segundos de luta (entre duas derrotas, a que durou mais)
+#   mais_vida                 mais Vida (proporcional) no fim
+criterios: [vitoria_limpa_sem_morrer, vitoria_sem_morrer, vitoria, mais_rapido, mais_vida]
+
+# Cenários parecidos: os mesmos campeões ou as mesmas classes dos adversários, no mesmo mapa, com minutos próximos.
+parecido: {minutos: 3}
+
+# "Treinar automaticamente": o orçamento padrão de um pedido. Para na vitória limpa, ou no fim das gerações.
+orcamento: {geracoes: 60, populacao: 32, episodios: 8, objetivo: win_fast}

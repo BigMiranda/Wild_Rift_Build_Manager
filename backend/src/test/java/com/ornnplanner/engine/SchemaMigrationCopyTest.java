@@ -35,6 +35,7 @@ class SchemaMigrationCopyTest {
         int builds = jdbc.queryForObject("SELECT COUNT(*) FROM build", Integer.class);
         int combos = count(jdbc, "arena_combo");
         int dummies = count(jdbc, "arena_dummy");
+        int tests = count(jdbc, "effect_test");
         new SchemaManager(jdbc, ds).migrate();
         int after = jdbc.queryForObject("PRAGMA user_version", Integer.class);
         System.out.printf("schema %d -> %d; %d builds, %d policies%n", before, after, builds, policies);
@@ -43,7 +44,8 @@ class SchemaMigrationCopyTest {
         assertEquals(policies, (int) jdbc.queryForObject("SELECT COUNT(*) FROM arena_policy", Integer.class));
         assertEquals(combos, count(jdbc, "arena_combo"));
         assertEquals(dummies, count(jdbc, "arena_dummy"));
-        assertEquals(0, count(jdbc, "effect_test"), "v23: the effectiveness tests' table, empty");
+        assertEquals(tests, count(jdbc, "effect_test"));
+        assertEquals(0, count(jdbc, "ai_result"), "v24: the history of the AIs starts empty");
         // the saved policies still read, older layouts migrated on load
         PolicyRepository repo = new PolicyRepository(jdbc);
         for (PolicyRepository.Record r : repo.list(null)) {

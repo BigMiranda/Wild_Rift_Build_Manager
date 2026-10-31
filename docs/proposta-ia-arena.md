@@ -1262,3 +1262,7 @@ elemental do Ornn com 480 de comprimento, "fotos de luta") está em [rodada-5.md
 - os resultados com quadros ganharam campos descritivos (`uses`, `statTrack`, `toggles`, `sheetOn`, `sheetOff`), fora
   da impressão digital; sem quadros (treino e busca) nada disso é calculado;
 - boneco de pano com o comportamento "ataca" (`Dummy.attackDamage`, 1 golpe/s).
+
+## Rodada 7 (31/10/2026)
+
+Cérebro Automático, histórico `ai_result`, IAs de classe e "Treinar automaticamente": ver a Parte 6 de [rodada-7.md](rodada-7.md).

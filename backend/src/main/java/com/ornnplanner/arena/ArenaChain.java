@@ -131,6 +131,7 @@ public final class ArenaChain {
         public Plateau plateau = Plateau.off();
         public boolean stopAtScenarioWin;
         public boolean aliveToo;
+        public boolean cleanWin;
         public double accept = ArenaTraining.ACCEPT;
         public int pool = ArenaTraining.POOL;
         public int selection = ArenaTraining.SELECTION;
@@ -285,6 +286,7 @@ public final class ArenaChain {
         st.rewards = spec.rewards.get(key);
         st.stopAtScenarioWin = spec.stopAtScenarioWin;
         st.aliveToo = spec.aliveToo;
+        st.cleanWin = spec.cleanWin;
         st.accept = spec.accept;
         st.pool = spec.pool;
         st.selection = spec.selection;

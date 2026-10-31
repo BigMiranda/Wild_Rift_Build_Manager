@@ -347,3 +347,92 @@ planejador, comparar com outro arquétipo mostra um aviso.
 dos status e dos efeitos.
 
 Testes: 226 → 229 (10 opcionais pulados). Golden sem mudança. `npm run build` limpo.
+
+## Parte 6 — IA automática por padrão ✅
+
+### O que entrou
+
+- **Cérebro `auto`** (`arena/AutoBrain`): padrão dos lugares novos. Roda no fim de `ArenaService.prepare`, porque precisa de todos os lutadores
+  prontos. Ordem: a melhor IA que venceu este cenário; a melhor em cenários parecidos; a melhor geral do campeão; a melhor da classe; o Tático.
+- **"Melhor"** vem de `seed/ia_automatica_7_3d.yml`.
+- **Histórico** (`ai_result`, migração v24): uma linha por campeão com IA em cada luta, na tela e no treino, com a impressão do cenário, a chave
+  exata e o resultado. O `game_patch` marca os patches antigos, que só contam se não houver resultado do patch atual. Apagar uma IA apaga as linhas dela.
+- **Tela:** "Automático: usando IA v23 de Ornn (venceu este cenário sem morrer e com todos mortos em 19,4 s)", com "Fixar esta". O resultado da
+  luta traz `brainChoices`.
+- **Vitória limpa** (`stopWhen: clean_victory`): o lado vence, o campeão termina vivo e todos os adversários morrem.
+- **Treinar automaticamente** (`POST /api/arena/train/auto`): aparece quando o Automático joga e o lado não vence. Parte da melhor IA do campeão ou
+  da classe, para na vitória limpa ou nas 60 gerações, e avisa ao terminar. A opção "sempre treinar sozinho" fica no navegador e pede uma vez por cenário.
+- **Fila:** o executor já rodava um treino por vez. A tela agora lista os pedidos, com "Cancelar".
+- **IAs de classe** (`POST /api/arena/train/class`): guardadas como `class:Tanque` no lugar do campeão. Servem de partida quente e de reserva do
+  Automático. A tela ("IA da classe") usa as builds salvas dos campeões da classe que têm ficha.
+
+### Decisões
+
+- **Treino de classe é uma etapa, não a cadeia:** as variantes do treino (`StageSpec.variants`) já se alternam por episódio, então cada uma virou uma
+  build de um campeão da classe. A cadeia treinaria um campeão por vez, que não é o objetivo.
+- **Entre duas derrotas, "mais rápido" inverte:** quem durou mais é melhor. A primeira versão preferia quem morria antes; a prova mostrou isso.
+- **A mesma luta não grava duas vezes:** a tela roda a luta a cada edição, e uma repetição determinística não diz nada novo.
+- **O histórico começa vazio:** a migração não reconstrói o passado. Até a primeira luta com uma IA fixa ou com o Automático, a escolha é a "geral". Ao abrir e
+  rodar um cenário salvo, ele já registra a IA que está lá.
+- **O cérebro depende do histórico.** A luta segue determinística para um cérebro dado, mas o mesmo cenário pode mudar de cérebro depois de uma IA nova
+  vencer. O resultado diz qual jogou. O golden não usa `auto`.
+
+### Exemplos (cópia do banco)
+
+**Cenário 1, "Ornn de Coração de Aço vs Rumble full dano", com o Automático no Ornn:**
+
+| momento | escolha | resultado |
+|---|---|---|
+| antes | IA v115 de Ornn (a melhor até aqui: sem histórico, a mais nova aceita) | perde: Ornn morre aos 26,0 s, Rumble com 247 de Vida |
+| Treinar automaticamente | parte da v115; **vitória limpa na geração 17 de 60, em 12,3 s** | salva a IA v117 (não "aceita" pela regra dos 55%, mas vence o cenário) |
+| depois | **IA v117: venceu este cenário sem morrer e com todos mortos em 23,2 s** | Rumble morre aos 23,2 s, Ornn termina com 298 de Vida |
+
+**Cenário 2, "Darius ganha de Ornn":** com o Automático no Ornn, 60 gerações em 37,3 s **não** chegaram à vitória limpa contra a IA v22 do Darius. O Automático segue
+com a v115. No Darius, a v22 já vencia limpo: mantida em 1,4 s, sem treinar.
+
+**Tela:** com o Automático no Ornn no cenário 2, aparecem o aviso e o botão; o pedido mostrou "Treinando: Ornn · 52/60 · a partir da IA v23 de Ornn", com "Cancelar", e terminou
+em "Ornn: o orçamento acabou sem vitória limpa (IA v80, 64 s de treino)". A notificação do navegador não foi testada (precisa de permissão); a linha na tela apareceu.
+
+**IAs de classe (15 gerações):**
+
+| classe | builds | tempo | melhor que o Roteiro | melhor que o Tático | aceita |
+|---|---|---|---|---|---|
+| Tanque | Big Carry v1, Manopla, K'Sante* | 8,9 s | 100% | 69% | sim |
+| Lutador | Darius de CdC, Armor Shredder (Renekton) | 7,3 s | 100% | 100% | sim |
+| Atirador | Vayne* | 8,0 s | 100% | 75% | sim |
+
+\* Builds criadas só na cópia: o banco do usuário não tem build de K'Sante nem de Vayne.
+
+**Testes novos (`AutoBrainTest`):** escolhe a IA que venceu este cenário, e não a que venceu outro mais rápido; a ordem dos critérios, com "vitória limpa" antes de
+"vitória"; sem histórico, cai na IA do campeão, depois na da classe, depois no Tático; "parecido" pelo mesmo adversário; vitória limpa exige todos mortos e o campeão vivo;
+cérebro fixo não muda e não grava; o histórico guarda quem jogou e apagar a IA apaga as linhas. `AutoTrainReportTest` (opcional) gera os exemplos acima.
+
+Testes: 229 → 235, mais 1 opcional (11 pulados). Golden sem mudança. `npm run build` limpo.
+
+## Para o usuário
+
+**Precisa de decisão:**
+- **Índice em % da Vida (desvio do prompt, Parte 2).** O prompt pede a taxa em dano por segundo. Com ela, um item só de Vida não muda o índice, e o Soldado (17,9 s) passa da Big
+  Carry (20,1 s) contra o Atirador. Deixei `indice.taxa: por_vida`. Para seguir o prompt ao pé da letra, troque para `bruta` em `efetividade_7_3d.yml`.
+- **O teto de 1000 achata os fortes.** A Big Carry fica em "1000+" ou "sustenta" em 8 de 10 cenários, e as varreduras dela saem retas em 1000, sem ponto de quebra (o atacante de
+  referência não dá conta dela). Para separar builds desse nível, suba `indice.teto` ou fortaleça o atacante de referência.
+
+**Precisa de ação:**
+- **Reinicie o backend.** O servidor na porta 8080 está rodando o código antigo. A migração v24 e o que há de novo só valem depois disso. O seu banco não foi tocado nesta rodada: os treinos
+  foram numa cópia.
+- **Treinar as IAs de classe no seu banco:** em Arena > Treinar, "IA da classe". Hoje só Tanque (Ornn) e Lutador (Darius, Renekton) têm builds suas com ficha. Atirador pede uma build de Vayne, e
+  K'Sante enriqueceria Tanque. Kalista e Yasuo não têm ficha.
+
+**Vale conferir:**
+- **Esmagadores Acorrentados contra o Atirador alimentado dá −5%** em "fixo" e em "como joga": com o item, a build recebe 517/s; sem ele, 481/s. As decisões são iguais, então não é o cérebro. Não achei a causa.
+- **Rotas e classes** vêm das páginas `WR:` da wiki, não do jogo. Alcance de ataque é do LoL. Um print confirmaria os casos que importam.
+- **Limiares de arquétipo e pesos do perfil são meus**, ajustados nas suas builds, em `classificacao_7_3d.yml`.
+- **Selos da loja e Shyvana** (pendências da 6.a) seguem abertos.
+
+## Fechamento
+
+- **Testes:** 217 antes da rodada (10 opcionais pulados) → 235 depois (11 opcionais pulados), 0 falhas, contados com `target/surefire-reports/` limpa. `npm run build` limpo em todas as partes.
+- **Golden:** sem mudança em toda a rodada.
+- **Migração:** v24 (`ai_result`). Na cópia do banco: "schema 23 → 24; 36 builds, 178 policies", tudo preservado, com cenários, IAs e combos abrindo.
+- **Conferido na tela** (banco de desenvolvimento): relatório com "1.000+", "sustenta", "> 180 s", taxa líquida e cura cortada; leitura por item com "Leitura: Comportamento fixo"; seletor Automático
+  com o motivo e "Fixar esta"; "Treinar automaticamente" e a fila; arquétipo na lista de builds; classes no painel do campeão. O Ranking por arquétipo, a "IA da classe" na tela e a opção "Escala com o minuto" só foram compilados: não abri nem usei nenhum deles (a função da classe e a do cenário têm teste no backend).

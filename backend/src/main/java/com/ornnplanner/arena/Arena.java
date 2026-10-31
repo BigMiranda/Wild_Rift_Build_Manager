@@ -107,6 +107,8 @@ public class Arena {
         public Combo script;
         /** A ragdoll (the lab): how it moves and the effects it applies; null = a champion. */
         public ArenaModel.Dummy dummy;
+        /** What the automatic brain picked for it (null = a brain set by hand). */
+        public AutoBrain.Choice autoChoice;
         /** Share of its health it starts with (null = full): drills of training, the lab. */
         public Double startHealth;
         /** Drills: seconds left of cooldowns at the start (slot or active), its resource, a knock-up on it. */

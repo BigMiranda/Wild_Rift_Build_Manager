@@ -29,9 +29,11 @@ public class ArenaController {
     private final ArenaTrainingService training;
     private final PolicyRepository policies;
     private final com.ornnplanner.arena.LabService lab;
+    private final com.ornnplanner.arena.AiResultRepository results;
 
     public ArenaController(ArenaService arena, ArenaTrainingService training, PolicyRepository policies,
-                           com.ornnplanner.arena.LabService lab) {
+                           com.ornnplanner.arena.LabService lab, com.ornnplanner.arena.AiResultRepository results) {
+        this.results = results;
         this.arena = arena;
         this.training = training;
         this.policies = policies;
@@ -100,6 +102,24 @@ public class ArenaController {
     @PostMapping("/train")
     public ArenaTrainingService.Job train(@RequestBody ArenaTrainingService.TrainRequest request) {
         return training.start(request);
+    }
+
+    /** "Treinar automaticamente" a champion of the scenario: the default budget, until a clean victory. */
+    @PostMapping("/train/auto")
+    public ArenaTrainingService.Job trainAuto(@RequestBody ArenaTrainingService.TrainRequest request) {
+        return training.startAuto(request.scenario, request.fighter);
+    }
+
+    /** Trains the AI of a class, with several champions of it. */
+    @PostMapping("/train/class")
+    public ArenaTrainingService.Job trainClass(@RequestBody ArenaTrainingService.ClassRequest request) {
+        return training.startClass(request);
+    }
+
+    /** What the automatic brain would pick for each slot, and why, without running the fight. */
+    @PostMapping("/auto")
+    public List<com.ornnplanner.arena.AutoBrain.Choice> autoChoices(@RequestBody ArenaModel.Scenario scenario) {
+        return arena.autoChoices(scenario);
     }
 
     /** Single trainings and chains (each with its kind: single | chain). */
@@ -197,6 +217,7 @@ public class ArenaController {
         if (!policies.delete(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "IA " + id + " não encontrada.");
         }
+        results.forgetPolicy(id);
     }
 
     // ------------------------------------------------------------------ combo library

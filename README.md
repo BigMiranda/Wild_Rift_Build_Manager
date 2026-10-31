@@ -409,8 +409,9 @@ planejador (sem a corrida de 0 s): o ganho % é uma triagem, e os cartões dão 
 ## Efetividade por cenários de teste
 
 A aba **Efetividade** (e a aba "Efetividade" do momento, no planejador) mede a build em **cenários de teste**: lutas
-padrão na Arena, pelas mesmas regras de uma luta, em que a build (cérebro Tático, condicionais disparando de verdade)
-enfrenta de 1 a 5 **bonecos de pano atacantes**, com até 4 bonecos aliados. Os presets ficam em
+padrão na Arena, pelas mesmas regras de uma luta, em que a build (Tático sem fuga, condicionais disparando de verdade)
+enfrenta de 1 a 5 **bonecos de pano atacantes**, com até 4 bonecos aliados. A build nunca recua nem usa o Flash para escapar:
+a rota é reta, e fugir até a parede mediria a caminhada, não a resistência. Os presets ficam em
 [`seed/efetividade_7_3d.yml`](backend/src/main/resources/seed/efetividade_7_3d.yml) (o cabeçalho documenta cada campo);
 os cenários do usuário, na tabela `effect_test`.
 
@@ -419,13 +420,22 @@ os cenários do usuário, na tabela `effect_test`.
   **pulsos** de habilidade genéricos (base + razões, tipo, a cada N s: dano no inimigo, ou escudo / cura no aliado com
   menos Vida). A **função** (atirador, mago, lutador, assassino, tanque, suporte) decide só o padrão e a posição.
   Os atacantes **não morrem** (ficam em 1 de Vida: a Vida deles serve ao que lê a Vida do alvo); os aliados morrem. A
-  luta acaba quando a build morre.
-- **Medidas**: tempo até morrer; vida efetiva (o dano bruto recebido até morrer); dano mitigado %; escudo absorvido;
-  cura e a perdida para Feridas; dano devolvido aos atacantes; controle aplicado neles; com aliados, a % do dano
-  inimigo que a build absorveu e o tempo vivo deles. Se a build sobrevive à luta toda (180 s nos 1×1), o tempo até
-  morrer é estimado pela Vida perdida (no máximo 5× a duração) e aparece com *.
-- **Índice**: tempo até morrer ÷ o da referência × 100. Referência padrão: o mesmo campeão, no mesmo nível, sem itens,
-  com as runas da build (ou uma build escolhida, ou a média de uma pasta).
+  luta acaba quando a build morre. Os presets se curam como um campeão, por itens reais (Sedenta por Sangue, Hemodrenário,
+  Criafendas).
+- **O que muda com o minuto**: só a build. O atacante tem os status fixos do preset, e por isso builds em minutos
+  diferentes se comparam. O cenário pode ligar "Escala com o minuto" (fator = minuto ÷ 25, entre 0,2 e 1,4, sobre Vida, DdA,
+  PdH e base dos pulsos).
+- **Medidas**: tempo até morrer ("> duração" se não morre, sem estimativa); **taxa líquida** (dano depois das mitigações,
+  menos a cura e o escudo recebidos, por segundo); vida efetiva (o dano bruto recebido até morrer); dano mitigado %; escudo
+  absorvido; cura e a perdida para Feridas; dano devolvido aos atacantes, separado em reflexo, aura e queimadura, e golpes;
+  a cura dos atacantes que as Feridas cortaram; controle aplicado neles; com aliados, a % do dano inimigo que a build
+  absorveu e o tempo vivo deles.
+- **Índice**: taxa líquida da referência ÷ a da build × 100, em % da Vida máxima de cada um por segundo. Numa luta até a
+  morte é o tempo até morrer ÷ o da referência; e vale também quando ninguém morre. Teto de 1000, configurável (`indice`,
+  no YAML), marcado com "+". Quem se cura pelo menos o que apanha **"sustenta"**: mostra a sobra por segundo e entra como o
+  teto. Referência padrão: o mesmo campeão, no mesmo nível, sem itens, com as runas da build, contra o mesmo atacante (roda
+  no primeiro minuto do nível; ou uma build escolhida, ou a média de uma pasta). No comparativo, todas usam a referência da
+  build aberta.
 - **Relatórios**: Básico (os cenários 1×1 com pesos: tabela, barras e pontos fracos) e Completo (mais os de equipe e as
   varreduras: 5 estágios de um atributo do atacante de referência, com o ponto de quebra, o estágio em que o índice cai
   mais de 25% em relação ao anterior). Configuráveis e salvos, com "Restaurar o padrão". A penetração % vai de 0 a
@@ -434,10 +444,25 @@ os cenários do usuário, na tabela `effect_test`.
 - **Por item**: com × sem o item; com × só os status planos dele (passivas e ativos desligados: o valor da passiva);
   com × o mesmo ouro em status puros (Vida, Armadura e RM em terços, pelos preços de `precos_status.yml`, a mistura que
   mais rende). **Comparar candidatos** troca uma compra da build por outro item, com o ouro e as regras da loja.
-- O **Ranking** ganhou o modo "Efetividade": ordena pelo índice ponderado, com o mapa de calor cenário × build.
+- **Modo de leitura** (por item, candidatos, comparador rápido e valor medido das passivas): **comportamento fixo** (padrão: as
+  decisões da build como está, gravadas e reproduzidas nas duas lutas), **média de largadas** (8 largadas, distância e lado
+  variados) ou **como joga** (cada luta decide por si).
+- O **Ranking** ganhou o modo "Efetividade": ordena pelo índice ponderado, com o mapa de calor cenário × build. Cada arquétipo
+  tem o próprio ranking por padrão (tanque contra tanque), com "Comparar todas juntas".
 
-Lutas sem quadros, com cache por (build, minuto, cenário, estágio, variante), em paralelo. O Básico de uma build leva
-2 a 6 s; o Completo, uns 4 a 7 s a mais; a leitura por item, cerca de 1 min (657 lutas na Big Carry).
+Lutas sem quadros, com cache por (build, minuto, cenário, estágio, variante, modo), em paralelo. O Básico de uma build leva
+2 a 6 s; o Completo, uns 4 a 7 s a mais; a leitura por item, uns 6 a 20 s.
+
+## Classificação de campeões e de builds
+
+- **Campeões** (`campeoes_7_3d.yml`): `classes` (Classe/Subclasse), `funcoes`, `rotas`, `alcance_ataque` e `fonte_classes`, das
+  páginas `WR:` da wiki e das páginas oficiais do Wild Rift. O **perfil calculado** (`GET /api/champions/profiles`) lê a ficha e os
+  status: alcance, mobilidade, controles, resistência, dano por tipo, explosão ou contínuo. Ele sugere uma classe, avisa quando diverge
+  muito da oficial e alimenta os cenários parecidos da IA automática. Palavras e pesos ficam em
+  [`seed/classificacao_7_3d.yml`](backend/src/main/resources/seed/classificacao_7_3d.yml).
+- **Builds**: cada build, num minuto, tem um **arquétipo** (Tanque, Lutador, Crítico, Ao acertar, Letalidade, Mago explosivo, Mago
+  contínuo, Suporte, Híbrido), calculado pelo ouro dos status dos itens e pelos tipos de efeito, sem lista de itens. Aparece na lista de
+  builds, no Ranking e na Efetividade.
 
 ## Arena
 
@@ -459,10 +484,21 @@ Nexus (ou onde você os colocar).
   A reconjuração da ultimate do Ornn espera o elemental chegar perto para a cabeçada. O elemental é um retângulo de
   480 de comprimento (`comprimento` da ficha; o ponto que anda é o meio do corpo) por 340 de largura, o mesmo no
   desenho, no acerto, nas previsões, no alcance da cabeçada e no desvio.
-- **Cérebro** de cada campeão (o que ele faz quando a linha do tempo não dá ordem): **Roteiro** (padrão, o descrito
-  acima) ou **Tático**, que também desvia de projéteis, recua quando perde a troca com pouca vida (Flash e Fantasma
-  para fugir), faz kite se ataca à distância, reconjura e usa ativos de dano e feitiços (Barreira/Curar com pouca vida,
-  Incendiar num alvo enfraquecido, Exaustão) — ou uma **IA treinada** daquele campeão.
+- **Cérebro** de cada campeão (o que ele faz quando a linha do tempo não dá ordem): **Automático** (padrão dos lugares
+  novos), **Roteiro** (o descrito acima), **Tático**, que também desvia de projéteis, recua quando perde a troca com pouca vida
+  (Flash e Fantasma para fugir), faz kite se ataca à distância, reconjura e usa ativos de dano e feitiços (Barreira/Curar com
+  pouca vida, Incendiar num alvo enfraquecido, Exaustão), ou uma **IA treinada** daquele campeão.
+- **Automático**: a cada luta escolhe, nesta ordem, a melhor IA do campeão que venceu este cenário; a melhor em cenários parecidos
+  (os mesmos adversários ou as mesmas classes, minutos próximos); a melhor IA geral do campeão; a melhor IA da classe dele; o Tático.
+  "Melhor" é uma ordem de critérios em [`seed/ia_automatica_7_3d.yml`](backend/src/main/resources/seed/ia_automatica_7_3d.yml): vencer
+  sem morrer e com todos os adversários mortos, vencer sem morrer, vencer, mais rápido, mais Vida no fim. O histórico fica na tabela
+  `ai_result`, gravado a cada luta na tela e no treino. A tela mostra a escolha e o motivo, com "Fixar esta". Cenários salvos mantêm o
+  cérebro que têm.
+- **Treinar automaticamente**: se o Automático jogou e não venceu, a tela oferece um treino em segundo plano, a partir da melhor IA do
+  campeão ou da classe, com parada na **Vitória limpa** (o lado vence, o campeão termina vivo e todos os adversários morrem) ou no fim do
+  orçamento. Um treino por vez, com a fila na tela e "cancelar". "Sempre treinar sozinho" fica lembrado no navegador.
+- **IAs de classe**: treinadas com vários campeões da classe, guardadas como `class:Tanque` no lugar do campeão. Servem de partida quente
+  para um campeão novo e de reserva do Automático.
 - **Treinar IA**: ensina ao campeão uma política que reage à luta. Uma rede neural pequena parte do cérebro Tático e
   uma estratégia evolutiva (Java puro, sem dependências) guarda as mudanças que melhoram o objetivo, em lutas do
   cenário com inícios, minutos das builds e oponentes variados (Roteiro, Tático, IAs salvas dos inimigos, ela mesma

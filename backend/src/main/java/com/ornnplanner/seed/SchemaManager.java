@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 23;
+    static final int VERSION = 24;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -135,7 +135,7 @@ public class SchemaManager {
                     + "kind TEXT NOT NULL DEFAULT 'cenario', name TEXT NOT NULL, data TEXT NOT NULL, "
                     + "created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
         }
-        // v16 / v17 / v18: arena_combo, arena_dummy and arena_guideline are new tables, created by schema.sql
+        // v16 / v17 / v18 / v24: arena_combo, arena_dummy, arena_guideline and ai_result are new tables, created by schema.sql
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {
             jdbc.execute("PRAGMA user_version = " + VERSION);

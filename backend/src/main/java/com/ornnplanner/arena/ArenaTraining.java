@@ -112,6 +112,10 @@ public final class ArenaTraining {
         public boolean stopAtScenarioWin;
         /** With {@link #stopAtScenarioWin}: the champion must also end the fight alive. */
         public boolean aliveToo;
+        /** With {@link #stopAtScenarioWin}: a clean victory, the champion alive and every enemy dead. */
+        public boolean cleanWin;
+        /** An AI of a class: saved under this name ("class:Tanque") instead of the champion's (null = a champion's). */
+        public String classKey;
         /** Share of validation fights to beat the script and the previous version in (to be accepted). */
         public double accept = ACCEPT;
         public int pool = POOL;
@@ -336,7 +340,7 @@ public final class ArenaTraining {
         }
 
         PolicyRepository.Record r = new PolicyRepository.Record();
-        r.champion = myChampion;
+        r.champion = spec.classKey != null ? spec.classKey : myChampion;
         r.objective = objective;
         r.fitness = vsScript.meanFitness;
         r.betterVsScript = vsScript.better;
@@ -452,7 +456,21 @@ public final class ArenaTraining {
     /** Whether the trained champion's side wins the scenario's fight with this policy (and it ends alive, if asked). */
     boolean wins(Gym.Episode screen, Policy policy, StageSpec spec) {
         ArenaModel.Result r = gym.play(screen, policy);
-        return r.winner == screen.team() && (!spec.aliveToo || r.fighters.get(screen.me).deathTime == null);
+        return spec.cleanWin ? cleanWin(r, screen.me, screen.team())
+                : r.winner == screen.team() && (!spec.aliveToo || r.fighters.get(screen.me).deathTime == null);
+    }
+
+    /** The side wins, the champion ends alive and every enemy died: nobody left over, nobody escaped. */
+    public static boolean cleanWin(ArenaModel.Result r, int me, int team) {
+        if (r.winner != team || r.fighters.get(me).deathTime != null) {
+            return false;
+        }
+        for (ArenaModel.FighterStats f : r.fighters) {
+            if (f.team != team && f.deathTime == null) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** The scenario's fight with this policy for the trained champion (what the screen shows with it in the slot). */
