@@ -402,7 +402,7 @@ do minuto selecionado no gráfico, ou da última compra). Cada candidato passa p
 soma ao ficar pronto e no minuto comparado, vida efetiva física, mágica e mista (base do `SeenBy`, corrida de 0 s em
 cache; "sob efeitos" usa os efeitos da Visão sob efeitos), valor das passivas e eficiência de ouro (a da relevância),
 com o melhor de cada linha marcado e um veredito pelo critério escolhido. Todos são comparados no mesmo minuto: o
-escolhido, ou 5 minutos depois de o último ficar pronto. "Índice Básico" roda o relatório da Efetividade só nos
+escolhido, ou 5 minutos depois de o último ficar pronto. "Pontuação Básica" roda o relatório da Efetividade só nos
 candidatos. "Sugerir" testa os itens da mesma aba da loja que cabem no espaço e traz os 5 melhores, pela ficha do
 planejador (sem a corrida de 0 s): o ganho % é uma triagem, e os cartões dão o número final.
 
@@ -430,14 +430,15 @@ os cenários do usuário, na tabela `effect_test`.
   absorvido; cura e a perdida para Feridas; dano devolvido aos atacantes, separado em reflexo, aura e queimadura, e golpes;
   a cura dos atacantes que as Feridas cortaram; controle aplicado neles; com aliados, a % do dano inimigo que a build
   absorveu e o tempo vivo deles.
-- **Índice**: taxa líquida da referência ÷ a da build × 100, em % da Vida máxima de cada um por segundo. Numa luta até a
-  morte é o tempo até morrer ÷ o da referência; e vale também quando ninguém morre. Teto de 1000, configurável (`indice`,
-  no YAML), marcado com "+". Quem se cura pelo menos o que apanha **"sustenta"**: mostra a sobra por segundo e entra como o
-  teto. Referência padrão: o mesmo campeão, no mesmo nível, sem itens, com as runas da build, contra o mesmo atacante (roda
+- **Pontuação**: quanto da taxa líquida da referência a build cancela: 100 × (taxa da referência − taxa da build) ÷ taxa da referência,
+  em % da Vida máxima de cada um por segundo. 0 = igual à referência, 50 = dura o dobro, 75 = 4 vezes, 90 = 10 vezes, 100 = não perde
+  Vida, acima de 100 = se cura mais do que apanha, abaixo de 0 = pior que a referência. Toda luta tem um número, sem teto, morrendo
+  ou não. **Notas** (`indice.notas`, no YAML), contra a referência padrão: Perfeito (100), Ótimo (90), Bom (75), Regular (50), Ruim (25), Péssimo.
+  Referência padrão: o mesmo campeão, no mesmo nível, sem itens, com as runas da build, contra o mesmo atacante (roda
   no primeiro minuto do nível; ou uma build escolhida, ou a média de uma pasta). No comparativo, todas usam a referência da
   build aberta.
 - **Relatórios**: Básico (os cenários 1×1 com pesos: tabela, barras e pontos fracos) e Completo (mais os de equipe e as
-  varreduras: 5 estágios de um atributo do atacante de referência, com o ponto de quebra, o estágio em que o índice cai
+  varreduras: 5 estágios de um atributo do atacante de referência, com o ponto de quebra, o estágio em que a pontuação cai
   mais de 25% em relação ao anterior). Configuráveis e salvos, com "Restaurar o padrão". A penetração % vai de 0 a
   75% (0, 10, 30, 50, 75); um estágio acima disso usa 75%. Com "comparar" ligado no planejador, o relatório roda também
   nas builds comparadas, com a tabela lado a lado e uma linha por build nas varreduras.
@@ -449,7 +450,7 @@ os cenários do usuário, na tabela `effect_test`.
 - **Modo de leitura** (por item, candidatos, comparador rápido e valor medido das passivas): **comportamento fixo** (padrão: as
   decisões da build como está, gravadas e reproduzidas nas duas lutas), **média de largadas** (8 largadas, distância e lado
   variados) ou **como joga** (cada luta decide por si).
-- O **Ranking** ganhou o modo "Efetividade": ordena pelo índice ponderado, com o mapa de calor cenário × build. Cada arquétipo
+- O **Ranking** ganhou o modo "Efetividade": ordena pela pontuação ponderada, com o mapa de calor cenário × build. Cada arquétipo
   tem o próprio ranking por padrão (tanque contra tanque), com "Comparar todas juntas".
 
 Lutas sem quadros, com cache por (build, minuto, cenário, estágio, variante, modo), em paralelo. O Básico de uma build leva

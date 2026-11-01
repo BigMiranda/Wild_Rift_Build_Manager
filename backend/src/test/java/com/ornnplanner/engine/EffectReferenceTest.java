@@ -21,6 +21,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** What an effectiveness index is measured against, on the seed's catalog (a new database, builds not saved). */
@@ -178,17 +179,42 @@ class EffectReferenceTest {
             System.out.printf("%s: %.1f s, %.0f health, net %.0f/s (reference %.1f s), index %.0f%n", mage, o.build.timeToDeath, o.build.maxHealth,
                     o.build.netRate, o.reference.timeToDeath, o.index);
             assertTrue(o.build.died && o.build.timeToDeath < 60, mage + ": " + o.build.timeToDeath + " s");
-            assertTrue(o.index <= o.cap);
+            assertNotNull(o.grade);
         }
     }
 
-    /** Every index stops at the cap, and a fight to the death gives time to die over the reference's. */
+    /** The score of a fight to the death: how much shorter the reference's time to die is. */
     @Test
     void theIndexOfAFightToTheDeathIsTheTimeRatio() {
         EffectModel.Outcome o = run(build("Coração de Aço", "Égide de Fogo Solar"), 26, null, "atirador_alimentado");
         assertTrue(o.build.died && o.reference.died);
-        assertEquals(100 * o.build.timeToDeath / o.reference.timeToDeath, o.index, 1e-9);
-        assertEquals(1000, o.cap, 1e-9);
+        assertEquals(100 * (1 - o.reference.timeToDeath / o.build.timeToDeath), o.index, 1e-9);
+        assertEquals(EffectTestService.gradeOf(o.index, o.grades), o.grade);
+    }
+
+    /** A number for every fight: it goes on through 0 with no limit, and only the default reference gets a grade. */
+    @Test
+    void theScoreHasNoLimit() {
+        assertEquals(0, EffectTestService.score(10, 10, 0.01), 1e-9, "as the reference");
+        assertEquals(50, EffectTestService.score(10, 5, 0.01), 1e-9, "twice as long");
+        assertEquals(100, EffectTestService.score(10, 0, 0.01), 1e-9, "loses nothing");
+        assertEquals(110, EffectTestService.score(10, -1, 0.01), 1e-9, "heals beyond what it takes");
+        assertEquals(-100, EffectTestService.score(10, 20, 0.01), 1e-9, "worse than the reference");
+        assertEquals(0, EffectTestService.score(-2, -2, 0.01), 1e-9, "a reference that sustains");
+        assertEquals(100, EffectTestService.score(-2, -4, 0.01), 1e-9);
+        assertTrue(EffectTestService.score(0, 1, 0.01) < 0, "a reference that loses nothing does not divide by 0");
+
+        EffectModel.Outcome o = run(build("Coração de Aço"), 26, null, "atirador_alimentado");
+        List<EffectModel.Grade> g = o.grades;
+        assertEquals(List.of("perfeito", "otimo", "bom", "regular", "ruim", "pessimo"), g.stream().map(x -> x.key).collect(java.util.stream.Collectors.toList()));
+        assertEquals("perfeito", EffectTestService.gradeOf(104, g));
+        assertEquals("perfeito", EffectTestService.gradeOf(100, g));
+        assertEquals("otimo", EffectTestService.gradeOf(99.9, g));
+        assertEquals("bom", EffectTestService.gradeOf(80, g));
+        assertEquals("regular", EffectTestService.gradeOf(50, g));
+        assertEquals("ruim", EffectTestService.gradeOf(25, g));
+        assertEquals("pessimo", EffectTestService.gradeOf(24.9, g));
+        assertEquals("pessimo", EffectTestService.gradeOf(-300, g));
     }
 
     private static EffectModel.Test copy(EffectModel.Test t) {

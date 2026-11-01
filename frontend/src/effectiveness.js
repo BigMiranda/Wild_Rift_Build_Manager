@@ -86,22 +86,28 @@ export function weakPoints(report, outcomes) {
     .sort((a, b) => a.o.index - b.o.index);
 }
 
-/** The index of an outcome as text: "sustenta", the number, or the number with + at the cap. */
+/** The grade of a score: the first whose least score it reaches (best first), else the last (backend: gradeOf). */
+export const gradeOf = (score, grades) => (grades ?? []).find((g) => g.from == null || score >= g.from)?.key ?? null;
+
+/** The grade of a weighted score, by the grades its outcomes came with (null when they have none: another reference). */
+export const weightedGrade = (value, outcomes) => {
+  const o = outcomes?.find((x) => x?.grades);
+  return value == null || !o || !outcomes.some((x) => x?.grade) ? null : gradeOf(value, o.grades);
+};
+
+/** The score of an outcome as text, with its grade. */
 export const indexText = (o, tr, fmt) => {
   if (o?.index == null) return '—';
-  return o.sustains ? tr('efx.sustainsShort') : `${fmt(o.index)}${o.capped ? '+' : ''}`;
+  return o.grade ? `${fmt(o.index)} · ${tr(`efx.grade.${o.grade}`)}` : fmt(o.index);
 };
 
 /** The outcome measured against another one's reference (side by side, every build uses the open build's). */
 export function overReference(o, reference) {
   if (!o?.build || !reference) return o;
   const rate = (m) => (o.rateMode === 'bruta' ? m.netRate : m.healthRate);
-  const me = rate(o.build);
   const ref = rate(reference);
-  if (me <= 0) return { ...o, index: ref <= 0 ? 100 : o.cap, capped: ref > 0 };
-  if (ref <= 0) return { ...o, index: null, capped: false };
-  const v = (100 * ref) / me;
-  return { ...o, index: Math.min(v, o.cap), capped: v > o.cap };
+  const index = (100 * (ref - rate(o.build))) / Math.max(Math.abs(ref), o.rateMode === 'bruta' ? 1 : 0.01);
+  return { ...o, index, grade: o.grade ? gradeOf(index, o.grades) : null };
 }
 
 /** Percent change of a durability over another (+18 = 18% longer). */

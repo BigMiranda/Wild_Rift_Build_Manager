@@ -52,8 +52,8 @@ import java.util.concurrent.Callable;
 /**
  * Effectiveness by test scenarios: standard fights of the build tested (tactical brain, its conditional effects firing
  * for real) against test ragdolls that attack, with optional ragdoll allies, all in the arena by the fight's own rules.
- * The index of a scenario is the reference's net damage rate over the build's x 100 (see {@link #setIndex}), against the
- * same champion at the same level with no items and the build's runes, another build, or a folder's mean.
+ * The score of a scenario is how much of the reference's net damage rate the build cancels (see {@link #score}), against
+ * the same champion at the same level with no items and the build's runes, another build, or a folder's mean.
  * <p>
  * What grows with the minute: the build (its items, level and stats) and nothing else. An attacker has its fixed stats
  * (unless its scenario says {@link Test#scalesWithMinute}) and the default reference depends only on the level: it runs at
@@ -101,9 +101,9 @@ public class EffectTestService {
     private double scaleFullMinute = 25;
     private double scaleMin = 0.2;
     private double scaleMax = 1.4;
-    /** The highest index, and the rate it compares: por_vida (% of max health per second) | bruta (damage per second). */
-    private double indexCap = 1000;
+    /** The rate the score compares: por_vida (% of max health per second) | bruta (damage per second). */
     private String indexRate = "por_vida";
+    private final List<EffectModel.Grade> grades = new ArrayList<>();
     private final List<Sweep> defaultSweeps = new ArrayList<>();
     private final Map<String, Report> defaultReports = new LinkedHashMap<>();
 
@@ -145,8 +145,14 @@ public class EffectTestService {
             scaleMin = num(scale.get("minimo"), scaleMin);
             scaleMax = num(scale.get("maximo"), scaleMax);
             Map<String, Object> index = (Map<String, Object>) root.getOrDefault("indice", Map.of());
-            indexCap = num(index.get("teto"), indexCap);
             indexRate = String.valueOf(index.getOrDefault("taxa", indexRate));
+            for (Object o : (List<Object>) index.getOrDefault("notas", List.of())) {
+                Map<String, Object> m = (Map<String, Object>) o;
+                EffectModel.Grade g = new EffectModel.Grade();
+                g.key = String.valueOf(m.get("nota"));
+                g.from = m.get("de") == null ? null : num(m.get("de"), 0);
+                grades.add(g);
+            }
             Map<String, Object> sweep = (Map<String, Object>) root.getOrDefault("varredura", Map.of());
             rawSweepBot = (Map<String, Object>) sweep.get("atacante");
             sweepDuration = num(sweep.get("duracao"), 180);
@@ -417,7 +423,7 @@ public class EffectTestService {
             Outcome o = out.get(i);
             o.build = mean(measuresOf(keys.get(i).get(0)));
             o.reference = mean(measuresOf(keys.get(i).get(1)));
-            setIndex(o);
+            setIndex(o, "proprio".equals(ref.kind == null ? "proprio" : ref.kind));
         }
         return out;
     }
@@ -493,27 +499,35 @@ public class EffectTestService {
     }
 
     /**
-     * The index: reference's net rate / build's net rate x 100. A build that sustains (net rate 0 or less) has no number
-     * of its own: it takes the cap, marked. Every index stops at the cap, so one scenario cannot decide a weighted mean.
+     * How much of the reference's net rate the build cancels, in %: a number for every fight, with no limit and no jump
+     * when the rate crosses 0. 75 = it lasts 4 times as long as the reference, 100 = it loses nothing, 110 = it heals 10%
+     * of the reference's rate beyond what it takes. {@code floor} keeps a reference that loses nothing from dividing by 0.
      */
-    private void setIndex(Outcome o) {
-        o.cap = indexCap;
+    public static double score(double reference, double build, double floor) {
+        return 100 * (reference - build) / Math.max(Math.abs(reference), floor);
+    }
+
+    /** The grade of a score: the first whose least score it reaches (best first), else the last. */
+    public static String gradeOf(double score, List<EffectModel.Grade> grades) {
+        for (EffectModel.Grade g : grades) {
+            if (g.from == null || score >= g.from) {
+                return g.key;
+            }
+        }
+        return null;
+    }
+
+    private void setIndex(Outcome o, boolean ownReference) {
         o.rateMode = indexRate;
+        o.grades = grades;
         if (o.build == null || o.reference == null) {
             return;
         }
         boolean raw = "bruta".equals(indexRate);
-        double me = raw ? o.build.netRate : o.build.healthRate;
-        double ref = raw ? o.reference.netRate : o.reference.healthRate;
         o.sustains = o.build.netRate <= 0;
-        if (me <= 0) {
-            o.index = ref <= 0 ? 100 : indexCap;
-            o.capped = ref > 0;
-        } else if (ref > 0) {
-            double v = 100 * ref / me;
-            o.capped = v > indexCap;
-            o.index = Math.min(v, indexCap);
-        }
+        o.index = raw ? score(o.reference.netRate, o.build.netRate, 1) : score(o.reference.healthRate, o.build.healthRate, 0.01);
+        // a grade says how good the build is: against another build, the score only says how far it is from it
+        o.grade = ownReference ? gradeOf(o.index, grades) : null;
     }
 
     /** The arena scenario of one job (to open the fight in the Arena): the build as it is, with frames. */

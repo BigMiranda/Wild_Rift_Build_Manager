@@ -220,18 +220,28 @@ public final class EffectModel {
         public double maxHealth;
     }
 
-    /** The answer to one job: the build's measures, the reference's and the index. */
+    /** A grade of the score: its key and the least score it takes (null = everything below the others). */
+    public static class Grade {
+        public String key;
+        public Double from;
+    }
+
+    /** The answer to one job: the build's measures, the reference's and the score. */
     public static class Outcome {
         public String tag;
         public String testName;
         public Measures build;
         public Measures reference;
-        /** The reference's net rate over the build's x 100, at most {@link #cap}; null when the reference sustains and it does not. */
+        /**
+         * The score: how much of the reference's net rate the build cancels, in %. 0 = as the reference, 100 = it loses
+         * nothing, above 100 = it heals more than it takes, below 0 = worse than the reference.
+         */
         public Double index;
-        /** The cap of an index, and whether this one hit it. */
-        public double cap;
-        public boolean capped;
-        /** The build heals at least what it takes: its index is the cap (marked), not a number of its own. */
+        /** The grade of the score (perfeito ... pessimo); null against a reference other than the champion with no items. */
+        public String grade;
+        /** The grades, best first, each with the least score it takes. */
+        public List<Grade> grades;
+        /** The build heals at least what it takes. */
         public boolean sustains;
         /** por_vida (in % of each one's max health) | bruta (in damage per second): which rate the index compared. */
         public String rateMode;
