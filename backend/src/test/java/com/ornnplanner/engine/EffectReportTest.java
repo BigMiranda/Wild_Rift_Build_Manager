@@ -158,13 +158,10 @@ class EffectReportTest {
             line("| %s | %s | %s | %s | %.0f/s | %.2f (%.2f) | %.0f | %.0f | %.0f%% | %.0f | %.0f (%.0f) | %.0f | %.1f s |", x.testName, index(x),
                     time(m), time(x.reference), m.netRate, m.healthRate, x.reference.healthRate, m.netRate > 0 ? 100 * x.reference.netRate / m.netRate : -1,
                     m.effectiveHealth, m.mitigatedPct, m.shieldAbsorbed, m.healed, m.healLost, m.dealt, m.controlApplied);
-            if (x.index > x.cap + 1e-9) {
-                throw new IllegalStateException(x.testName + ": índice acima do teto");
-            }
             sum += rep.tests.get(i).weight * x.index;
             w += rep.tests.get(i).weight;
         }
-        line("índice ponderado: %.0f", sum / w);
+        line("pontuação ponderada: %.1f %s", sum / w, EffectTestService.gradeOf(sum / w, o.get(0).grades));
         line("devolvido: reflexo / aura e queimadura / golpes; cura do atacante (cortada):");
         for (EffectModel.Outcome x : o) {
             if (x.error == null) {
@@ -372,7 +369,7 @@ class EffectReportTest {
     }
 
     private static String index(EffectModel.Outcome x) {
-        return x.sustains ? "sustenta (+" + Math.round(x.build.surplus) + "/s)" : Math.round(x.index) + (x.capped ? "+" : "");
+        return String.format(Locale.ROOT, "%.1f %s", x.index, x.grade);
     }
 
     private static String time(EffectModel.Measures m) {

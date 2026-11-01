@@ -450,3 +450,48 @@ Os gráficos do relatório Completo (as varreduras) mostravam só a build aberta
 **Conferido na tela** (banco de desenvolvimento, Big Carry v1): 1.261 lutas pedidas, menos de 1 min na primeira vez, 25 linhas nos 10 gráficos; "Só as principais" deixa 1, a legenda esconde uma, "Só as marcadas" volta ao comportamento antigo; "Mesmo campeão" dá 20 linhas, todas de Ornn; "Mesmo arquétipo" dá 21, incluindo o Rumble Redutor Off Tank.
 
 **Limite:** o relatório Básico não tem gráficos de linha, então nada muda nele. Builds que chegam ao teto de 1000 se sobrepõem no topo dos gráficos.
+
+## Ajuste: pontuação real e notas, sem "sustenta" nem "1000+"
+
+**Pedido do usuário (01/11/2026):** a pontuação em si, em vez de "sustenta" e "maior que 1000", com notas de Perfeito a Péssimo. Substitui o índice com teto da Parte 2.
+
+**A conta:** `100 × (taxa da referência − taxa da build) ÷ taxa da referência`, com a taxa em % da Vida por segundo. É quanto da perda de Vida da referência a build cancela. A razão antiga
+estoura quando a taxa chega perto de 0 e não existe quando fica negativa; esta passa por 0 sem salto, sem teto.
+
+| pontuação | significado | nota |
+|---|---|---|
+| 100 ou mais | não perde Vida; acima disso, cura além do que apanha | Perfeito |
+| 90 | dura 10 vezes mais que sem itens | Ótimo |
+| 75 | dura 4 vezes mais | Bom |
+| 50 | dura o dobro | Regular |
+| 25 | dura 1,33 vez | Ruim |
+| abaixo de 25 | até negativa: pior que a referência | Péssimo |
+
+As faixas ficam em `indice.notas`. A nota só aparece contra a referência padrão; contra outra build ou pasta, a pontuação só diz a distância até ela. `indice.taxa: bruta` continua valendo, pela mesma conta.
+
+**Antes e depois** (Básico, minuto padrão):
+
+| cenário | Big Carry v1 | Soldado v8 | Manopla dos Glacinatas |
+|---|---|---|---|
+| Crítico | 1000+ → **95,4 Ótimo** | 949 → **89,5 Bom** | 1000+ → **96,5 Ótimo** |
+| Anti-tanque físico | 783 → **87,2 Bom** | 518 → **80,7 Bom** | 556 → **82,0 Bom** |
+| Tormento de Liandry | sustenta → **101,9 Perfeito** | 844 → **88,2 Bom** | 188 → **46,7 Ruim** |
+| Cajado do Vazio | sustenta → **105,0 Perfeito** | 1000+ → **92,3 Ótimo** | 213 → **53,0 Regular** |
+| 1000 de PdH + Cajado | 1000+ → **99,5 Ótimo** | 952 → **89,5 Bom** | 288 → **65,2 Regular** |
+| Misto | sustenta → **108,5 Perfeito** | sustenta → **101,2 Perfeito** | 713 → **86,0 Bom** |
+| Atirador alimentado | 536 → **81,4 Bom** | 423 → **76,4 Bom** | 755 → **86,7 Bom** |
+| **ponderado** | 932 → **96,4 Ótimo** | 725 → **85,9 Bom** | 432 → **66,6 Regular** |
+
+**Varreduras:** deixaram de ser retas em 1000. Big Carry, penetração % física e mágica: 110, 109, 105, 100, 94.
+
+**O que mudou junto:**
+- Taxa líquida negativa aparece como número ("−14/s"), sem a palavra "sustenta".
+- O mapa de calor do Ranking fica verde de 50 para cima e vermelho abaixo.
+- A calculadora segue lendo a média, agora sem empate no teto.
+
+**Limites:**
+- A escala comprime o topo: 90 → 95 é o dobro do tempo. É o preço de um número que nunca estoura.
+- O ponto de quebra segue sendo uma queda de mais de 25% da pontuação, então aparece bem menos: na Big Carry, só em DdA.
+- As leituras por item seguem na `durability`, com limite de 5× a duração, e duas builds que sustentam ainda empatam nela.
+
+Testes: 330 (14 opcionais pulados), 0 falhas. `npm run build` limpo. Conferido na tela: relatório, comparativo, gráficos e mapa de calor do Ranking.

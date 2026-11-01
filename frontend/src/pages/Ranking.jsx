@@ -8,7 +8,7 @@ import MinuteInput from '../components/MinuteInput.jsx';
 import SeenByReport, { Bars, MetricControls, ehp } from '../components/SeenByReport.jsx';
 import { reportJobs, runJobs, weightedIndex } from '../effectiveness.js';
 import { archetypeLabel, archetypeTitle, useArchetypes } from '../archetypes.js';
-import { ReferencePicker, indexLabel, ttd, useTestNames } from '../components/EffectivenessReport.jsx';
+import { ReferencePicker, indexLabel, ttd, useTestNames, weightedLabel } from '../components/EffectivenessReport.jsx';
 
 /**
  * Ranking of builds: the builds of a folder (or picked by hand) at the same minute, either under chosen effects (the
@@ -414,7 +414,6 @@ function EffectivenessResult({ rows, report, archetypes }) {
   const names = useTestNames();
   const [together, setTogether] = useState(false);
   const sorted = [...rows].sort((a, b) => (b.index ?? -1) - (a.index ?? -1));
-  const ok = sorted.filter((r) => r.outcomes);
   // Tank against tank by default: each archetype is its own ranking.
   const groups = [];
   for (const r of sorted) {
@@ -424,12 +423,8 @@ function EffectivenessResult({ rows, report, archetypes }) {
     if (g) g.rows.push(r);
     else groups.push({ key, label: together ? null : a ? t(`arch.${a.key}`) : t('arch.none'), rows: [r] });
   }
-  const max = Math.max(100, ...ok.flatMap((r) => r.outcomes.map((o) => (o?.index != null && Number.isFinite(o.index) ? o.index : 0))));
-  const cell = (v) => {
-    if (v == null) return {};
-    const s = Math.log(Math.max(1, v) / 100) / Math.log(Math.max(1.01, max / 100));
-    return v >= 100 ? heat(GREEN, s * 0.45) : heat(RED, Math.min(1, (100 - v) / 100) * 0.45);
-  };
+  // Green from "dura o dobro" (50) up, red below it.
+  const cell = (v) => (v == null ? {} : v >= 50 ? heat(GREEN, Math.min(1, (v - 50) / 50) * 0.45) : heat(RED, Math.min(1, (50 - v) / 50) * 0.45));
   return (
     <section className="panel">
       <h3>{t('rank.effectivenessTitle', { kind: t(`efx.kind.${report.kind}`) })}</h3>
@@ -452,7 +447,7 @@ function EffectivenessResult({ rows, report, archetypes }) {
               <tr key={r.build.id}>
                 <td>{i + 1}</td>
                 <td title={archetypeTitle(archetypes[r.build.id])}>{r.build.name} <small className="arch-tag">{archetypeLabel(archetypes[r.build.id])}</small></td>
-                <td><strong>{r.index == null ? '—' : n0(r.index)}</strong></td>
+                <td><strong>{weightedLabel(r.index, r.outcomes)}</strong></td>
                 {r.error ? <td colSpan={report.tests.length} className="error">{r.error}</td> : report.tests.map((e, k) => {
                   const o = r.outcomes?.[k];
                   return (

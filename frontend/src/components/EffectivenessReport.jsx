@@ -3,7 +3,7 @@ import { CartesianGrid, Line, LineChart, ReferenceDot, ResponsiveContainer, Tool
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { SERIES_COLORS, mmss, n0, n1 } from '../format.js';
-import { READ_MODES, breakPoint, effectMeta, gain, indexText, overReference, reportJobs, runJobs, weakPoints, weightedIndex } from '../effectiveness.js';
+import { READ_MODES, breakPoint, effectMeta, gain, indexText, overReference, reportJobs, runJobs, weakPoints, weightedGrade, weightedIndex } from '../effectiveness.js';
 import ItemIcon from './ItemIcon.jsx';
 import { archetypeLabel, archetypeTitle, useArchetypes } from '../archetypes.js';
 import { openInArena } from './TestInArena.jsx';
@@ -59,11 +59,18 @@ export function ReferencePicker({ value, onChange, builds = [], folders = [] }) 
 /** The time to die, or "> duration" when the build did not die in the fight. */
 export const ttd = (m) => (m == null ? '—' : `${m.died ? '' : '> '}${n1(m.timeToDeath)} s`);
 
-/** Damage taken net of healing and shields per second, or what is left over when the build sustains. */
-export const netRate = (m) => (m == null ? '—' : m.netRate <= 0 ? t('efx.sustains', { v: n0(m.surplus) }) : `${n0(m.netRate)}/s`);
+/** Damage taken net of healing and shields per second; below 0, what it heals beyond what it takes. */
+export const netRate = (m) => (m == null ? '—' : `${n0(m.netRate)}/s`);
 
-/** The index as text, for tables. */
-export const indexLabel = (o) => indexText(o, t, n0);
+/** The score as text, with its grade, for tables. */
+export const indexLabel = (o) => indexText(o, t, n1);
+
+/** A weighted score as text, with its grade. */
+export const weightedLabel = (value, outcomes) => {
+  if (value == null) return '—';
+  const g = weightedGrade(value, outcomes);
+  return g ? `${n1(value)} · ${t(`efx.grade.${g}`)}` : n1(value);
+};
 
 /** "Como ler": the reading mode of a per-item reading, with what each one means in its title. */
 export function ReadModePicker({ value, onChange }) {
@@ -76,14 +83,14 @@ export function ReadModePicker({ value, onChange }) {
   );
 }
 
-/** A horizontal bar of an index (100 = the reference). */
+/** A horizontal bar of a score (0 = the reference, 100 = loses nothing). */
 function IndexBar({ outcome }) {
   const value = outcome?.index;
   if (value == null) return <span className="muted">—</span>;
-  const w = Math.max(2, Math.min(100, (100 * value) / Math.max(outcome.cap, 1)));
+  const w = Math.max(2, Math.min(100, value / 1.1));
   return (
-    <span className="eff-bar" title={t(outcome.capped ? 'efx.indexCapped' : 'efx.indexTitle', { v: n0(value) })}>
-      <span className={value >= 100 ? 'up' : 'down'} style={{ width: `${w}%` }} />
+    <span className="eff-bar" title={t('efx.indexTitle', { v: n1(value) })}>
+      <span className={value >= 50 ? 'up' : 'down'} style={{ width: `${w}%` }} />
       <strong>{indexLabel(outcome)}</strong>
     </span>
   );
@@ -133,12 +140,12 @@ export function BasicResult({ report, outcomes, names }) {
         </table>
       </div>
       <p>
-        <strong>{t('efx.weighted', { v: mean == null ? '—' : n0(mean) })}</strong>{' '}
+        <strong>{t('efx.weighted', { v: weightedLabel(mean, outcomes) })}</strong>{' '}
         <small className="muted">{t('efx.estimatedNote')}</small>
       </p>
       <p className="eff-weak">
         {weak.length === 0 ? t('efx.noWeak')
-          : t('efx.weak', { list: weak.map((x) => `${x.o.testName} (${n0(x.o.index)})`).join(', ') })}
+          : t('efx.weak', { list: weak.map((x) => `${x.o.testName} (${n1(x.o.index)})`).join(', ') })}
       </p>
     </>
   );
@@ -175,7 +182,7 @@ export function ComparativeResult({ report, series, names }) {
             <td><strong>{t('efx.weightedShort')}</strong></td>
             {series.map((s) => {
               const v = weightedIndex(report, s.outcomes);
-              return <td key={s.key}><strong>{v == null ? '—' : n0(v)}</strong></td>;
+              return <td key={s.key}><strong>{weightedLabel(v, s.outcomes)}</strong></td>;
             })}
           </tr>
         </tbody>
@@ -224,7 +231,7 @@ export function SweepResult({ report, series: all }) {
           const p = { stage: Number(v) };
           series.forEach((b) => {
             const o = b.outcomes[from + i];
-            p[b.key] = o?.index != null && Number.isFinite(o.index) ? Math.round(o.index) : null;
+            p[b.key] = o?.index != null && Number.isFinite(o.index) ? Math.round(o.index * 10) / 10 : null;
           });
           return p;
         });
@@ -238,7 +245,7 @@ export function SweepResult({ report, series: all }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="#2a3240" />
                   <XAxis dataKey="stage" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v, n) => [n0(v), n]} labelFormatter={(l) => `${s.name}: ${l}`} itemSorter={(x) => -(x.value ?? 0)}
+                  <Tooltip formatter={(v, n) => [n1(v), n]} labelFormatter={(l) => `${s.name}: ${l}`} itemSorter={(x) => -(x.value ?? 0)}
                     contentStyle={{ fontSize: 11, padding: '4px 8px' }} itemStyle={{ padding: 0 }} wrapperStyle={{ zIndex: 5 }} />
                   {series.map((b) => (
                     <Line key={b.key} type="monotone" dataKey={b.key} name={b.name} stroke={b.color} dot={!b.thin} isAnimationActive={false} connectNulls
@@ -251,7 +258,7 @@ export function SweepResult({ report, series: all }) {
             {breaks.map(({ b, br }) => (
               <small key={b.key} className={`eff-break ${br ? 'error' : 'muted'}`}>
                 {series.length > 1 && <span style={{ color: b.color }}>{b.name}: </span>}
-                {br ? t('efx.break', { stage: br.stage, from: n0(br.from), to: n0(br.to) }) : t('efx.noBreak')}
+                {br ? t('efx.break', { stage: br.stage, from: n1(br.from), to: n1(br.to) }) : t('efx.noBreak')}
               </small>
             ))}
           </div>

@@ -52,17 +52,28 @@
 # mitigações, menos a cura e o escudo recebidos, por segundo da luta. A cura que encontrou a Vida cheia conta: é o que dá
 # a "sobra por segundo" de quem sustenta.
 #
-# Índice de efetividade: taxa líquida da referência ÷ taxa líquida da build × 100, com a taxa em % da Vida máxima de cada
-# um por segundo. Numa luta até a morte isso é o tempo até morrer ÷ o da referência; a medida vale também quando ninguém
-# morre. Se a taxa é 0 ou menos, a build "sustenta": o índice é o teto, marcado. Todo índice para no teto.
+# Pontuação de efetividade: quanto da taxa líquida da referência a build cancela, em %:
+#   100 × (taxa da referência − taxa da build) ÷ taxa da referência
+# com a taxa em % da Vida máxima de cada um por segundo. Sem teto e sem salto quando ninguém morre: 0 = igual à referência,
+# 50 = dura o dobro, 75 = dura 4 vezes, 90 = dura 10 vezes, 100 = não perde Vida, acima de 100 = se cura mais do que apanha,
+# abaixo de 0 = pior que a referência.
 patch: "7.3d"
 
 # Cenários com `escala_com_minuto`: fator = minuto da build / minuto_cheio, entre minimo e maximo.
 escala_com_minuto: {minuto_cheio: 25, minimo: 0.2, maximo: 1.4}
 
-# teto: o maior índice. taxa: por_vida (% da Vida máxima por segundo) | bruta (dano por segundo). Na `bruta` a Vida não
-# conta: um item só de Vida não muda a taxa, e uma build que dura mais pode ter índice menor (ver docs/rodada-7.md).
-indice: {teto: 1000, taxa: por_vida}
+# taxa: por_vida (% da Vida máxima por segundo) | bruta (dano por segundo). Na `bruta` a Vida não conta: um item só de Vida
+# não muda a taxa, e uma build que dura mais pode ter pontuação menor (ver docs/rodada-7.md).
+# notas: da melhor para a pior, cada uma com a menor pontuação que a alcança. Só valem contra a referência padrão.
+indice:
+  taxa: por_vida
+  notas:
+  - {nota: perfeito, de: 100}   # não perde Vida
+  - {nota: otimo, de: 90}       # dura 10 vezes mais que sem itens
+  - {nota: bom, de: 75}         # 4 vezes
+  - {nota: regular, de: 50}     # 2 vezes
+  - {nota: ruim, de: 25}        # 1,33 vez
+  - {nota: pessimo}
 
 funcoes:
   atirador:

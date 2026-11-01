@@ -77,8 +77,8 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   `immortal`), fights stop when the build dies (`Arena.stopWhenDead`), cached and run in parallel. Presets in
   `efetividade_<patch>.yml`; the user's scenarios and report settings in table `effect_test`. Item variants (only flat
   stats, same gold in pure stats) are synthetic items passed through `Slot.replaceItems` → `FighterBuilder`.
-  Fights use `tactical_stand` (`ai/StandPolicy`: no running away). The index is the reference's net damage rate over the build's, in %
-  of max health per second, capped; `durability` is what per-item readings compare. Reading modes (`EffectModel.READ_MODES`): the
+  Fights use `tactical_stand` (`ai/StandPolicy`: no running away). The score is how much of the reference's net damage rate the build cancels (`EffectTestService.score`: no cap, above 100 = it heals
+  more than it takes), in % of max health per second, with grades from `indice.notas`; `durability` is what per-item readings compare. Reading modes (`EffectModel.READ_MODES`): the
   fixed behavior records the build's decisions (`Arena.recordOrders`, `holdAtOne`) and replays them in both fights.
 - `arena/AutoBrain` (+ `AiResultRepository`, table `ai_result`) — the `auto` brain: picks a saved AI from the history, in the order and
   by the criteria of `ia_automatica_<patch>.yml`, at the end of `ArenaService.prepare`. `class:<Class>` in `arena_policy.champion` is an
