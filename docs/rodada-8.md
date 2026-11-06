@@ -162,3 +162,31 @@ acertos), E 137,6 (2 acertos), iguais à leitura.
 
 **Fora:** "Visão sob efeitos" como alvo. Ela descreve a build sob efeitos do inimigo, não um alvo com Vida e resistências.
 O alvo escolhido já cobre o dano depois das resistências.
+
+## Parte 3 — Painéis temporários ✅
+
+**Gaveta lateral** (`components/Drawer.jsx`): `useDrawer().open({ title, render, path })` abre o conteúdo de outra sub aba
+por cima da tela, sem trocar a tela de baixo nem perder nada. Fecha com **Esc** ou **×**; **abrir como aba** leva à sub aba
+inteira (`path`). Ela vive dentro do estado global, então mostra a build aberta no minuto selecionado e acompanha as
+mudanças. Usada por:
+
+- os botões rápidos do cabeçalho: **Status** (Status do campeão), **Relevância**, **Habilidades** (Campeão, compacto) e
+  **Condicionais** (Parte 5);
+- a **leitura de item**: um clique num item do cabeçalho, ou em qualquer nome de item dos relatórios
+  (`ItemReaderContext`, que antes abria o leitor da barra fixa);
+- a **prévia da build**.
+
+**Prévia da build** (`components/BuildPreview.jsx`): itens com ícones na ordem, runas, feitiços, campeão, minuto e nível,
+os status principais e a nota, com **Abrir esta build** (troca a build aberta, perguntando se há rascunho não salvo).
+`BuildLink` torna clicável toda referência a uma build salva:
+
+| tela | onde |
+|---|---|
+| Arena | ao lado do seletor de build de cada campeão ("prévia", no minuto do campeão) |
+| Ranking | o nome de cada build nos resultados, nas tabelas e na lista de builds da pasta |
+| Efetividade | o cabeçalho de cada build comparada no comparativo |
+| Calculadora | ao lado da build e da build adversária |
+| Partida | a build de cada jogador na tabela |
+| Comparar builds | cada build marcada |
+| Builds | a própria prévia, ao lado da lista |
+| Campeão | a build escolhida para comparar |

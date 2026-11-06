@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { BuildLink } from '../components/BuildPreview.jsx';
 import { useTask } from '../tasks.js';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
@@ -155,7 +156,7 @@ export default function Match() {
               <tbody>
                 {result.players.map((p, i) => (
                   <tr key={i}>
-                    <td style={{ color: TEAM[p.team] }}>{p.champion} <small className="muted">{p.build}</small></td>
+                    <td style={{ color: TEAM[p.team] }}>{p.champion} <small className="muted"><BuildLink id={p.buildId} name={p.build} /></small></td>
                     <td>{t(`match.role.${p.role}`)}</td>
                     <td>{now.level[i]}</td>
                     <td>{p.kills}/{p.deaths}</td>

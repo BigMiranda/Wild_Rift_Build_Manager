@@ -1,4 +1,5 @@
 import { Fragment, Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BuildLink } from '../components/BuildPreview.jsx';
 import { useTask } from '../tasks.js';
 import { api } from '../api.js';
 import ObjectivesPicker from '../components/ObjectivesPicker.jsx';
@@ -1346,6 +1347,7 @@ function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onC
           <option value="">{t('report.pickBuild')}</option>
           {builds.map((b) => <option key={b.id} value={b.id}>{b.name} · {b.unitCode}</option>)}
         </select>
+        {build && <BuildLink id={build.id} name={build.name} minute={slot.minute ?? undefined}>{t('preview.short')}</BuildLink>}
         <label className="inline slot-minute" title={t('arena.slotMinuteTitle')}>{t('arena.slotMinute')}
           <MinuteInput value={slot.minute} placeholder={t('report.minuteAuto')} onChange={(minute) => onChange({ minute })} />
         </label>

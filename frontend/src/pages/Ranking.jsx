@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { BuildLink } from '../components/BuildPreview.jsx';
 import { useTask } from '../tasks.js';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
@@ -155,7 +156,7 @@ export default function Ranking({ items }) {
             <ul className="rank-checks">
               {inFolder.map((b) => (
                 <li key={b.id}>
-                  <label><input type="checkbox" checked={!excluded.includes(b.id)} onChange={() => toggle(b.id)} /> <span className="muted">{b.unitCode}</span> {b.name}</label>
+                  <label><input type="checkbox" checked={!excluded.includes(b.id)} onChange={() => toggle(b.id)} /> <span className="muted">{b.unitCode}</span> <BuildLink id={b.id} name={b.name} /></label>
                 </li>
               ))}
             </ul>
@@ -208,7 +209,7 @@ function EffectsResult({ rows, sources, metric, idOf, open, setOpen, archetypes 
               <li key={r.build.id} className={open === r.build.id ? 'open' : ''}>
                 <button className="rank-row" onClick={() => setOpen(open === r.build.id ? null : r.build.id)} aria-expanded={open === r.build.id}>
                   <span className="rank-pos">{k + 1}</span>
-                  <span className="rank-name"><span className="muted">{r.build.unitCode}</span> {r.build.name} <small className="arch-tag" style={{ display: 'inline' }}>{archetypeLabel(archetypes[r.build.id])}</small></span>
+                  <span className="rank-name"><span className="muted">{r.build.unitCode}</span> <BuildLink id={r.build.id} name={r.build.name} /> <small className="arch-tag" style={{ display: 'inline' }}>{archetypeLabel(archetypes[r.build.id])}</small></span>
                   <span className="rank-bar" title={t('rank.barTitle')}>
                     <span className="rank-bar-plain" style={{ width: `${(plain / top) * 100}%` }} />
                     <span className="rank-bar-now" style={{ width: `${(now / top) * 100}%` }} />
@@ -250,7 +251,7 @@ function EffectsResult({ rows, sources, metric, idOf, open, setOpen, archetypes 
                   const lost = plain - ehp(r.seen.now, metric);
                   return (
                     <tr key={r.build.id}>
-                      <td className="l"><span className="muted">{r.build.unitCode}</span> {r.build.name} <small className="arch-tag">{archetypeLabel(archetypes[r.build.id])}</small></td>
+                      <td className="l"><span className="muted">{r.build.unitCode}</span> <BuildLink id={r.build.id} name={r.build.name} /> <small className="arch-tag">{archetypeLabel(archetypes[r.build.id])}</small></td>
                       {sources.map((s) => {
                         const c = r.seen.contributions.find((x) => x.source === s);
                         const v = c ? ehp(c, metric) : 0;
@@ -286,7 +287,7 @@ function EffectsResult({ rows, sources, metric, idOf, open, setOpen, archetypes 
             const its = [...(r.seen.items ?? [])].sort((a, b) => ehp(b, metric) - ehp(a, metric));
             return (
               <div key={r.build.id} className="rank-items-row">
-                <span className="rank-name"><span className="muted">{r.build.unitCode}</span> {r.build.name} <small className="arch-tag" style={{ display: 'inline' }}>{archetypeLabel(archetypes[r.build.id])}</small></span>
+                <span className="rank-name"><span className="muted">{r.build.unitCode}</span> <BuildLink id={r.build.id} name={r.build.name} /> <small className="arch-tag" style={{ display: 'inline' }}>{archetypeLabel(archetypes[r.build.id])}</small></span>
                 <span className="rank-chips">
                   {its.map((i, k) => {
                     const v = ehp(i, metric);
@@ -329,7 +330,7 @@ function ScenarioResult({ rows, scenario, open, setOpen, archetypes }) {
               <li key={r.build.id} className={open === r.build.id ? 'open' : ''}>
                 <button className="rank-row scenario" onClick={() => setOpen(open === r.build.id ? null : r.build.id)} aria-expanded={open === r.build.id}>
                   <span className="rank-pos">{k + 1}</span>
-                  <span className="rank-name"><span className="muted">{r.build.unitCode}</span> {r.build.name} <small className="arch-tag" style={{ display: 'inline' }}>{archetypeLabel(archetypes[r.build.id])}</small></span>
+                  <span className="rank-name"><span className="muted">{r.build.unitCode}</span> <BuildLink id={r.build.id} name={r.build.name} /> <small className="arch-tag" style={{ display: 'inline' }}>{archetypeLabel(archetypes[r.build.id])}</small></span>
                   <span className={`rank-outcome ${won ? 'good' : x.winner < 0 ? '' : 'warn'}`}>
                     {won ? t('ptest.won', { s: n1(x.duration) }) : x.winner < 0 ? t('ptest.draw', { s: n1(x.duration) }) : t('ptest.lost', { s: n1(x.duration) })}
                   </span>
@@ -370,7 +371,7 @@ function ScenarioResult({ rows, scenario, open, setOpen, archetypes }) {
             const top = Math.max(1e-9, ...items.map((w) => Math.abs(holds(x, w))));
             return (
               <div key={r.build.id} className="rank-items-row">
-                <span className="rank-name"><span className="muted">{r.build.unitCode}</span> {r.build.name} <small className="arch-tag" style={{ display: 'inline' }}>{archetypeLabel(archetypes[r.build.id])}</small></span>
+                <span className="rank-name"><span className="muted">{r.build.unitCode}</span> <BuildLink id={r.build.id} name={r.build.name} /> <small className="arch-tag" style={{ display: 'inline' }}>{archetypeLabel(archetypes[r.build.id])}</small></span>
                 <span className="rank-chips">
                   {items.map((w, k) => (
                     <span key={w.itemId} className={`rank-chip${k === 0 ? ' best' : ''}`} style={heat(GREEN, holds(x, w) / top / 2, 0.35)} title={w.item}>
@@ -395,7 +396,7 @@ function Failed({ rows }) {
   return (
     <details className="small">
       <summary className="muted">{t('rank.failed', { n: bad.length })}</summary>
-      <ul>{bad.map((r) => <li key={r.build.id}>{r.build.name}: {r.error}</li>)}</ul>
+      <ul>{bad.map((r) => <li key={r.build.id}><BuildLink id={r.build.id} name={r.build.name} />: {r.error}</li>)}</ul>
     </details>
   );
 }
@@ -448,7 +449,7 @@ function EffectivenessResult({ rows, report, archetypes }) {
             {g.rows.map((r, i) => (
               <tr key={r.build.id}>
                 <td>{i + 1}</td>
-                <td title={archetypeTitle(archetypes[r.build.id])}>{r.build.name} <small className="arch-tag">{archetypeLabel(archetypes[r.build.id])}</small></td>
+                <td title={archetypeTitle(archetypes[r.build.id])}><BuildLink id={r.build.id} name={r.build.name} /> <small className="arch-tag">{archetypeLabel(archetypes[r.build.id])}</small></td>
                 <td><strong>{weightedLabel(r.index, r.outcomes)}</strong></td>
                 {r.error ? <td colSpan={report.tests.length} className="error">{r.error}</td> : report.tests.map((e, k) => {
                   const o = r.outcomes?.[k];

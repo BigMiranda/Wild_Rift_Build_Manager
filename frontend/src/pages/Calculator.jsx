@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { BuildLink } from '../components/BuildPreview.jsx';
 import { useTask } from '../tasks.js';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
@@ -100,6 +101,7 @@ export default function Calculator() {
               <option value="">—</option>
               {builds.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
+            {form.buildId !== '' && <BuildLink id={Number(form.buildId)} name={builds.find((b) => String(b.id) === String(form.buildId))?.name}>{t('preview.short')}</BuildLink>}
           </label>
           <label className="field">{t('calc.target')}
             <select value={form.target} onChange={(e) => set({ target: e.target.value })}>
@@ -112,6 +114,7 @@ export default function Calculator() {
               <option value="">{t('calc.noOpponent')}</option>
               {builds.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
+            {form.opponentBuildId !== '' && <BuildLink id={Number(form.opponentBuildId)} name={builds.find((b) => String(b.id) === String(form.opponentBuildId))?.name}>{t('preview.short')}</BuildLink>}
           </label>
         </div>
         <div className="row">

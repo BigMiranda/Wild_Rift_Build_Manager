@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { BuildLink } from './BuildPreview.jsx';
 import { useTask } from '../tasks.js';
 import { CartesianGrid, Line, LineChart, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../api.js';
@@ -162,7 +163,7 @@ export function ComparativeResult({ report, series, names }) {
         <thead>
           <tr>
             <th>{t('efx.col.test')}</th>
-            {series.map((s) => <th key={s.key} style={{ color: s.color }}>{s.name}</th>)}
+            {series.map((s) => <th key={s.key} style={{ color: s.color }}>{s.buildId ? <BuildLink id={s.buildId} name={s.name} /> : s.name}</th>)}
           </tr>
         </thead>
         <tbody>
@@ -387,7 +388,7 @@ export function EffectivenessPanel({ objectives, build, buildId, name, minute, i
       const rest = [];
       for (const c of compare) {
         if (stop.current) break;
-        rest.push({ key: `b${c.id}`, name: c.name, color: c.color, outcomes: await one(await c.request()) });
+        rest.push({ key: `b${c.id}`, buildId: c.id, name: c.name, color: c.color, outcomes: await one(await c.request()) });
         setOthers([...rest]);
       }
       const lines = [];
