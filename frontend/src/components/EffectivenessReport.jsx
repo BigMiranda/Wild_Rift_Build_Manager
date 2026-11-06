@@ -5,6 +5,7 @@ import { t } from '../i18n.js';
 import { SERIES_COLORS, mmss, n0, n1 } from '../format.js';
 import { READ_MODES, breakPoint, effectMeta, gain, indexText, overReference, reportJobs, runJobs, weakPoints, weightedGrade, weightedIndex } from '../effectiveness.js';
 import ItemIcon from './ItemIcon.jsx';
+import WholeDelta, { fightDelta } from './WholeDelta.jsx';
 import { archetypeLabel, archetypeTitle, useArchetypes } from '../archetypes.js';
 import { openInArena } from './TestInArena.jsx';
 import { CandidatePicker } from './ShopPicker.jsx';
@@ -467,7 +468,17 @@ export function EffectivenessPanel({ objectives, build, buildId, name, minute, i
         jobs.push({ testKey: e.key, variant: { kind: 'candidato', slot: Number(cmp.slot), candidateId: c } });
       }
     }
-    go(jobs, (out) => setCmp((x) => ({ ...x, rows: out, readMode, ranTests: report.tests.filter((y) => x.test === 'all' || y.key === x.test) })));
+    const ran = report.tests.filter((x) => cmp.test === 'all' || x.key === cmp.test);
+    // the build as it is in the same scenarios: the fight's Δ of each candidate
+    ran.forEach((e) => jobs.push({ testKey: e.key }));
+    const slot = Number(cmp.slot);
+    // the whole build's change by each swap: the same function as the quick comparison (BuildDeltaService)
+    Promise.all(cmp.candidates.map((c) => api.post('/api/quick/delta', {
+      build, buildId: build ? null : buildId, change: { slot, itemId: c }, minute: at,
+    }).catch(() => null))).then((deltas) => setCmp((x) => ({ ...x, deltas })));
+    go(jobs, (out) => setCmp((x) => ({
+      ...x, rows: out.slice(0, ran.length * x.candidates.length), asIs: out.slice(ran.length * x.candidates.length), readMode, ranTests: ran,
+    })));
   };
 
   const openFight = async (job) => {
@@ -560,7 +571,7 @@ export function EffectivenessPanel({ objectives, build, buildId, name, minute, i
       <p className="muted small">{t('efx.compareHelp')}</p>
       <div className="row">
         <label className="inline">{t('efx.slot')}
-          <select value={cmp.slot} onChange={(e) => setCmp({ ...cmp, slot: e.target.value, rows: null })}>
+          <select value={cmp.slot} onChange={(e) => setCmp({ ...cmp, slot: e.target.value, rows: null, deltas: null })}>
             <option value="">—</option>
             {steps.map((s) => <option key={s.i} value={s.i}>#{s.i + 1} {itemsById.get(s.itemId)?.name ?? s.itemId}</option>)}
           </select>
@@ -572,12 +583,12 @@ export function EffectivenessPanel({ objectives, build, buildId, name, minute, i
           </select>
         </label>
         <CandidatePicker build={build} slot={cmp.slot === '' ? null : Number(cmp.slot)} items={items} value={cmp.candidates} label={t('efx.addCandidate')}
-          onChange={(candidates) => setCmp({ ...cmp, candidates, rows: null })} />
+          onChange={(candidates) => setCmp({ ...cmp, candidates, rows: null, deltas: null })} />
         <button onClick={runCompare} disabled={!report || !!busy || cmp.slot === '' || cmp.candidates.length === 0}>{t('efx.compareRun')}</button>
       </div>
       <div className="chips">
         {cmp.candidates.map((c) => (
-          <button key={c} className="chip-item" onClick={() => setCmp({ ...cmp, candidates: cmp.candidates.filter((x) => x !== c), rows: null })}
+          <button key={c} className="chip-item" onClick={() => setCmp({ ...cmp, candidates: cmp.candidates.filter((x) => x !== c), rows: null, deltas: null })}
             title={t('efx.removeCandidate')}>
             <ItemIcon id={c} size={18} /> {itemsById.get(c)?.name ?? c} ✕
           </button>
@@ -615,6 +626,17 @@ function CompareResult({ cmp, itemsById }) {
               </tr>
             );
           })}
+          {cmp.deltas && (
+            <tr className="wd-row">
+              <td>{t('wd.title')}</td>
+              {cmp.candidates.map((c, ci) => (
+                <td key={c}>
+                  <WholeDelta delta={cmp.deltas[ci]} compact title=" "
+                    fight={fightDelta(tests.map((_, ti) => cmp.rows[ti * n + ci]), cmp.asIs)} />
+                </td>
+              ))}
+            </tr>
+          )}
         </tbody>
       </table>
     </div>

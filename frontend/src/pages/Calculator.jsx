@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { mmss, n0, n1 } from '../format.js';
 import ItemPicker from '../components/ShopPicker.jsx';
+import WholeDelta from '../components/WholeDelta.jsx';
 
 const STORE = 'ornn-planner-calculator';
 
@@ -143,13 +144,14 @@ export default function Calculator() {
           <h3>{t('calc.best')}: {names(a.best)}</h3>
           <p className="muted">{t('calc.cost', { s: n1(a.seconds), n: n0(a.evaluations) })}{a.truncated ? ` · ${t('calc.truncated')}` : ''}</p>
           <table className="table">
-            <thead><tr><th>{t('calc.order')}</th><th>{t('calc.score')}</th>{a.minutes.map((m) => <th key={m}>{mmss(m)}</th>)}</tr></thead>
+            <thead><tr><th>{t('calc.order')}</th><th>{t('calc.score')}</th>{a.minutes.map((m) => <th key={m}>{mmss(m)}</th>)}<th title={t('wd.calcHelp')}>{t('wd.calcCol')}</th></tr></thead>
             <tbody>
               {[a.best, ...a.alternatives].map((l, i) => (
                 <tr key={i}>
                   <td>{names(l)}</td>
                   <td>{n1(l.score)}</td>
                   {l.curve.map((c, k) => <td key={k}>{n1(c)}</td>)}
+                  <td>{l.delta ? <WholeDelta delta={l.delta} compact title=" " show={['gold', 'effective', 'stats']} /> : <small className="muted">{t('wd.calcBest')}</small>}</td>
                 </tr>
               ))}
             </tbody>

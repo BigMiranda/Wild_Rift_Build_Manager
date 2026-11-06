@@ -1656,6 +1656,8 @@ const EN = {
   'compare.sameCondsHint': 'Calculate the compared builds with the open build\u2019s settings: item effects they share, rune choices and, for the same champion, its choices. Nothing is saved.',
   'compare.calculating': 'Calculating…',
   'warn.ragdoll': 'Ragdoll without stats: every blank field counts as 0.',
+
+
 };
 
 const PT = {
@@ -3193,6 +3195,36 @@ const PT = {
   'compare.sameCondsHint': 'Calcula as builds comparadas com as configurações da build aberta: efeitos dos itens em comum, escolhas das runas e, se for o mesmo campeão, as escolhas dele. Nada é salvo.',
   'compare.calculating': 'Calculando…',
   'warn.ragdoll': 'Boneco de pano sem status definidos: todos os campos em branco contam como 0.',
+  'wd.title': "Build inteira",
+  'wd.titleSlot': "Build inteira, contra o item da compra",
+  'wd.titleNext': "Build inteira, contra a build como está",
+  'wd.ignored': "Fica fora da linha do tempo aqui: a troca não conta.",
+  'wd.gold': "Ouro efetivo (Δ)",
+  'wd.goldHelp': "Ouro efetivo da build inteira com a troca menos o da build com a referência: status × preço, passivas modeladas, Forja Viva e runas.",
+  'wd.own': "do próprio item",
+  'wd.others': "efeito nos outros itens e runas",
+  'wd.effective': "Vida efetiva mista (Δ)",
+  'wd.passives': "Valor das passivas (Δ)",
+  'wd.passivesHelp': "Ouro do que as passivas modeladas dão em status.",
+  'wd.dealt': "Dano causado (Δ)",
+  'wd.taken': "Dano recebido (Δ)",
+  'wd.fightHelp': "Média de {n} lutas dos cenários escolhidos, contra a build como está.",
+  'wd.bySource': "Por fonte ({n})",
+  'wd.forge': "Forja Viva",
+  'wd.rune': "runa",
+  'wd.stats': "Status da build inteira ({n})",
+  'wd.calcCol': "Build inteira × a melhor",
+  'wd.calcHelp': "A build inteira com esta ordem contra a melhor ordem, no último minuto.",
+  'wd.calcBest': "referência",
+  'qc.form': "Forma",
+  'qc.formHelp': "Item que evolui: compare na forma base, na evoluída ou nas duas.",
+  'qc.form.base': "base",
+  'qc.form.evoluido': "evoluída",
+  'qc.form.ambos': "as duas",
+  'qc.evolvesAt': "evolui aos {time}",
+  'qc.evolvedFromPurchase': "evoluído desde a compra (estimativa)",
+  'wd.othersHelp': "O que a troca fez com o resto naquele minuto: Forja Viva, passivas que leem outros status (ref), runas que escalam, e as compras seguintes que ela atrasa ou adianta.",
+  'wd.effectiveHelp': "Pela ficha do planejador (sem luta), metade física e metade mágica; as linhas de cima do cartão vêm da corrida de zero segundo.",
 };
 
 /** Translates a key, replacing {placeholders}. Falls back to pt, then to the key itself. */

@@ -69,6 +69,8 @@ public class CalculatorService {
         public List<String> names = new ArrayList<>();
         public double score;
         public double[] curve;
+        /** Alternatives: the whole build against the best order at the last minute ({@link BuildDeltaService}). */
+        public com.ornnplanner.arena.BuildDeltaService.Delta delta;
     }
 
     /** One row of the tree's reading. */
@@ -136,7 +138,11 @@ public class CalculatorService {
     /** Seconds one measure took lately: what the estimate multiplies. */
     private volatile double secondsPerMeasure = 0.4;
 
-    public CalculatorService(PlannerService planner, BuildRepository builds, EffectTestService effect, ArenaService arena) {
+    private final com.ornnplanner.arena.BuildDeltaService deltas;
+
+    public CalculatorService(PlannerService planner, BuildRepository builds, EffectTestService effect, ArenaService arena,
+                             com.ornnplanner.arena.BuildDeltaService deltas) {
+        this.deltas = deltas;
         this.planner = planner;
         this.builds = builds;
         this.effect = effect;
@@ -223,6 +229,11 @@ public class CalculatorService {
         if (!found.isEmpty()) {
             a.best = line(found.get(0));
             found.stream().skip(1).limit(3).forEach(x -> a.alternatives.add(line(x)));
+            double last = minutes.length == 0 ? 20 : minutes[minutes.length - 1];
+            for (Line alt : a.alternatives) {
+                alt.delta = deltas.compare(ours.timeline(a.best.order), ours.timeline(alt.order), last,
+                        com.ornnplanner.arena.BuildDeltaService.Change.order(alt.order), ours.order(a.best.order));
+            }
             for (BuildSearch.Importance m : BuildSearch.importance(oracle, found.get(0), minutes)) {
                 Map<String, Object> row = new LinkedHashMap<>();
                 row.put("item", name(m.item));

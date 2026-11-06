@@ -29,6 +29,12 @@ public class QuickCompareController {
         return quick.fits(req);
     }
 
+    /** The whole build's change by one swap (an item, a rune page or an order), at a minute. */
+    @PostMapping("/delta")
+    public com.ornnplanner.arena.BuildDeltaService.Delta delta(@RequestBody QuickCompareService.DeltaRequest req) {
+        return quick.delta(req);
+    }
+
     /** The best items of the shop tab that fit there, by the criterion. */
     @PostMapping("/suggest")
     public QuickCompareService.Result suggest(@RequestBody QuickCompareService.Request req) {

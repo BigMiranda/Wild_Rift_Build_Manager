@@ -7,6 +7,7 @@ import EffectPicker, { applied } from './EffectPicker.jsx';
 import ItemIcon from './ItemIcon.jsx';
 import MinuteInput from './MinuteInput.jsx';
 import { CandidatePicker } from './ShopPicker.jsx';
+import WholeDelta, { fightDelta } from './WholeDelta.jsx';
 
 export const MAX_COMPARED = 4;
 const CRITERIA = ['mista', 'fisica', 'magica', 'ouro', 'indice'];
@@ -95,6 +96,8 @@ export default function QuickCompare({ build, slot, atMinute, ids, onIds, onClos
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [basic, setBasic] = useState(null);
+  /** The basic run's outcomes per candidate, and those of the build as it is (the fight's Δ). */
+  const [fights, setFights] = useState(null);
   const [basicBusy, setBasicBusy] = useState(null);
   const [suggested, setSuggested] = useState(null);
   const seq = useRef(0);
@@ -107,6 +110,7 @@ export default function QuickCompare({ build, slot, atMinute, ids, onIds, onClos
   useEffect(() => {
     const mine = ++seq.current;
     setBasic(null);
+    setFights(null);
     setSuggested(null);
     if (slot == null && ids.length === 0) {
       setResult(null);
@@ -138,13 +142,20 @@ export default function QuickCompare({ build, slot, atMinute, ids, onIds, onClos
       const jobs = cards.flatMap((c) => reportJobs(report, false).map((j) => ({
         ...j, variant: { kind: 'candidato', slot, atMinute: slot == null ? atMinute : null, candidateId: c.itemId },
       })));
+      // the build as it is, for the fight's Δ of every card (a slot's reference is the build as it is too)
+      jobs.push(...reportJobs(report, false));
       const out = await runJobs({ build, minute: result.minute, readMode: 'fixo' }, jobs, {
         size: 12, onProgress: (done, total) => setBasicBusy({ done, total }),
       });
       const n = report.tests.length;
       const idx = {};
-      cards.forEach((c, i) => { idx[c.itemId] = weightedIndex(report, out.slice(i * n, i * n + n)); });
+      const per = {};
+      cards.forEach((c, i) => {
+        idx[c.itemId] = weightedIndex(report, out.slice(i * n, i * n + n));
+        per[c.itemId] = out.slice(i * n, i * n + n);
+      });
       setBasic(idx);
+      setFights({ per, asIs: out.slice(cards.length * n) });
       setCriterion('indice');
     } catch (e) {
       setError(e.message);
@@ -174,6 +185,19 @@ export default function QuickCompare({ build, slot, atMinute, ids, onIds, onClos
   const line = cards.length > 1 ? verdict(cards, criterion, basic, result.minute) : null;
   const add = (id) => { if (!ids.includes(id) && ids.length < MAX_COMPARED) onIds([...ids, id]); };
   const noCandidates = slot == null && ids.length === 0;
+  /** An item that evolves: compare it in its base form, its evolved form, or both (the reference stays in the slot). */
+  const formOf = (c) => {
+    const here = cards.some((x) => x.itemId === c.otherFormId);
+    return here ? 'ambos' : c.form;
+  };
+  const setForm = (c, form) => {
+    const base = c.form === 'base' ? c.itemId : c.otherFormId;
+    const evo = c.form === 'base' ? c.otherFormId : c.itemId;
+    const keep = ids.filter((x) => x !== base && x !== evo);
+    const ref = cards.find((x) => x.reference)?.itemId;
+    const want = form === 'base' ? [base] : form === 'evoluido' ? [evo] : [base, evo];
+    onIds([...keep, ...want.filter((x) => x !== ref)]);
+  };
   return (
     <section className="qc" aria-label={t('qc.title')}>
       <header className="row qc-head">
@@ -240,6 +264,20 @@ export default function QuickCompare({ build, slot, atMinute, ids, onIds, onClos
                   <button className="icon" onClick={() => onIds(ids.filter((x) => x !== c.itemId))} aria-label={t('qc.remove')}>✕</button>
                 )}
               </header>
+              {c.form && (
+                <div className="qc-form">
+                  <label className="inline" title={t('qc.formHelp')}>{t('qc.form')}
+                    <select value={formOf(c)} onChange={(e) => setForm(c, e.target.value)}>
+                      <option value="base">{t('qc.form.base')}</option>
+                      <option value="evoluido">{t('qc.form.evoluido')}</option>
+                      <option value="ambos">{t('qc.form.ambos')}</option>
+                    </select>
+                  </label>
+                  {c.form === 'evoluido' && (
+                    <small className="muted">{c.evolvesAt != null ? t('qc.evolvesAt', { time: mmss(c.evolvesAt) }) : t('qc.evolvedFromPurchase')}</small>
+                  )}
+                </div>
+              )}
               {c.ignored ? <p className="error">{t('qc.doesNotFit')}</p> : (
                 <>
                   {c.violations.length > 0 && <p className="error">{t('qc.breaksRules')}</p>}
@@ -256,6 +294,10 @@ export default function QuickCompare({ build, slot, atMinute, ids, onIds, onClos
                     })}
                     {basic?.[c.itemId] != null && <div><dt>{t('qc.row.basic')}</dt><dd>{n0(basic[c.itemId])}</dd></div>}
                   </dl>
+                  {c.delta && !(c.reference && slot != null) && (
+                    <WholeDelta delta={c.delta} compact title={t(slot == null ? 'wd.titleNext' : 'wd.titleSlot')}
+                      fight={fights ? fightDelta(fights.per[c.itemId], fights.asIs) : null} />
+                  )}
                   {c.under && <UnderEffects c={c} />}
                   {c.waitedUntil != null && <small className="qc-rule">{t('qc.waited', { time: mmss(c.waitedUntil) })}</small>}
                   {!c.held && <small className="qc-rule">{t('qc.notHeld', { time: mmss(result.minute) })}</small>}

@@ -9,7 +9,6 @@ import com.ornnplanner.engine.Model.MinutePoint;
 import com.ornnplanner.engine.Model.TimelineResult;
 import com.ornnplanner.engine.Model.TimelineStep;
 import com.ornnplanner.engine.Model.Violation;
-import com.ornnplanner.engine.Stats;
 import com.ornnplanner.repo.BuildRepository;
 import com.ornnplanner.service.PlannerService;
 import org.springframework.http.HttpStatus;
@@ -35,7 +34,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class QuickCompareService {
 
-    public static final int MAX_CANDIDATES = 5;
+    /** The reference and up to four shop items, each in its base and its evolved form. */
+    public static final int MAX_CANDIDATES = 9;
     public static final int SUGGESTIONS = 5;
     /** Minutes after the item is ready that the second reading looks at, unless a minute is chosen. */
     static final double LATER = 5;
@@ -97,6 +97,17 @@ public class QuickCompareService {
         public SeenBy plain;
         /** Suggestions: gain on the build as it is by the criterion, %, both read from the planner's sheet. */
         public Double gainPct;
+        /** An item that evolves: base | evoluido (this card's form), and the other form's id and name. */
+        public String form;
+        public Long otherFormId;
+        public String otherFormName;
+        /**
+         * Evolved form: the minute it evolves, when the timeline knows it; null = the engine has no estimate, and the
+         * card reads it as evolved from the purchase.
+         */
+        public Double evolvesAt;
+        /** The whole build with this candidate against the build as it is ({@link BuildDeltaService}). */
+        public BuildDeltaService.Delta delta;
     }
 
     public static class Result {
@@ -111,13 +122,31 @@ public class QuickCompareService {
     private final PlannerService planner;
     private final ArenaService arena;
     private final BuildRepository builds;
+    private final BuildDeltaService deltas;
     private final Map<String, SeenBy.Base> bases = new ConcurrentHashMap<>();
     private final Map<String, List<Map<String, Object>>> values = new ConcurrentHashMap<>();
 
-    public QuickCompareService(PlannerService planner, ArenaService arena, BuildRepository builds) {
+    public QuickCompareService(PlannerService planner, ArenaService arena, BuildRepository builds, BuildDeltaService deltas) {
+        this.deltas = deltas;
         this.planner = planner;
         this.arena = arena;
         this.builds = builds;
+    }
+
+    /** A change asked of {@link BuildDeltaService}: the build (or a saved one), the change and the minute. */
+    public static class DeltaRequest {
+        public Long buildId;
+        public BuildRepository.Build build;
+        public BuildDeltaService.Change change;
+        public Double minute;
+    }
+
+    /** The whole build's change, for the screens that ask it alone (effectiveness candidates, the rune comparison). */
+    public BuildDeltaService.Delta delta(DeltaRequest req) {
+        Request r = new Request();
+        r.build = req.build;
+        r.buildId = req.buildId;
+        return deltas.delta(buildOf(r), req.change, req.minute);
     }
 
     private BuildRepository.Build buildOf(Request req) {
@@ -158,6 +187,10 @@ public class QuickCompareService {
             runs.add(() -> {   // the zero-second runs of a new minute: each candidate on its own thread
                 Card c = card(s, items.get(s.itemId), out.minute);
                 c.reference = current != null && current == s.itemId;
+                forms(c, items);
+                c.delta = deltas.compare(before, s.result, out.minute,
+                        BuildDeltaService.Change.item(req.slot, s.itemId, req.atMinute), build);
+                c.delta.ignored = c.ignored;
                 if (!c.ignored) {
                     SeenBy.Base start = base(s.build, out.minute);
                     SeenBy e = SeenBy.apply(start, req.effects, share);
@@ -176,6 +209,26 @@ public class QuickCompareService {
         out.cards.addAll(ArenaService.parallel(runs));
         out.ms = (System.nanoTime() - t0) / 1e6;
         return out;
+    }
+
+    /** The base and the evolved form of a shop item that evolves (Muramana, Fimbulwinter, Seraph...). */
+    private static void forms(Card c, Map<Long, ItemDef> items) {
+        ItemDef it = items.get(c.itemId);
+        if (it == null) {
+            return;
+        }
+        for (ItemDef o : items.values()) {
+            if (o.id == it.id) {
+                continue;
+            }
+            boolean evolvedOfIt = "evolucao".equals(o.section) && it.name.equals(o.group);
+            boolean baseOfIt = "evolucao".equals(it.section) && o.name.equals(it.group);
+            if (evolvedOfIt || baseOfIt) {
+                c.form = baseOfIt ? "evoluido" : "base";
+                c.otherFormId = o.id;
+                c.otherFormName = o.name;
+            }
+        }
     }
 
     /** Whether an item fits a purchase and when it would be ready there. */
@@ -249,7 +302,7 @@ public class QuickCompareService {
         Result out = new Result();
         out.minute = minute != null ? minute : commonMinute(fits);
         out.slot = req.slot == null ? (fits.isEmpty() ? 0 : fits.get(0).slot) : req.slot;
-        SeenBy now = SeenBy.apply(sheetBase(point(before, out.minute)), req.effects, share);
+        SeenBy now = SeenBy.apply(BuildDeltaService.sheetBase(point(before, out.minute)), req.effects, share);
         Card reference = new Card();
         reference.effectivePhysical = now.effectiveHpPhysical;
         reference.effectiveMagic = now.effectiveHpMagic;
@@ -257,7 +310,7 @@ public class QuickCompareService {
         List<Card> cards = new ArrayList<>();
         for (Swap s : fits) {
             Card c = card(s, items.get(s.itemId), out.minute);
-            SeenBy e = SeenBy.apply(sheetBase(point(s.result, out.minute)), req.effects, share);
+            SeenBy e = SeenBy.apply(BuildDeltaService.sheetBase(point(s.result, out.minute)), req.effects, share);
             c.effectivePhysical = e.effectiveHpPhysical;
             c.effectiveMagic = e.effectiveHpMagic;
             c.effectiveMixed = e.effectiveHpMixed;
@@ -424,18 +477,6 @@ public class QuickCompareService {
             }
         }
         return best;
-    }
-
-    /** The planner's sheet as a {@link SeenBy.Base}: the suggestion's measure, without the zero-second run. */
-    private static SeenBy.Base sheetBase(MinutePoint p) {
-        SeenBy.Base b = new SeenBy.Base();
-        b.health = p.total.getOrDefault(Stats.MAX_HEALTH, 0.0);
-        b.armor = p.total.getOrDefault(Stats.ARMOR, 0.0);
-        b.magicResist = p.total.getOrDefault(Stats.MAGIC_RESIST, 0.0);
-        b.shieldAny = p.total.getOrDefault("Shield", 0.0);
-        b.shieldPhysical = p.total.getOrDefault("Physical Shield", 0.0);
-        b.shieldMagic = p.total.getOrDefault("Magic Shield", 0.0);
-        return b;
     }
 
     private SeenBy.Base base(BuildRepository.Build b, double minute) {
