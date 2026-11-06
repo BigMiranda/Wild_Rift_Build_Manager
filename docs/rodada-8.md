@@ -190,3 +190,45 @@ os status principais e a nota, com **Abrir esta build** (troca a build aberta, p
 | Comparar builds | cada build marcada |
 | Builds | a própria prévia, ao lado da lista |
 | Campeão | a build escolhida para comparar |
+
+## Parte 4 — Comparar runas ✅
+
+`components/RuneCompare.jsx`, em **Build › Comparar runas**. A página da build é a referência; até 4 páginas candidatas,
+cada uma editada com o mesmo editor de runas da build (fundamental e menores no estilo do jogo). Cada página passa pela
+**mesma função de troca** da Parte 0: `POST /api/quick/delta` com `change.runePage` (`BuildDeltaService.Change.runes`).
+O cartão mostra, no minuto selecionado:
+
+- o que as runas da página **somam em status** (as fontes `rune` do Δ ganharam `statsAfter`);
+- o **valor das runas em ouro** (status e passivas modeladas: a estimativa das passivas delas);
+- a **vida efetiva** física, mágica e mista da build inteira com a página;
+- contra a referência, o Δ da build inteira (ouro "das próprias runas" × efeito nos outros, status, vida efetiva).
+
+**Índice Básico** roda o relatório Básico da Efetividade só para as páginas (a build com cada página, leitura fixa), com
+progresso no sino.
+
+Teste novo em `BuildDeltaTest`: a página da própria build não muda nada; outra página (com Suserano do Gelo) dá o mesmo Δ
+pelo endpoint e pela função, as runas dela são "próprias" e somam Armadura.
+
+Medido (Soldado v1, 22:39): trocar o Suserano do Gelo pelo Aperto dos Mortos-Vivos dá −27.085 de ouro efetivo na build
+inteira, −17.792 das próprias runas e −9.292 nos outros (a Forja Viva lê a Armadura e a RM do Suserano), e −29.809 de vida
+efetiva mista.
+
+## Parte 5 — Condicionais ligáveis no cabeçalho ✅
+
+O botão **Condicionais** do cabeçalho abre na gaveta (`components/Conditionals.jsx`) a lista de todos os efeitos
+condicionais da build aberta:
+
+- **compras**: as linhas condicionais do item (Duplaguarda de Amaranto após 5 s…), por compra (`includeConditional`);
+- **efeitos dos itens**: os efeitos modelados com condicional (`itemSetup.conditional`);
+- **runas**: Suserano do Gelo ao imobilizar, Coragem do Colosso… (`runePage.conditional`);
+- **campeão**: os efeitos da passiva e das habilidades (Poder de Noxus…), `championSetup.conditional`.
+
+Cada um tem o botão ligado / desligado (com • quando difere da build); **Ligar tudo**, **Desligar tudo** e **Como a build
+salvou**. Os botões gravam uma camada por cima do rascunho (`condOverride` no estado global, `applyConditionals`), que
+toda leitura da build aberta usa (linha do tempo, ficha, relatórios, Efetividade, comparadores, Campeão). Não mexe no
+rascunho; o cabeçalho mostra **condicionais alterados**, a camada fica no navegador com o rascunho, e **Salvar** grava a
+build com ela (e a desfaz). Usa o que já existia (`includeConditional` e os mapas `conditional`) e estende o liga/desliga
+a runas e habilidades, que antes só se mudavam nos editores de cada uma.
+
+Conferido no navegador (Soldado v1, Status do campeão): "Desligar tudo" leva a Armadura de 1.182 para 378 e a RM de
+1.031 para 306, e some o escudo do Suserano.

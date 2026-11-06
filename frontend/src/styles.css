@@ -1346,3 +1346,14 @@ td .arch-tag { display: inline; margin-left: 4px; }
 .cr-terms li.has-src { cursor: help; }
 .cr-passive { grid-column: 1 / -1; }
 .drawer .cr-grid { grid-template-columns: 1fr; }
+
+/* Rodada 8, partes 4 e 5 — comparar runas, condicionais do cabeçalho */
+.rc-page { width: 100%; margin: 6px 0; }
+.rc-page:disabled { opacity: 1; cursor: default; }
+.conditionals .row { margin-bottom: 8px; }
+.cond-group { margin-top: 10px; }
+.cond-list { list-style: none; padding: 0; margin: 0; }
+.cond-list li { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.cond-list li.changed { background: var(--warn-bg); }
+.cond-label { flex: 1; min-width: 0; }
+.cond-list button { min-width: 110px; }

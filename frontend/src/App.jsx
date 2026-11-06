@@ -213,7 +213,14 @@ function Shell({ meta, items, reload, error, settingsBox }) {
 
       {pane('admin/catalogo', () => <Admin meta={meta} items={items} onChanged={reload} />)}
       {pane('admin/efetividade', () => <Effectiveness items={items} />)}
-      {pane('admin/sobre', () => <About base={meta?.base} />)}
+      {pane('admin/sobre', () => (
+        <>
+          <div className="main settings-page" style={{ paddingBottom: 0 }}>
+            <section className="panel"><h3>{t('settings.title')}</h3><p className="muted small">{t('settings.help')}</p>{settingsBox}</section>
+          </div>
+          <About base={meta?.base} />
+        </>
+      ))}
       <PrepEditors />
     </ItemReaderContext.Provider>
   );

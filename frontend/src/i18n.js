@@ -10,11 +10,12 @@ let state = { lang: 'pt', abbr: 'pt' };
 export function loadSettings() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
-    if (saved && (saved.lang === 'pt' || saved.lang === 'en')) return { lang: saved.lang, abbr: saved.abbr === 'en' ? 'en' : 'pt' };
+    const scale = ['normal', 'grande', 'live'].includes(saved?.scale) ? saved.scale : 'normal';
+    if (saved && (saved.lang === 'pt' || saved.lang === 'en')) return { lang: saved.lang, abbr: saved.abbr === 'en' ? 'en' : 'pt', scale };
   } catch {
     /* storage unavailable: defaults */
   }
-  return { lang: 'pt', abbr: 'pt' };
+  return { lang: 'pt', abbr: 'pt', scale: 'normal' };
 }
 
 export function saveSettings(s) {
@@ -1656,6 +1657,9 @@ const EN = {
   'compare.sameCondsHint': 'Calculate the compared builds with the open build\u2019s settings: item effects they share, rune choices and, for the same champion, its choices. Nothing is saved.',
   'compare.calculating': 'Calculating…',
   'warn.ragdoll': 'Ragdoll without stats: every blank field counts as 0.',
+
+
+
 
 
 
@@ -3359,6 +3363,37 @@ const PT = {
   'cr.fx.reduz_armadura': "Redução de armadura",
   'cr.fx.reduz_rm': "Redução de RM",
   'preview.short': "prévia",
+  'cond.title': "Condicionais da build aberta",
+  'cond.help': "Todos os efeitos condicionais da build (compras, efeitos de itens, runas e campeão). Os botões valem para a build aberta em todas as telas e não alteram a build salva até você salvar.",
+  'cond.allOn': "Ligar tudo",
+  'cond.allOff': "Desligar tudo",
+  'cond.asSaved': "Como a build salvou",
+  'cond.changed': "condicionais alterados",
+  'cond.changedHelp': "Os condicionais do cabeçalho diferem da build: todas as telas os leem; salvar a build os guarda.",
+  'cond.none': "Esta build não tem efeito condicional.",
+  'cond.on': "ligado",
+  'cond.off': "desligado",
+  'cond.savedAs': "Na build está {v}",
+  'cond.group.steps': "Compras (linhas condicionais do item)",
+  'cond.group.items': "Efeitos dos itens",
+  'cond.group.runes': "Runas",
+  'cond.group.champion': "Campeão (passiva e habilidades)",
+  'rc.title': "Comparar páginas de runas aos {time}",
+  'rc.help': "A página da build é a referência; adicione até 4 páginas candidatas e clique numa para editá-la. Cada uma é a build inteira com aquela página (a mesma troca do comparador de itens): o que as runas somam, o valor delas em ouro (a estimativa das passivas) e a vida efetiva. \"Pontuação Básica\" roda o relatório Básico da Efetividade só para as páginas.",
+  'rc.add': "+ página",
+  'rc.reference': "Página da build (referência)",
+  'rc.refHelp': "A página da própria build: edite em \"Runas e feitiços\".",
+  'rc.candidate': "Página {n}",
+  'rc.edit': "Editar esta página",
+  'rc.runeGold': "Valor das runas em ouro",
+  'rc.runeGoldHelp': "O que as runas dão em status e passivas modeladas, em ouro, no minuto.",
+  'rc.vsRef': "Build inteira, contra a página de referência",
+  'rc.stats': "As runas somam",
+  'rc.task': "Pontuação Básica das páginas de runas",
+  'wd.ownRunes': "das próprias runas",
+  'wd.ownOrder': "dos itens que mudaram",
+  'settings.title': "Configurações",
+  'settings.help': "Idioma, siglas e tamanho da interface, lembrados neste navegador (no celular o cabeçalho os esconde: ficam aqui).",
 };
 
 /** Translates a key, replacing {placeholders}. Falls back to pt, then to the key itself. */
