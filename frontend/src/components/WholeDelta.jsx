@@ -11,7 +11,7 @@ const tone = (v) => (Math.abs(v) < 0.5 ? '' : v > 0 ? 'delta-up' : 'delta-down')
  * health and the passives' gold; with a scenario run, the fight's damage dealt and taken. Every comparator shows this.
  * `show` picks the parts: gold | stats | effective | passives | fight (all by default).
  */
-export default function WholeDelta({ delta, fight, show, title, compact }) {
+export default function WholeDelta({ delta, fight, show, title, compact, ownLabel }) {
   if (!delta) return null;
   const want = (k) => !show || show.includes(k);
   const others = delta.sources.filter((s) => !s.own);
@@ -29,7 +29,7 @@ export default function WholeDelta({ delta, fight, show, title, compact }) {
               <dt>{t('wd.gold')}</dt>
               <dd className={tone(delta.goldDelta)}>{signed(delta.goldDelta)} <small className="muted">({n0(delta.goldBefore)} → {n0(delta.goldAfter)})</small></dd>
             </div>
-            <div><dt>{t('wd.own')}</dt><dd className={tone(delta.ownDelta)}>{signed(delta.ownDelta)}</dd></div>
+            <div><dt>{ownLabel ?? t('wd.own')}</dt><dd className={tone(delta.ownDelta)}>{signed(delta.ownDelta)}</dd></div>
             <div title={t('wd.othersHelp')}><dt>{t('wd.others')}</dt><dd className={tone(delta.othersDelta)}>{signed(delta.othersDelta)}</dd></div>
           </>
         )}

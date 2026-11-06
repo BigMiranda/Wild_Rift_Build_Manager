@@ -125,6 +125,39 @@ class BuildDeltaTest {
     }
 
     /**
+     * The rune comparison is the same function: the build's own page changes nothing, and another page is "own" in its
+     * runes and shows what they add (the comparar runas screen asks it through {@link QuickCompareService#delta}).
+     */
+    @Test
+    void theRuneComparisonUsesTheSameSwap() {
+        BuildRepository.Build b = build("Coração Congelado", "Presságio de Randuin");
+        b.runePage = new BuildRepository.RunePage();
+        b.runePage.primary = "Determinação";
+        b.runePage.secondary = "Dominação";
+        b.runePage.primaryRunes = new ArrayList<>(java.util.Arrays.asList(null, null, null));
+        Delta same = deltas.delta(b, Change.runes(b.runePage), 20.0);
+        assertEquals(0, same.goldDelta, 1e-9);
+        assertTrue(same.statsDelta.isEmpty());
+
+        BuildRepository.RunePage other = new BuildRepository.RunePage();
+        other.primary = "Determinação";
+        other.secondary = "Dominação";
+        other.keystone = "Suserano do Gelo";
+        other.primaryRunes = new ArrayList<>(java.util.Arrays.asList(null, null, null));
+        QuickCompareService.DeltaRequest q = new QuickCompareService.DeltaRequest();
+        q.build = b;
+        q.change = Change.runes(other);
+        q.minute = 20.0;
+        Delta d = quick.delta(q);
+        assertEquals(deltas.delta(b, Change.runes(other), 20.0).goldDelta, d.goldDelta, 1e-9);
+        assertTrue(d.statsDelta.getOrDefault(Stats.ARMOR, 0.0) > 0, "Suserano do Gelo adds armor");
+        Source rune = d.sources.stream().filter(s -> "rune".equals(s.kind) && s.name.contains("Suserano")).findFirst().orElseThrow();
+        assertTrue(rune.own);
+        assertTrue(rune.statsAfter.getOrDefault(Stats.ARMOR, 0.0) > 0);
+        assertEquals(d.goldDelta, d.ownDelta + d.othersDelta, 1e-6);
+    }
+
+    /**
      * The same swap, the same numbers: the quick comparison's card, the delta asked alone (the effectiveness candidates
      * and the rune comparison ask it so) and the calculator's reading of an order (the build's order with the swap).
      */

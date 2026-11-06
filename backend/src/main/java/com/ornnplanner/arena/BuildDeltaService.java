@@ -76,6 +76,8 @@ public class BuildDeltaService {
         public double before;
         public double after;
         public double delta;
+        /** What the source adds in stats after the change (flat and passives): what a rune page adds, by rune. */
+        public Map<String, Double> statsAfter = new LinkedHashMap<>();
     }
 
     /** The whole build before and after the change, at one minute. */
@@ -258,6 +260,8 @@ public class BuildDeltaService {
                 s.before += gold;
             } else {
                 s.after += gold;
+                c.flat.forEach((k, v) -> s.statsAfter.merge(k, v, Double::sum));
+                c.passives.forEach((k, v) -> s.statsAfter.merge(k, v, Double::sum));
             }
         }
         double forge = 0;

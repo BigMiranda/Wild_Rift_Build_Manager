@@ -156,7 +156,7 @@ export default function Calculator() {
                   <td>{names(l)}</td>
                   <td>{n1(l.score)}</td>
                   {l.curve.map((c, k) => <td key={k}>{n1(c)}</td>)}
-                  <td>{l.delta ? <WholeDelta delta={l.delta} compact title=" " show={['gold', 'effective', 'stats']} /> : <small className="muted">{t('wd.calcBest')}</small>}</td>
+                  <td>{l.delta ? <WholeDelta delta={l.delta} compact title=" " show={['gold', 'effective', 'stats']} ownLabel={t('wd.ownOrder')} /> : <small className="muted">{t('wd.calcBest')}</small>}</td>
                 </tr>
               ))}
             </tbody>
