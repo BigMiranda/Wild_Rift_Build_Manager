@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTask } from '../tasks.js';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { mmss, n0 } from '../format.js';
@@ -25,6 +26,7 @@ export default function Match() {
   const [seed, setSeed] = useState(saved?.seed ?? 1);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
+  useTask('match', !!busy, { label: t('tasks.match'), path: '/simulacoes/partida' });
   const [error, setError] = useState(null);
   const [second, setSecond] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -79,6 +81,7 @@ export default function Match() {
     } catch {
       /* session only */
     }
+    window.dispatchEvent(new CustomEvent('ornn-arena-load', { detail: f.scenario }));
     window.dispatchEvent(new CustomEvent('ornn-open-tab', { detail: 'arena' }));
   };
 

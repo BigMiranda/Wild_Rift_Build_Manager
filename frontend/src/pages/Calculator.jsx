@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTask } from '../tasks.js';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { mmss, n0, n1 } from '../format.js';
@@ -41,6 +42,7 @@ export default function Calculator() {
   const [builds, setBuilds] = useState([]);
   const [estimate, setEstimate] = useState(null);
   const [job, setJob] = useState(null);
+  useTask('calculator', job?.status === 'running', { label: t('tasks.calculator'), done: job?.done, total: job?.total, path: '/simulacoes/calculadora' });
   const [error, setError] = useState(null);
   const timer = useRef(null);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));

@@ -1,4 +1,5 @@
 import { Fragment, Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTask } from '../tasks.js';
 import { api } from '../api.js';
 import ObjectivesPicker from '../components/ObjectivesPicker.jsx';
 import ItemPicker from '../components/ShopPicker.jsx';
@@ -97,7 +98,7 @@ function MapChoice({ sc, set, templates, onTemplate }) {
   );
 }
 
-export default function Arena() {
+export default function Arena({ forcedTab = null }) {
   const [templates, setTemplates] = useState([]);
   const [builds, setBuilds] = useState([]);
   const [saved, setSaved] = useState([]);
@@ -137,13 +138,15 @@ export default function Arena() {
     }
     setCard({ fighter, key, x, y });
   };
-  const [tab, setTab] = useState(() => {
+  const [ownTab, setTab] = useState(() => {
     try {
       return localStorage.getItem(`${STORE}-tab`) ?? 'scenario';
     } catch {
       return 'scenario';
     }
   });
+  // Simulações › Arena and › Laboratório are the same instance (one scenario), each showing its part
+  const tab = forcedTab ?? ownTab;
   const pickTab = (v) => {
     setTab(v);
     try {
@@ -199,6 +202,23 @@ export default function Arena() {
 
   // "Testar na Arena" from the planner: play the new scenario as soon as it has run.
   const autoplay = useRef(false);
+  // The arena stays mounted while other tabs are open (Rodada 8): a scenario sent from elsewhere comes by event.
+  useEffect(() => {
+    const load = (e) => {
+      if (!e.detail) return;
+      setSc({ ...emptyScenario(), ...e.detail });
+      setTime(0);
+      setEditing(null);
+      autoplay.current = true;
+      try {
+        localStorage.removeItem(`${STORE}-autoplay`);
+      } catch {
+        /* session only */
+      }
+    };
+    window.addEventListener('ornn-arena-load', load);
+    return () => window.removeEventListener('ornn-arena-load', load);
+  }, []);
   useEffect(() => {
     try {
       // (set only: StrictMode runs this twice in development, and the second run finds the flag gone)
@@ -310,7 +330,7 @@ export default function Arena() {
     : builds.find((b) => b.id === f.buildId)?.unitCode) ?? `#${i + 1}`);
   const names = useMemo(() => nameList, [nameList.join('|')]);
 
-  const tabs = (
+  const tabs = forcedTab ? null : (
     <div className="row arena-tabs" role="tablist">
       {['scenario', 'lab'].map((k) => (
         <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'primary' : ''} onClick={() => pickTab(k)}>
@@ -644,6 +664,7 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
   const [rules, setRules] = useState(null);   // the trained champion's guidelines, as saved
   const running = job != null && RUNNING.includes(job.status);
   const chainRunning = chain != null && RUNNING.includes(chain.status);
+  useTask('arena-training', running || chainRunning, { label: t('tasks.training'), done: job?.generation, total: job?.generations, path: '/simulacoes/arena' });
   const busy = running || chainRunning;
   const saved = useRef(0);
 

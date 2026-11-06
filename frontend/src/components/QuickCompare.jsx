@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTask } from '../tasks.js';
 import { api } from '../api.js';
 import { statLabel, t } from '../i18n.js';
 import { mmss, n0, n1, statValue } from '../format.js';
@@ -101,6 +102,7 @@ export default function QuickCompare({ build, slot, atMinute, ids, onIds, onClos
   const [basicBusy, setBasicBusy] = useState(null);
   const [suggested, setSuggested] = useState(null);
   const seq = useRef(0);
+  useTask('quick-basic', !!basicBusy, { label: t('tasks.quickBasic'), done: basicBusy?.done, total: basicBusy?.total, path: '/build/comparar-itens' });
   const effects = useMemo(() => applied(chosen), [chosen]);
   const ask = useMemo(() => ({
     build, slot, atMinute: slot == null ? atMinute : null, candidates: ids, minute, physicalShare: share / 100, effects,

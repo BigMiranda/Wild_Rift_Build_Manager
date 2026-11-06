@@ -24,6 +24,7 @@ export function openInArena(scenario) {
   } catch {
     /* storage unavailable: the arena opens as it was */
   }
+  window.dispatchEvent(new CustomEvent('ornn-arena-load', { detail: scenario }));
   window.dispatchEvent(new CustomEvent('ornn-open-tab', { detail: 'arena' }));
 }
 

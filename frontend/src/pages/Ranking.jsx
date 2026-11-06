@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTask } from '../tasks.js';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { n0, n1 } from '../format.js';
@@ -42,6 +43,7 @@ export default function Ranking({ items }) {
   const [rows, setRows] = useState([]);
   const [ran, setRan] = useState(null);
   const [busy, setBusy] = useState(null);
+  useTask('ranking', !!busy, { label: t('tasks.ranking'), done: busy?.done, total: busy?.total, path: '/relatorios/ranking' });
   const [open, setOpen] = useState(null);
   const [error, setError] = useState(null);
   const [effKind, setEffKind] = useState(saved.effKind ?? 'basico');

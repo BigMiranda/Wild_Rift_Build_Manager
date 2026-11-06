@@ -68,7 +68,7 @@ function PendingSale({ point, sales }) {
   );
 }
 
-export default function BuildDock({ point, itemsById, selected, readerId, onRead, onShop, draft, sales = [], testInArena, overlay, prices, objectives }) {
+export default function BuildDock({ point, itemsById, selected, readerId, onRead, onShop, draft, sales = [], testInArena, overlay, prices, objectives, inline = false }) {
   const [statsOpen, setStatsOpen] = useState(loadOpen);
   const [passivesOpen, setPassivesOpen] = useState(() => {
     try {
@@ -95,7 +95,7 @@ export default function BuildDock({ point, itemsById, selected, readerId, onRead
     return !o;
   });
   useEffect(() => {
-    if (readerId == null) return undefined;
+    if (readerId == null || !onRead) return undefined;
     const onKey = (e) => { if (e.key === 'Escape') onRead(null); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -105,7 +105,7 @@ export default function BuildDock({ point, itemsById, selected, readerId, onRead
   const total = point?.total ?? {};
   const reader = readerId != null ? itemsById.get(readerId) : null;
   return (
-    <div className="build-dock" role="region" aria-label={t('dock.title')}>
+    <div className={`build-dock${inline ? ' inline' : ''}`} role="region" aria-label={t('dock.title')}>
       <div className="dock-row">
         <span className="dock-when">
           <strong>{t('dock.title')}</strong>
@@ -113,8 +113,8 @@ export default function BuildDock({ point, itemsById, selected, readerId, onRead
             : <small className="muted">{t('dock.empty')}</small>}
         </span>
         <InventorySlots ids={ids} itemsById={itemsById} size={34} picked={readerId}
-          onPick={(id) => onRead(readerId === id ? null : id)} />
-        <button className="link dock-shop" onClick={onShop}>{t('dock.shop')}</button>
+          onPick={(id) => onRead?.(readerId === id ? null : id)} />
+        {onShop && <button className="link dock-shop" onClick={onShop}>{t('dock.shop')}</button>}
         {testInArena}
         {point && (
           <button className={`opt dock-toggle${passivesOpen ? ' on' : ''}`} aria-expanded={passivesOpen} onClick={togglePassives}
@@ -183,7 +183,7 @@ export default function BuildDock({ point, itemsById, selected, readerId, onRead
         </div>
       )}
       {reader && (
-        <ItemReader item={reader} point={point} values={valuesOf(values, reader.name)} onClose={() => onRead(null)} overlay={overlay} prices={prices} />
+        <ItemReader item={reader} point={point} values={valuesOf(values, reader.name)} onClose={() => onRead?.(null)} overlay={overlay} prices={prices} />
       )}
     </div>
   );
@@ -205,7 +205,7 @@ export function ItemReader({ item, point, onClose, values = [], overlay, prices 
           <h3>{item.name}</h3>
           <div className="gold">{t('shop.gold', { n: n0(item.cost) })}{item.active ? ` · ${t('shop.active')}` : ''}</div>
         </div>
-        <button className="icon reader-close" onClick={onClose} aria-label={t('close')}>✕</button>
+        {onClose && <button className="icon reader-close" onClick={onClose} aria-label={t('close')}>✕</button>}
       </header>
       <div className="reader-body">
         <div>

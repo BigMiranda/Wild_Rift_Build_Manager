@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTask } from '../tasks.js';
 import { CartesianGrid, Line, LineChart, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
@@ -321,6 +322,7 @@ export function EffectivenessPanel({ objectives, build, buildId, name, minute, i
   const at = minute == null ? null : Math.round(minute * 100) / 100;
   const base = { build, buildId: build ? null : buildId, minute: at, reference: ref, objectives };
   const itemsById = useMemo(() => new Map((items ?? []).map((i) => [i.id, i])), [items]);
+  useTask('effectiveness-panel', !!busy, { label: t('tasks.effectiveness', { name: name ?? '' }), done: busy?.done, total: busy?.total, path: '/relatorios/efetividade' });
 
   useEffect(() => {
     let live = true;
