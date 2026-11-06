@@ -294,6 +294,18 @@ public class PlannerLabService {
         return arena.effectValues(build, minute);
     }
 
+    /** The champion's passive and abilities with the build's stats (the planner's "Campeão: passiva e habilidades"). */
+    public List<Map<String, Object>> abilityValues(com.ornnplanner.api.PlannerLabController.AbilityRequest req) {
+        BuildRepository.Build b = req.build;
+        if (b == null && req.buildId != null) {
+            b = builds.findBuild(req.buildId).orElse(null);
+        }
+        if (b == null) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Sem build.");
+        }
+        return arena.abilityValues(b, req.minute, req.target);
+    }
+
     // ------------------------------------------------------------------ 2. seen under chosen effects
 
     /** The items and champion passives / abilities the panel can apply, with their default values and formulas. */

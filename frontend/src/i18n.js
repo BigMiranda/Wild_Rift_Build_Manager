@@ -1660,6 +1660,8 @@ const EN = {
 
 
 
+
+
 };
 
 const PT = {
@@ -3310,6 +3312,53 @@ const PT = {
   'tasks.training': "Treino de IA (Arena)",
   'tasks.ranking': "Ranking de builds",
   'tasks.match': "Partida inteira",
+  'cr.title': "{name} aos {time} (nível {level})",
+  'cr.help': "A passiva e as habilidades com a build aberta no minuto (e os condicionais do cabeçalho), pelas fórmulas da própria Arena: passe o mouse num termo para ver quais itens e runas dão aquele status. Embaixo de cada uma, o texto do jogo com os valores recalculados.",
+  'cr.target': "Alvo",
+  'cr.targetPick': "O dano depois das resistências do alvo, e quantos usos o matam (vida / armadura / RM).",
+  'cr.effTarget': "Efetividade",
+  'cr.compare': "Comparar com",
+  'cr.cmpMinute': "outro minuto",
+  'cr.cmpBuild': "outra build (mesmo campeão)",
+  'cr.cmpNote': "Os números entre parênteses são a diferença para a comparação (verde: melhor para a build aberta).",
+  'cr.base': "{v} de base (rank {rank})",
+  'cr.targetHealth': "Vida máxima do alvo",
+  'cr.from': "Vem de: {list}",
+  'cr.damage': "Dano ({type})",
+  'cr.type.fisico': "físico",
+  'cr.type.magico': "mágico",
+  'cr.type.verdadeiro': "verdadeiro",
+  'cr.cooldown': "Recarga",
+  'cr.cooldownHelp': "{base} s do rank, com {haste} de aceleração de habilidade da build.",
+  'cr.cost': "Custo",
+  'cr.range': "Alcance",
+  'cr.after': "Depois das resistências do alvo",
+  'cr.targetHelp': "Alvo com {arm} de armadura e {mr} de RM: passa {pct}%, com a penetração da build.",
+  'cr.toKill': "Usos para matar o alvo",
+  'cr.fromText': "lida do texto",
+  'cr.fromTextHelp': "Este campeão não tem ficha na Arena: o dano é o primeiro lido do texto do jogo, numa habilidade com alvo.",
+  'cr.shield': "Escudo: {v}",
+  'cr.heal': "Cura: {v}",
+  'cr.withTenacity': "com {pct}% de tenacidade do alvo",
+  'cr.forge': "Forja Viva: +{pct}% de cada item",
+  'cr.forgeTotal': "Total da forja",
+  'cr.fx.lentidao': "Lentidão",
+  'cr.fx.duracao': "Duração",
+  'cr.fx.atordoa': "Atordoa",
+  'cr.fx.arremessa': "Arremessa ao ar",
+  'cr.fx.enraiza': "Enraíza",
+  'cr.fx.puxa': "Puxa",
+  'cr.fx.empurra': "Empurra",
+  'cr.fx.empurrao': "Empurra",
+  'cr.fx.silencia': "Silencia",
+  'cr.fx.provoca': "Provoca",
+  'cr.fx.amedronta': "Amedronta",
+  'cr.fx.encanta': "Encanta",
+  'cr.fx.suprime': "Suprime",
+  'cr.fx.fragil': "Frágil",
+  'cr.fx.reduz_armadura': "Redução de armadura",
+  'cr.fx.reduz_rm': "Redução de RM",
+  'preview.short': "prévia",
 };
 
 /** Translates a key, replacing {placeholders}. Falls back to pt, then to the key itself. */

@@ -208,6 +208,23 @@ public class ArenaService {
         return new Arena(catalog, map).withoutFrames().withEffectValues().run(inputs, List.of(), 0).fighters.get(0).effectValues;
     }
 
+    /**
+     * The champion's passive and abilities of a build at a minute, by the fight's own formulas and against a target
+     * (a ragdoll; null = the lab's, 10000 health and 100 / 100): a zero-second fight ({@link Arena#withAbilityValues}).
+     */
+    public List<Map<String, Object>> abilityValues(BuildRepository.Build build, Double minute, ArenaModel.Dummy target) {
+        Scenario sc = new Scenario();
+        Slot me = new Slot();
+        me.team = 0;
+        me.build = build;
+        me.minute = minute;
+        Slot other = new Slot();
+        other.team = 1;
+        other.dummy = target != null ? target : new ArenaModel.Dummy();
+        sc.fighters = List.of(me, other);
+        return new Arena(catalog, map).withoutFrames().withAbilityValues().run(prepare(sc), List.of(), 0).fighters.get(0).abilityValues;
+    }
+
     /** The stats a build (saved or not) starts a fight with at a minute: the zero-second run of {@link SeenBy}. */
     public SeenBy.Base startBase(BuildRepository.Build build, Double minute) {
         Slot me = new Slot();

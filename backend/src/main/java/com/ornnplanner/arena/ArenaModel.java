@@ -584,6 +584,12 @@ public final class ArenaModel {
          */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public List<Map<String, Object>> effectValues = new ArrayList<>();
+        /**
+         * The champion's abilities read with its stats as the fight starts, by the fight's own sheet formulas
+         * ({@code Arena.withAbilityValues}): the planner's "Campeão: passiva e habilidades".
+         */
+        @JsonInclude(JsonInclude.Include.NON_EMPTY)
+        public List<Map<String, Object>> abilityValues = new ArrayList<>();
         /** Second of each activation of its runes and items, by source (all parts of one activation count once). */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public Map<String, List<Double>> procTimes = new LinkedHashMap<>();

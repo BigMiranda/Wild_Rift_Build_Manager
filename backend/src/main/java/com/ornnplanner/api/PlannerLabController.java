@@ -55,6 +55,20 @@ public class PlannerLabController {
         return lab.effectValues(req.build, req.minute);
     }
 
+    /** A build at a minute against a target ragdoll (null = the lab's). */
+    public static class AbilityRequest {
+        public com.ornnplanner.repo.BuildRepository.Build build;
+        public Long buildId;
+        public Double minute;
+        public com.ornnplanner.arena.ArenaModel.Dummy target;
+    }
+
+    /** The champion's passive and abilities with the build's stats at the minute, by the arena's formulas. */
+    @PostMapping("/abilities")
+    public List<Map<String, Object>> abilities(@RequestBody AbilityRequest req) {
+        return lab.abilityValues(req);
+    }
+
     /** The build under chosen item and champion effects, now and minute by minute. */
     @PostMapping("/seen-by")
     public Map<String, Object> seenBy(@RequestBody PlannerLabService.Request req) {

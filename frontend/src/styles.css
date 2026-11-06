@@ -1328,3 +1328,21 @@ td .arch-tag { display: inline; margin-left: 4px; }
 .analysis-items { list-style: none; padding: 0; margin: 0 0 8px; }
 .analysis-items li { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; margin: 4px 0; }
 .big-number { font-size: 1.3em; font-weight: 700; color: var(--gold-bright); margin: 6px 0 2px; }
+
+/* Rodada 8, parte 2b — Campeão: passiva e habilidades */
+.cr-controls { margin-bottom: 8px; }
+.cr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.cr-card { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; background: var(--surface-2); min-width: 0; }
+.cr-card header { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 6px; }
+.cr-numbers { display: grid; gap: 2px; margin: 0 0 6px; }
+.cr-numbers > div { display: flex; justify-content: space-between; gap: 8px; }
+.cr-numbers dt { color: var(--text-2); }
+.cr-numbers dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.cr-numbers .dmg-fisico { color: var(--stat-ad); }
+.cr-numbers .dmg-magico { color: var(--stat-ap); }
+.cr-numbers .dmg-verdadeiro { color: var(--text); }
+.cr-terms, .cr-effects { list-style: none; padding: 0; margin: 4px 0; font-size: .95em; }
+.cr-terms li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.cr-terms li.has-src { cursor: help; }
+.cr-passive { grid-column: 1 / -1; }
+.drawer .cr-grid { grid-template-columns: 1fr; }

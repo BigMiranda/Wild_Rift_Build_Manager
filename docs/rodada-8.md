@@ -129,3 +129,36 @@ nova, na pasta dela se existir). A caixa "comparar" segue na lista; as comparaç
   ficha com 5 abas (Relevância, Passivas, Ouro efetivo, Efetividade, Laboratório). Trocar de aba desmontava a página.
 - **Depois:** 5 super abas com sub abas numa segunda linha e o cabeçalho fino da build aberta embaixo delas, as três
   fixas no topo. Cada parte do Planejador tem a sua sub aba, e nenhuma tela perde estado ao trocar de aba.
+
+## Parte 2b — Relatórios › Campeão: passiva e habilidades ✅
+
+**Os números vêm da Arena.** `Arena.withAbilityValues()` escreve, no início de uma luta de zero segundo contra o
+boneco-alvo, a leitura de cada habilidade (`FighterStats.abilityValues`) com **as mesmas funções da luta**: a ficha da
+habilidade (`ability`), o `formula()` do dano termo a termo, a recarga com a aceleração (`cooldown`), o custo (`custo`
+do recurso), o alcance, os `efeitos` (controle e duração) e o que passa da resistência do alvo com a penetração da build
+(`DamageRules.mitigation`, como o `deal`). Campeões sem ficha caem no dano lido do texto (`AbilityParser`), também como
+a Arena faz. Endpoint: `POST /api/lab/abilities` (`build` ou `buildId`, `minute`, `target`: um boneco).
+
+**A tela** (`pages/ChampionReport.jsx`) reaproveita o `Ability` do `ChampionPanel` (o texto do jogo recalculado por
+`abilityMath.js`) e o `skills.js` (o rank pelo plano de habilidades), sem duplicar:
+
+- por habilidade: rank no minuto, dano com tipo, recarga (base → com a AH da build), custo, alcance, controle (tipo e
+  duração; com a tenacidade do alvo quando ele tem), escudo / cura quando a ficha tem;
+- **de onde vem o valor:** cada termo ("110% × 290 Dano de Ataque = 319"); ao passar o mouse, quais itens e runas dão
+  aquele status ("Vem de: Coração de Aço 180, Armadura de Warmog 155…");
+- **contra um alvo:** o boneco do laboratório, os bonecos da Arena (padrão e salvos) e os atacantes dos cenários da
+  Efetividade; dano depois das resistências e quantos usos matam o alvo;
+- **passiva:** o que ela soma em status e, para o Ornn, a tabela de quanto a Forja Viva amplifica cada item; o Frágil
+  (W e R) aparece com o dano dele;
+- **comparar:** outro minuto ou outra build do mesmo campeão, com a diferença entre parênteses (verde: melhor);
+- os condicionais do cabeçalho valem (a leitura usa a build com eles).
+
+O cabeçalho ganhou **Habilidades**, que abre esta aba (compacta) no painel lateral.
+
+**Teste** (`ChampionAbilitiesTest`): Ornn com 3 itens de tanque e sem runas aos 18:00 contra um boneco de 200.000 de
+Vida, 80 de Armadura e 60 de RM. A leitura de Q e E é o dano por acerto que a própria Arena registrou (dano por fonte ÷
+`habilidade_acertou`), ±1%; os termos somam o dano; a recarga é a da ficha com a AH. Medido: Q 137,0 por acerto (3
+acertos), E 137,6 (2 acertos), iguais à leitura.
+
+**Fora:** "Visão sob efeitos" como alvo. Ela descreve a build sob efeitos do inimigo, não um alvo com Vida e resistências.
+O alvo escolhido já cobre o dano depois das resistências.

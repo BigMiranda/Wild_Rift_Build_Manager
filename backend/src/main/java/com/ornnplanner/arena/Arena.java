@@ -833,6 +833,13 @@ public class Arena {
     }
 
     private boolean describeEffects;
+    private boolean describeAbilities;
+
+    /** Also writes the champion's abilities as the fight starts ({@link ArenaModel.FighterStats#abilityValues}). */
+    public Arena withAbilityValues() {
+        describeAbilities = true;
+        return this;
+    }
     private double quietFor;
     private double lastChampionHit;
     /** The fight ends when this fighter dies (null = when a side is down): the effectiveness tests stop at the build. */
@@ -917,6 +924,9 @@ public class Arena {
             u.r.startShields.put("fisico", sum(u.shieldPhysical));
             if (describeEffects) {
                 describeEffects(u);
+            }
+            if (describeAbilities) {
+                describeAbilities(u);
             }
             if (recordFrames && u.f.sheetAllOn != null) {
                 u.r.sheetOn.putAll(sheetStats(u, u.f.sheetAllOn));
@@ -6242,6 +6252,192 @@ public class Arena {
                     m.put("spec", t.d.spec);
                 }
             }
+        }
+    }
+
+    /** The terms of a sheet's damage formula, in the order {@link #formula} adds them: key, stat, scope. */
+    private static final String[][] FORMULA_TERMS = {
+        {"base", null, ""}, {"dda", Stats.ATTACK_DAMAGE, "total"}, {"dda_base", Stats.ATTACK_DAMAGE, "base"},
+        {"dda_bonus", Stats.ATTACK_DAMAGE, "bonus"}, {"pdh", Stats.ABILITY_POWER, "total"},
+        {"vida_max_alvo", "target max health", "alvo"}, {"vida_bonus", Stats.MAX_HEALTH, "bonus"},
+        {"vida_max", Stats.MAX_HEALTH, "total"}, {"arm_bonus", Stats.ARMOR, "bonus"}, {"rm_bonus", Stats.MAGIC_RESIST, "bonus"},
+    };
+
+    /**
+     * The champion's passive and abilities with its stats as the fight starts: rank, cooldown after haste, cost, range,
+     * damage (term by term, the very terms {@link #formula} adds) and what gets through the first enemy's resistances,
+     * the shield / heal of the sheet and its effects (control and their durations). The ranks are the build's.
+     */
+    private void describeAbilities(U u) {
+        U t = null;
+        for (U v : units) {
+            if (v.team() != u.team() && v != u) {
+                t = v;
+                break;
+            }
+        }
+        int lv = u.f.level;
+        Map<String, Object> res = map(u.kit("recurso"));
+        Map<String, Object> brittle = map(u.kit("fragil"));
+        if (brittle != null && map(brittle.get("dano")) != null) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("slot", "P");
+            m.put("name", "Frágil");
+            m.put("rank", 1);
+            readDamage(m, u, t, map(brittle.get("dano")), 1);
+            if (brittle.get("aumento_controle") != null) {
+                m.put("controlBonus", num(brittle.get("aumento_controle"), 0));
+            }
+            u.r.abilityValues.add(m);
+        }
+        for (String slot : List.of("1", "2", "3", "R")) {
+            Map<String, Object> ab = ability(u, slot);
+            if (ab == null) {
+                continue;
+            }
+            int learned = u.rank(slot);
+            int rank = Math.max(1, learned);
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("slot", slot);
+            m.put("name", String.valueOf(ab.getOrDefault("nome", slot)));
+            m.put("rank", learned);
+            m.put("form", ab.get("forma"));
+            m.put("fromText", ab.get("_parsed") != null);
+            double baseCd = val(ab, "recarga", rank, lv, 10);
+            double haste = u.stat(Stats.ABILITY_HASTE) + u.stat("R".equals(slot) ? "Ultimate Haste" : "Basic Ability Haste");
+            m.put("cooldownBase", baseCd);
+            m.put("haste", haste);
+            m.put("cooldown", baseCd / (1 + haste / 100));
+            if (ab.get("alcance") != null) {
+                m.put("range", num(ab.get("alcance"), 0));
+            }
+            if (res != null && ab.get("custo") != null) {
+                m.put("cost", val(ab, "custo", rank, lv, 0));
+                m.put("resource", res.get("tipo"));
+            }
+            if (ab.get("_parsed") != null) {
+                AbilityParser.Ability pa = (AbilityParser.Ability) ab.get("_parsed");
+                if (pa.damage != null) {
+                    readParsed(m, u, t, pa.damage, rank);
+                }
+                if (pa.immobilizes) {
+                    m.put("effects", Map.of("atordoa", 0.75));
+                }
+            } else {
+                Map<String, Object> d = map(ab.get("dano"));
+                if (d != null) {
+                    readDamage(m, u, t, d, rank);
+                    double mult = num(ab.get("_mult"), 1);
+                    if (mult != 1) {
+                        m.put("multiplier", mult);
+                    }
+                }
+                for (String k : List.of("escudo", "cura")) {
+                    Map<String, Object> f = map(ab.get(k));
+                    if (f != null) {
+                        m.put("escudo".equals(k) ? "shield" : "heal", formula(f, u, t, rank));
+                    }
+                }
+                Map<String, Object> ef = map(ab.get("efeitos"));
+                if (ef != null) {
+                    m.put("effects", new LinkedHashMap<>(ef));
+                }
+            }
+            if (t != null) {
+                m.put("targetTenacity", t.stat("% Tenacity"));
+            }
+            u.r.abilityValues.add(m);
+        }
+    }
+
+    /** Damage of a sheet's formula, term by term, and what gets through the target as {@link #deal} lets it. */
+    private void readDamage(Map<String, Object> m, U u, U t, Map<String, Object> d, int rank) {
+        int lv = u.f.level;
+        List<Map<String, Object>> terms = new ArrayList<>();
+        for (String[] k : FORMULA_TERMS) {
+            double r = val(d, k[0], rank, lv, 0);
+            if (Math.abs(r) < 1e-12) {
+                continue;
+            }
+            Map<String, Object> term = new LinkedHashMap<>();
+            term.put("key", k[0]);
+            if (k[1] == null) {
+                term.put("value", r);
+            } else {
+                double amount;
+                if ("alvo".equals(k[2])) {
+                    amount = t == null ? 0 : t.maxHp;
+                } else if (Stats.MAX_HEALTH.equals(k[1])) {
+                    amount = "bonus".equals(k[2]) ? Math.max(0, u.maxHp - u.base(Stats.MAX_HEALTH)) : u.maxHp;
+                } else if ("base".equals(k[2])) {
+                    amount = u.base(k[1]);
+                } else if ("bonus".equals(k[2])) {
+                    amount = u.bonus(k[1]);
+                } else {
+                    amount = u.stat(k[1]);
+                }
+                term.put("stat", k[1]);
+                term.put("scope", k[2]);
+                term.put("ratio", r);
+                term.put("amount", amount);
+                term.put("value", r * amount);
+            }
+            terms.add(term);
+        }
+        double raw = formula(d, u, t, rank);
+        m.put("damageType", type(d));
+        m.put("terms", terms);
+        m.put("damage", raw);
+        through(m, u, t, type(d), raw);
+    }
+
+    /** The same for a damage read from the game's text (champions without a sheet). */
+    private void readParsed(Map<String, Object> m, U u, U t, AbilityParser.Damage dmg, int rank) {
+        List<Map<String, Object>> terms = new ArrayList<>();
+        for (AbilityParser.Term x : dmg.terms) {
+            double r = x.byRank[Math.max(0, Math.min(x.byRank.length, rank) - 1)];
+            Map<String, Object> term = new LinkedHashMap<>();
+            if (x.stat == null) {
+                term.put("key", "base");
+                term.put("value", r * dmg.hits);
+            } else {
+                boolean target = AbilityParser.TARGET_MAX_HEALTH.equals(x.stat);
+                double amount = target ? (t == null ? 0 : t.maxHp) : u.stat(x.stat) - (x.bonus ? u.base(x.stat) : 0);
+                term.put("key", x.marker);
+                term.put("stat", x.stat);
+                term.put("scope", target ? "alvo" : x.bonus ? "bonus" : "total");
+                term.put("ratio", r * dmg.hits);
+                term.put("amount", amount);
+                term.put("value", r * amount * dmg.hits);
+            }
+            terms.add(term);
+        }
+        double raw = dmg.at(rank, u::stat, u::base, t == null ? 0 : t.maxHp);
+        m.put("damageType", dmg.type);
+        m.put("terms", terms);
+        m.put("damage", raw);
+        through(m, u, t, dmg.type, raw);
+    }
+
+    /** What a hit of `raw` leaves after the target's resistance, with the caster's penetration (as {@link #deal}). */
+    private void through(Map<String, Object> m, U u, U t, String type, double raw) {
+        if (t == null) {
+            return;
+        }
+        int res = "fisico".equals(type) ? 0 : "magico".equals(type) ? 1 : -1;
+        double mult = 1;
+        if (res >= 0) {
+            mult = DamageRules.mitigation(t.stat(res == 0 ? Stats.ARMOR : Stats.MAGIC_RESIST), 0,
+                    u.stat(res == 0 ? "% Armor Penetration" : "% Magic Penetration") / 100,
+                    u.stat(res == 0 ? "Armor Penetration" : "Magic Penetration"));
+        }
+        m.put("targetMult", mult);
+        m.put("afterResist", raw * mult);
+        m.put("targetHealth", t.maxHp);
+        m.put("targetArmor", t.stat(Stats.ARMOR));
+        m.put("targetMagicResist", t.stat(Stats.MAGIC_RESIST));
+        if (raw * mult > 0) {
+            m.put("usesToKill", (int) Math.ceil(t.maxHp / (raw * mult) - 1e-9));
         }
     }
 
