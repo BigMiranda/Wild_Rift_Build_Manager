@@ -232,3 +232,118 @@ a runas e habilidades, que antes só se mudavam nos editores de cada uma.
 
 Conferido no navegador (Soldado v1, Status do campeão): "Desligar tudo" leva a Armadura de 1.182 para 378 e a RM de
 1.031 para 306, e some o escudo do Suserano.
+
+## Parte 6 — Tamanho e mobile em paisagem ✅
+
+**Escala da interface** nas configurações (cabeçalho e Admin › Sobre e configurações): **Normal / Grande / Live**,
+lembrada no navegador (`ornn-planner-settings.scale`, `data-scale` no `<html>`). A folha de estilo tem 160 tamanhos em
+px (base 14 px), então a escala é um `zoom` no `body`, que aumenta texto, ícones e alvos de toque juntos:
+
+| escala | zoom | texto base | o que muda |
+|---|---|---|---|
+| Normal | 1 | 14 px (16 px no celular) | — |
+| Grande | 1,15 | 16 px | — |
+| Live | 1,25 | 17,5 px | cartões mais largos (menos colunas), grades de 2 colunas viram 1, tabelas mostram as 6 primeiras colunas e as outras ao tocar ou passar o mouse na tabela (com a dica "+ colunas"), botões e campos com pelo menos 36 × 1,25 = 45 px, ícones de item com pelo menos 33 px |
+
+Coordenadas medidas na tela e usadas como estilo de um elemento fixo são divididas pelo zoom (`zoom.js`): o seletor de
+itens, o cartão de recarga e a dica do mapa da Arena, e o tempo clicado na linha do tempo da Arena. O gráfico mede a
+largura com `clientWidth` (pixels de layout, como o `ResizeObserver`), não com `getBoundingClientRect`, que já vem com o
+zoom e deixava as faixas de compras mais largas que o gráfico.
+
+**Layout por largura** (`max-height: 520px` em paisagem, ou `max-width: 760px`):
+
+- texto base de pelo menos 16 px (zoom 1,15 na escala Normal);
+- o cabeçalho do app e as sub abas rolam junto com a página; as super abas e as **sub abas viram faixas roláveis**
+  (sem barra visível, com encaixe);
+- o **cabeçalho da build encolhe para uma linha** fixa no topo (52 px), rolável para os lados: nome, itens, minuto e os
+  botões rápidos;
+- os **painéis laterais ocupam até 60%** da largura (medido: 505 de 844 px);
+- Builds, Status e as grades de 2 colunas viram uma coluna; botões e campos com pelo menos 36 px × 1,15 = 41 px. As
+  marcas desenhadas (faixas do gráfico, espaços do inventário, células do plano de habilidades) mantêm o tamanho;
+- os gráficos ficam com até 70% da altura útil, e nenhuma tela rola para os lados.
+
+**Contraste** (WCAG, sobre o fundo `#060d17` / painel `#0c1826` / cartão `#13253a`): texto 15,7 / 14,4 / 12,5; texto
+secundário 11,0 / 10,1 / 8,8; texto apagado 6,0 / 5,5 / 4,7; dourado 8,8 / 8,0 / 7,0; erro 8,8; verde 10,3. Todos acima de
+4,5:1.
+
+### Revisão das telas
+
+Medido no navegador em cada uma das 24 sub abas: largura do documento contra a da janela, tamanho do texto, menor
+ícone de item e altura do topo fixo.
+
+**844 × 390 (Normal):** texto de 16,1 px em todas. Nenhuma rola para os lados depois das correções (antes: Gráfico e
+Comparar builds com 908 px, por causa das faixas de compras). O topo some ao rolar e fica só a linha da build.
+
+- Loja: a loja e a sequência rolam dentro das próprias caixas; Sequência e Comparar itens também.
+- Gráfico: ocupa a largura, e as marcas de nível voltaram ao tamanho normal (a altura mínima de botão as esticava).
+- Status, Análise, Relevância, Ouro efetivo, Efetividade e Campeão: uma coluna.
+- Arena: a explicação e o mapa numa coluna; a linha do tempo rola dentro da caixa.
+- Gaveta: 60% da largura.
+
+**915 × 412 (Normal):** as 24 sub abas sem rolagem lateral, com o cabeçalho da build de 52 px.
+
+**1920 × 1080 (Live):** texto de 17,5 px, menor ícone de item com 33 px (70 px na Loja), topo fixo de 180 px (17% da
+altura) e nenhuma tela com rolagem lateral. As tabelas largas (Relevância, Linha do tempo, Ranking) mostram 6 colunas e
+a dica.
+
+**Cabeçalho a 375 px** (a Rodada 6.a mediu 1.004 px): com 760 px ou menos, o cabeçalho do app não quebra mais em várias
+linhas. As super abas, as sub abas e a linha da build rolam para os lados dentro de si, sem alargar a página.
+
+# Relatório final
+
+## Onde estava → onde ficou
+
+| funcionalidade | onde estava | onde ficou |
+|---|---|---|
+| Pastas e builds (abrir, criar, mover, renomear, apagar pasta) | Planejador, coluna lateral | **Builds › Builds e pastas** (+ prévia, duplicar, importar, exportar) |
+| Marcar builds para comparar | Planejador, coluna lateral (caixa "comparar") | Builds (a mesma caixa) e **Relatórios › Comparar builds** (adicionar e tirar) |
+| Nome, pasta, campeão, ouro/min, XP/min, fim da partida, suposições, nota, boneco de pano | Planejador, topo | **Build › Loja** (topo) |
+| Salvar, duplicar e apagar a build | Planejador, topo | **Build › Loja** (topo) |
+| Barra fixa da build (6 espaços, status, passivas, venda pendente, objetivos) | Planejador, fixa no topo | **Cabeçalho fino** (espaços, minuto, botões) + **Build › Status do campeão** (o resto) |
+| Leitor de item | Barra fixa | **Gaveta lateral** (item do cabeçalho ou qualquer nome de item) |
+| Objetivos (Infernal, Montanha, Barão…) | Barra fixa | **Build › Status do campeão** |
+| Testar na Arena | Barra fixa e aba Laboratório | **Cabeçalho** e **Simulações › Laboratório** |
+| Campeão: plano de habilidades, efeitos, escolhas, texto | Planejador | **Build › Habilidades** |
+| Runas e feitiços, exportar | Planejador ("Preparações") | **Build › Runas e feitiços** |
+| Loja | Planejador | **Build › Loja** |
+| Sequência de compras (mover, momentos, vendas, condicionais, evoluir) | Planejador, sob a loja | **Build › Loja**, **Build › Sequência** e **Build › Comparar itens** |
+| Comparador rápido de itens | Planejador, sob a sequência | **Build › Comparar itens** (o ⇄ da loja e da sequência leva até lá) |
+| Efeitos modelados dos itens | Planejador, sob a sequência | **Build › Loja** (embaixo) |
+| Linha do tempo de compras | Planejador | **Build › Sequência** (e Relatórios › Comparar builds) |
+| Gráfico (status, ouro efetivo, passivas) | Planejador | **Build › Gráfico** (e Comparar builds) |
+| Ficha de status | Planejador, aba do momento | **Build › Status do campeão** (e a gaveta "Status") |
+| Relevância | Planejador, aba do momento | **Relatórios › Relevância** (e a gaveta) |
+| Passivas | Planejador, aba do momento | **Relatórios › Análise da build** |
+| Ouro efetivo | Planejador, aba do momento | **Relatórios › Ouro efetivo** |
+| Efetividade da build (relatórios, por item, candidatos) | Planejador, aba do momento | **Relatórios › Efetividade** |
+| Laboratório da build (sob efeitos) | Planejador, aba do momento | **Simulações › Laboratório** |
+| Arena (cenário, luta, treino) | aba Arena | **Simulações › Arena** |
+| Laboratório da Arena (combos, boneco) | aba Arena › Laboratório | **Simulações › Laboratório** |
+| Partida | aba Partida | **Simulações › Partida** |
+| Calculadora | aba Calculadora | **Simulações › Calculadora** |
+| Ranking | aba Ranking | **Relatórios › Ranking** |
+| Cenários de teste, bonecos, relatórios Básico e Completo | aba Efetividade | **Admin › Configuração da Efetividade** |
+| Admin (catálogo, Ornn, XP, preços, reimportar) | aba Admin | **Admin › Catálogo** |
+| Sobre | aba Sobre | **Admin › Sobre e configurações** |
+| Idioma e siglas | cabeçalho | cabeçalho e **Admin › Sobre e configurações** (+ Tamanho) |
+| — (novo) | — | Relatórios › Campeão; Build › Comparar runas; Build › Guias (lugar da Rodada 9); Condicionais no cabeçalho; sino de tarefas; prévia de build |
+
+Nada sumiu: as 24 sub abas foram abertas com uma build salva e todas renderizam, sem erro no console nem resposta de
+erro do backend.
+
+## O que ficou de fora, e por quê
+
+- **"Visão sob efeitos" como alvo do Campeão:** ela descreve a build sob efeitos do inimigo, não um alvo com Vida e
+  resistências. Os bonecos da Arena e os atacantes da Efetividade cobrem o dano contra um alvo.
+- **Minuto da evolução** dos itens que evoluem: o motor não estima quando a evolução acontece. O cartão diz "evoluído
+  desde a compra (estimativa)", e o campo `evolvesAt` fica pronto para quando o motor souber.
+- **Tabelas em Live:** as colunas da 7ª em diante ficam escondidas por CSS. O botão "mais" virou a dica "+ colunas", e a
+  tabela inteira aparece ao tocar ou passar o mouse nela. Um botão de verdade exigiria mexer em cada tabela.
+- **A escala usa `zoom`**, que funciona no Chrome, no Edge e no Firefox recente. Converter os 160 tamanhos em px para
+  `rem` seria uma rodada à parte.
+- **As Partes 1 e 2 saíram num commit só**, porque as rotas são as próprias super abas (explicado acima).
+- **Calculadora:** o Δ da build inteira aparece só nas alternativas, contra a melhor ordem. Na árvore de escolhas, que
+  compara ordens dos dois lados, o Δ de uma troca não tem um sentido único.
+
+**Testes:** 330 antes da rodada → 336 (14 opcionais pulados): `BuildDeltaTest` (5) e `ChampionAbilitiesTest` (1). Golden
+sem mudança. `npm run build` limpo.

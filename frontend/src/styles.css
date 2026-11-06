@@ -1357,3 +1357,66 @@ td .arch-tag { display: inline; margin-left: 4px; }
 .cond-list li.changed { background: var(--warn-bg); }
 .cond-label { flex: 1; min-width: 0; }
 .cond-list button { min-width: 110px; }
+
+/* ------------------------------------------------------------------------------------------------------------------
+ * Rodada 8, parte 6 — size and phones in landscape.
+ * The sheet sizes in px (14px base); the scales use `zoom`, which grows text, icons and touch targets together:
+ * Normal 1 (14px), Grande 1.15 (16px), Live 1.25 (17.5px, fewer columns, tables with fewer visible columns).
+ * A phone in landscape (low height) or a narrow window gets at least 16px, a header that scrolls away and the open
+ * build's header on one sticky line.
+ * ------------------------------------------------------------------------------------------------------------------ */
+html[data-scale="grande"] body { zoom: 1.15; }
+html[data-scale="live"] body { zoom: 1.25; }
+
+/* fewer columns in Live: the grids ask for wider cards */
+html[data-scale="live"] .qc-cards, html[data-scale="live"] .cr-grid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+html[data-scale="live"] .grid-2 { grid-template-columns: 1fr; }
+html[data-scale="live"] .analysis-grid { grid-template-columns: 1fr; }
+/* tables show their first 6 columns; hovering or touching a table (or focusing inside it) shows the rest */
+html[data-scale="live"] table.data:not(:hover):not(:focus-within) tr > :nth-child(n+7) { display: none; }
+html[data-scale="live"] .table-wrap:has(table.data tr > :nth-child(7))::before {
+  content: "+ colunas: toque ou passe o mouse na tabela"; display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px;
+}
+html[lang="en"][data-scale="live"] .table-wrap:has(table.data tr > :nth-child(7))::before { content: "+ columns: touch or hover the table"; }
+/* touch targets and icons */
+html[data-scale="live"] button, html[data-scale="live"] select, html[data-scale="live"] input:not([type="checkbox"]):not([type="range"]) { min-height: 36px; }
+html[data-scale="live"] :is(.lane-item, .lane-level, .inv-slot, .buildbar-opts .opt, .champ-plan-cell, .tile-icon) { min-height: 0; }
+html[data-scale="live"] .item-icon { min-width: 26px; min-height: 26px; }
+
+/* phones in landscape (844 x 390, 915 x 412) and narrow windows */
+@media (max-height: 520px) and (orientation: landscape), (max-width: 760px) {
+  html[data-scale="normal"] body, html:not([data-scale]) body { zoom: 1.15; }
+  /* the wrapper steps aside so the build header alone sticks to the page */
+  .app-top { display: contents; }
+  .app-top .app-header { position: static; }
+  .app-header { padding: 4px 10px; gap: 8px; flex-wrap: nowrap; }
+  .app-header h1 { font-size: 13px; white-space: nowrap; }
+  .app-header .super-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .app-header .super-tabs button { white-space: nowrap; min-height: 36px; padding: 4px 8px; }
+  .app-header .settings { display: none; }
+  .sub-tabs { padding: 0 6px; scroll-snap-type: x proximity; }
+  .sub-tabs button { scroll-snap-align: start; min-height: 36px; padding: 6px 10px; }
+  /* the open build's header: one sticky line that scrolls sideways */
+  .build-header {
+    position: sticky; top: 0; z-index: 6; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 4px 8px; gap: 8px;
+  }
+  .build-header > * { flex-shrink: 0; }
+  .sub-tabs, .build-header, .app-header .super-tabs { scrollbar-width: none; }
+  .sub-tabs::-webkit-scrollbar, .build-header::-webkit-scrollbar, .app-header .super-tabs::-webkit-scrollbar { display: none; }
+  .build-header .bh-title small { display: none; }
+  .build-header .bh-title strong { max-width: 14ch; }
+  .build-header .bh-buttons { flex-wrap: nowrap; margin-left: 0; }
+  .build-header button, .build-header select { white-space: nowrap; min-height: 36px; }
+  /* up to 60% of the screen: vw is zoomed too (1.15), so 52vw is about 60% on screen */
+  .drawer { width: min(52vw, 560px); }
+  .main { padding: 8px 10px 30px; }
+  .panel { padding: 10px; }
+  button, select, input:not([type="checkbox"]):not([type="range"]) { min-height: 36px; }
+  /* drawn marks are not touch rows: the chart's lanes, the slots and the small toggles keep their size */
+  .lane-item, .lane-level, .inv-slot, .buildbar-opts .opt, .champ-plan-cell, .tile-icon, .chip-item .icon { min-height: 0; }
+  .builds-page { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .recharts-responsive-container { max-height: 70vh; }
+}
+/* the settings still reachable on a phone: Admin › Sobre e configurações shows them in the page */
+.settings-page .settings { display: flex !important; flex-wrap: wrap; gap: 12px; }

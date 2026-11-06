@@ -125,8 +125,13 @@ Catalog re-import (Admin screen) upserts by name and preserves hand-edited items
 `identityHashCode`, unordered-hash iteration, or wall-clock in simulation logic). The golden tests and the trainer's
 validation depend on it.
 
-Frontend: React 18 + Vite 5 + Recharts, plain JS (no TypeScript), **no router** — `App.jsx` switches pages
-(`pages/Planner`, `Arena`, `Match`, `Effectiveness`, `Calculator`, `Ranking`, `Admin`, `About`). `api.js` wraps all backend calls. Client-side game math
+Frontend: React 18 + Vite 5 + Recharts, plain JS (no TypeScript). Since Rodada 8 (`docs/rodada-8.md`): a hand-written
+hash router (`router.js`: `#/<super>/<sub>?build=&min=`, `LEGACY` maps the old tab names), super tabs (Builds, Build,
+Relatórios, Simulações, Admin) with sub tabs, and every visited screen stays mounted (hidden) in `App.jsx`. The open build
+lives in `buildContext.jsx` (`useBuild()`: draft, minute, comparisons, header conditionals; draft kept in localStorage);
+`pages/Planner.jsx` is a set of sections reading it. The side drawer (`components/Drawer.jsx`), the job bell (`tasks.js`)
+and the interface scale (CSS `zoom`; `zoom.js` converts screen coordinates) are global. Item / rune / order comparisons
+all go through `arena/BuildDeltaService` ("swap and recalculate the whole build"). `api.js` wraps all backend calls. Client-side game math
 mirrors the backend in `abilityMath.js`, `effective.js`, `passives.js`, `runes.js`, `shopModel.js`, `skills.js` —
 keep these in sync with the Java side when a rule changes.
 

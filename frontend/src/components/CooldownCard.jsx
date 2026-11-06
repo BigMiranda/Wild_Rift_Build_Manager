@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { pageZoom } from '../zoom.js';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { n0, n1 } from '../format.js';
@@ -57,8 +58,9 @@ export default function CooldownCard({ result, sel, time, frame, bars, buildOf, 
     // Next to the click, kept inside the window (a phone's width included).
     const box = ref.current?.getBoundingClientRect();
     if (!box) return;
-    const left = Math.max(8, Math.min(sel.x + 12, window.innerWidth - box.width - 8));
-    const top = Math.max(8, Math.min(sel.y + 12, window.innerHeight - box.height - 8));
+    const z = pageZoom();   // the click and the box are on screen; the style is inside the zoomed body
+    const left = Math.max(8, Math.min((sel.x + 12) / z, (window.innerWidth - box.width) / z - 8));
+    const top = Math.max(8, Math.min((sel.y + 12) / z, (window.innerHeight - box.height) / z - 8));
     setPos({ left, top });
   }, [sel.x, sel.y, more]);
   useEffect(() => {

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { pageZoom } from '../zoom.js';
 import { createPortal } from 'react-dom';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
@@ -41,9 +42,12 @@ export function PickerPopover({ label, title, disabled, className = '', children
   };
   useLayoutEffect(() => {
     if (!open || !button.current) return;
-    const r = button.current.getBoundingClientRect();
-    const vw = document.documentElement.clientWidth;
-    const vh = window.innerHeight;
+    // screen measures as style measures inside the zoomed body (the interface scale)
+    const z = pageZoom();
+    const b = button.current.getBoundingClientRect();
+    const r = { top: b.top / z, bottom: b.bottom / z, left: b.left / z };
+    const vw = document.documentElement.clientWidth / z;
+    const vh = window.innerHeight / z;
     const width = Math.min(WIDTH, vw - 16);
     const below = vh - r.bottom - 12;
     const above = r.top - 12;

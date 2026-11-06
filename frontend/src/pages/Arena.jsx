@@ -1,4 +1,5 @@
 import { Fragment, Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { pageZoom } from '../zoom.js';
 import { BuildLink } from '../components/BuildPreview.jsx';
 import { useTask } from '../tasks.js';
 import { api } from '../api.js';
@@ -1609,7 +1610,7 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick, onSe
         </g>
       </svg>
       {hover && (
-        <div className="arena-tip" style={{ left: hover.x + 14, top: hover.y + 14 }}>
+        <div className="arena-tip" style={{ left: hover.x / pageZoom() + 14, top: hover.y / pageZoom() + 14 }}>
           {hover.found.map((h, k) => (h.unit ? (
             <div key={k}>
               <strong>{h.i + 1} · {names[h.i]}</strong> — {n0(h.unit.hp)}/{n0(h.unit.maxHp)}{h.unit.shield > 0 ? ` +${n0(h.unit.shield)} ${t('arena.shield')}` : ''}
@@ -1773,7 +1774,7 @@ function Timeline({ sc, result, time, names, editing, selected, onTime, onAdd, o
   on.current = { onTime, onAdd, onEdit, onMove, onPickCooldown, drag };
   const toTime = (ev) => {
     const box = ref.current.getBoundingClientRect();
-    return Math.max(0, Math.min(sc.duration, (ev.clientX - box.left + ref.current.scrollLeft - 110) / PX_PER_S));
+    return Math.max(0, Math.min(sc.duration, ((ev.clientX - box.left) / pageZoom() + ref.current.scrollLeft - 110) / PX_PER_S));
   };
   const cds = useMemo(() => cooldownBars(result), [result]);
   const selKey = selected ? `${selected.fighter}|${selected.key}` : null;

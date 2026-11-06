@@ -37,7 +37,8 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
 
   useEffect(() => {
     if (!wrapRef.current) return undefined;
-    setWidth(wrapRef.current.getBoundingClientRect().width); // the observer's first callback may be delayed
+    // the observer's first callback may be delayed; clientWidth is in layout pixels, like the observer's (not zoomed)
+    setWidth(wrapRef.current.clientWidth);
     const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
     ro.observe(wrapRef.current);
     return () => ro.disconnect();
