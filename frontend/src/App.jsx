@@ -22,6 +22,8 @@ import Arena from './pages/Arena.jsx';
 import Match from './pages/Match.jsx';
 import Calculator from './pages/Calculator.jsx';
 import Discovery from './pages/Discovery.jsx';
+import Campaigns from './pages/Campaigns.jsx';
+import Guides from './pages/Guides.jsx';
 import Ranking from './pages/Ranking.jsx';
 import Effectiveness from './pages/Effectiveness.jsx';
 
@@ -193,7 +195,7 @@ function Shell({ meta, items, reload, error, settingsBox }) {
       {pane('build/comparar-runas', () => main(<RuneCompare />))}
       {pane('build/runas', () => main(<PrepSection />))}
       {pane('build/habilidades', () => main(<SkillsSection />))}
-      {pane('build/guias', () => main(<section className="panel"><h3>{t('sub.build.guias')}</h3><p className="muted">{t('guides.soon')}</p></section>))}
+      {pane('build/guias', () => main(<Guides />))}
 
       {pane('relatorios/analise', () => main(<><Analysis /><PassivesSection /></>))}
       {pane('relatorios/campeao', () => main(<ChampionReport />))}
@@ -215,6 +217,7 @@ function Shell({ meta, items, reload, error, settingsBox }) {
 
       {pane('admin/catalogo', () => <Admin meta={meta} items={items} onChanged={reload} />)}
       {pane('admin/efetividade', () => <Effectiveness items={items} />)}
+      {pane('admin/campanhas', () => <Campaigns />)}
       {pane('admin/sobre', () => (
         <>
           <div className="main settings-page" style={{ paddingBottom: 0 }}>

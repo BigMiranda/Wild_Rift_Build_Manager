@@ -90,6 +90,13 @@ export default function Discovery() {
     }
   };
   const r = job?.result;
+  const unitCode = builds.find((b) => String(b.id) === String(form.buildId))?.unitCode;
+  const [latest, setLatest] = useState(null);
+  useEffect(() => {
+    setLatest(null);
+    if (!unitCode) return;
+    api.get(`/api/campaigns/latest?unit=${encodeURIComponent(unitCode)}`).then((l) => setLatest(l?.discovery ? l : null)).catch(() => {});
+  }, [unitCode, job?.status]);
   const baseBuild = async () => api.get(`/api/builds/${form.buildId}`);
   const asBuild = (b, k, label) => ({
     ...b, name: `${b.name} · ${label}`, steps: (k.order?.length ? k.order : [...k.items, ...(k.boots ? [k.boots] : [])]).map((id) => ({ itemId: id, includeConditional: true })),
@@ -196,6 +203,10 @@ export default function Discovery() {
           )}
         </div>
         {(error || job?.error) && <p className="error">{error ?? job.error}</p>}
+        {latest && job?.result !== latest.discovery && (
+          <p className="small">{t('disc.latest', { s: n0(latest.discovery.seconds), b: t(`disc.budget.${latest.discovery.budget ?? 'rapido'}`) })}{' '}
+            <button className="small" onClick={() => setJob({ status: 'done', result: latest.discovery })}>{t('disc.showLatest')}</button></p>
+        )}
       </section>
 
       <MetaBuilds unitCode={builds.find((b) => String(b.id) === String(form.buildId))?.unitCode} />

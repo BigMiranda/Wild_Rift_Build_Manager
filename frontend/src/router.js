@@ -11,7 +11,7 @@ export const ROUTES = {
   build: ['loja', 'sequencia', 'grafico', 'status', 'comparar-itens', 'comparar-runas', 'runas', 'habilidades', 'guias'],
   relatorios: ['analise', 'campeao', 'efetividade', 'relevancia', 'ouro', 'ranking', 'comparar-builds'],
   simulacoes: ['arena', 'laboratorio', 'partida', 'calculadora', 'descoberta'],
-  admin: ['catalogo', 'efetividade', 'sobre'],
+  admin: ['catalogo', 'efetividade', 'campanhas', 'sobre'],
 };
 export const SUPERS = Object.keys(ROUTES);
 export const DEFAULT_PATH = '/build/loja';

@@ -305,7 +305,10 @@ public final class Funnel {
         ranked.sort(Comparator.comparingDouble((Entry e) -> -e.score()).thenComparing(e -> e.kit.key()));
         res.ranked = ranked;
         LinkedHashSet<Entry> toConfirm = new LinkedHashSet<>(ranked.subList(0, Math.min(c.confirm, ranked.size())));
-        toConfirm.addAll(res.niches.values());
+        // and the best niches (by score), as many as the finalists: a confirmation costs about five batteries
+        List<Entry> niches = new ArrayList<>(res.niches.values());
+        niches.sort(Comparator.comparingDouble((Entry e) -> -e.score()).thenComparing(e -> e.kit.key()));
+        toConfirm.addAll(niches.subList(0, Math.min(c.confirm, niches.size())));
         int n = 0;
         for (Entry e : toConfirm) {
             if (ev.stopped()) {

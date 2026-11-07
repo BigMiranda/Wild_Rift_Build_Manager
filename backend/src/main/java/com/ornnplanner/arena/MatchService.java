@@ -41,8 +41,45 @@ public class MatchService {
     private final ChampionProfiles profiles;
     private final Map<String, Object> macro;
 
+    private final com.ornnplanner.arena.guide.GuideService guides;
+
+    /**
+     * The seats with a guide (Rodada 9, part 7) buy by it: it is read at the draft against this match (the other side's
+     * builds, the lane opponent by role) and becomes the build's order, by the planner's timeline. Gold and enemy items
+     * are not known at the draft: those conditions read as false (no live re-reading during the match).
+     */
+    private void guides(List<MatchModel.Slot> slots, List<BuildRepository.Build> chosen, List<String> roles) {
+        for (int i = 0; i < slots.size(); i++) {
+            MatchModel.Slot s = slots.get(i);
+            if (s.guideId == null) {
+                continue;
+            }
+            com.ornnplanner.arena.guide.GuideService.Match m = new com.ornnplanner.arena.guide.GuideService.Match();
+            m.build = chosen.get(i);
+            for (int k = 0; k < slots.size(); k++) {
+                if (slots.get(k).team != s.team) {
+                    m.enemies.add(slots.get(k).buildId);
+                    if (roles.get(k).equals(roles.get(i))) {
+                        m.laneOpponent = slots.get(k).buildId;
+                    }
+                }
+            }
+            com.ornnplanner.arena.guide.GuideService.Reading r = guides.resolve(guides.get(s.guideId), m);
+            if (!r.order.isEmpty()) {
+                BuildRepository.Build b = guides.withOrderPublic(chosen.get(i), r.order);
+                if (r.runePage != null) {
+                    b.runePage = r.runePage;
+                }
+                b.name = chosen.get(i).name + " (guia)";
+                chosen.set(i, b);
+            }
+        }
+    }
+
     public MatchService(ArenaService arena, PlannerService planner, BuildRepository builds, ChampionProfiles profiles,
+                        @org.springframework.context.annotation.Lazy com.ornnplanner.arena.guide.GuideService guides,
                         @Value("${planner.seed.macro:classpath:seed/macro_7_3d.yml}") Resource macroFile) {
+        this.guides = guides;
         this.arena = arena;
         this.planner = planner;
         this.builds = builds;
@@ -85,6 +122,7 @@ public class MatchService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cada lado precisa de ao menos 1 campeão com ficha.");
         }
         List<String> roles = roles(slots, names);
+        guides(slots, chosen, roles);
         Live world = new Live(slots, chosen, roles);
         List<Integer> teams = new ArrayList<>();
         slots.forEach(s -> teams.add(s.team));
@@ -186,7 +224,11 @@ public class MatchService {
         private Slot slot(int seat, int done, int level, double minute) {
             Slot s = new Slot();
             s.team = slots.get(seat).team;
-            s.buildId = slots.get(seat).buildId;
+            if (slots.get(seat).guideId != null) {
+                s.build = chosen.get(seat);   // the guide's order, not the saved one
+            } else {
+                s.buildId = slots.get(seat).buildId;
+            }
             s.minute = (double) Math.max(1, Math.round(minute));
             s.matchSteps = prefix(seat, done);
             s.matchLevel = level;

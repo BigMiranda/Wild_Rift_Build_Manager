@@ -21,6 +21,8 @@ public final class MatchModel {
         public String role;
         /** script (null too) | tactical | auto | ai:&lt;id&gt;: its brain in the fights. */
         public String brain = "tactical";
+        /** A guide (Rodada 9, part 7): the purchases follow it, read at the draft against this match, instead of the build's order. */
+        public Long guideId;
     }
 
     public static class Request {

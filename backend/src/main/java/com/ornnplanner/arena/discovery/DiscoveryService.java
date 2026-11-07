@@ -123,12 +123,42 @@ public class DiscoveryService {
             try {
                 j.result = run(r, j);
                 j.status = j.stop ? "stopped" : "done";
+                keep(r, j);
             } catch (RuntimeException e) {
                 j.status = "error";
                 j.error = e.getMessage() == null ? e.toString() : e.getMessage();
             }
         });
         return j;
+    }
+
+    /** A discovery run alone is kept in build_discovery too (no campaign), by patch, champion and configuration. */
+    private void keep(DiscoveryModel.Request r, DiscoveryModel.Job j) {
+        try {
+            BuildRepository.Build base = base(r);
+            com.ornnplanner.repo.DiscoveryRepository.DiscoveryRow row = new com.ornnplanner.repo.DiscoveryRepository.DiscoveryRow();
+            row.patch = runes.catalog().patch;
+            row.unitCode = base.unitCode;
+            row.champion = j.result.champion;
+            DiscoveryModel.Request cfg = copy(r, DiscoveryModel.Request.class);
+            cfg.build = null;
+            row.config = JSON.writeValueAsString(cfg);
+            row.configKey = base.unitCode + "|avulsa|" + j.id + "|" + System.currentTimeMillis();
+            row.status = j.stop ? "pausado" : "feito";
+            row.step = "fim";
+            Map<String, Object> wrap = new LinkedHashMap<>();
+            wrap.put("discovery", j.result);
+            row.result = JSON.writeValueAsString(wrap);
+            row.seconds = j.result.seconds;
+            repo.insertDiscovery(row);
+        } catch (Exception e) {
+            // keeping it is a convenience: the job's answer stands without it
+        }
+    }
+
+    /** The patch of the game data (what the stored results are kept by). */
+    public String patch() {
+        return runes.catalog().patch;
     }
 
     public DiscoveryModel.Job job(long id) {

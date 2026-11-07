@@ -357,3 +357,72 @@ uma coordenada eram montadas antes da troca da fundamental, e a árvore nunca mu
 **Banco:** migração **v25** cria `meta_build`, `build_discovery` e `build_guide` (a última também pelo `SchemaManager`).
 
 Testes: 359 → 364 (16 opcionais pulados). `npm run build` limpo.
+
+## Parte 6 — Campanhas e tela ✅
+
+**Tela da Descoberta** (Simulações › Descoberta; feita junto da Parte 5): build (campeão, runas, feitiços, ouro), orçamento
+rápido ou completo, arquétipo alvo ou "deixar livre", runas, ordem, sementes, eixos de nicho, semente; **estimativa antes
+de começar** (agora contando as builds conhecidas); etapa, barra e "Parar". Resultado: a **build padrão robusta** (a
+melhor média com P20 pelo menos a mediana dos cinco primeiros, e a % de cenários em que supera a melhor conhecida), as
+melhores achadas (nota, média, P20, confirmada, versatilidade, novidade, supera a conhecida, nicho, origem), as
+**descobertas**, a **curva de efetividade no tempo** (padrão, melhor conhecida e as três primeiras), os **nichos**, as
+**sinergias** e as conhecidas. Ações em cada build: **Abrir como build**, **Salvar como build** (`/api/discovery/save`, na
+pasta da build base, com a ordem e as runas), **Comparar com a minha** (Δ da build inteira) e **Na Efetividade** (abre o
+rascunho em Relatórios › Efetividade).
+
+**Campanhas** (Admin › Campanhas, `arena/discovery/CampaignService`, `/api/campaigns`): a mesma busca para uma lista de
+campeões, em segundo plano, um de cada vez, numa fila em `build_discovery` por **patch, campeão e configuração** (hash).
+Pausar, retomar (a fila ou uma linha), cancelar, prioridade e apagar. Um campeão já feito para o mesmo patch e
+configuração não roda de novo. Um servidor parado no meio volta a fila ao subir (`rodando` → `pendente`, ao ficar pronto),
+e o campeão refaz a etapa em que estava. **A Descoberta avulsa também é guardada** (sem campanha). **As análises
+simples leem de lá:** a Descoberta mostra "Há um resultado salvo deste campeão neste patch" com "Mostrar", e a guia
+sugerida (Parte 7) lê o mais recente.
+
+**Confiança:** campeões com ficha C, D ou sem ficha recebem "baixa confiança", e as descobertas deles viram nota, não
+destaque. Na campanha, podem ser pulados (padrão).
+
+**Conferido na tela (servidores da rodada):** a campanha "Teste da tela" (Darius, rápido sem runas nem ordem) rodou as
+builds salvas, entrou na descoberta, **pausou** pela tela (estado "pausado" na etapa "descoberta", 11 min gastos),
+**retomou** e pausou de novo. **Achado: a confirmação dos nichos era cara** (no rápido, 9 confirmações de ~20 s cada para
+o Darius, com 6 nichos): agora confirmam-se os finalistas e os melhores nichos, no mesmo número.
+
+**Mais lento que o Ornn:** o Darius levou ~11 min até as sinergias no rápido, contra ~3 min do Ornn. As lutas do Darius
+(zonas, sangramento, execução) custam mais por bateria.
+
+## Parte 7 — Guias ✅
+
+`arena/guide/Guide` (o modelo e a leitura, puros) e `GuideService` (`/api/guides`, tabela `build_guide`).
+
+- **Guia por campeão:** nós de **condição** com o galho do sim e o do não, e folhas de **decisão** (item, componente,
+  bota ou página de runas). Condições: inimigos com dano mágico, físico ou misto (N ou mais), da classe, com o arquétipo
+  de build; o adversário de rota (classe ou campeão); estar à frente ou atrás em ouro; o minuto (a partir de, antes de);
+  o item que o adversário fechou. O dano de um inimigo sai do ouro dos status dos itens da build dele.
+- **Editor** em Build › Guias: lista recuada clicável, sem biblioteca; cada galho se abre com um clique, e "+ condição" ou
+  "+ as runas da build" entram no galho aberto. **Modo Guia da loja:** a loja ao lado põe o item clicado no galho aberto
+  (componente e bota reconhecidos pela seção e pela aba).
+- **Ler numa partida:** contra builds inimigas escolhidas (e o adversário de rota), a guia vira uma ordem, decisão por
+  decisão, cada uma no minuto em que a linha do tempo chega com as anteriores: "a partir dos 10 min" vira quando a build
+  chega lá.
+- **Avaliar:** cada caminho pelas condições vira uma build e recebe a nota robusta; a nota da guia é a média ponderada
+  pela **frequência** de cada condição (campo do nó; vazio = metade). Conferido na tela: uma guia de 1 condição (sim:
+  Máscara Abissal, 22,5; não: Armadura de Espinhos, 15,5) deu 19.
+- **Sugestão automática:** pela árvore dos dois lados da calculadora ("se o adversário rushar X, a nossa melhor resposta
+  a X; senão a linha maximin"), ou pela Descoberta mais recente guardada ("2+ inimigos com dano mágico alto → a build
+  achada melhor nos cenários mágicos; 2+ físico → a melhor nos físicos; senão a padrão robusta"). Os cenários são
+  mágicos ou físicos pelas funções dos atacantes do YAML, nunca pelo nome.
+- **A macro da partida compra pela guia** quando a posição tem uma (`MatchModel.Slot.guideId`): a guia é lida **no draft**
+  contra o outro lado (o adversário de rota pela função) e vira a ordem da build daquela posição, inclusive nas lutas.
+
+**Fora:** a releitura **durante** a partida. O ouro e os itens do adversário não são conhecidos no draft, então essas
+condições leem "não"; reler a guia a cada compra pede mudar o `World` da partida (a ordem é um índice de passos
+calculado antes). A Efetividade e a calculadora avaliam uma guia pelo botão da tela de Guias (a nota robusta é a
+mesma medida), não dentro das telas delas.
+
+### Testes
+
+`CampaignTest` (1, orçamento mínimo): a estimativa pula o campeão sem ficha; a fila roda o Ornn até "feito" com base
+sintética; o mesmo campeão e configuração de novo não cria linha. `GuideTest` (3): a leitura pelas condições (dano,
+minuto); os caminhos pesam pela frequência; uma guia lida numa partida vira ordem (inimigo mágico → Máscara primeiro; o
+2º item lido antes dos 10 min) e a avaliação tem 4 caminhos.
+
+Testes: 364 → 368 (16 opcionais pulados). `npm run build` limpo.
