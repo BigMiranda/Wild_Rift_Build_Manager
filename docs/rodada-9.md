@@ -77,3 +77,83 @@ e `length` itens; um componente forte comprado cedo e fechado depois; a agressiv
 "qual componente primeiro"; determinismo.
 
 Testes: 336 → 342 (14 opcionais pulados). `npm run build` limpo.
+
+## Parte 1b — Efetividade ofensiva ✅
+
+A build testada **ataca** um boneco-alvo que não ataca e morre de verdade, com o cérebro automático (`auto`), e a medida é
+quão bem ela o mata. Fica em Relatórios › Efetividade, na aba **Causar dano** (a defensiva virou a aba **Aguentar**), e
+os alvos ficam no Admin › Configuração da Efetividade › **Alvos (causar dano)**, com presets só de leitura,
+"Duplicar", alvos do usuário e o relatório (pesos e varreduras).
+
+**Serviço próprio:** `arena/OffenseTestService` (+ `OffenseModel`, `api/OffenseController`, `/api/offense/...`). Os
+alvos do usuário e o relatório salvo ficam na tabela `effect_test` com `kind` `alvo` e `relatorio_ofensivo`, **sem
+migração**. As variantes por item (`sem`, `so_status`, `ouro`) são as mesmas da defensiva (`EffectTestService.fighter`).
+
+### Os alvos (`ofensivo` em `efetividade_7_3d.yml`)
+
+Os números do prompt, sem mudança. Cura e escudo são pulsos do boneco (o mesmo mecanismo dos bonecos atacantes). Dois
+campos novos no `ArenaModel.Dummy`, que só valem para quem os usa (os golden não mudaram):
+
+- `growTo` / `growSeconds`: a Armadura e a RM sobem até o valor ao longo do tempo, contado do primeiro golpe;
+- `dashEvery` / `dashDistance` / `seed`: um avanço a 1.200 unidades/s, na direção sorteada pela semente da largada
+  (`Arena.unit`, splitmix64: igual em qualquer thread).
+
+O "revide leve" é um pulso de dano físico por segundo, desligado nos presets.
+
+### Medidas
+
+| medida | como |
+|---|---|
+| tempo para matar | a morte do alvo, ou "não matou em 30 s" com a vida restante |
+| DPS efetivo | vida tirada por segundo, depois das resistências, escudos e cura |
+| % perdido | (bruto − depois das resistências), escudo absorvido e cura do alvo, sobre o bruto |
+| acertos | `mira_lancada` / `mira_acertou` (formas miradas, sem canal nem avanço) e `ataque_iniciado` / `ataque_acertou`: contadores novos em `events`, que não entram na impressão digital dos golden |
+| tempo em alcance | `em_alcance`: segundos com o alvo no alcance de ataque, contados só quando há boneco mortal |
+
+**Índice ofensivo** = tempo para matar da referência ÷ o da build × 100. **Decisão:** o tempo comparado é o
+**contínuo** (`smoothTime` = vida do alvo × tempo ÷ dano líquido, com o excesso do último golpe): o tempo da morte vem
+em degraus de um ataque, e duas builds que matam no 17º ataque davam índice idêntico (achei isso no teste da
+penetração). Quando um dos dois não mata, o índice é a razão das taxas de dano efetivas (`byRate`), como a Rodada 7 fez
+na defensiva.
+
+**Leituras:** "como joga" (uma largada) ou "média de 6 largadas" (distância, lado e a semente dos avanços variam).
+Por item: sem o item, só os status, e o mesmo ouro em status puros, numa das misturas do YAML (DdA, PdH, penetrações,
+velocidade de ataque, DdA + VA). Varreduras de 5 estágios: Vida 1.000–10.000, Armadura e RM 0–400, cura 0–5%/s,
+escudo 0–400/s, velocidade 300–550 (andando) e 0–2 avanços/s.
+
+### Calibragem (aos 15:00, 800 de ouro/min, uma largada)
+
+`-Doffense.report=true` (`OffenseTestsTest#calibrationReport`). Tempo para matar da build (e da referência sem itens), índice:
+
+| alvo | Vayne (Gume + Dominik) | Darius (Serrespada + Serylda) | Ornn (Égide + Espinhos) |
+|---|---|---|---|
+| Frágil | 4,0 s (10,4) · 238 | 6,0 s (7,7) · 126 | 6,9 s (9,1) · 119 |
+| Muita vida | 10,4 s (18,8) · 185 | 13,9 s (21,8) · 163 | 19,9 s (23,2) · 116 |
+| Muita vida e cura | 13,4 s (> 30) · 247 taxa | 17,4 s (> 30) · 254 taxa | 29,2 s (> 30) · 179 taxa |
+| Pouca vida, muita resist. | 9,4 s (18,8) · 197 | 10,3 s (19,4) · 195 | 29,3 s (> 30) · 125 taxa |
+| Muita vida e resist. | 16,4 s (21,2) · 130 | 23,4 s (> 30) · 199 taxa | > 30 s, 34% resta · 130 taxa |
+| Escudo contínuo | 16,4 s (> 30) · 278 taxa | 22,1 s (> 30) · 495 taxa | > 30 s, 84% · 120 taxa |
+| Resistência crescente | 10,4 s (21,2) · 207 | 15,2 s (> 30) · 201 taxa | > 30 s, 10% · 127 taxa |
+| Escudo grande em janela | 16,4 s (> 30) · 188 taxa | 20,8 s (> 30) · 184 taxa | > 30 s, 40% · 145 taxa |
+| Esquiva por velocidade | 6,6 s (15,6) · 223 | 9,0 s (14,5) · 162 | 14,8 s (23,5) · 157 |
+| Esquiva por avanços | 7,2 s (16,3) · 231 | 8,2 s (13,4) · 176 | 23,4 s (24,9) · 107 |
+
+O que a tabela diz: o tanque com 2 itens de tanque não mata os alvos resistentes em 30 s (é o esperado, e a nota por
+classe da Parte 1 não cobra isso dele); o Escudo contínuo de 80/s come 15–23% do dano bruto; contra a cura de 2%/s
+nenhuma referência sem itens mata.
+
+**Calibragem a rever:**
+- **Os perfis de esquiva quase não esquivam numa largada:** o Ornn acerta 5/5 do Q contra os avanços. Com a média de
+  largadas aparecem erros (o teste confere que a mira erra mais que o ataque com alvo). A causa provável é que a IA
+  lança perto do alvo, onde o avanço de 300 não tira o corpo da linha a tempo. Não mexi nos números do prompt.
+- **Índice pela taxa e pelo tempo misturados** na média ponderada: quando só a referência não mata, o índice vem pela
+  taxa e tende a ser maior (Escudo contínuo do Darius: 495). Está marcado "pela taxa" na tela.
+
+### Testes
+
+`OffenseTestsTest` (4 + o relatório opcional): mais penetração % (Rancor de Serylda contra o mesmo ouro em DdA) sobe o
+índice contra "muita resistência" mais que contra "frágil"; o corta-cura (Serrespada, inteira contra só os status)
+sobe o índice contra "muita cura" e quase nada contra "frágil"; nos perfis de esquiva a mira acerta menos que o ataque
+com alvo (média de 4 largadas); determinismo, com os avanços sorteados.
+
+Testes: 342 → 347 (15 opcionais pulados). `npm run build` limpo. Golden sem mudança.

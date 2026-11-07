@@ -1432,3 +1432,5 @@ html[data-scale="live"] .item-icon { min-width: 26px; min-height: 26px; }
 .calc-lines th { text-align: left; white-space: nowrap; vertical-align: top; }
 .calc-lines td { vertical-align: top; min-width: 180px; }
 .bar-mini { display: inline-block; height: 8px; background: var(--accent, #4a8); border-radius: 2px; vertical-align: middle; }
+.sweep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.sweep-card h5 { margin: 4px 0; }

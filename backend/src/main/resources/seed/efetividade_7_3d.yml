@@ -270,3 +270,118 @@ relatorios:
     - {cenario: cinco_contra_um, peso: 1}
     - {cenario: luta_de_equipe, peso: 1}
     varreduras: [pen_pct, pen_pct_fisica, pen_pct_magica, pen_fixa, critico, dda, pdh, resistencias, vida, inimigos]
+
+# ------------------------------------------------------------------ efetividade ofensiva (Rodada 9, parte 1b)
+# A build testada ATACA um boneco-alvo, com o cérebro automático, e a medida é quão bem ela o mata. O boneco-alvo não
+# ataca (salvo o "revide leve", que só existe para os efeitos "ao sofrer dano") e morre de verdade.
+#
+# Por alvo:
+#   nome, nota
+#   vida, armadura, rm, vdm
+#   comportamento  parado | anda (zigue-zague de um lado ao outro da rota) | foge (se afasta de quem o ataca)
+#   cura_pct       cura de x% da Vida máxima por segundo (depois do primeiro golpe)
+#   escudo         escudo de `escudo` renovado a cada `escudo_a_cada` s, durando `escudo_duracao` s
+#   cresce_ate     a Armadura e a RM sobem até este valor em `cresce_em` s, contados do primeiro golpe, e ficam
+#   avanco_a_cada  avança uma vez a cada x s, `avanco_distancia` unidades, numa direção sorteada pela semente da largada
+#   revide         dano físico por segundo ao atacante (0 = não revida)
+#
+# Os números são o ponto de partida do prompt da Rodada 9; a calibragem está em docs/rodada-9.md.
+ofensivo:
+  duracao: 30          # s: "não matou em 30 s" quando não mata
+  distancia: 550       # onde o alvo começa, à frente da build
+  # O mesmo ouro do item em status puros, para a leitura "ouro" por item (partes de 0 a 1 do ouro).
+  misturas:
+  - {"Attack Damage": 1.0}
+  - {"Ability Power": 1.0}
+  - {"% Armor Penetration": 1.0}
+  - {"% Magic Penetration": 1.0}
+  - {"% Attack Speed": 1.0}
+  - {"Attack Damage": 0.5, "% Attack Speed": 0.5}
+  alvos:
+    fragil:
+      nome: Frágil
+      vida: 1500
+      armadura: 30
+      rm: 30
+    vida_alta:
+      nome: Muita vida, poucas resistências
+      vida: 5000
+      armadura: 40
+      rm: 40
+    cura_alta:
+      nome: Muita vida e muita cura
+      vida: 5000
+      armadura: 60
+      rm: 60
+      cura_pct: 2
+    resistente:
+      nome: Pouca vida, muita resistência
+      vida: 2000
+      armadura: 250
+      rm: 250
+    muralha:
+      nome: Muita vida e muita resistência
+      vida: 5000
+      armadura: 250
+      rm: 250
+    escudo_continuo:
+      nome: Escudo contínuo e muita resistência
+      vida: 3000
+      armadura: 250
+      rm: 250
+      escudo: 80
+      escudo_a_cada: 1
+      escudo_duracao: 1.2
+    resistencia_crescente:
+      nome: Resistência crescente
+      nota: O perfil do Ornn ou da Duplaguarda.
+      vida: 3000
+      armadura: 50
+      rm: 50
+      cresce_ate: 300
+      cresce_em: 5
+    escudo_janela:
+      nome: Resistência e escudo grande em janela
+      vida: 3000
+      armadura: 250
+      rm: 250
+      escudo: 1500
+      escudo_a_cada: 8
+      escudo_duracao: 2.5
+    esquiva_velocidade:
+      nome: Esquiva por velocidade
+      vida: 3000
+      armadura: 60
+      rm: 60
+      vdm: 500
+      comportamento: anda
+    esquiva_avancos:
+      nome: Esquiva por avanços
+      vida: 3000
+      armadura: 60
+      rm: 60
+      avanco_a_cada: 1
+      avanco_distancia: 300
+  varredura:
+    alvo: {nome: Alvo da varredura, vida: 3000, armadura: 80, rm: 80}
+    dimensoes:
+    - {chave: vida, nome: Vida do alvo, estagios: [1000, 2500, 4000, 7000, 10000]}
+    - {chave: resistencias, nome: Armadura e RM do alvo, estagios: [0, 100, 200, 300, 400]}
+    - {chave: cura, nome: Cura por segundo (% da Vida), estagios: [0, 1, 2, 3.5, 5]}
+    - {chave: escudo, nome: Escudo por segundo, estagios: [0, 50, 100, 200, 400]}
+    - {chave: velocidade, nome: Velocidade de movimento do alvo, estagios: [300, 350, 400, 475, 550]}
+    - {chave: avancos, nome: Avanços por segundo, estagios: [0, 0.25, 0.5, 1, 2]}
+  relatorio:
+    nome: Causar dano
+    alvos:
+    - {alvo: fragil, peso: 1}
+    - {alvo: vida_alta, peso: 1}
+    - {alvo: cura_alta, peso: 1}
+    - {alvo: resistente, peso: 1}
+    - {alvo: muralha, peso: 1}
+    - {alvo: escudo_continuo, peso: 1}
+    - {alvo: resistencia_crescente, peso: 1}
+    - {alvo: escudo_janela, peso: 1}
+    - {alvo: esquiva_velocidade, peso: 1}
+    - {alvo: esquiva_avancos, peso: 1}
+    varreduras: [vida, resistencias, cura, escudo, velocidade, avancos]

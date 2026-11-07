@@ -25,6 +25,7 @@ import SkillExport from '../components/SkillExport.jsx';
 import BuildTestPanels from '../components/BuildTestPanels.jsx';
 import TestInArena from '../components/TestInArena.jsx';
 import { EffectivenessPanel } from '../components/EffectivenessReport.jsx';
+import OffensePanel from '../components/OffenseReport.jsx';
 import QuickCompare from '../components/QuickCompare.jsx';
 import PassiveValueBar from '../components/PassiveValueBar.jsx';
 import ItemSetupExport from '../components/ItemSetupExport.jsx';
@@ -359,12 +360,23 @@ export function PassivesSection() {
 
 /** The effectiveness reports of the open build at the minute (test scenarios), with the compared builds. */
 export function EffectivenessSection() {
-  const { point, objectives, payload, draft, items, builds, folders, compareIds, condKey, compareForEffect } = useBuild();
+  const { point, objectives, payload, draft, dirty, items, builds, folders, compareIds, condKey, compareForEffect } = useBuild();
+  const [side, setSide] = useState('aguentar');
   if (!point) return <p className="muted">{t('timeline.needInputs')}</p>;
   return (
-    <EffectivenessPanel objectives={hasObjectives(objectives) ? objectives : null} build={payload} buildId={draft.id} name={draft.name}
-      minute={point.minute} items={items} builds={builds} folders={folders}
-      compareKey={`${compareIds.join(',')}|${condKey}`} compare={compareForEffect} />
+    <>
+      <div className="chips" role="tablist">
+        {['aguentar', 'causar'].map((k) => (
+          <button key={k} role="tab" aria-selected={side === k} className={side === k ? 'active' : ''} onClick={() => setSide(k)}>{t(`off.side.${k}`)}</button>
+        ))}
+      </div>
+      <div hidden={side !== 'aguentar'}>
+        <EffectivenessPanel objectives={hasObjectives(objectives) ? objectives : null} build={payload} buildId={draft.id} name={draft.name}
+          minute={point.minute} items={items} builds={builds} folders={folders}
+          compareKey={`${compareIds.join(',')}|${condKey}`} compare={compareForEffect} />
+      </div>
+      {side === 'causar' && <OffensePanel build={payload} buildId={dirty ? null : draft.id} minute={point.minute} />}
+    </>
   );
 }
 

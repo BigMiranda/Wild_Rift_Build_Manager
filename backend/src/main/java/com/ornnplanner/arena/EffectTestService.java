@@ -710,6 +710,34 @@ public class EffectTestService {
         return s;
     }
 
+    /**
+     * The build's fighter held as the variant says, with a brain (the offensive tests: the build attacks), prepared and
+     * cached like the defensive ones.
+     */
+    public Arena.Input fighter(BuildRepository.Build build, Double minute, Variant v, String brain) {
+        ArenaModel.Slot s = slotFor(build, minute, v == null ? new Variant() : v);
+        s.brain = brain;
+        return buildInput(s);
+    }
+
+    /** The reference's fighter: the same champion at the first minute of the level, with no items and the build's runes. */
+    public Arena.Input referenceFighter(BuildRepository.Build build, Double minute, String brain) {
+        FighterBuilder.Combatant c = new FighterBuilder.Combatant();
+        c.build = build;
+        c.minute = minute;
+        ArenaModel.Slot s = noItems(build, combat.levelStart(c));
+        s.brain = brain;
+        return buildInput(s);
+    }
+
+    /** The minute of the reference (the first of the build's level at the minute). */
+    public double referenceMinute(BuildRepository.Build build, Double minute) {
+        FighterBuilder.Combatant c = new FighterBuilder.Combatant();
+        c.build = build;
+        c.minute = minute;
+        return combat.levelStart(c);
+    }
+
     /** The build's slot held as the variant says. */
     private ArenaModel.Slot slotFor(BuildRepository.Build build, Double minute, Variant v) {
         String kind = v.kind == null ? "build" : v.kind;
@@ -810,7 +838,8 @@ public class EffectTestService {
 
     /** The item's gold in pure stats (Health, Armor, Magic Resist by the shares of {@code mix}), at their gold prices. */
     ItemDef pureStats(ItemDef it, Map<String, Double> mix) {
-        int idx = Math.max(0, MIXES.indexOf(mix));
+        // a mix of the offensive tests is not among the defensive ones: its own id, from its content
+        int idx = MIXES.contains(mix) ? MIXES.indexOf(mix) : 50 + Math.floorMod(new java.util.TreeMap<>(mix).toString().hashCode(), 49);
         ItemDef d = synthetic(it, -(2_000_000L + it.id * 100 + idx), "Ouro de " + it.name + " em status");
         goldStats(it.cost, mix).forEach((stat, v) -> d.stats.add(StatLine.flat(stat, v)));
         return d;
@@ -1215,7 +1244,7 @@ public class EffectTestService {
         }
     }
 
-    private static <T> T read(String s, Class<T> type) {
+    static <T> T read(String s, Class<T> type) {
         try {
             return JSON.readValue(s, type);
         } catch (JsonProcessingException e) {

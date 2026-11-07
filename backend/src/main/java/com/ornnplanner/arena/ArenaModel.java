@@ -149,6 +149,16 @@ public final class ArenaModel {
          * tested dies; its health still counts for whatever reads the target's health.
          */
         public boolean immortal;
+        /**
+         * Growing resistances (an offensive effectiveness target): armor and magic resist go from their values to this
+         * one over {@link #growSeconds} from its first second in combat, and stay (null = fixed).
+         */
+        public Double growTo;
+        public double growSeconds = 5;
+        /** Dashes once every this many seconds (0 = never), {@link #dashDistance} units in a direction drawn by {@link #seed}. */
+        public double dashEvery;
+        public double dashDistance = 300;
+        public long seed = 1;
 
         /** Presets: the ragdolls of the lab's first screen. */
         public static List<Dummy> presets() {
@@ -191,6 +201,11 @@ public final class ArenaModel {
             d.attackSpeed = attackSpeed;
             d.attackRange = attackRange;
             d.immortal = immortal;
+            d.growTo = growTo;
+            d.growSeconds = growSeconds;
+            d.dashEvery = dashEvery;
+            d.dashDistance = dashDistance;
+            d.seed = seed;
             d.pulses = new ArrayList<>();
             for (Pulse p : pulses == null ? List.<Pulse>of() : pulses) {
                 d.pulses.add(p.copy());

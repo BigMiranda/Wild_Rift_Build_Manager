@@ -9,6 +9,7 @@ import MinuteInput from '../components/MinuteInput.jsx';
 import { ReferencePicker, indexLabel, netRate, ttd } from '../components/EffectivenessReport.jsx';
 import { openInArena } from '../components/TestInArena.jsx';
 import { archetypeLabel, useArchetypes } from '../archetypes.js';
+import OffenseConfig from '../components/OffenseConfig.jsx';
 
 /**
  * "Efetividade": the test scenarios (presets and the user's: create, duplicate, edit, save, delete; presets only
@@ -62,7 +63,7 @@ export default function Effectiveness({ items }) {
         <h2>{t('efx.title')}</h2>
         <p className="muted small" style={{ marginTop: 0 }}>{t('efx.intro')}</p>
         <div className="chips" role="tablist">
-          {['tests', 'reports', 'help'].map((k) => (
+          {['tests', 'reports', 'targets', 'help'].map((k) => (
             <button key={k} role="tab" aria-selected={section === k} className={section === k ? 'active' : ''} onClick={() => setSection(k)}>{t(`efx.section.${k}`)}</button>
           ))}
         </div>
@@ -108,6 +109,7 @@ export default function Effectiveness({ items }) {
         </div>
       )}
       {section === 'reports' && meta && <ReportsEditor all={all} meta={meta} />}
+      {section === 'targets' && <OffenseConfig />}
       {section === 'help' && <Help />}
     </div>
   );

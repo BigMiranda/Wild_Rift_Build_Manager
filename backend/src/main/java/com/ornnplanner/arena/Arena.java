@@ -399,6 +399,12 @@ public class Arena {
         /** A ragdoll: its next turn and way (side to side), its next on-hit effects. */
         double dummyTurnAt = 1.5;
         int dummyDir = 1;
+        /** A ragdoll that dashes: its next dash, how many it made, and where the one under way ends (null = none). */
+        double dashAt = -1;
+        int dashes;
+        double[] dashTo;
+        /** An aimed ability was cast and has not hit a champion yet (the hit / miss count of the offensive tests). */
+        boolean aimPending;
         double dummyHitAt;
         /** Next second each ability pulse of a ragdoll may fire (index of the pulse; absent = as soon as in range). */
         final double[] pulseAt;
@@ -443,6 +449,11 @@ public class Arena {
 
         double stat(String s) {
             double v = f.stat(s);
+            if (in.dummy != null && in.dummy.growTo != null && (Stats.ARMOR.equals(s) || Stats.MAGIC_RESIST.equals(s))) {
+                double from = Stats.ARMOR.equals(s) ? in.dummy.armor : in.dummy.magicResist;
+                double share = combatSince < 0 ? 0 : Math.min(1, (now - combatSince) / Math.max(0.1, in.dummy.growSeconds));
+                v += (in.dummy.growTo - from) * share;
+            }
             for (int i = 0; i < delayOn.length; i++) {
                 if (!delayOn[i]) {
                     v -= f.delays.get(i).amounts.getOrDefault(s, 0.0);
@@ -2488,6 +2499,7 @@ public class Arena {
     // ------------------------------------------------------------------ attacks
 
     private void attack(U u, U t) {
+        count(u, "ataque_iniciado");
         double interval = 1 / u.attackSpeed();
         double windup = num(u.kit("espera_ataque"), 0.25) * interval;
         u.nextAttack = now + interval;
@@ -2521,6 +2533,9 @@ public class Arena {
     private void attackHit(U s, U t) {
         if (t.dead || !t.targetable()) {
             return;
+        }
+        if (now >= s.blindUntil) {
+            count(s, "ataque_acertou");
         }
         if (now < s.blindUntil) {
             count(s, "ataque_errou");
@@ -2880,6 +2895,10 @@ public class Arena {
         if (ab.get("troca_forma") != null) {
             changeForm(u, String.valueOf(ab.get("troca_forma")));
         }
+        if (AIMED.contains(shape) && !"canal".equals(shape) && !"avanco".equals(shape)) {
+            count(u, "mira_lancada");
+            u.aimPending = true;
+        }
         switch (shape) {
             case "piscar":
                 blink(u, ab, tx, ty);
@@ -3074,6 +3093,10 @@ public class Arena {
 
     /** Damage and effects of an ability on one enemy (mult: Danger Zone, Decimate's handle, per-stack bonus). */
     private void hitAbility(U u, U v, Map<String, Object> ab, int rank, String source, double mult, String stackSlot) {
+        if (u.aimPending && v.team() != u.team()) {
+            count(u, "mira_acertou");
+            u.aimPending = false;
+        }
         credit(u, source, u.dash != null && u.dash.recast);
         Map<String, Object> d = map(ab.get("dano"));
         if (d != null) {
@@ -4539,6 +4562,7 @@ public class Arena {
             }
             dummyEffects(s);
             dummyPulses(s);
+            dummyReach(s);
             tickStacks(s);
             if (s.combatSince < 0) {
                 continue;
@@ -6522,6 +6546,9 @@ public class Arena {
      * away or Cleanse (true = the step is done).
      */
     private boolean dummyStep(U u) {
+        if (dummyDash(u)) {
+            return true;
+        }
         String b = u.in.dummy.behavior == null ? "parado" : u.in.dummy.behavior;
         switch (b) {
             case "anda": {
@@ -6551,6 +6578,63 @@ public class Arena {
             default:
                 return true;
         }
+    }
+
+    /**
+     * A ragdoll's dashes (the "dodge by dashes" target): once every {@code dashEvery} seconds it dashes its distance at
+     * 1200 units per second, in a direction drawn from its seed and the dash's number (deterministic), kept in the lane.
+     * True while a dash is under way.
+     */
+    private boolean dummyDash(U u) {
+        ArenaModel.Dummy d = u.in.dummy;
+        if (d.dashEvery <= 0 || !u.canAct()) {
+            u.dashTo = null;
+            return false;
+        }
+        if (u.dashTo == null && u.dashAt < 0) {
+            u.dashAt = now + d.dashEvery;
+        }
+        if (u.dashTo == null && now >= u.dashAt - 1e-9) {
+            double a = 2 * Math.PI * unit(d.seed, u.dashes++);
+            u.dashTo = new double[] {clampX(u.x + Math.cos(a) * d.dashDistance), clampY(u.y + Math.sin(a) * d.dashDistance)};
+            u.dashAt = now + d.dashEvery;
+        }
+        if (u.dashTo == null) {
+            return false;
+        }
+        moveTo(u, u.dashTo[0], u.dashTo[1], 1200 * DT);
+        u.busyState = "move";
+        if (dist(u.x, u.y, u.dashTo[0], u.dashTo[1]) < 1) {
+            u.dashTo = null;
+        }
+        return true;
+    }
+
+    /**
+     * Seconds each enemy champion spends with a ragdoll in its attack reach (the offensive tests' "time in range"). Only
+     * ragdolls pay for it.
+     */
+    private void dummyReach(U d) {
+        if (d.in.dummy == null || d.in.dummy.immortal) {
+            return;
+        }
+        for (U u : units) {
+            if (u.dead || u.in.dummy != null || u.team() == d.team() || u.npc) {
+                continue;
+            }
+            if (dist(u.x, u.y, d.x, d.y) <= u.attackRange() + u.radius() + d.radius()) {
+                count(u, "em_alcance", DT);
+            }
+        }
+    }
+
+    /** A number in [0, 1) from a seed and an index (splitmix64): the same everywhere, in any thread. */
+    static double unit(long seed, long k) {
+        long z = seed + (k + 1) * 0x9E3779B97F4A7C15L;
+        z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
+        z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+        z = z ^ (z >>> 31);
+        return (z >>> 11) * 0x1.0p-53;
     }
 
     /**
