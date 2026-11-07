@@ -532,6 +532,21 @@ public class ArenaService {
         return labInput(buildId, minute, null);
     }
 
+    /** The same for a build that is not saved here (the public version's builds live in the visitor's browser). */
+    public Arena.Input labInput(BuildRepository.Build build, Double minute, java.util.Set<Long> without) {
+        Scenario sc = new Scenario();
+        Slot me = new Slot();
+        me.team = 0;
+        me.build = build;
+        me.minute = minute;
+        me.excludeItems = without;
+        Slot other = new Slot();
+        other.team = 1;
+        other.dummy = new ArenaModel.Dummy();
+        sc.fighters = List.of(me, other);
+        return prepare(sc).get(0);
+    }
+
     /** The same without some of its items (null = all of them). */
     public Arena.Input labInput(long buildId, Double minute, java.util.Set<Long> without) {
         Scenario sc = new Scenario();

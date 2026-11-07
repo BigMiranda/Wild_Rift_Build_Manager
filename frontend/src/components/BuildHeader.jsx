@@ -10,6 +10,7 @@ import { RelevanceSection, StatusSection } from '../pages/Planner.jsx';
 import ChampionReport from '../pages/ChampionReport.jsx';
 import Conditionals from './Conditionals.jsx';
 import { ItemReader } from './BuildDock.jsx';
+import { PUBLIC } from '../publicMode.js';
 
 /**
  * The thin fixed header of the open build (Rodada 8): name, champion, the items held at the minute, the minute selected
@@ -47,7 +48,7 @@ export default function BuildHeader() {
         <button onClick={() => open({ title: t('sub.relatorios.relevancia'), path: '/relatorios/relevancia', render: () => <RelevanceSection /> })} disabled={!point}>{t('header.relevance')}</button>
         <button onClick={() => open({ title: t('sub.relatorios.campeao'), path: '/relatorios/campeao', render: () => <ChampionReport compact /> })} disabled={!point || draft.unitCode === 'RAGDOLL'}>{t('header.skills')}</button>
         <button className={condOverride ? 'on' : ''} onClick={() => open({ title: t('cond.title'), render: () => <Conditionals /> })}>{t('header.conditionals')}</button>
-        <TestInArena compact buildId={draft.id} buildName={draft.name} minute={point?.minute ?? null} builds={builds} />
+        {!PUBLIC && <TestInArena compact buildId={draft.id} buildName={draft.name} minute={point?.minute ?? null} builds={builds} />}
       </span>
     </div>
   );

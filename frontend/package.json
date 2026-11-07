@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:publico": "vite build --mode publico",
     "preview": "vite preview"
   },
   "dependencies": {

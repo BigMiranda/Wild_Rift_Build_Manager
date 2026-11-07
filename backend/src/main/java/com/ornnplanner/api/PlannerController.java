@@ -38,9 +38,11 @@ public class PlannerController {
     private final BuildRepository builds;
     private final ReferenceRepository reference;
     private final CatalogImporter importer;
+    private final com.ornnplanner.publico.ComputeGuard guard;
 
     public PlannerController(PlannerService planner, BuildRepository builds, ReferenceRepository reference,
-                             CatalogImporter importer) {
+                             CatalogImporter importer, com.ornnplanner.publico.ComputeGuard guard) {
+        this.guard = guard;
         this.planner = planner;
         this.builds = builds;
         this.reference = reference;
@@ -80,7 +82,7 @@ public class PlannerController {
     /** Calculates an unsaved build (the editor sends its current state). */
     @PostMapping("/calculate")
     public TimelineResult calculate(@RequestBody Build build) {
-        return planner.calculate(build);
+        return guard.run(() -> planner.calculate(build));
     }
 
     /** Body of {@code POST /api/relevance}: the build (as edited), the game minute and the sources passed on. */
@@ -93,7 +95,7 @@ public class PlannerController {
     /** Relevance report at a minute with the Living Forge and / or passives with a ref passed on to the items. */
     @PostMapping("/relevance")
     public com.ornnplanner.engine.Model.Relevance relevance(@RequestBody RelevanceRequest body) {
-        return planner.relevance(body.build, body.minute, body.sources);
+        return guard.run(() -> planner.relevance(body.build, body.minute, body.sources));
     }
 
     @GetMapping("/builds/{id}/timeline")

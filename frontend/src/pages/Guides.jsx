@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
+import { PUBLIC } from '../publicMode.js';
 import { t } from '../i18n.js';
 import { n1 } from '../format.js';
 import { useBuild } from '../buildContext.jsx';
@@ -216,23 +217,28 @@ export default function Guides() {
         <h3>{t('sub.build.guias')} · {unit} <Help text={t('guide.help')} /></h3>
         <div className="row">
           {list.map((g) => <button key={g.id} className={guide?.id === g.id ? 'active' : ''} onClick={() => { setGuide(g); setOpen([]); setEvaluation(null); }}>{g.name}</button>)}
-          <button onClick={() => { setGuide({ name: t('guide.new'), unitCode: unit, nodes: [] }); setOpen([]); }}>{t('guide.newBtn')}</button>
-          <button disabled={busy} onClick={suggest} title={t('guide.suggestHelp')}>{t('guide.suggest')}</button>
+          {!PUBLIC && <button onClick={() => { setGuide({ name: t('guide.new'), unitCode: unit, nodes: [] }); setOpen([]); }}>{t('guide.newBtn')}</button>}
+          {!PUBLIC && <button disabled={busy} onClick={suggest} title={t('guide.suggestHelp')}>{t('guide.suggest')}</button>}
         </div>
+        {PUBLIC && list.length === 0 && <p className="muted small">{t('pub.noGuides')}</p>}
         {msg && <p className="small muted">{msg}</p>}
       </section>
       {guide && (
         <div className="guide-layout">
           <section className="panel">
-            <div className="row">
-              <label className="inline">{t('efx.name')}<input value={guide.name ?? ''} onChange={(e) => setGuide({ ...guide, name: e.target.value })} /></label>
-              <button className="primary" onClick={save}>{t('efx.save')}</button>
-              {guide.id && <button className="danger" onClick={remove}>{t('efx.delete')}</button>}
-            </div>
+            {PUBLIC ? <h4>{guide.name}</h4> : (
+              <div className="row">
+                <label className="inline">{t('efx.name')}<input value={guide.name ?? ''} onChange={(e) => setGuide({ ...guide, name: e.target.value })} /></label>
+                <button className="primary" onClick={save}>{t('efx.save')}</button>
+                {guide.id && <button className="danger" onClick={remove}>{t('efx.delete')}</button>}
+              </div>
+            )}
             <div className={`guide-branch${open.length === 0 ? ' open' : ''}`}>
               <button className="link" onClick={() => setOpen([])}>{t('guide.root')}{open.length === 0 ? ` · ${t('guide.openBranch')}` : ''}</button>
-              <NodeList nodes={guide.nodes} path={[]} open={open} setOpen={setOpen} onTree={setTree} tree={guide.nodes} itemsById={itemsById} />
+              <NodeList nodes={guide.nodes} path={[]} open={open} setOpen={setOpen} onTree={PUBLIC ? () => {} : setTree} tree={guide.nodes} itemsById={itemsById} />
             </div>
+            {!PUBLIC && (
+            <>
             <div className="row">
               <button onClick={() => addHere(newCondition())}>{t('guide.addCondition')}</button>
               <button onClick={addRunes}>{t('guide.addRunes')}</button>
@@ -269,11 +275,15 @@ export default function Guides() {
               <p className="small">{t('guide.readOrder')}: <span className="step-row">{reading.order.map((id, i) => <ItemIcon key={`${id}-${i}`} id={id} size={22} />)}</span>
                 {reading.runePage && ` · ${t('guide.runes')}: ${reading.runePage.keystone}`}</p>
             )}
+            </>
+            )}
           </section>
-          <section className="panel guide-shop">
-            <h4>{t('guide.shopMode')} <Help text={t('guide.shopModeHelp')} /></h4>
-            <ShopBrowser tiles={tiles} iconSize={44} tileProps={(x) => ({ type: 'button', title: x.name, onClick: () => pickItem(x.preferredId) })} />
-          </section>
+          {!PUBLIC && (
+            <section className="panel guide-shop">
+              <h4>{t('guide.shopMode')} <Help text={t('guide.shopModeHelp')} /></h4>
+              <ShopBrowser tiles={tiles} iconSize={44} tileProps={(x) => ({ type: 'button', title: x.name, onClick: () => pickItem(x.preferredId) })} />
+            </section>
+          )}
         </div>
       )}
     </div>

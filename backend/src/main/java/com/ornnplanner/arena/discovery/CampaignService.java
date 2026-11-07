@@ -85,6 +85,8 @@ public class CampaignService {
     private final ChampionProfiles profiles;
     private final BuildScore scorer;
     private final ArenaService arena;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.ornnplanner.publico.PublicMode publicMode;
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "campaigns");
         t.setDaemon(true);
@@ -110,6 +112,9 @@ public class CampaignService {
     /** After the schema is up: a row left "rodando" by a stopped server goes back to the queue. */
     @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     public void resume() {
+        if (publicMode != null && publicMode.on()) {
+            return;   // the public version reads the campaigns' results, never runs or changes them
+        }
         int n = repo.resetRunning();
         if (n > 0) {
             log.info("Campanhas: {} campeão(ões) interrompido(s) voltaram para a fila (Retomar continua).", n);

@@ -799,6 +799,9 @@ public class EffectTestService {
     /** The builds the reference runs (the build itself stands for "the same champion without items"). */
     private List<BuildRepository.Build> referenceBuilds(BuildRepository.Build build, Reference ref) {
         String kind = ref.kind == null ? "proprio" : ref.kind;
+        if ("build".equals(kind) && ref.build != null) {
+            return List.of(ref.build);
+        }
         if ("build".equals(kind) && ref.buildId != null) {
             return List.of(builds.findBuild(ref.buildId).orElseThrow(() -> new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "Build " + ref.buildId + " não existe.")));

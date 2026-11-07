@@ -16,6 +16,7 @@ import { ATTACKING_DUMMY } from '../components/TestInArena.jsx';
 import ItemIcon from '../components/ItemIcon.jsx';
 import { pointAt } from '../components/MomentPanels.jsx';
 import { mmss } from '../format.js';
+import { PUBLIC } from '../publicMode.js';
 
 /**
  * Orchestrated matchup: a scenario (champions from saved builds at a minute, where they start, and a timeline of
@@ -175,7 +176,8 @@ export default function Arena({ forcedTab = null }) {
 
   // Runs the scenario on every change (the engine is fast): debounced.
   const ready = sc.fighters.length > 1 && sc.fighters.every((f) => f.buildId != null || f.dummy)
-    && sc.fighters.some((f) => f.team === 0) && sc.fighters.some((f) => f.team === 1);
+    && sc.fighters.some((f) => f.team === 0) && sc.fighters.some((f) => f.team === 1)
+    && (!PUBLIC || sc.id != null);   // the public version runs only its scenarios, as they were saved
   const seq = useRef(0);
   const ranWith = useRef(null);   // the scenario of the result shown (item values run it again)
   useEffect(() => {
@@ -361,14 +363,16 @@ export default function Arena({ forcedTab = null }) {
               <option value="">{t('arena.open')}</option>
               {saved.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
-            <button onClick={() => { setSc(emptyScenario()); setTime(0); }}>{t('arena.new')}</button>
-            <button className="primary" onClick={() => save(false)}>{t('arena.save')}</button>
-            {sc.id && <button onClick={() => save(true)}>{t('arena.saveCopy')}</button>}
-            {sc.id && <button className="danger" onClick={remove}>{t('arena.delete')}</button>}
+            {!PUBLIC && <button onClick={() => { setSc(emptyScenario()); setTime(0); }}>{t('arena.new')}</button>}
+            {!PUBLIC && <button className="primary" onClick={() => save(false)}>{t('arena.save')}</button>}
+            {!PUBLIC && sc.id && <button onClick={() => save(true)}>{t('arena.saveCopy')}</button>}
+            {!PUBLIC && sc.id && <button className="danger" onClick={remove}>{t('arena.delete')}</button>}
           </div>
         </div>
-        <p className="muted" style={{ marginTop: 0 }}>{t('arena.help')}</p>
+        <p className="muted" style={{ marginTop: 0 }}>{t(PUBLIC ? 'pub.arenaHelp' : 'arena.help')}</p>
+        {PUBLIC && !sc.id && <p className="notice small">{t('pub.arenaPick')}</p>}
         {message && <p className="muted">{message}</p>}
+        <fieldset className="plain" disabled={PUBLIC}>
         <div className="row arena-head">
           <label className="field grow">{t('arena.name')}<input value={sc.name} onChange={(e) => set({ name: e.target.value })} /></label>
           <label className="field narrow">{t('arena.duration')}
@@ -417,10 +421,11 @@ export default function Arena({ forcedTab = null }) {
             </div>
           ))}
         </div>
+        </fieldset>
         {error && <p className="error">{error}</p>}
       </section>
 
-      <AutoTrain sc={sc} result={result} names={names} onDone={() => { loadPolicies(); setSc((s) => ({ ...s })); }} />
+      {!PUBLIC && <AutoTrain sc={sc} result={result} names={names} onDone={() => { loadPolicies(); setSc((s) => ({ ...s })); }} />}
 
       <Profiler id="arena-stage" onRender={onStageRender}>
       <section className="panel arena-stage">
@@ -445,8 +450,8 @@ export default function Arena({ forcedTab = null }) {
           onPick={(x, y) => { if (pickPoint != null) { setAction(pickPoint, { x: Math.round(x), y: Math.round(y), target: null }); setPickPoint(null); } }}
           onSelect={(fighter, key, x, y) => openCard(fighter, key, null, x, y)} />
         <Timeline sc={sc} result={result} time={time} names={names} editing={editing} selected={card}
-          onTime={(tm) => { setPlaying(false); setTime(tm); }} onAdd={addAction} onEdit={setEditing}
-          onMove={(i, tm) => setAction(i, { time: Math.max(0, Math.round(tm * 10) / 10) })}
+          onTime={(tm) => { setPlaying(false); setTime(tm); }} onAdd={PUBLIC ? () => {} : addAction} onEdit={PUBLIC ? () => {} : setEditing}
+          onMove={(i, tm) => { if (!PUBLIC) setAction(i, { time: Math.max(0, Math.round(tm * 10) / 10) }); }}
           onPickCooldown={openCard} />
         {card && result && card.key && (
           <CooldownCard result={result} sel={card} time={time} frame={frame} bars={cardBars[card.fighter]?.find((c) => c.name === card.key)?.bars}
@@ -460,7 +465,7 @@ export default function Arena({ forcedTab = null }) {
       </section>
       </Profiler>
 
-      {ready && (
+      {ready && !PUBLIC && (
         <TrainPanel sc={sc} names={names} policies={policies} onTrained={loadPolicies}
           onUse={(fighter, id) => setFighter(fighter, { brain: `ai:${id}` })}
           onUseMany={(latest) => {
@@ -468,7 +473,7 @@ export default function Arena({ forcedTab = null }) {
             setMessage(t('arena.chain.used', { n: Object.keys(latest ?? {}).length }));
           }} />
       )}
-      {result && <FightReport result={result} names={names} time={time} onItemValues={itemValues} />}
+      {result && <FightReport result={result} names={names} time={time} onItemValues={PUBLIC ? null : itemValues} />}
     </div>
   );
 }

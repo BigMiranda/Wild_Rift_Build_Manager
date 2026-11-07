@@ -32,6 +32,7 @@ import PassiveValueBar from '../components/PassiveValueBar.jsx';
 import ItemSetupExport from '../components/ItemSetupExport.jsx';
 import { loadFlag, saveFlag, useBuild } from '../buildContext.jsx';
 import { navigate } from '../router.js';
+import { PUBLIC } from '../publicMode.js';
 
 /**
  * The open build's screens (Rodada 8): each section reads the app's open build (buildContext) and is shown by a sub
@@ -117,7 +118,7 @@ export function SkillsSection() {
   return (
     <ChampionPanel code={draft.unitCode} setup={draft.championSetup} matchEnd={draft.matchEnd} point={point}
       onChange={(championSetup) => update({ championSetup })}
-      onExportSkills={builds.some((b) => b.id !== draft.id && b.unitCode !== 'RAGDOLL') ? () => setPrepEditor('skills') : null} />
+      onExportSkills={!PUBLIC && builds.some((b) => b.id !== draft.id && b.unitCode !== 'RAGDOLL') ? () => setPrepEditor('skills') : null} />
   );
 }
 
@@ -128,7 +129,7 @@ export function PrepSection() {
   return (
     <PrepPanel runePage={draft.runePage} spells={draft.spells}
       onRunes={() => setPrepEditor('runes')} onSpells={() => setPrepEditor('spells')}
-      onExport={builds.some((b) => b.id !== draft.id) ? () => setPrepEditor('export') : null} />
+      onExport={!PUBLIC && builds.some((b) => b.id !== draft.id) ? () => setPrepEditor('export') : null} />
   );
 }
 
@@ -226,7 +227,7 @@ export function ItemEffectsSection() {
   return (
     <ItemEffectsPanel steps={draft.steps} itemsById={itemsById} setup={draft.itemSetup} matchEnd={draft.matchEnd}
       onChange={(itemSetup) => update({ itemSetup })}
-      onExport={builds.some((b) => b.id !== draft.id) ? () => setPrepEditor('items') : null} />
+      onExport={!PUBLIC && builds.some((b) => b.id !== draft.id) ? () => setPrepEditor('items') : null} />
   );
 }
 
@@ -367,7 +368,7 @@ export function EffectivenessSection() {
   return (
     <>
       <div className="chips" role="tablist">
-        {['aguentar', 'causar', 'nota'].map((k) => (
+        {(PUBLIC ? ['aguentar'] : ['aguentar', 'causar', 'nota']).map((k) => (
           <button key={k} role="tab" aria-selected={side === k} className={side === k ? 'active' : ''} onClick={() => setSide(k)}>{t(`off.side.${k}`)}</button>
         ))}
       </div>
@@ -389,10 +390,12 @@ export function BuildLabSection() {
   return (
     <section className="panel">
       <h3>{t('ptest.panelTitle', { time: mmss(point.minute) })}</h3>
-      <div className="row test-arena-row">
-        <TestInArena buildId={draft.id} buildName={draft.name} minute={point.minute} builds={builds} />
-        <small className="muted">{t('arenaTest.help')}</small>
-      </div>
+      {!PUBLIC && (
+        <div className="row test-arena-row">
+          <TestInArena buildId={draft.id} buildName={draft.name} minute={point.minute} builds={builds} />
+          <small className="muted">{t('arenaTest.help')}</small>
+        </div>
+      )}
       <BuildTestPanels buildId={draft.id} minute={Math.round(point.minute * 100) / 100} items={items} />
     </section>
   );

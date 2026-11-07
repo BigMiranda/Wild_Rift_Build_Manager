@@ -15,6 +15,7 @@ import java.util.List;
 
 /** Offensive effectiveness (Rodada 9, part 1b): the target ragdolls, the report's settings and the runs. */
 @RestController
+@org.springframework.context.annotation.Profile("!" + com.ornnplanner.publico.PublicMode.PROFILE)
 @RequestMapping("/api/offense")
 public class OffenseController {
 

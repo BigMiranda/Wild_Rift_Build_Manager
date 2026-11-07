@@ -14,14 +14,16 @@ import java.util.List;
 public class PassiveValueController {
 
     private final PassiveValueService values;
+    private final com.ornnplanner.publico.ComputeGuard guard;
 
-    public PassiveValueController(PassiveValueService values) {
+    public PassiveValueController(PassiveValueService values, com.ornnplanner.publico.ComputeGuard guard) {
         this.values = values;
+        this.guard = guard;
     }
 
     @PostMapping("/estimate")
     public List<PassiveValueService.Sample> estimate(@RequestBody PassiveValueService.EstimateRequest req) {
-        return values.estimate(req);
+        return guard.run(() -> values.estimate(req));
     }
 
     /** A batch of passives (the screen sends a few at a time for its progress bar and "Parar"). */

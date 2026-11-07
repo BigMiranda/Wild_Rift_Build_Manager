@@ -12,32 +12,34 @@ import org.springframework.web.bind.annotation.RestController;
 public class QuickCompareController {
 
     private final QuickCompareService quick;
+    private final com.ornnplanner.publico.ComputeGuard guard;
 
-    public QuickCompareController(QuickCompareService quick) {
+    public QuickCompareController(QuickCompareService quick, com.ornnplanner.publico.ComputeGuard guard) {
         this.quick = quick;
+        this.guard = guard;
     }
 
     /** The candidates side by side in a purchase of the build (or as a new purchase). */
     @PostMapping("/compare")
     public QuickCompareService.Result compare(@RequestBody QuickCompareService.Request req) {
-        return quick.compare(req);
+        return guard.run(() -> quick.compare(req));
     }
 
     /** Which upgraded items fit there by the shop's rules, and when each would be ready. */
     @PostMapping("/fits")
     public java.util.Map<Long, QuickCompareService.Fit> fits(@RequestBody QuickCompareService.Request req) {
-        return quick.fits(req);
+        return guard.run(() -> quick.fits(req));
     }
 
     /** The whole build's change by one swap (an item, a rune page or an order), at a minute. */
     @PostMapping("/delta")
     public com.ornnplanner.arena.BuildDeltaService.Delta delta(@RequestBody QuickCompareService.DeltaRequest req) {
-        return quick.delta(req);
+        return guard.run(() -> quick.delta(req));
     }
 
     /** The best items of the shop tab that fit there, by the criterion. */
     @PostMapping("/suggest")
     public QuickCompareService.Result suggest(@RequestBody QuickCompareService.Request req) {
-        return quick.suggest(req);
+        return guard.run(() -> quick.suggest(req));
     }
 }

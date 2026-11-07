@@ -22,9 +22,13 @@ import java.util.Map;
 public class EffectController {
 
     private final EffectTestService effect;
+    private final com.ornnplanner.publico.ComputeGuard guard;
+    private final com.ornnplanner.publico.PublicLimits limits;
 
-    public EffectController(EffectTestService effect) {
+    public EffectController(EffectTestService effect, com.ornnplanner.publico.ComputeGuard guard, com.ornnplanner.publico.PublicLimits limits) {
         this.effect = effect;
+        this.guard = guard;
+        this.limits = limits;
     }
 
     /** Roles, presets, the sweeps' reference attacker and dimensions, the gold mixes and the limits. */
@@ -88,8 +92,11 @@ public class EffectController {
     /** A batch of runs (the screen sends a few at a time for its progress bar and "Parar"). */
     @PostMapping("/evaluate")
     public Map<String, Object> evaluate(@RequestBody EffectModel.Request req) {
+        if (guard.publicMode()) {
+            com.ornnplanner.publico.PublicRequests.basicEffect(req, limits);
+        }
         long t0 = System.nanoTime();
-        List<EffectModel.Outcome> out = effect.evaluate(req);
+        List<EffectModel.Outcome> out = guard.run(() -> effect.evaluate(req));
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("outcomes", out);
         m.put("ms", (System.nanoTime() - t0) / 1e6);
@@ -99,6 +106,6 @@ public class EffectController {
     /** The arena scenario of the first job, to open the fight in the Arena. */
     @PostMapping("/scenario")
     public ArenaModel.Scenario scenario(@RequestBody EffectModel.Request req) {
-        return effect.scenario(req, req.jobs.isEmpty() ? new EffectModel.Job() : req.jobs.get(0));
+        return guard.run(() -> effect.scenario(req, req.jobs.isEmpty() ? new EffectModel.Job() : req.jobs.get(0)));
     }
 }

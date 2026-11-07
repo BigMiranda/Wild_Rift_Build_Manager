@@ -11,6 +11,7 @@ import WholeDelta, { fightDelta } from './WholeDelta.jsx';
 import { archetypeLabel, archetypeTitle, useArchetypes } from '../archetypes.js';
 import { openInArena } from './TestInArena.jsx';
 import { CandidatePicker } from './ShopPicker.jsx';
+import { PUBLIC } from '../publicMode.js';
 
 /** Names of the scenarios a report may hold (presets and the user's), by key. */
 export function useTestNames() {
@@ -38,7 +39,7 @@ export function ReferencePicker({ value, onChange, builds = [], folders = [] }) 
         <select value={kind} onChange={(e) => onChange({ kind: e.target.value, buildId: null, folderId: null })}>
           <option value="proprio">{t('efx.ref.proprio')}</option>
           <option value="build">{t('efx.ref.build')}</option>
-          <option value="pasta">{t('efx.ref.pasta')}</option>
+          {!PUBLIC && <option value="pasta">{t('efx.ref.pasta')}</option>}
         </select>
       </label>
       {kind === 'build' && (
@@ -502,7 +503,7 @@ export function EffectivenessPanel({ objectives, build, buildId, name, minute, i
       {mixed.length > 0 && <p className="warn small">{t('arch.mixed', { list: mixed.join(', ') })}</p>}
       <div className="row">
         <div className="chips" role="tablist">
-          {['basico', 'completo'].map((k) => (
+          {(PUBLIC ? ['basico'] : ['basico', 'completo']).map((k) => (
             <button key={k} role="tab" aria-selected={kind === k} className={kind === k ? 'active' : ''} onClick={() => setKind(k)}>{t(`efx.kind.${k}`)}</button>
           ))}
         </div>
@@ -530,7 +531,7 @@ export function EffectivenessPanel({ objectives, build, buildId, name, minute, i
             </>
           )}
           <BasicResult report={report} outcomes={outcomes} names={names} />
-          {buildId && report.tests[0] && (
+          {!PUBLIC && buildId && report.tests[0] && (
             <button className="link" onClick={() => openFight({ testKey: report.tests[0].key })}>{t('efx.openFirst', { name: outcomes[0]?.testName ?? '' })}</button>
           )}
           {kind === 'completo' && chartOnly.length > 0 && <p className="muted small">{t('efx.chartsHelp', { name: name ?? '', n: chartOnly.length })}</p>}
@@ -539,6 +540,9 @@ export function EffectivenessPanel({ objectives, build, buildId, name, minute, i
         </>
       )}
 
+      {/* per-item readings and candidates run many fights: not in the public version */}
+      {!PUBLIC && (
+        <>
       <h4>{t('efx.perItem')}</h4>
       <p className="muted small">{t('efx.perItemHelp')}</p>
       <div className="row">
@@ -599,6 +603,8 @@ export function EffectivenessPanel({ objectives, build, buildId, name, minute, i
       </div>
       {cmp.rows && <small className="muted">{t('efx.read.used', { mode: t(`efx.read.${cmp.readMode}`) })}</small>}
       {cmp.rows && <CompareResult cmp={cmp} itemsById={itemsById} />}
+        </>
+      )}
     </section>
   );
 }

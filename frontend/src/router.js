@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { PUBLIC } from './publicMode.js';
 
 /**
  * A hand-written hash router: `#/<super>/<sub>?key=value`. The browser's back button walks the hashes, and a link opens
@@ -6,13 +7,27 @@ import { useEffect, useState } from 'react';
  */
 
 /** Super tabs and their sub tabs, in the bar's order (the first sub tab is the super tab's default). */
-export const ROUTES = {
+const LOCAL_ROUTES = {
   builds: ['lista'],
   build: ['loja', 'sequencia', 'grafico', 'status', 'comparar-itens', 'comparar-runas', 'runas', 'habilidades', 'guias'],
   relatorios: ['analise', 'campeao', 'efetividade', 'relevancia', 'ouro', 'ranking', 'comparar-builds'],
   simulacoes: ['arena', 'laboratorio', 'partida', 'calculadora', 'descoberta'],
   admin: ['catalogo', 'efetividade', 'campanhas', 'sobre'],
 };
+
+/**
+ * The public version (Rodada 11): no Admin, no training, laboratory, whole match or calculator, no ranking (they run
+ * fights the public server does not); the laboratory keeps only "seen under effects"; the discovery shows what was
+ * calculated before the export. "Sobre" moves to Builds.
+ */
+const PUBLIC_ROUTES = {
+  builds: ['lista', 'sobre'],
+  build: LOCAL_ROUTES.build,
+  relatorios: ['analise', 'campeao', 'efetividade', 'relevancia', 'ouro', 'comparar-builds'],
+  simulacoes: ['arena', 'laboratorio', 'descoberta'],
+};
+
+export const ROUTES = PUBLIC ? PUBLIC_ROUTES : LOCAL_ROUTES;
 export const SUPERS = Object.keys(ROUTES);
 export const DEFAULT_PATH = '/build/loja';
 
@@ -20,7 +35,10 @@ export const DEFAULT_PATH = '/build/loja';
  * Where the old screens went: the tab names of the single bar (still sent by `ornn-open-tab` and found in old links
  * such as `#arena`) → the new path.
  */
-export const LEGACY = {
+export const LEGACY = PUBLIC ? {
+  planner: '/build/loja',
+  arena: '/simulacoes/arena',
+} : {
   planner: '/build/loja',
   arena: '/simulacoes/arena',
   match: '/simulacoes/partida',

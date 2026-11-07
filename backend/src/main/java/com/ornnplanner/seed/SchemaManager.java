@@ -23,18 +23,34 @@ public class SchemaManager {
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
+    private final com.ornnplanner.publico.PublicMode publicMode;
     /** Set when a migration added catalog data that only a re-import can fill. */
     private boolean catalogReimportNeeded;
 
+    /** The local app's (tests that migrate a copy of a database). */
     public SchemaManager(JdbcTemplate jdbc, DataSource dataSource) {
+        this(jdbc, dataSource, new com.ornnplanner.publico.PublicMode(false));
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public SchemaManager(JdbcTemplate jdbc, DataSource dataSource, com.ornnplanner.publico.PublicMode publicMode) {
         this.jdbc = jdbc;
         this.dataSource = dataSource;
+        this.publicMode = publicMode;
     }
 
     @PostConstruct
     public void migrate() {
         Integer current = jdbc.queryForObject("PRAGMA user_version", Integer.class);
         int version = current == null ? 0 : current;
+        if (publicMode.on()) {
+            // the public version opens an exported database read-only: it is never migrated, only checked
+            if (version != VERSION) {
+                throw new IllegalStateException("The public database has schema v" + version + ", this app reads v" + VERSION
+                        + ": export it again (./mvnw -Pexport).");
+            }
+            return;
+        }
         if (version < 2 && tableExists("item")) {
             // v2 replaces the changchiyou catalog (English names) with the one transcribed from the shop (pt-BR).
             // Item ids change, so purchase sequences pointing at old items cannot be kept.

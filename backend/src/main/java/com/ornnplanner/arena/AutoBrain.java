@@ -53,6 +53,8 @@ public class AutoBrain {
     }
 
     private final AiResultRepository results;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.ornnplanner.publico.PublicMode publicMode;
     private final PolicyRepository policies;
     private final ChampionProfiles profiles;
     private final List<String> criteria = new ArrayList<>();
@@ -233,6 +235,9 @@ public class AutoBrain {
 
     /** Writes a fight: one row per champion whose brain is an AI or the automatic. */
     public void record(ArenaModel.Scenario sc, List<Arena.Input> inputs, ArenaModel.Result r, String source) {
+        if (publicMode != null && publicMode.on()) {
+            return;   // the public version never writes: its fights do not enter the history
+        }
         for (int k = 0; k < sc.fighters.size(); k++) {
             ArenaModel.Slot s = sc.fighters.get(k);
             Choice choice = inputs.get(k).autoChoice;

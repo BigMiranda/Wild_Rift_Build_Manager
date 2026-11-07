@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** The build discovery (Rodada 9): estimate, start, follow and stop a job. */
 @RestController
+@org.springframework.context.annotation.Profile("!" + com.ornnplanner.publico.PublicMode.PROFILE)
 @RequestMapping("/api/discovery")
 public class DiscoveryController {
 

@@ -26,6 +26,8 @@ import Campaigns from './pages/Campaigns.jsx';
 import Guides from './pages/Guides.jsx';
 import Ranking from './pages/Ranking.jsx';
 import Effectiveness from './pages/Effectiveness.jsx';
+import { PUBLIC } from './publicMode.js';
+import { decodeBuild } from './shareLink.js';
 
 /** Interface scale (Rodada 8, parte 6): normal | grande | live, remembered in the browser. */
 const SCALES = ['normal', 'grande', 'live'];
@@ -131,6 +133,7 @@ export default function App() {
 
 /** The screen of each route; routes with the same `pane` share one mounted instance. */
 function paneOf(sup, sub) {
+  if (PUBLIC && sup === 'simulacoes' && sub === 'laboratorio') return 'simulacoes/laboratorio';
   if (sup === 'simulacoes' && (sub === 'arena' || sub === 'laboratorio')) return 'simulacoes/arena';
   return `${sup}/${sub}`;
 }
@@ -182,6 +185,7 @@ function Shell({ meta, items, reload, error, settingsBox }) {
         ))}
       </nav>
       {route.sup !== 'admin' && <BuildHeader />}
+      {PUBLIC && <div className="public-banner">{t('pub.banner')}</div>}
       </div>
       {error && <div className="main"><div className="notice error">{t('error.backend', { msg: error })}</div></div>}
 
@@ -211,6 +215,7 @@ function Shell({ meta, items, reload, error, settingsBox }) {
           <Arena forcedTab={route.sub === 'laboratorio' ? 'lab' : 'scenario'} />
         </>
       ))}
+      {pane('simulacoes/laboratorio', () => main(<BuildLabSection />))}
       {pane('simulacoes/partida', () => <Match />)}
       {pane('simulacoes/calculadora', () => <Calculator />)}
       {pane('simulacoes/descoberta', () => <Discovery />)}
@@ -218,6 +223,15 @@ function Shell({ meta, items, reload, error, settingsBox }) {
       {pane('admin/catalogo', () => <Admin meta={meta} items={items} onChanged={reload} />)}
       {pane('admin/efetividade', () => <Effectiveness items={items} />)}
       {pane('admin/campanhas', () => <Campaigns />)}
+      {pane('builds/sobre', () => (
+        <>
+          <div className="main settings-page" style={{ paddingBottom: 0 }}>
+            <section className="panel"><h3>{t('settings.title')}</h3><p className="muted small">{t('settings.help')}</p>{settingsBox}</section>
+            <section className="panel"><h3>{t('pub.aboutTitle')}</h3><p className="small">{t('pub.about')}</p></section>
+          </div>
+          <About base={meta?.base} />
+        </>
+      ))}
       {pane('admin/sobre', () => (
         <>
           <div className="main settings-page" style={{ paddingBottom: 0 }}>
@@ -247,8 +261,24 @@ function lastSub(sup) {
  * the draft has unsaved changes), and opening a build or picking a minute writes them back (replacing the entry).
  */
 function useRouteSync(route) {
-  const { draft, builds, openBuild, selectedMinute, setSelectedMinute } = useBuild();
+  const { draft, builds, folders, openBuild, openDraft, selectedMinute, setSelectedMinute, setMessage } = useBuild();
   const applied = useRef(false);
+  // a build carried in the link (`?b=`, Rodada 11) opens as an unsaved draft, then leaves the address
+  const linkCode = route.params.b;
+  useEffect(() => {
+    if (!linkCode || !draft) return;
+    (async () => {
+      try {
+        const b = await decodeBuild(linkCode);
+        const folderId = (folders.find((f) => !f.readOnly) ?? folders[0])?.id;
+        if (openDraft({ ...b, folderId })) setMessage(t('pub.linkOpened', { name: b.name ?? '' }));
+      } catch (e) {
+        setMessage(e.message);
+      }
+      const { b: _, ...rest } = route.params;
+      navigate(route.path, rest, { replace: true });
+    })();
+  }, [linkCode, !!draft]);
   const wantBuild = route.params.build != null && route.params.build !== '' ? Number(route.params.build) : null;
   const wantMin = route.params.min != null && route.params.min !== '' ? Number(route.params.min) : null;
 

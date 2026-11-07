@@ -27,8 +27,10 @@ public class ArchetypeController {
 
     private final BuildArchetypes archetypes;
     private final BuildRepository builds;
+    private final com.ornnplanner.publico.ComputeGuard guard;
 
-    public ArchetypeController(BuildArchetypes archetypes, BuildRepository builds) {
+    public ArchetypeController(BuildArchetypes archetypes, BuildRepository builds, com.ornnplanner.publico.ComputeGuard guard) {
+        this.guard = guard;
         this.archetypes = archetypes;
         this.builds = builds;
     }
@@ -52,6 +54,6 @@ public class ArchetypeController {
 
     @PostMapping
     public BuildArchetypes.Archetype one(@RequestBody Request req) {
-        return archetypes.of(req.build, req.minute);
+        return guard.run(() -> archetypes.of(req.build, req.minute));
     }
 }

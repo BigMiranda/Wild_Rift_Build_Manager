@@ -30,9 +30,14 @@ public class ArenaController {
     private final PolicyRepository policies;
     private final com.ornnplanner.arena.LabService lab;
     private final com.ornnplanner.arena.AiResultRepository results;
+    private final com.ornnplanner.publico.ComputeGuard guard;
+    private final com.ornnplanner.publico.PublicLimits limits;
 
     public ArenaController(ArenaService arena, ArenaTrainingService training, PolicyRepository policies,
-                           com.ornnplanner.arena.LabService lab, com.ornnplanner.arena.AiResultRepository results) {
+                           com.ornnplanner.arena.LabService lab, com.ornnplanner.arena.AiResultRepository results,
+                           com.ornnplanner.publico.ComputeGuard guard, com.ornnplanner.publico.PublicLimits limits) {
+        this.guard = guard;
+        this.limits = limits;
         this.results = results;
         this.arena = arena;
         this.training = training;
@@ -313,6 +318,12 @@ public class ArenaController {
 
     @PostMapping("/run")
     public ArenaModel.Result run(@RequestBody ArenaModel.Scenario scenario) {
+        if (guard.publicMode()) {
+            // the public version runs only an exported scenario, as stored, shortened
+            ArenaModel.Scenario stored = scenario == null || scenario.id == null ? null : arena.find(scenario.id);
+            ArenaModel.Scenario sc = com.ornnplanner.publico.PublicRequests.shortFight(scenario, stored, limits);
+            return guard.run(() -> arena.run(sc));
+        }
         return arena.run(scenario);
     }
 

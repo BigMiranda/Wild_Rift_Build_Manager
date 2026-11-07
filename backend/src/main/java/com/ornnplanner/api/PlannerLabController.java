@@ -17,9 +17,11 @@ import java.util.Map;
 public class PlannerLabController {
 
     private final PlannerLabService lab;
+    private final com.ornnplanner.publico.ComputeGuard guard;
 
-    public PlannerLabController(PlannerLabService lab) {
+    public PlannerLabController(PlannerLabService lab, com.ornnplanner.publico.ComputeGuard guard) {
         this.lab = lab;
+        this.guard = guard;
     }
 
     /** The saved scenarios with this build's champion, and the champion's library combos. */
@@ -52,7 +54,7 @@ public class PlannerLabController {
         if (req.build == null) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Sem build.");
         }
-        return lab.effectValues(req.build, req.minute);
+        return guard.run(() -> lab.effectValues(req.build, req.minute));
     }
 
     /** A build at a minute against a target ragdoll (null = the lab's). */
@@ -66,13 +68,13 @@ public class PlannerLabController {
     /** The champion's passive and abilities with the build's stats at the minute, by the arena's formulas. */
     @PostMapping("/abilities")
     public List<Map<String, Object>> abilities(@RequestBody AbilityRequest req) {
-        return lab.abilityValues(req);
+        return guard.run(() -> lab.abilityValues(req));
     }
 
     /** The build under chosen item and champion effects, now and minute by minute. */
     @PostMapping("/seen-by")
     public Map<String, Object> seenBy(@RequestBody PlannerLabService.Request req) {
-        return lab.seenBy(req);
+        return guard.run(() -> lab.seenBy(req));
     }
 
     /** Builds side by side on the bench, each with its best combo: what the automatic build search will call. */

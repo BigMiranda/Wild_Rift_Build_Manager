@@ -32,6 +32,7 @@ import java.util.TreeMap;
 
 /** Plain CRUD over the reference data kept in SQLite. */
 @RestController
+@org.springframework.context.annotation.Profile("!" + com.ornnplanner.publico.PublicMode.PROFILE)
 @RequestMapping("/api/admin")
 public class AdminController {
 

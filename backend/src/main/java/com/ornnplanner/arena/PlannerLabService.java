@@ -34,6 +34,8 @@ public class PlannerLabService {
     /** What the screen asks: the build, the minute, the ragdoll and, optionally, a combo or the effects to apply. */
     public static class Request {
         public Long buildId;
+        /** The build itself, instead of {@link #buildId} (the public version's builds live in the visitor's browser). */
+        public BuildRepository.Build build;
         public Double minute;
         public Dummy dummy = new Dummy();
         public Long comboId;
@@ -308,6 +310,24 @@ public class PlannerLabService {
 
     // ------------------------------------------------------------------ 2. seen under chosen effects
 
+    private static final com.fasterxml.jackson.databind.ObjectMapper KEY_JSON = new com.fasterxml.jackson.databind.ObjectMapper();
+
+    /** The content of a build that is not saved here, as a cache key (SHA-256 of it without id and dates). */
+    private static String inlineKey(BuildRepository.Build b) {
+        try {
+            com.fasterxml.jackson.databind.node.ObjectNode tree = KEY_JSON.valueToTree(b);
+            tree.remove(java.util.List.of("id", "createdAt", "updatedAt"));
+            byte[] hash = java.security.MessageDigest.getInstance("SHA-256").digest(KEY_JSON.writeValueAsBytes(tree));
+            StringBuilder hex = new StringBuilder();
+            for (byte x : hash) {
+                hex.append(String.format("%02x", x));
+            }
+            return hex.toString();
+        } catch (com.fasterxml.jackson.core.JsonProcessingException | java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     /** The items and champion passives / abilities the panel can apply, with their default values and formulas. */
     public List<EffectSources.Source> effectSources() {
         return sources.list();
@@ -337,10 +357,10 @@ public class PlannerLabService {
      * minus without it, under the effects) and, minute by minute, the stats under the same effects.
      */
     public Map<String, Object> seenBy(Request req) {
-        if (req.buildId == null) {
+        if (req.buildId == null && req.build == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Salve a build para usar este painel.");
         }
-        BuildRepository.Build b = builds.findBuild(req.buildId).orElseThrow(() -> new ResponseStatusException(
+        BuildRepository.Build b = req.build != null ? req.build : builds.findBuild(req.buildId).orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "Build " + req.buildId + " não existe."));
         List<SeenBy.Applied> fx = req.effects == null ? List.of() : req.effects;
         double share = req.physicalShare == null ? 0.5 : req.physicalShare;
@@ -395,12 +415,16 @@ public class PlannerLabService {
      * the effects only change the arithmetic on top of them.
      */
     SeenBy.Base base(BuildRepository.Build b, Double minute, Set<Long> without) {
-        String key = b.id + "|" + b.updatedAt + "|" + minute + "|" + (without == null ? "" : new java.util.TreeSet<>(without));
+        // a saved build is keyed by its last save; one sent whole (not saved here) by its content
+        boolean saved = b.id != null && b.updatedAt != null && builds.findBuild(b.id).map(x -> b.updatedAt.equals(x.updatedAt)).orElse(false);
+        String key = (saved ? b.id + "|" + b.updatedAt : "inline|" + inlineKey(b)) + "|" + minute + "|"
+                + (without == null ? "" : new java.util.TreeSet<>(without));
         SeenBy.Base hit = bases.get(key);
         if (hit != null) {
             return hit;
         }
-        SeenBy.Base base = SeenBy.base(catalog, map, arena.labInput(b.id, minute, without), arena.dummyInput(new Dummy()));
+        SeenBy.Base base = SeenBy.base(catalog, map, saved ? arena.labInput(b.id, minute, without) : arena.labInput(b, minute, without),
+                arena.dummyInput(new Dummy()));
         if (bases.size() > 20000) {
             bases.clear();
         }

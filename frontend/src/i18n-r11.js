@@ -1,0 +1,38 @@
+/** Texts of Rodada 11 (the public version, the export and the community builds), merged into i18n.js. */
+export const PT11 = {
+  'sub.builds.sobre': 'Sobre e configurações',
+  'pub.banner': 'Versão pública, somente leitura: suas builds ficam neste navegador. Treino de IA, partida inteira, calculadora e administração ficam só no app local.',
+  'pub.aboutTitle': 'Versão pública',
+  'pub.about': 'Esta é a versão pública do planejador. O catálogo, as builds públicas e os resultados de Descoberta e de campanhas vêm de uma exportação do app local do administrador. Aqui roda o planejador, o comparador rápido, a Visão sob efeitos, a Efetividade Básica e lutas curtas da Arena nos cenários públicos, com um limite de pedidos por minuto. Suas builds ficam no seu navegador (localStorage): exporte para um arquivo ou copie o link para levá-las a outro lugar.',
+  'pub.buildsHelp': 'Suas builds ficam neste navegador: nada vai ao servidor. 🌐 são as pastas públicas, somente leitura: salvar uma build delas cria uma cópia sua. Exporte para arquivo ou copie o link para guardar ou compartilhar.',
+  'pub.folderPublic': 'Pasta pública: somente leitura',
+  'pub.link': 'Copiar link',
+  'pub.linkHelp': 'Um link com a build inteira: quem abrir vê a build como rascunho, sem servidor.',
+  'pub.linkCopy': 'Copie o link da build:',
+  'pub.linkCopied': 'Link da build copiado.',
+  'pub.linkOpened': 'Build aberta pelo link: {name} (rascunho, ainda não salva).',
+  'pub.arenaHelp': 'Na versão pública, a Arena roda os cenários públicos como foram salvos, numa luta curta. Escolha um cenário.',
+  'pub.arenaPick': 'Escolha um cenário público em "Abrir".',
+  'pub.discoveryHelp': 'Na versão pública, a Descoberta mostra o último resultado calculado para o campeão da build antes da exportação.',
+  'pub.discoveryNone': 'Ainda não há resultado de Descoberta para este campeão.',
+  'pub.noGuides': 'Nenhuma guia pública para este campeão.',
+};
+
+export const EN11 = {
+  'sub.builds.sobre': 'About and settings',
+  'pub.banner': 'Public, read-only version: your builds stay in this browser. AI training, whole matches, the calculator and administration are only in the local app.',
+  'pub.aboutTitle': 'Public version',
+  'pub.about': "This is the planner's public version. The catalog, the public builds and the Discovery and campaign results come from an export of the administrator's local app. The planner, the quick comparison, the seen-under-effects view, the basic Effectiveness and short Arena fights in the public scenarios run here, with a limit of requests per minute. Your builds stay in your browser (localStorage): export them to a file or copy the link to take them elsewhere.",
+  'pub.buildsHelp': 'Your builds stay in this browser: nothing goes to the server. 🌐 folders are public and read-only: saving one of their builds makes your own copy. Export to a file or copy the link to keep or share.',
+  'pub.folderPublic': 'Public folder: read-only',
+  'pub.link': 'Copy link',
+  'pub.linkHelp': 'A link with the whole build: whoever opens it sees the build as a draft, no server involved.',
+  'pub.linkCopy': 'Copy the build link:',
+  'pub.linkCopied': 'Build link copied.',
+  'pub.linkOpened': 'Build opened from the link: {name} (draft, not saved yet).',
+  'pub.arenaHelp': 'In the public version, the Arena runs the public scenarios as they were saved, in a short fight. Pick a scenario.',
+  'pub.arenaPick': 'Pick a public scenario in "Open".',
+  'pub.discoveryHelp': "In the public version, Discovery shows the last result calculated for the build's champion before the export.",
+  'pub.discoveryNone': 'No Discovery result for this champion yet.',
+  'pub.noGuides': 'No public guide for this champion.',
+};

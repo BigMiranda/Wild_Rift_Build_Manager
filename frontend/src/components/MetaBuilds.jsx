@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { PUBLIC } from '../publicMode.js';
 import { t } from '../i18n.js';
 import ItemIcon from './ItemIcon.jsx';
 import Help from './Help.jsx';
@@ -50,13 +51,13 @@ export default function MetaBuilds({ unitCode }) {
                 <td><span className="step-row">{[...m.items, ...(m.boots ? [m.boots] : [])].map((id) => <ItemIcon key={id} id={id} size={22} />)}</span></td>
                 <td>{m.keystone ?? '—'}</td>
                 <td><small className="muted">{m.source}</small></td>
-                <td><button className="icon" onClick={() => remove(m)} aria-label={t('efx.remove')}>✕</button></td>
+                {!PUBLIC && <td><button className="icon" onClick={() => remove(m)} aria-label={t('efx.remove')}>✕</button></td>}
               </tr>
             ))}
           </tbody>
         </table>
       )}
-      {unitCode && (
+      {unitCode && !PUBLIC && (
         <>
           <div className="row">
             <label className="inline">{t('efx.name')}<input value={name} onChange={(e) => setName(e.target.value)} /></label>

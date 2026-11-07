@@ -138,6 +138,8 @@ public final class EffectModel {
     public static class Reference {
         public String kind = "proprio";
         public Long buildId;
+        /** The reference build itself, instead of {@link #buildId} (a build kept in the public version's browser). */
+        public BuildRepository.Build build;
         public Long folderId;
     }
 

@@ -5,6 +5,8 @@ import FolderTree from '../components/FolderTree.jsx';
 import BuildPreview from '../components/BuildPreview.jsx';
 import { useBuild } from '../buildContext.jsx';
 import { navigate } from '../router.js';
+import { PUBLIC } from '../publicMode.js';
+import { buildLink } from '../shareLink.js';
 
 /**
  * The "Builds" super tab (Rodada 8): the folders and builds that were the planner's side column, with a preview of the
@@ -42,6 +44,20 @@ export default function Builds() {
     }
   };
 
+  const copyLink = async (id) => {
+    try {
+      const link = await buildLink(await api.get(`/api/builds/${id}`));
+      try {
+        await navigator.clipboard.writeText(link);
+        setMessage(t('pub.linkCopied'));
+      } catch {
+        window.prompt(t('pub.linkCopy'), link);
+      }
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
   const importBuild = async (f) => {
     setError(null);
     try {
@@ -70,7 +86,7 @@ export default function Builds() {
         </div>
         {message && <p className="notice small">{message}</p>}
         {error && <p className="error">{error}</p>}
-        <p className="muted small">{t('builds.help')}</p>
+        <p className="muted small">{t(PUBLIC ? 'pub.buildsHelp' : 'builds.help')}</p>
         <FolderTree archetypes={archetypes}
           folders={folders}
           builds={builds}
@@ -99,6 +115,7 @@ export default function Builds() {
               <span className="row">
                 <button onClick={() => duplicate(pickedBuild.id)}>{t('build.duplicate')}</button>
                 <button onClick={() => exportBuild(pickedBuild.id)}>{t('builds.export')}</button>
+                <button onClick={() => copyLink(pickedBuild.id)} title={t('pub.linkHelp')}>{t('pub.link')}</button>
               </span>
             </div>
             <BuildPreview id={pickedBuild.id} />

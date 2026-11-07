@@ -12,6 +12,7 @@ import java.util.Map;
 
 /** Whole matches on the full map. */
 @RestController
+@org.springframework.context.annotation.Profile("!" + com.ornnplanner.publico.PublicMode.PROFILE)
 @RequestMapping("/api/match")
 public class MatchController {
 

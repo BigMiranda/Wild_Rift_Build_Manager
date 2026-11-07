@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** The build calculator: an estimate before it starts, the job, its progress and a stop. */
 @RestController
+@org.springframework.context.annotation.Profile("!" + com.ornnplanner.publico.PublicMode.PROFILE)
 @RequestMapping("/api/calc")
 public class CalculatorController {
 

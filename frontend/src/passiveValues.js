@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PUBLIC } from './publicMode.js';
 import { api } from './api.js';
 import { t } from './i18n.js';
 import { n0, n1 } from './format.js';
@@ -12,7 +13,8 @@ import { n0, n1 } from './format.js';
 export const PV_TIER = 'tier';
 export const PV_ESTIMATED = 'estimado';
 export const PV_MEASURED = 'medido';
-export const PV_MODES = [PV_TIER, PV_ESTIMATED, PV_MEASURED];
+/** The public version (Rodada 11) does not measure: each measure is a batch of fights. */
+export const PV_MODES = PUBLIC ? [PV_TIER, PV_ESTIMATED] : [PV_TIER, PV_ESTIMATED, PV_MEASURED];
 
 const STORE = 'ornn-planner-passive-mode';
 const loadMode = () => {

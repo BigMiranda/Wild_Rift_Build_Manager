@@ -1,4 +1,5 @@
 import { EN9, PT9 } from './i18n-r9.js';
+import { EN11, PT11 } from './i18n-r11.js';
 
 /**
  * Minimal i18n: the language lives in module state, set by App before each render, so plain functions (t, statLabel,
@@ -3412,6 +3413,8 @@ const PT = {
 
 Object.assign(EN, EN9);
 Object.assign(PT, PT9);
+Object.assign(EN, EN11);
+Object.assign(PT, PT11);
 
 /** Translates a key, replacing {placeholders}. Falls back to pt, then to the key itself. */
 export function t(key, vars) {

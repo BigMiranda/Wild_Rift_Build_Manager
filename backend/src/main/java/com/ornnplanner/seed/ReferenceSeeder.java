@@ -21,6 +21,7 @@ import java.util.TreeMap;
  * survive restarts.
  */
 @Component
+@org.springframework.context.annotation.Profile("!" + com.ornnplanner.publico.PublicMode.PROFILE)   // never writes there
 public class ReferenceSeeder implements ApplicationRunner {
 
     public static final String ORNN = "ORNN";

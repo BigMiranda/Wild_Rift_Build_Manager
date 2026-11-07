@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../api.js';
+import { PUBLIC } from '../publicMode.js';
 import { t } from '../i18n.js';
 import { SERIES_COLORS, mmss, n0, n1 } from '../format.js';
 import { useTask } from '../tasks.js';
@@ -64,7 +65,7 @@ export default function Discovery() {
   }, [form]);
   const request = () => ({ ...form, buildId: Number(form.buildId), archetype: form.archetype || null });
   useEffect(() => {
-    if (!form.buildId) return undefined;
+    if (!form.buildId || PUBLIC) return undefined;
     const id = setTimeout(() => api.post('/api/discovery/estimate', request()).then(setEstimate).catch(() => {}), 300);
     return () => clearTimeout(id);
   }, [form]);
@@ -97,6 +98,10 @@ export default function Discovery() {
     if (!unitCode) return;
     api.get(`/api/campaigns/latest?unit=${encodeURIComponent(unitCode)}`).then((l) => setLatest(l?.discovery ? l : null)).catch(() => {});
   }, [unitCode, job?.status]);
+  // the public version only reads: the champion's last result shows by itself
+  useEffect(() => {
+    if (PUBLIC && latest) setJob({ status: 'done', result: latest.discovery });
+  }, [latest]);
   const baseBuild = async () => api.get(`/api/builds/${form.buildId}`);
   const asBuild = (b, k, label) => ({
     ...b, name: `${b.name} · ${label}`, steps: (k.order?.length ? k.order : [...k.items, ...(k.boots ? [k.boots] : [])]).map((id) => ({ itemId: id, includeConditional: true })),
@@ -131,7 +136,7 @@ export default function Discovery() {
     <>
       <div className="row" style={{ gap: 4 }}>
         <button className="small" onClick={() => open(k, label)}>{t('calc.openAsBuild')}</button>
-        <button className="small" onClick={() => save(k, label, key)} disabled={!!saved[key]}>{saved[key] ? t('disc.saved') : t('disc.save')}</button>
+        {!PUBLIC && <button className="small" onClick={() => save(k, label, key)} disabled={!!saved[key]}>{saved[key] ? t('disc.saved') : t('disc.save')}</button>}
         <button className="small" onClick={() => compare(k, key)}>{t('calc.compareMine')}</button>
         <button className="small" onClick={() => open(k, label, '/relatorios/efetividade')}>{t('disc.inEffect')}</button>
       </div>
@@ -166,6 +171,7 @@ export default function Discovery() {
             </select>
             {form.buildId !== '' && <BuildLink id={Number(form.buildId)} name={builds.find((b) => String(b.id) === String(form.buildId))?.name}>{t('preview.short')}</BuildLink>}
           </label>
+          {!PUBLIC && <>
           <label className="field">{t('disc.budget')} <Help text={t('disc.budgetHelp')} />
             <select value={form.budget} onChange={(e) => set({ budget: e.target.value })}>
               <option value="rapido">{t('disc.budget.rapido')}</option>
@@ -178,7 +184,11 @@ export default function Discovery() {
               {['tanque', 'lutador', 'critico', 'ao_acertar', 'letalidade', 'mago_continuo', 'mago_explosivo', 'suporte', 'hibrido'].map((a) => <option key={a} value={a}>{a}</option>)}
             </select>
           </label>
+          </>}
         </div>
+        {PUBLIC && <p className="muted small">{t('pub.discoveryHelp')}</p>}
+        {PUBLIC && form.buildId !== '' && !latest && <p className="notice small">{t('pub.discoveryNone')}</p>}
+        {!PUBLIC && <>
         <div className="row">
           <label className="check"><input type="checkbox" checked={form.runes} onChange={(e) => set({ runes: e.target.checked })} />{t('disc.runes')}</label>
           <label className="check"><input type="checkbox" checked={form.order} onChange={(e) => set({ order: e.target.checked })} />{t('disc.order')}</label>
@@ -202,6 +212,7 @@ export default function Discovery() {
             </>
           )}
         </div>
+        </>}
         {(error || job?.error) && <p className="error">{error ?? job.error}</p>}
         {latest && job?.result !== latest.discovery && (
           <p className="small">{t('disc.latest', { s: n0(latest.discovery.seconds), b: t(`disc.budget.${latest.discovery.budget ?? 'rapido'}`) })}{' '}

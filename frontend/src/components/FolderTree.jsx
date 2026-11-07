@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api.js';
+import { PUBLIC } from '../publicMode.js';
 import { t } from '../i18n.js';
 import { archetypeLabel, archetypeTitle } from '../archetypes.js';
 
@@ -62,15 +63,15 @@ export default function FolderTree({ folders, builds, activeId, compareIds, arch
         return (
           <div className={`folder${dropFolder === f.id && dragged?.folderId !== f.id ? ' drop' : ''}`} key={f.id} {...dropProps(f)}>
             <div className="folder-head">
-              <span className="name" title={f.name}>📁 {f.name}</span>
-              <button className="icon" title={t('folders.newBuild')} aria-label={`${t('folders.newBuild')}: ${f.name}`} onClick={() => onNew(f.id)}>+</button>
-              <button className="icon" title={t('folders.rename')} aria-label={`${t('folders.rename')}: ${f.name}`} onClick={() => renameFolder(f)}>✎</button>
-              <button className="icon danger" title={t('folders.delete')} aria-label={`${t('folders.delete')}: ${f.name}`} onClick={() => deleteFolder(f)}>✕</button>
+              <span className="name" title={f.readOnly ? t('pub.folderPublic') : f.name}>{f.readOnly ? '🌐' : '📁'} {f.name}</span>
+              {!f.readOnly && <button className="icon" title={t('folders.newBuild')} aria-label={`${t('folders.newBuild')}: ${f.name}`} onClick={() => onNew(f.id)}>+</button>}
+              {!f.readOnly && <button className="icon" title={t('folders.rename')} aria-label={`${t('folders.rename')}: ${f.name}`} onClick={() => renameFolder(f)}>✎</button>}
+              {!f.readOnly && <button className="icon danger" title={t('folders.delete')} aria-label={`${t('folders.delete')}: ${f.name}`} onClick={() => deleteFolder(f)}>✕</button>}
             </div>
             <ul className="build-list">
               {inFolder.length === 0 && <li className="muted">{t('folders.empty')}</li>}
               {inFolder.map((b) => (
-                <li key={b.id} className={b.id === activeId ? 'active' : ''} draggable
+                <li key={b.id} className={b.id === activeId ? 'active' : ''} draggable={!b.readOnly}
                   onDragStart={(e) => { setDragged(b); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(b.id)); }}
                   onDragEnd={() => { setDragged(null); setDropFolder(null); }}>
                   {moving === b.id ? (
@@ -78,7 +79,7 @@ export default function FolderTree({ folders, builds, activeId, compareIds, arch
                       onChange={(e) => moveBuild(b, Number(e.target.value))} onBlur={() => setMoving(null)}
                       onKeyDown={(e) => { if (e.key === 'Escape') setMoving(null); }}>
                       <option value="">{t('folders.moveTo', { name: b.name })}</option>
-                      {folders.filter((x) => x.id !== b.folderId).map((x) => <option key={x.id} value={x.id}>📁 {x.name}</option>)}
+                      {folders.filter((x) => x.id !== b.folderId && !x.readOnly).map((x) => <option key={x.id} value={x.id}>📁 {x.name}</option>)}
                     </select>
                   ) : (
                     <button className="open" title={[b.note || b.name, archetypeTitle(archetypes[b.id])].filter(Boolean).join('\n')} onClick={() => onOpen(b.id)}>
@@ -86,7 +87,7 @@ export default function FolderTree({ folders, builds, activeId, compareIds, arch
                       {archetypes[b.id] && <small className="arch-tag">{archetypeLabel(archetypes[b.id])}</small>}
                     </button>
                   )}
-                  {folders.length > 1 && moving !== b.id && (
+                  {!b.readOnly && folders.filter((x) => !x.readOnly).length > 1 && moving !== b.id && (
                     <button className="icon move" title={t('folders.move')} aria-label={t('folders.moveTo', { name: b.name })}
                       onClick={() => setMoving(b.id)}>⇄</button>
                   )}
