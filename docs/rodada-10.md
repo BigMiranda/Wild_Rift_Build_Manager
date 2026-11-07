@@ -255,3 +255,86 @@ Regravados com `-Darena.golden.write=true`, porque a mudança é intencional:
   do 3º ciclo. O combo do teste ganhou um passo para trás depois do ataque, e a meta é a mesma.
 
 Testes: 382 → 384 (16 opcionais pulados), 0 falhas. `npm run build` limpo.
+
+## Conferido na tela
+
+No servidor de desenvolvimento (portas 8090 e 5174, banco `data/dev`), sem tocar no seu banco nem na porta 8080.
+
+| tela | resultado |
+|---|---|
+| Arena, modelo "Troca na rota com Frutomel" | abre com "Mapa: Summoner's Rift", Ornn (Big Carry v1) contra Kalista, a luta roda (vitória azul aos 44,5 s). O mapa novo aparece com o rio, as paredes e as faixas. A lentidão aparece no campeão ("↓ 60%"), o golpe é desenhado entre os dois, e a faixa de tempo tem as marcas dos ataques |
+| Build › Status do campeão, Objetivos | o seletor mostra só Oceano, Montanha e Infernal, e a alma também. Com 1 dragão da Montanha, Armadura 450 → **467** (450 + 4 + 3% de 454) e RM 312 → **326** |
+
+Os erros no console foram só da primeira carga, antes de o backend subir. Não vi erro do React.
+
+**Só coberto por teste, não visto na tela:** a reprodução da partida com escombros e decisões, o círculo de alcance da
+torre ao passar o mouse, o "no ar" com sombra, as estrelas e o rastro, e o aviso "antes do arremesso do Frágil" na
+lista de IAs. Celular não foi revisto.
+
+## Relatório final
+
+| parte | commit | testes depois |
+|---|---|---|
+| 1. Mapa, torres e dragões | 73ffa8a | 376 |
+| 2. IA em dois tempos | 3352800 | 382 |
+| 3. Arena legível e Frágil | 4836cdb | 384 |
+| Relatório | último | 384 |
+
+- **Testes:** 368 antes → **384** depois (16 opcionais pulados), 0 falhas. `npm run build` limpo.
+- **Mapa:**
+  - escala de 40 unidades por pixel, com o centro no meio dos Nexos;
+  - paredes numa grade traçada do print, e torres, Nexo, fossos e acampamentos pelo print;
+  - corrigidas as rotas das torres vermelhas e a linha livre que pulava cantos;
+  - todas as rotas, os fossos, os acampamentos e as torres dos dois lados conferidos a pé.
+- **Torres, dragões e Barão:**
+  - dragões pelos prints: 3 elementos, efeito por dragão que acumula, Montanha 4 + 3% do total, alma pelo 1º dragão e
+    ordem sorteada;
+  - torres sem números novos;
+  - Barão e Mão do Barão sem print, e seguem como estimativa.
+- **IA em dois tempos:** ouro/min médio 511–537 → 541–557, XP/min médio 346–356 → 361–387, mortes 30–32 → 29–39.
+  Os exemplos de decisões estão na Parte 2.
+- **Arena:**
+  - projéteis, segmentos do corpo a corpo, faixas de avanço e áreas de contato no mapa;
+  - estados de controle no campeão e marcas de ataque na faixa de tempo;
+  - o corpo a corpo acerta no caminho.
+- **Prova do Ornn:** o controle do combo manual sobe de 2,56 para 3,46 s, e a nota de 5.630 para 5.990. O dano é igual.
+- **Determinismo:** os golden regravados passam duas vezes seguidas, e o teste paralelo continua igual ao sequencial.
+- **Banco:** sem migração. Cenários, IAs e builds salvos continuam abrindo:
+  - o `rift.dragon` velho vira o primeiro da ordem;
+  - Gelo, em objetivos salvos, é ignorado;
+  - as redes de 36 ações migram para 38.
+
+## Para o usuário
+
+**Precisa de ação:**
+- **Reinicie o backend** da porta 8080. Não há migração de banco.
+- **Treine de novo as IAs do Ornn:** as 107 IAs do Ornn e de classe do seu banco foram treinadas com o empurrão. A tela
+  mostra "⚠ antes do arremesso do Frágil".
+- **Os 3 commits estão no `main`, sem push.**
+
+**Precisa de confirmação:**
+- **A duração do arremesso do Frágil:** usei 0,5 s, uma estimativa. Qual é no jogo?
+- **A regra das placas:** fiz as placas das outras torres caírem quando cai a primeira torre da partida. Não achei
+  fonte escrita. É essa a regra?
+- **Ataque no caminho:** usei uma largura de 60 para o segmento. Os efeitos de ao acertar dos itens valem para quem
+  está no caminho, e as runas e o Frágil só para o alvo. Confere?
+- **Alma do Oceano:** agora dispara ao **causar** dano a um campeão, como diz o print. Antes disparava ao sofrer.
+
+**Prints, por prioridade:**
+1. **O segundo print do mapa, com moitas e plantas:** hoje as moitas e as plantas são esquema.
+2. **Um alcance de torre visível no minimapa ou no mapa grande**, para calibrar a escala de 40 unidades por pixel.
+3. **Os status sob a Mão do Barão em dois minutos.**
+4. **Torres:** vida, dano e resistências. **"Barricadas":** o que é no jogo.
+5. Os da 6.b que seguem abertos:
+   - tropas aos 0:30 e aos 15:00 e a composição da onda;
+   - o ouro passivo;
+   - o laser e a cura da fonte;
+   - ouro e XP dos acampamentos;
+   - o Arauto;
+   - os nomes pt-BR das plantas.
+
+**Vale conferir:**
+- **O ganho do item na decisão de dois tempos** é o custo dos itens, não o comparador rápido, que seria lento demais
+  por decisão. Se valer o tempo, dá para trocar.
+- **Os pesos de `dois_tempos`** são todos estimativa. A partida ainda rende cerca de 550 de ouro por minuto, contra os
+  700 a 900 das builds.
