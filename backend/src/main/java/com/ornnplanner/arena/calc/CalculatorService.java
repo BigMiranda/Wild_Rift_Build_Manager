@@ -40,6 +40,12 @@ public class CalculatorService {
     public static class Request {
         /** The build that gives the champion, runes, spells, gold and experience. */
         public long buildId;
+        /** The same, not saved (the discovery's kits): wins over {@link #buildId}. */
+        public BuildRepository.Build build;
+        /** Only these boots (empty = every boots of tier 2 and 3). */
+        public List<Long> boots = new ArrayList<>();
+        /** Prune the branches whose start is clearly worse than the weakest start of the champion's saved builds (part 4b). */
+        public boolean pruneByStart = true;
         /** basico | completo (a report) | testes (the keys in {@link #tests}) | arena (a saved scenario). */
         public String target = "basico";
         public List<String> tests = new ArrayList<>();
@@ -91,6 +97,8 @@ public class CalculatorService {
         public List<Long> order;
         public List<String> names = new ArrayList<>();
         public List<StepView> steps = new ArrayList<>();
+        /** The page of runes searched for this order (part 4), null when the runes were not searched. */
+        public BuildRepository.RunePage runePage;
         public double score;
         public double[] curve;
         /** Alternatives: the whole build against the best order at the last minute ({@link BuildDeltaService}). */
@@ -131,6 +139,12 @@ public class CalculatorService {
         public long evaluations;
         public double seconds;
         public boolean truncated;
+        /** Branches cut by their start, against the saved builds' starts (part 4b). */
+        public int prunedByStart;
+        /** The rune search: what changed and the score before and after. */
+        public List<String> runeChanges = new ArrayList<>();
+        public Double runeScoreBefore;
+        public Double runeScoreAfter;
     }
 
     /** A running job. */
@@ -176,11 +190,13 @@ public class CalculatorService {
 
     private final com.ornnplanner.arena.BuildDeltaService deltas;
     private final BuildScore scorer;
+    private final com.ornnplanner.seed.RuneCatalog runeCatalog;
 
     public CalculatorService(PlannerService planner, BuildRepository builds, EffectTestService effect, ArenaService arena,
-                             com.ornnplanner.arena.BuildDeltaService deltas, BuildScore scorer) {
+                             com.ornnplanner.arena.BuildDeltaService deltas, BuildScore scorer, com.ornnplanner.seed.RuneCatalog runeCatalog) {
         this.deltas = deltas;
         this.scorer = scorer;
+        this.runeCatalog = runeCatalog;
         this.planner = planner;
         this.builds = builds;
         this.effect = effect;
@@ -225,7 +241,7 @@ public class CalculatorService {
         }
         if (!r.noBoots) {
             for (PlannerService.ItemView i : planner.itemViews()) {
-                if (!i.boots() || r.forbidden.contains(i.id)) {
+                if (!i.boots() || r.forbidden.contains(i.id) || !r.boots.isEmpty() && !r.boots.contains(i.id)) {
                     continue;
                 }
                 if ("tier_medio".equals(i.section)) {
@@ -329,7 +345,8 @@ public class CalculatorService {
     /** The search, on the calling thread (the tests and the job). */
     public Answer compute(Request r, Job j) {
         long t0 = System.nanoTime();
-        BuildRepository.Build base = builds.findBuild(r.buildId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Build não existe."));
+        BuildRepository.Build base = r.build != null ? r.build
+                : builds.findBuild(r.buildId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Build não existe."));
         BuildRepository.Build rival = r.opponentBuildId == null ? null : builds.findBuild(r.opponentBuildId).orElse(null);
         double[] minutes = r.minutes.stream().mapToDouble(Double::doubleValue).toArray();
         Side ours = new Side(base, r.goldPerMin, 0);
@@ -341,7 +358,8 @@ public class CalculatorService {
         a.measure = rival != null ? "duelo" : "arena".equals(r.target) ? "arena" : r.measure;
         a.space = census(sp);
         oracle.limit = (long) (r.budget * SEARCH_SHARE);
-        List<BuildSearch.Ranked> found = new ArrayList<>(BuildSearch.steps(oracle, sp, Math.max(r.beam, 4), minutes));
+        BuildSearch.DepthListener prune = rival == null && r.pruneByStart ? startPruner(oracle, sp, base, minutes, a) : null;
+        List<BuildSearch.Ranked> found = new ArrayList<>(BuildSearch.steps(oracle, sp, Math.max(r.beam, 4), minutes, prune));
         a.truncated = oracle.stopped();
         oracle.limit = r.budget;
         if (!found.isEmpty() && !sp.aggressive) {
@@ -377,6 +395,9 @@ public class CalculatorService {
                 a.importance.add(row);
             }
             bootsMinute(oracle, found.get(0), minutes, a);
+            if (r.runes && rival == null && !"arena".equals(r.target)) {
+                runes(ours, found.get(0).order, minutes, a, j);
+            }
         }
         if (r.tree && rival != null) {
             tree(r, j, ours, new Side(rival, null, 1), base, rival, a);
@@ -387,6 +408,69 @@ public class CalculatorService {
             secondsPerMeasure = a.seconds / a.evaluations;
         }
         return a;
+    }
+
+    /** How much worse than the weakest saved start a branch may be before it is cut (a share of that start's score). */
+    static final double START_MARGIN = 0.05;
+
+    /**
+     * Pruning by the start (part 4b): the champion's saved builds are measured first, by their first and first two
+     * purchases in the space; a prefix of one or two steps scoring clearly below the weakest of those starts is cut
+     * before any measure is spent on its later items.
+     */
+    private BuildSearch.DepthListener startPruner(Oracle oracle, BuildSearch.Space sp, BuildRepository.Build base, double[] minutes, Answer a) {
+        double[] bound = {Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY};
+        for (BuildRepository.Build saved : builds.findBuildSummaries()) {
+            if (base.unitCode == null || !base.unitCode.equals(saved.unitCode) || oracle.stopped()) {
+                continue;
+            }
+            BuildRepository.Build full = builds.findBuild(saved.id).orElse(null);
+            if (full == null) {
+                continue;
+            }
+            List<Long> prefix = new ArrayList<>();
+            for (BuildRepository.Step st : full.steps) {
+                if (st.itemId == null || st.moment() || st.sell() || !sp.kinds.containsKey(st.itemId) || prefix.contains(st.itemId)) {
+                    continue;
+                }
+                prefix.add(st.itemId);
+                if (prefix.size() > 2 || !oracle.allowed(prefix)) {
+                    break;
+                }
+                double s = BuildSearch.measure(oracle, new ArrayList<>(prefix), minutes).score;
+                bound[prefix.size() - 1] = Math.min(bound[prefix.size() - 1], s);
+            }
+        }
+        int[] pruned = new int[1];
+        BuildSearch.DepthListener l = BuildSearch.startPruner(bound, START_MARGIN, pruned);
+        return (depth, ranked) -> {
+            List<BuildSearch.Ranked> kept = l.depth(depth, ranked);
+            a.prunedByStart = pruned[0];
+            return kept;
+        };
+    }
+
+    /**
+     * The page of runes for the best order (part 4): coordinate by coordinate, each page scored by the class score at the
+     * last two minutes asked, mixed with its versatility (runes: 40% the mean, 60% the worst and low cases).
+     */
+    private void runes(Side side, List<Long> order, double[] minutes, Answer a, Job j) {
+        double[] at = minutes.length <= 2 ? minutes : java.util.Arrays.copyOfRange(minutes, minutes.length - 2, minutes.length);
+        double meanWeight = scorer.versatilityWeight("runas");
+        com.ornnplanner.arena.discovery.RuneSearch.Shape shape = com.ornnplanner.arena.discovery.RuneSearch.Shape.of(runeCatalog.catalog());
+        com.ornnplanner.arena.discovery.RuneSearch.Outcome o = com.ornnplanner.arena.discovery.RuneSearch.search(side.base.runePage, shape, page -> {
+            List<Double> points = new ArrayList<>();
+            for (double m : at) {
+                BuildRepository.Build b = side.order(new ArrayList<>(side.held(order, m)));
+                b.runePage = page;
+                scorer.score(b, m).readings.forEach(x -> points.add(x.points));
+            }
+            return com.ornnplanner.arena.discovery.RuneSearch.versatility(points, meanWeight)[0];
+        }, 2, () -> j != null && j.stop);
+        a.best.runePage = o.page;
+        a.runeChanges = o.changes;
+        a.runeScoreBefore = o.start;
+        a.runeScoreAfter = o.score;
     }
 
     private void bootsMinute(BuildSearch.Oracle o, BuildSearch.Ranked best, double[] minutes, Answer a) {

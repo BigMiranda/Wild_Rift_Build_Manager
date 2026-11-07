@@ -273,3 +273,87 @@ proibida; o MAP-Elites guarda o melhor de cada nicho; o modelo substituto não p
 sementes) e acerta r > 0,5; a lista curta mantém a cota e os coringas; determinismo; o ridge aprende um mundo aditivo.
 
 Testes: 351 → 359 (16 opcionais pulados, com o `DiscoveryReportTest`).
+
+## Partes 4, 4b e 5 — Runas, ordem, o começo, versatilidade e novidade ✅
+
+Num commit: as três mexem no mesmo pós-busca da Descoberta (`DiscoveryService.afterSearch` e `novelty`).
+
+### Parte 4 — Runas e ordem de compra
+
+- **Runas coordenada a coordenada** (`arena/discovery/RuneSearch`): a fundamental (13), a árvore principal (com as linhas
+  voltando à primeira de cada), cada linha da principal e a runa secundária (de outra árvore, qualquer linha), cada uma
+  com as outras fixas, repetido até nada melhorar (no máximo 2 passadas). A estrutura vem do catálogo de runas; nenhuma
+  runa é citada no código. Cada página é medida pela nota por classe aos 15:00 em todos os cenários (uma largada),
+  misturada com a versatilidade (Parte 4b).
+- **Os feitiços** ficam os da build do usuário (não entram na busca: ficou de fora).
+- **Ordem de compra:** a calculadora da Parte 0 sobre os itens do conjunto (obrigatórios) e só a bota dele (e a tier 2
+  da receita), com a importância cedo e "qual componente primeiro". A calculadora aceita agora uma build não salva
+  (`Request.build`) e uma lista de botas (`Request.boots`).
+- **Iteração itens → runas → ordem → itens:** se a página do melhor finalista mudou, a busca de itens roda de novo com a
+  página nova (um terço das gerações, sementes = os finalistas). Se o melhor conjunto muda, ele entra no topo com origem
+  "com as runas novas".
+- **Na calculadora:** "Buscar as runas também" roda a mesma busca sobre a melhor ordem (nota nos dois últimos minutos
+  pedidos) e mostra a página e o que mudou.
+
+**Medido (cópia do banco, Big Carry v1, rápido, com runas e ordem): 195 s.** A busca de runas mediu **101 páginas** e
+subiu a nota do 1º finalista de **65,7 para 72,5** (aos 15:00): Suserano do Gelo → Ímpeto Gradual na fundamental,
+Fonte da Vida/Revitalizar na Determinação, Lenda: Aceleração na secundária, entre outras. **Com as runas novas o melhor
+conjunto mudou:** Manto da Meia-noite, Coração de Aço, Rookern, Desespero Eterno, Duplaguarda (76,3, confirmada 75,2).
+A ordem gastou 55 medidas.
+
+**Cuidado na leitura:** depois da iteração, o novo 1º foi medido com as runas novas e os outros com as da build. Estão
+na mesma lista, mas não na mesma base; a tela marca a origem.
+
+### Parte 4b — O começo vale mais, e versatilidade
+
+- **Pesos por minuto decrescentes** (10, 15, 20, fim: 1,0 / 0,9 / 0,8 / 0,7) já vinham da Parte 1.
+- **Desconto por "não chegar lá"** (`chegar` no YAML): cada minuto multiplica a chance de chegar aos seguintes por uma
+  logística da nota dele (limiar 10, escala 10, piso 0,3). Quem perde as medidas iniciais vale menos no fim.
+- **Poda pelo começo:** antes de buscar, a calculadora mede o 1º e os 2 primeiros passos de **todas as builds salvas**
+  do campeão; um prefixo de 1 ou 2 passos mais de 5% abaixo do começo mais fraco delas é cortado antes de medir os
+  itens seguintes ("ramos descartados pelo começo", na calculadora e na Descoberta). **Os começos fortes viram
+  sementes:** na Descoberta, as builds salvas e meta entram inteiras na população inicial.
+- **Versatilidade:** de uma escolha, sobre as variações (os cenários): metade o pior caso + metade o percentil 20.
+  **Runas: 40% a média + 60% a versatilidade; itens: 80% + 20%** (`versatilidade` no YAML), porque a loja reage e o
+  draft não. A tabela da Descoberta mostra a coluna "Versatilidade".
+
+**Variações do adversário: o que ficou de fora.** O prompt pede variações por builds alternativas do adversário (pelo
+arquétipo e pela Descoberta dele) e pelas runas dele. Aqui as variações são os cenários da nota (os testes defensivos,
+os alvos e, se ligados, os duelos). Os bonecos não têm runas, então "as fundamentais plausíveis do adversário" não
+existem como variação. Fazer isso pede duelos contra builds descobertas do adversário, ou seja, campanhas antes
+(Parte 8). Está em "Para o usuário".
+
+### Parte 5 — "Ninguém notou": novidade em relação ao meta
+
+- **Builds meta cadastradas** (tabela `meta_build`, `/api/meta-builds`): itens, bota, fundamental e de onde veio, por
+  campeão. Na Descoberta, o painel "Builds meta" lista, apaga e **lê um texto colado** ("item, item → bota / runa"),
+  pelos nomes da loja sem acento nem caixa, e diz o que não achou.
+- **Conhecidas** = as builds salvas do campeão + as meta. Todas passam pela mesma bateria.
+- **Novidade** = 1 − Jaccard (itens e bota) até a conhecida mais próxima, + 0,15 quando a fundamental difere.
+- **Descobertas:** nota ≥ a melhor conhecida, novidade ≥ 0,4 e **mantida na confirmação** (largadas que a busca não viu,
+  com tolerância de 1 ponto contra a conhecida confirmada do mesmo jeito). Cada uma explicada: em que cenários ganha e
+  perde (média nos minutos), o que troca, a fundamental, e a sinergia que sustenta (a maior positiva entre os itens
+  dela). Campeões de ficha C, D ou sem ficha: as descobertas viram nota, não destaque.
+
+**Na tela (servidores da rodada, banco `data/dev-r9`, Big Carry v1, rápido sem runas nem ordem): 303 s**, com 21
+conhecidas medidas (20 salvas + 1 meta colada na tela). Três descobertas, por exemplo:
+
+> troca Armadura de Espinhos + Égide de Fogo Solar por Convergência de Zeke + Bastão das Eras: 72,9 contra 72,6 de
+> Soldado v0; ganha em Cajado do Vazio +2,0, Tormento de Liandry +1,8, 1000 de PdH + Cajado do Vazio +1,6; perde em
+> Crítico −0,6
+
+**As margens são pequenas** (72,9 contra 72,6): "nota igual ou maior" deixa passar descobertas por 0,3 ponto. Elas se
+mantiveram na confirmação, mas um limiar de margem pode ser desejável (está em "Para o usuário"). A estimativa não
+contava as conhecidas (21 baterias a mais); agora conta.
+
+### Testes
+
+`RuneSearchTest` (3): a busca coordenada acha o melhor de uma medida separável medindo menos páginas que todas; uma runa
+versátil vence uma "tudo ou nada" na matriz das runas e perde na dos itens; um ramo com começo perdedor é podado.
+`MetaNoveltyTest` (2): o texto colado vira build meta (itens, bota, fundamental, o que não achou) e só aparece para o
+campeão dela; a novidade é o Jaccard com o passo da fundamental. **Achei e corrigi** na busca de runas: as páginas de
+uma coordenada eram montadas antes da troca da fundamental, e a árvore nunca mudava.
+
+**Banco:** migração **v25** cria `meta_build`, `build_discovery` e `build_guide` (a última também pelo `SchemaManager`).
+
+Testes: 359 → 364 (16 opcionais pulados). `npm run build` limpo.

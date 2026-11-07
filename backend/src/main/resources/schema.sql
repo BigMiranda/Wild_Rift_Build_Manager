@@ -22,6 +22,8 @@
 -- Version 22: arena_policy.arena_rules (the fight rules a version was trained with).
 -- Version 23: effectiveness tests and report settings saved by the user (effect_test).
 -- Version 24: what each AI did in each fight (ai_result), read by the automatic brain.
+-- Version 25 (Rodada 9): meta builds kept by the user (meta_build), discovery results and the campaigns' queue
+--   (build_discovery), and the guides of decisions (build_guide).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -265,5 +267,43 @@ CREATE INDEX IF NOT EXISTS idx_ai_result_champion ON ai_result (champion);
 CREATE TABLE IF NOT EXISTS arena_guideline (
     champion    TEXT PRIMARY KEY COLLATE NOCASE,
     data        TEXT NOT NULL,                    -- guidelines and event reward weights, as JSON
+    updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS meta_build (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    unit_code   TEXT NOT NULL,
+    name        TEXT NOT NULL,
+    items       TEXT NOT NULL,                    -- JSON list of item ids (finished items)
+    boots       INTEGER,
+    keystone    TEXT,
+    source      TEXT,                             -- where it came from ("site X, outubro/2026")
+    created_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS build_discovery (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    patch       TEXT NOT NULL,
+    unit_code   TEXT NOT NULL,
+    champion    TEXT,
+    config_key  TEXT NOT NULL,                    -- hash of the configuration: the same champion and configuration resume
+    config      TEXT NOT NULL,                    -- the discovery request, as JSON
+    status      TEXT NOT NULL,                    -- pendente | rodando | pausado | feito | erro | cancelado | pulado
+    priority    INTEGER NOT NULL DEFAULT 0,
+    campaign    TEXT,
+    step        TEXT,                             -- salvas | descoberta | matchups | fim
+    result      TEXT,                             -- the discovery's result (and the saved builds and matchups), as JSON
+    error       TEXT,
+    seconds     REAL NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS build_guide (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    unit_code   TEXT NOT NULL,
+    name        TEXT NOT NULL,
+    tree        TEXT NOT NULL,                    -- the tree of conditions and decisions, as JSON
+    created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL
 );

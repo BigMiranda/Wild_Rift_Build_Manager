@@ -234,6 +234,9 @@ export default function Calculator() {
           <h3>{t('calc.best')}</h3>
           <StepRow line={a.best} />
           {a.best.runePage && <p className="small">{t('calc.runePage')}: <b>{a.best.runePage.keystone}</b> · {[...(a.best.runePage.primaryRunes ?? []), a.best.runePage.secondaryRune].filter(Boolean).join(' · ')}</p>}
+          {a.runeChanges?.length > 0 && <p className="small">{t('calc.runeChanges', { c: a.runeChanges.join('; '), a: n1(a.runeScoreBefore), b: n1(a.runeScoreAfter) })}</p>}
+          {a.runeScoreAfter != null && !a.runeChanges?.length && <p className="small muted">{t('calc.runeSame')}</p>}
+          {a.prunedByStart > 0 && <p className="small muted">{t('calc.pruned', { n: a.prunedByStart })} <Help text={t('calc.prunedHelp')} /></p>}
           <p className="muted">
             {t('calc.cost', { s: n1(a.seconds), n: n0(a.evaluations) })}{a.truncated ? ` · ${t('calc.truncated')}` : ''}
             {' · '}{t(`calc.mode.${a.mode ?? 'moderado'}`)}

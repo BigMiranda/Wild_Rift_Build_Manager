@@ -107,6 +107,15 @@ public final class DiscoveryModel {
         /** Versatility (part 4b): the worst and the low percentile over the scenarios, and the mixed score. */
         public Double worst;
         public Double versatile;
+        /** The order search's reading (part 4): early importance, which component first, what the runes changed. */
+        public List<Map<String, Object>> importance = new ArrayList<>();
+        public List<Map<String, Object>> componentFirst = new ArrayList<>();
+        public List<String> runeChanges = new ArrayList<>();
+        /** A known build's name (a saved build, or a meta build with its source). */
+        public String label;
+        public String keystone;
+        /** The scenario-minutes' points (part 5 compares them with the known builds'). */
+        public Map<String, Double> readings = new LinkedHashMap<>();
     }
 
     public static class SynergyView {

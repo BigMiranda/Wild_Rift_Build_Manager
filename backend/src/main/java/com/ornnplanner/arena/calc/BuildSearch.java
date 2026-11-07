@@ -328,6 +328,29 @@ public final class BuildSearch {
         return pool;
     }
 
+    /**
+     * Pruning by the start (part 4b): at depth d (a prefix of d + 1 steps) a prefix scoring below {@code bounds[d]} minus
+     * {@code margin} of it is cut, the best one always kept; {@code pruned[0]} counts the cuts. The bounds are the weakest
+     * starts of the champion's saved builds (infinite = no bound at that depth).
+     */
+    public static DepthListener startPruner(double[] bounds, double margin, int[] pruned) {
+        return (depth, ranked) -> {
+            if (depth >= bounds.length || Double.isInfinite(bounds[depth])) {
+                return ranked;
+            }
+            double cut = bounds[depth] - Math.abs(bounds[depth]) * margin;
+            List<Ranked> kept = new ArrayList<>();
+            for (Ranked x : ranked) {
+                if (x.score >= cut || kept.isEmpty()) {
+                    kept.add(x);
+                } else {
+                    pruned[0]++;
+                }
+            }
+            return kept;
+        };
+    }
+
     /** "Which component of the next item first": the best of an item's components bought right before it. */
     public static class ComponentFirst {
         public long item;

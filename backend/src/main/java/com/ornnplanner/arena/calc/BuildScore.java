@@ -65,6 +65,8 @@ public class BuildScore {
         public double p20;
         public double floorPenalty;
         public double total;
+        /** The chance of reaching this minute the robust score gave it (1 = the first minute). */
+        public double reach = 1;
         public List<Reading> readings = new ArrayList<>();
     }
 
@@ -93,6 +95,14 @@ public class BuildScore {
             o.defensiveMode = EffectModel.AS_PLAYED;
             o.offensiveMode = EffectModel.AS_PLAYED;
             o.limit = 3;
+            return o;
+        }
+
+        /** Every scenario, one start each (the rune search's reading at one minute). */
+        public static Options single() {
+            Options o = new Options();
+            o.defensiveMode = EffectModel.AS_PLAYED;
+            o.offensiveMode = EffectModel.AS_PLAYED;
             return o;
         }
 
@@ -416,6 +426,27 @@ public class BuildScore {
 
     // ------------------------------------------------------------------ robust, over minutes
 
+    /** Share of the mean in a choice's versatility score (part 4b): {@code runas} or {@code itens}, from the YAML. */
+    @SuppressWarnings("unchecked")
+    public double versatilityWeight(String what) {
+        Map<String, Object> v = (Map<String, Object>) rules.getOrDefault("versatilidade", Map.of());
+        return num(v.get(what + "_media"), "runas".equals(what) ? 0.4 : 0.8);
+    }
+
+    /**
+     * The chance of reaching a later minute (part 4b): each earlier minute's total through a logistic of the YAML's
+     * {@code chegar} (threshold and scale), never below its floor. A build that loses early is worth less late.
+     */
+    @SuppressWarnings("unchecked")
+    double reach(double earlierTotal) {
+        Map<String, Object> c = (Map<String, Object>) rules.getOrDefault("chegar", Map.of());
+        if (c.isEmpty()) {
+            return 1;
+        }
+        double p = 1 / (1 + Math.exp(-(earlierTotal - num(c.get("limiar"), 10)) / Math.max(1e-6, num(c.get("escala"), 10))));
+        return Math.max(num(c.get("piso"), 0.3), p);
+    }
+
     /** The minutes of the robust score: the YAML's, with "fim" as the build's last purchase (or its match end). */
     @SuppressWarnings("unchecked")
     public List<double[]> minutes(BuildRepository.Build b) {
@@ -465,13 +496,18 @@ public class BuildScore {
         double p20 = 0;
         int beats = 0;
         int total = 0;
+        double reach = 1;
         for (double[] mw : minutes(b)) {
             Score s = score(b, mw[0], o);
             r.minutes.add(s);
-            sum += mw[1] * s.total;
-            mean += mw[1] * s.mean;
-            p20 += mw[1] * s.p20;
-            w += mw[1];
+            // what a late minute is worth: its weight times the chance of getting there (the earlier minutes' totals)
+            double wm = mw[1] * reach;
+            s.reach = reach;
+            sum += wm * s.total;
+            mean += wm * s.mean;
+            p20 += wm * s.p20;
+            w += wm;
+            reach *= reach(s.total);
             if (reference != null) {
                 Score ref = score(reference, mw[0], o);
                 Map<String, Double> theirs = new LinkedHashMap<>();

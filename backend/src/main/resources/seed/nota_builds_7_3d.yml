@@ -57,3 +57,21 @@ pesos_minuto: [1.0, 0.9, 0.8, 0.7]
 robustez:
   media: 0.6
   p20: 0.4
+
+# Parte 4b: o começo vale mais. A chance de chegar a um minuto: cada minuto anterior, pela nota dele, numa logística
+# (limiar e escala), nunca abaixo do piso; os minutos seguintes valem o peso x essa chance. Uma build que perde cedo
+# (nota abaixo do limiar) vale menos no fim, porque talvez nunca chegue lá.
+chegar: {limiar: 10, escala: 10, piso: 0.3}
+
+# Versatilidade (escolhas feitas sem saber o que o adversário fará): a parte da média na nota de uma escolha; o resto é
+# metade o pior caso e metade o percentil 20 entre as variações (os cenários). Runas pesam versatilidade mais que itens:
+# são escolhidas no draft, sem saber as runas do adversário; itens dá para trocar na loja.
+versatilidade:
+  runas_media: 0.4
+  itens_media: 0.8
+
+# Parte 5: novidade em relação às builds conhecidas (as salvas do campeão e as meta cadastradas). Novidade = 1 - Jaccard
+# dos itens e da bota até a conhecida mais próxima, mais `fundamental` quando a runa fundamental difere. Uma "descoberta"
+# tem nota >= a da melhor conhecida, novidade >= `limiar` e se mantém na confirmação (largadas que a busca não viu),
+# com a tolerância abaixo da conhecida confirmada do mesmo jeito.
+novidade: {limiar: 0.4, fundamental: 0.15, tolerancia_confirmacao: 1.0}

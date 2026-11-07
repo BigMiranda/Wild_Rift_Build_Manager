@@ -21,6 +21,7 @@ import About from './pages/About.jsx';
 import Arena from './pages/Arena.jsx';
 import Match from './pages/Match.jsx';
 import Calculator from './pages/Calculator.jsx';
+import Discovery from './pages/Discovery.jsx';
 import Ranking from './pages/Ranking.jsx';
 import Effectiveness from './pages/Effectiveness.jsx';
 
@@ -210,6 +211,7 @@ function Shell({ meta, items, reload, error, settingsBox }) {
       ))}
       {pane('simulacoes/partida', () => <Match />)}
       {pane('simulacoes/calculadora', () => <Calculator />)}
+      {pane('simulacoes/descoberta', () => <Discovery />)}
 
       {pane('admin/catalogo', () => <Admin meta={meta} items={items} onChanged={reload} />)}
       {pane('admin/efetividade', () => <Effectiveness items={items} />)}

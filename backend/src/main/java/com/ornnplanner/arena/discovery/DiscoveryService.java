@@ -50,6 +50,9 @@ public class DiscoveryService {
     final ChampionProfiles profiles;
     final BuildArchetypes archetypes;
     final ArenaService arena;
+    final com.ornnplanner.arena.calc.CalculatorService calc;
+    final com.ornnplanner.seed.RuneCatalog runes;
+    final com.ornnplanner.repo.DiscoveryRepository repo;
     private final Map<String, List<String>> families = new LinkedHashMap<>();
     private final ExecutorService runner = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "discovery");
@@ -66,7 +69,12 @@ public class DiscoveryService {
     @SuppressWarnings("unchecked")
     public DiscoveryService(PlannerService planner, BuildRepository builds, BuildScore scorer, BuildDeltaService deltas,
                             ChampionProfiles profiles, BuildArchetypes archetypes, ArenaService arena,
+                            com.ornnplanner.arena.calc.CalculatorService calc, com.ornnplanner.seed.RuneCatalog runes,
+                            com.ornnplanner.repo.DiscoveryRepository repo,
                             @Value("${planner.seed.classification:classpath:seed/classificacao_7_3d.yml}") Resource file) {
+        this.calc = calc;
+        this.repo = repo;
+        this.runes = runes;
         this.planner = planner;
         this.builds = builds;
         this.scorer = scorer;
@@ -92,6 +100,15 @@ public class DiscoveryService {
         e.quick = c[1];
         e.order = r.order ? c[2] * b.search.confirm : 0;
         e.candidates = b.shortlist + b.jokers;
+        // the known builds (saved and meta) go through the same battery, and the best one is confirmed
+        int known = 0;
+        try {
+            BuildRepository.Build base = base(r);
+            known = known(base).size() + repo.metaBuilds(base.unitCode).size();
+        } catch (ResponseStatusException ex) {
+            // no build yet: the estimate leaves them out
+        }
+        e.full += known + 1;
         e.seconds = e.full * secondsPerFull + e.quick * secondsPerQuick + e.order * secondsPerOrder
                 + (r.runes ? b.search.confirm * 20 * secondsPerFull : 0);
         return e;
@@ -178,14 +195,30 @@ public class DiscoveryService {
         }
         // the seeds: the champion's saved builds (part 4b) as kits
         List<Funnel.Kit> seeds = new ArrayList<>();
-        if (r.seedsFromSaved) {
-            for (BuildRepository.Build b : known(base)) {
-                Funnel.Kit k = ev.kitOf(b);
-                if (k != null) {
+        for (BuildRepository.Build b : known(base)) {
+            Funnel.Kit k = ev.kitOf(b);
+            if (k != null) {
+                if (r.seedsFromSaved) {
                     seeds.add(k);
-                    res.known.add(ev.view(k, null, "conhecida"));
                 }
+                DiscoveryModel.KitView kv = ev.view(k, null, "salva");
+                kv.label = b.name;
+                kv.keystone = b.runePage == null ? null : b.runePage.keystone;
+                res.known.add(kv);
             }
+        }
+        for (com.ornnplanner.repo.DiscoveryRepository.MetaBuild m : repo.metaBuilds(base.unitCode)) {
+            Funnel.Kit k = new Funnel.Kit(m.items, m.boots);
+            if (k.items.isEmpty()) {
+                continue;
+            }
+            if (r.seedsFromSaved && ev.allowed(k)) {
+                seeds.add(k);
+            }
+            DiscoveryModel.KitView kv = ev.view(k, null, "meta");
+            kv.label = m.name + (m.source == null || m.source.isBlank() ? "" : " (" + m.source + ")");
+            kv.keystone = m.keystone;
+            res.known.add(kv);
         }
         // stages 2 to 4: the genetic search, quick fights, full battery, confirmation
         Funnel.Result fr = Funnel.search(ev, shortlist, ev.boots, seeds, budget.search);
@@ -213,7 +246,8 @@ public class DiscoveryService {
                 res.synergies.add(v);
             }
         }
-        afterSearch(r, ev, fr, res, budget);
+        afterSearch(r, ev, fr, res, budget, shortlist, job);
+        novelty(r, ev, res, job);
         res.seconds = (System.nanoTime() - t0) / 1e9;
         if (ev.fullCount > 0) {
             secondsPerFull = ev.fullSeconds / ev.fullCount;
@@ -224,8 +258,309 @@ public class DiscoveryService {
         return res;
     }
 
-    /** What runs after the item search (runes, order, discoveries: parts 4, 4b and 5). */
-    void afterSearch(DiscoveryModel.Request r, Evaluator ev, Funnel.Result fr, DiscoveryModel.Result res, DiscoveryModel.Budget b) {
+    /**
+     * After the item search (part 4): the runes of the finalists, coordinate by coordinate, and their purchase order by
+     * the calculator's step search (with the pruning by the saved builds' starts); then once more the items with the best
+     * page, because a rune may change which item is worth most (items → runes → order → items).
+     */
+    void afterSearch(DiscoveryModel.Request r, Evaluator ev, Funnel.Result fr, DiscoveryModel.Result res, DiscoveryModel.Budget b,
+                     List<Long> shortlist, DiscoveryModel.Job job) {
+        if (fr.ranked.isEmpty() || ev.stopped()) {
+            return;
+        }
+        int finalists = Math.min(res.ranked.size(), DiscoveryModel.COMPLETE.equals(r.budget) ? 3 : 1);
+        RuneSearch.Shape shape = RuneSearch.Shape.of(runes.catalog());
+        BuildRepository.RunePage bestPage = null;
+        for (int i = 0; i < finalists && !ev.stopped(); i++) {
+            Funnel.Kit k = fr.ranked.get(i).kit;
+            DiscoveryModel.KitView v = res.ranked.get(i);
+            BuildRepository.Build b0 = ev.build(k);
+            if (r.runes) {
+                stage(job, "runas", i, finalists);
+                double meanWeight = scorer.versatilityWeight("runas");
+                RuneSearch.Outcome o = RuneSearch.search(b0.runePage, shape, page -> {
+                    BuildRepository.Build bp = copy(b0, BuildRepository.Build.class);
+                    bp.runePage = page;
+                    List<Double> points = new ArrayList<>();
+                    scorer.score(bp, QUICK_MINUTE, BuildScore.Options.single()).readings.forEach(x -> points.add(x.points));
+                    return RuneSearch.versatility(points, meanWeight)[0];
+                }, 2, ev::stopped);
+                v.runePage = o.page;
+                v.runeChanges = o.changes;
+                b0.runePage = o.page;
+                if (i == 0) {
+                    bestPage = o.page;
+                }
+                res.notes.add(String.format(java.util.Locale.ROOT, "Runas de %s: %d páginas medidas, %.1f → %.1f%s", String.join(", ", v.names),
+                        o.measured, o.start, o.score, o.changes.isEmpty() ? " (a página da build já era a melhor)" : " (" + String.join("; ", o.changes) + ")"));
+            }
+            if (r.order) {
+                stage(job, "ordem", i, finalists);
+                com.ornnplanner.arena.calc.CalculatorService.Request cr = new com.ornnplanner.arena.calc.CalculatorService.Request();
+                cr.build = b0;
+                cr.candidates = new ArrayList<>(k.items);
+                cr.required = new ArrayList<>(k.items);
+                cr.length = k.items.size();
+                cr.budget = b.orderBudget;
+                cr.beam = 3;
+                cr.boots = new ArrayList<>();
+                if (k.boots != null) {
+                    cr.boots.add(k.boots);
+                    Model.ItemDef bd = ev.items.get(k.boots);
+                    if (bd != null) {
+                        bd.components.forEach(c -> cr.boots.add(c.itemId));
+                    }
+                } else {
+                    cr.noBoots = true;
+                }
+                com.ornnplanner.arena.calc.CalculatorService.Answer ans = calc.compute(cr, null);
+                res.orderMeasures += (int) ans.evaluations;
+                res.prunedByStart += ans.prunedByStart;
+                if (ans.best != null) {
+                    v.order = ans.best.order;
+                    v.importance = ans.importance;
+                    v.componentFirst = ans.componentFirst;
+                }
+            }
+        }
+        // items again with the best page: a rune may change which item is worth most
+        if (bestPage != null && !ev.stopped() && !res.ranked.get(0).runeChanges.isEmpty()) {
+            stage(job, "itens com as runas", 0, 1);
+            BuildRepository.Build base2 = copy(ev.base, BuildRepository.Build.class);
+            base2.runePage = bestPage;
+            Evaluator ev2 = new Evaluator(this, base2, r, job);
+            ev2.screen.putAll(ev.screen);
+            Funnel.Config c2 = copy(b.search, Funnel.Config.class);
+            c2.generations = Math.max(1, b.search.generations / 3);
+            c2.population = Math.min(8, b.search.population);
+            c2.confirm = 1;
+            List<Funnel.Kit> seeds = new ArrayList<>();
+            fr.ranked.stream().limit(c2.population).forEach(e -> seeds.add(e.kit));
+            Funnel.Result again = Funnel.search(ev2, shortlist, ev.boots, seeds, c2);
+            res.fullRuns += again.fullRuns;
+            res.quickRuns += again.quickRuns;
+            if (!again.ranked.isEmpty()) {
+                Funnel.Entry top = again.ranked.get(0);
+                boolean changed = !top.kit.key().equals(fr.ranked.get(0).kit.key());
+                res.notes.add(changed
+                        ? "Com as runas novas, o melhor conjunto mudou: " + String.join(", ", ev.view(top.kit, top, "").names)
+                        : "Com as runas novas, o melhor conjunto continua o mesmo.");
+                if (changed) {
+                    DiscoveryModel.KitView nv = ev2.view(top.kit, top, "runas");
+                    nv.runePage = bestPage;
+                    res.ranked.add(0, nv);
+                    res.standard = standard(res.ranked);
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ part 5: novelty against the meta
+
+    /** Novelty: 1 − the Jaccard of the items (and boots), plus a step when the keystone differs, at most 1. */
+    public static double novelty(DiscoveryModel.KitView a, DiscoveryModel.KitView b, double keystoneStep) {
+        java.util.Set<Long> x = new java.util.TreeSet<>(a.items);
+        java.util.Set<Long> y = new java.util.TreeSet<>(b.items);
+        if (a.boots != null) {
+            x.add(a.boots);
+        }
+        if (b.boots != null) {
+            y.add(b.boots);
+        }
+        java.util.Set<Long> inter = new java.util.TreeSet<>(x);
+        inter.retainAll(y);
+        java.util.Set<Long> union = new java.util.TreeSet<>(x);
+        union.addAll(y);
+        double d = union.isEmpty() ? 0 : 1 - (double) inter.size() / union.size();
+        String ka = a.runePage != null ? a.runePage.keystone : a.keystone;
+        if (ka != null && b.keystone != null && !ka.equals(b.keystone)) {
+            d += keystoneStep;
+        }
+        return Math.min(1, d);
+    }
+
+    /**
+     * Part 5: the known builds (the champion's saved builds and the meta builds) measured by the same battery; the novelty
+     * of each found build (its distance to the closest known one); the share of scenarios where it beats the best known;
+     * and the "discoveries": score at least the best known's, novelty high, held in the confirmation, each explained.
+     */
+    @SuppressWarnings("unchecked")
+    void novelty(DiscoveryModel.Request r, Evaluator ev, DiscoveryModel.Result res, DiscoveryModel.Job job) {
+        if (res.known.isEmpty() || res.ranked.isEmpty() || ev.stopped()) {
+            return;
+        }
+        Map<String, Object> cfg = (Map<String, Object>) scorer.rules().getOrDefault("novidade", Map.of());
+        double threshold = cfg.get("limiar") instanceof Number ? ((Number) cfg.get("limiar")).doubleValue() : 0.4;
+        double keystoneStep = cfg.get("fundamental") instanceof Number ? ((Number) cfg.get("fundamental")).doubleValue() : 0.15;
+        double tolerance = cfg.get("tolerancia_confirmacao") instanceof Number ? ((Number) cfg.get("tolerancia_confirmacao")).doubleValue() : 1.0;
+        // the known builds through the same battery (cached when the search already met them as seeds)
+        int n = 0;
+        DiscoveryModel.KitView bestKnown = null;
+        for (DiscoveryModel.KitView k : res.known) {
+            if (ev.stopped()) {
+                return;
+            }
+            Funnel.Kit kit = new Funnel.Kit(k.items, k.boots);
+            if (!ev.allowed(kit)) {
+                k.niche = "fora das regras da loja";
+                continue;
+            }
+            Funnel.Entry e = new Funnel.Entry();
+            e.kit = kit;
+            e.full = ev.full(kit);
+            DiscoveryModel.KitView measured = ev.view(kit, e, k.origin);
+            k.score = measured.score;
+            k.mean = measured.mean;
+            k.p20 = measured.p20;
+            k.readings = measured.readings;
+            k.curve = measured.curve;
+            k.niche = measured.niche;
+            k.worst = measured.worst;
+            k.versatile = measured.versatile;
+            stage(job, "conhecidas", ++n, res.known.size());
+            if (bestKnown == null || k.score > bestKnown.score) {
+                bestKnown = k;
+            }
+        }
+        if (bestKnown == null) {
+            return;
+        }
+        List<DiscoveryModel.KitView> views = new ArrayList<>(res.ranked);
+        views.addAll(res.niches.values());
+        for (DiscoveryModel.KitView v : views) {
+            double best = 2;
+            for (DiscoveryModel.KitView k : res.known) {
+                double d = novelty(v, k, keystoneStep);
+                if (d < best) {
+                    best = d;
+                    v.closestKnown = k.label;
+                }
+            }
+            v.novelty = best;
+            int wins = 0;
+            int total = 0;
+            for (Map.Entry<String, Double> x : v.readings.entrySet()) {
+                Double y = bestKnown.readings.get(x.getKey());
+                if (y != null) {
+                    total++;
+                    wins += x.getValue() > y + 1e-9 ? 1 : 0;
+                }
+            }
+            v.beatsKnown = total == 0 ? null : 100.0 * wins / total;
+        }
+        // the discoveries, confirmed on starts the search did not see against the best known confirmed the same way
+        Funnel.Eval knownConfirmed = ev.confirm(new Funnel.Kit(bestKnown.items, bestKnown.boots));
+        bestKnown.confirmed = knownConfirmed.score;
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (DiscoveryModel.KitView v : views) {
+            String key = v.items + "|" + v.boots;
+            if (!seen.add(key) || v.novelty == null || v.novelty < threshold || v.score + 1e-9 < bestKnown.score || ev.stopped()) {
+                continue;
+            }
+            if (v.confirmed == null) {
+                v.confirmed = ev.confirm(new Funnel.Kit(v.items, v.boots)).score;
+            }
+            DiscoveryModel.Finding f = explain(v, bestKnown, res, ev);
+            f.confirmed = v.confirmed + tolerance >= bestKnown.confirmed;
+            if (f.confirmed && !res.lowConfidence) {
+                res.discoveries.add(f);
+            } else {
+                res.notes.add((f.confirmed ? "Descoberta não destacada (ficha de baixa confiança): " : "Não se manteve na confirmação: ") + f.text);
+            }
+        }
+    }
+
+    /** Why a found build beats the known one: the scenarios where it wins and loses, the items swapped and the synergy. */
+    DiscoveryModel.Finding explain(DiscoveryModel.KitView v, DiscoveryModel.KitView known, DiscoveryModel.Result res, Evaluator ev) {
+        DiscoveryModel.Finding f = new DiscoveryModel.Finding();
+        f.kit = v;
+        f.against = known.label;
+        // by scenario (the mean over the minutes), the difference in points
+        Map<String, double[]> by = new LinkedHashMap<>();
+        for (Map.Entry<String, Double> x : v.readings.entrySet()) {
+            Double y = known.readings.get(x.getKey());
+            if (y == null) {
+                continue;
+            }
+            String scenario = x.getKey().substring(x.getKey().indexOf('|') + 1);
+            double[] acc = by.computeIfAbsent(scenario, k -> new double[2]);
+            acc[0] += x.getValue() - y;
+            acc[1]++;
+        }
+        List<Map.Entry<String, double[]>> diffs = new ArrayList<>(by.entrySet());
+        diffs.sort(Comparator.comparingDouble((Map.Entry<String, double[]> e) -> -e.getValue()[0] / e.getValue()[1]).thenComparing(Map.Entry::getKey));
+        for (Map.Entry<String, double[]> d : diffs) {
+            double mean = d.getValue()[0] / d.getValue()[1];
+            String label = String.format(java.util.Locale.ROOT, "%s %+.1f", scenarioName(d.getKey(), ev), mean);
+            if (mean > 0.5 && f.wins.size() < 3) {
+                f.wins.add(label);
+            }
+        }
+        for (int i = diffs.size() - 1; i >= 0 && f.losses.size() < 3; i--) {
+            double mean = diffs.get(i).getValue()[0] / diffs.get(i).getValue()[1];
+            if (mean < -0.5) {
+                f.losses.add(String.format(java.util.Locale.ROOT, "%s %+.1f", scenarioName(diffs.get(i).getKey(), ev), mean));
+            }
+        }
+        List<String> out = new ArrayList<>();
+        List<String> in = new ArrayList<>();
+        for (long i : known.items) {
+            if (!v.items.contains(i)) {
+                out.add(ev.name(i));
+            }
+        }
+        for (long i : v.items) {
+            if (!known.items.contains(i)) {
+                in.add(ev.name(i));
+            }
+        }
+        if (!java.util.Objects.equals(known.boots, v.boots) && v.boots != null) {
+            out.add(known.boots == null ? "sem bota" : ev.name(known.boots));
+            in.add(ev.name(v.boots));
+        }
+        if (!out.isEmpty() || !in.isEmpty()) {
+            f.swaps.add("troca " + (out.isEmpty() ? "nada" : String.join(" + ", out)) + " por " + (in.isEmpty() ? "nada" : String.join(" + ", in)));
+        }
+        String ka = v.runePage != null ? v.runePage.keystone : null;
+        if (ka != null && known.keystone != null && !ka.equals(known.keystone)) {
+            f.swaps.add("fundamental " + known.keystone + " → " + ka);
+        }
+        for (DiscoveryModel.SynergyView s : res.synergies) {
+            if (s.value > 0.5 && v.items.contains(s.a) && v.items.contains(s.b)) {
+                f.synergy = String.format(java.util.Locale.ROOT, "a sinergia %s + %s sustenta (%+.1f)", s.nameA, s.nameB, s.value);
+                break;
+            }
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(f.swaps.isEmpty() ? "mesmos itens" : String.join(", ", f.swaps));
+        sb.append(String.format(java.util.Locale.ROOT, ": %.1f contra %.1f de %s", v.score, known.score, known.label));
+        if (!f.wins.isEmpty()) {
+            sb.append("; ganha em ").append(String.join(", ", f.wins));
+        }
+        if (!f.losses.isEmpty()) {
+            sb.append("; perde em ").append(String.join(", ", f.losses));
+        }
+        if (f.synergy != null) {
+            sb.append("; ").append(f.synergy);
+        }
+        f.text = sb.toString();
+        return f;
+    }
+
+    /** A scenario's name from "part|key" (the evaluator kept the names it saw). */
+    static String scenarioName(String partKey, Evaluator ev) {
+        String name = ev.names.get(partKey);
+        return name == null ? partKey : name;
+    }
+
+    /** Versatility of a kit as an item choice (part 4b): mean, worst and P20 of its scenario-minutes. */
+    void versatility(DiscoveryModel.KitView v) {
+        if (v.readings.isEmpty()) {
+            return;
+        }
+        double[] x = RuneSearch.versatility(new ArrayList<>(v.readings.values()), scorer.versatilityWeight("itens"));
+        v.worst = x[2];
+        v.versatile = x[0];
     }
 
     private static DiscoveryModel.Job job(DiscoveryModel.Job j) {
@@ -302,6 +637,8 @@ public class DiscoveryService {
         final Map<String, Boolean> allowed = new ConcurrentHashMap<>();
         final Map<String, Funnel.Eval> fulls = new ConcurrentHashMap<>();
         final Map<String, Double> quicks = new ConcurrentHashMap<>();
+        /** "part|key" -> the scenario's name, as the score's readings gave them. */
+        final Map<String, String> names = new ConcurrentHashMap<>();
         double fullSeconds;
         double quickSeconds;
         int fullCount;
@@ -506,6 +843,9 @@ public class DiscoveryService {
                 curve.put(String.valueOf(sc.minute), sc.total);
                 for (BuildScore.Reading rd : sc.readings) {
                     e.readings.put(sc.minute + "|" + rd.part + "|" + rd.key, rd.points);
+                    if (rd.name != null) {
+                        names.put(rd.part + "|" + rd.key, rd.name);
+                    }
                 }
                 archetype = sc.archetype;
                 durability = sc.parts.get(BuildScore.DEFENSIVE);
@@ -596,6 +936,10 @@ public class DiscoveryService {
                 }
                 if (e.confirmed != null) {
                     v.confirmed = e.confirmed.score;
+                }
+                if (e.full != null) {
+                    v.readings = new LinkedHashMap<>(e.full.readings);
+                    s.versatility(v);
                 }
             }
             return v;

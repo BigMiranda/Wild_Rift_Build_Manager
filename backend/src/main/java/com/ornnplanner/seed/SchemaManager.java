@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 24;
+    static final int VERSION = 25;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -135,7 +135,12 @@ public class SchemaManager {
                     + "kind TEXT NOT NULL DEFAULT 'cenario', name TEXT NOT NULL, data TEXT NOT NULL, "
                     + "created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
         }
-        // v16 / v17 / v18 / v24: arena_combo, arena_dummy, arena_guideline and ai_result are new tables, created by schema.sql
+        if (version < 25 && !tableExists("build_guide")) {
+            // v25 (Rodada 9): the guides; meta_build and build_discovery come with them from schema.sql below
+            jdbc.execute("CREATE TABLE IF NOT EXISTS build_guide (id INTEGER PRIMARY KEY AUTOINCREMENT, unit_code TEXT NOT NULL, "
+                    + "name TEXT NOT NULL, tree TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
+        }
+        // v16 / v17 / v18 / v24 / v25: arena_combo, arena_dummy, arena_guideline, ai_result, meta_build and build_discovery are new tables, created by schema.sql
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {
             jdbc.execute("PRAGMA user_version = " + VERSION);
