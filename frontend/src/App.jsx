@@ -26,6 +26,7 @@ import Campaigns from './pages/Campaigns.jsx';
 import Guides from './pages/Guides.jsx';
 import Ranking from './pages/Ranking.jsx';
 import Effectiveness from './pages/Effectiveness.jsx';
+import Community from './pages/Community.jsx';
 import { PUBLIC } from './publicMode.js';
 import { decodeBuild } from './shareLink.js';
 
@@ -223,6 +224,7 @@ function Shell({ meta, items, reload, error, settingsBox }) {
       {pane('admin/catalogo', () => <Admin meta={meta} items={items} onChanged={reload} />)}
       {pane('admin/efetividade', () => <Effectiveness items={items} />)}
       {pane('admin/campanhas', () => <Campaigns />)}
+      {pane('builds/comunidade', () => main(<Community />))}
       {pane('builds/sobre', () => (
         <>
           <div className="main settings-page" style={{ paddingBottom: 0 }}>

@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 26;
+    static final int VERSION = 27;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -163,6 +163,7 @@ public class SchemaManager {
         if (version < 26 && tableExists("build_guide") && !columnExists("build_guide", "publico")) {
             jdbc.execute("ALTER TABLE build_guide ADD COLUMN publico INTEGER NOT NULL DEFAULT 0");
         }
+        // v27 (Rodada 11, part 4): community_guide is a new table, created by schema.sql
         // v16 / v17 / v18 / v24 / v25: arena_combo, arena_dummy, arena_guideline, ai_result, meta_build and build_discovery are new tables, created by schema.sql
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {

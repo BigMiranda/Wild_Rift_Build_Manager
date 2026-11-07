@@ -254,3 +254,93 @@ Estático para consultar (opção 2, de graça, na CDN) e um servidor pequeno **
 Para começar: **opção 1** num plano pequeno (ou numa camada gratuita), porque não exige trabalho novo, já tem os
 limites e é a única em que a Parte 4 roda. Se o custo ou a carga incomodarem, a **opção 3** reaproveita tudo isto e o
 script da opção 2. **A escolha e qualquer publicação ficam com o usuário.**
+
+## Parte 4 — Builds compartilhadas para eleger guias melhores (opcional, com permissão) ✅
+
+### Permissão explícita
+- Builds › **Guias** (só na versão pública): a caixa "Compartilhar minhas builds para melhorar as guias", **desligada
+  por padrão**, com o texto do que é guardado e para quê (`frontend/src/community.js`, `pages/Community.jsx`).
+- Ligada, cada build que o visitante **salva** neste navegador vai ao servidor. Não é retroativo: as builds salvas
+  antes de ligar não vão. Desligar para de enviar na hora.
+- "Apagar o que enviei" apaga do servidor, pelo identificador anônimo guardado no navegador (num cabeçalho, nunca no
+  endereço), os votos desse navegador; a build que mais ninguém enviou sai junto.
+- O servidor também exige `consent: true` no pedido: sem ele, **403** e nada é guardado.
+
+### O que se guarda
+- Um banco **à parte**, gravável (`planner.community.db-path`, padrão `./data/comunidade/comunidade.db`): o banco
+  exportado continua somente leitura. No Docker, é o volume `/app/data/comunidade`.
+- `shared_build`: a build (campeão, compras e ordem, momentos, vendas, runas, feitiços, ouro e XP por minuto, fim da
+  partida, suposições de compra), o patch, o grupo, os votos e a medida. **Sem nome, nota, pasta ou id da build.**
+- "A guia, se houver": o pedido aceita `guideId` (a guia pública de onde a build veio). A tela ainda não envia, porque
+  uma guia de decisão não vira build sozinha na versão pública; fica pronto para quando virar.
+- `shared_vote`: (identificador anônimo, build) — um voto por navegador e por build, e o que permite apagar.
+- **Nada de nome, e-mail, conta ou IP.** O IP só conta no limite por hora, em memória. O teste confere que o nome, a
+  nota e o IP enviados não aparecem no arquivo (nem no WAL).
+- **A conta:** a "Armor Shredder" (8 compras e página de runas) ocupa **826 bytes** no banco da comunidade. Com ~1 KB
+  por build, mais ~100 bytes por voto e os índices, **50.000 builds e 200.000 votos dão cerca de 75 MB**: folgado
+  para o SQLite.
+
+### Limites contra abuso
+- Por identificador: 20 envios por hora; por IP: 40 por hora (`per-anon-per-hour`, `per-ip-per-hour`). Passou: 429.
+- Tamanho máximo: 16 KB por build; de 1 a 40 compras; ouro e XP por minuto dentro do jogo.
+- **Validação pelas regras da loja:** o campeão existe, os itens existem, e a linha do tempo do planejador não marca
+  nenhuma violação nem compra além do limite (o mesmo bloqueio do "adicionar item" da tela). Inválida: 400.
+- **Duplicata vira voto:** a impressão digital é o SHA-256 do JSON canônico da build (chaves em ordem). A mesma build
+  de outro navegador soma um voto; do mesmo navegador, não soma de novo. Nome e nota não entram na impressão.
+
+### O processo em segundo plano (leve)
+- Uma única thread de prioridade mínima, a cada `interval-minutes` (10): agrupa as builds **parecidas** (mesmo campeão
+  e patch, os mesmos itens em qualquer ordem), soma os votos do grupo e, nos grupos com `min-votes` (3) ou mais, mede
+  a build mais votada pela **Efetividade Básica** na última compra. A medida fica na linha (cache): só mede de novo em
+  outro patch. Sem treino de IA nem campanhas.
+- Elege as `candidates-per-champion` (3) melhores medidas de cada campeão como **candidatas**. **Não publica nada.**
+
+### Revisão do administrador
+1. No servidor, com `PLANNER_COMMUNITY_ADMIN_TOKEN` definido no ambiente: `GET /api/community/candidates` com o
+   cabeçalho `X-Admin-Token` devolve o arquivo das candidatas (sem o token configurado, o endpoint responde 404).
+2. No app local: Admin › Catálogo › "Guias da comunidade (revisão)" › "Importar candidatas…" (tabela nova
+   `community_guide`, esquema **v27**). Aprovar ou recusar em "Situação".
+3. Na próxima exportação, só as aprovadas vão (`community_guide` com `status = 'aprovada'`).
+- **Apagar depois de aprovado:** "Apagar o que enviei" tira a build do servidor; uma guia já aprovada e exportada
+  continua na base pública até o administrador recusá-la e exportar de novo (ela não carrega nada do visitante).
+
+### Na tela pública
+Builds › Guias: "Guias do administrador" (as builds públicas, por campeão) separadas de "Guias da comunidade" (as
+aprovadas, com votos, Efetividade Básica e "Abrir como rascunho").
+
+### Testes
+`CommunityTest` (5 testes, perfil público, banco da comunidade temporário):
+- sem permissão, nada é guardado (403);
+- build inválida (dois Corações Congelados; campeão que não existe; identificador que não é UUID) é recusada;
+- duplicata vira voto (outro nome, outra nota: a mesma impressão; o mesmo navegador não vota duas vezes) e nada
+  pessoal fica no arquivo;
+- "apagar o que enviei" apaga, e a build que ninguém mais enviou some;
+- o 7º envio da hora de um identificador recebe 429;
+- a eleição mede a build votada uma vez só por patch, e só o token vê as candidatas.
+
+### Conferido nas telas (ciclo inteiro, com `min-votes=1` e eleição a cada minuto no `backend-publico`)
+1. Caixa desligada, build salva: **nenhum pedido** a `/api/community`.
+2. Caixa ligada, build salva: `POST /api/community/builds` → 1 voto.
+3. Depois de 1 minuto, a candidata (Renekton, Efetividade 76,6 · Bom) veio com o token; sem token, 404.
+4. Importada no app local, aprovada em "Situação", exportada (`community_guide: 1`).
+5. A versão pública mostrou a guia em "Guias da comunidade".
+6. "Apagar o que enviei": `removed: 1`, e o banco da comunidade ficou com 0 builds e 0 votos.
+
+## Fechamento
+
+- **Suíte:** 398 testes, 0 falhas (16 opcionais pulados, como antes). Os golden da Arena passaram em todas as partes: o
+  app local não mudou de comportamento. `npm run build` e `npm run build:publico` limpos.
+- **Commits:** um por parte, no `main`, sem push.
+
+### Para o usuário
+1. **Escolher a hospedagem** (Parte 3). Nada foi publicado. A recomendação é a opção 1 num plano pequeno.
+2. **Marcar as pastas e guias públicas** no app local (🔒/🌐 em Builds, "Pública" nas Guias) e exportar
+   (`./mvnw -Pexport` ou Admin › Exportar). Hoje nenhuma pasta do banco real está marcada.
+3. **A imagem Docker não foi montada aqui:** o serviço do Docker estava parado. Os passos dela foram simulados com o jar
+   (Parte 3). Vale um `docker build` antes de publicar.
+4. **Na publicação:** definir `PLANNER_COMMUNITY_ADMIN_TOKEN` no ambiente (sem ele, ninguém baixa as candidatas),
+   montar o volume da comunidade e, se a página ficar noutro domínio, `PLANNER_PUBLIC_ALLOWED_ORIGINS`.
+5. **Limites:** 30 cálculos e 600 pedidos por minuto por IP, 20 s e 2 trabalhadores, 30 s de luta. São estimativas para
+   um servidor de 1–2 núcleos: ajuste depois de ver o uso.
+6. O `backend-publico` do `launch.json` usa um token de teste e eleição a cada minuto com 1 voto, só para conferir a
+   Parte 4 em casa. Os padrões do perfil público são 10 minutos e 3 votos.

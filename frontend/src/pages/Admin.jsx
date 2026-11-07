@@ -1,5 +1,5 @@
 import ItemPicker from '../components/ShopPicker.jsx';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { currentLang, statLabel, t } from '../i18n.js';
 import { n0, n2, pct } from '../format.js';
@@ -108,6 +108,7 @@ export default function Admin({ meta, items, onChanged }) {
       </div>
       <BaseInfo base={meta?.base} />
       <PublicExport />
+      <CommunityReview />
       {msg && (
         <div className="notice spread"><span>{msg}</span><button className="link" onClick={() => setMsg(null)}>{a('close')}</button></div>
       )}
@@ -480,6 +481,75 @@ function PublicExport() {
             </div>
           </details>
         </>
+      )}
+    </section>
+  );
+}
+
+/**
+ * "Guias da comunidade" (Rodada 11, part 4): the candidates downloaded from the public server
+ * (GET /api/community/candidates with the token) are imported here and reviewed; the approved ones go to the next export.
+ */
+function CommunityReview() {
+  const [list, setList] = useState([]);
+  const [msg, setMsg] = useState(null);
+  const load = () => api.get('/api/admin/community').then(setList).catch((e) => setMsg(e.message));
+  useEffect(() => { load(); }, []);
+  const importFile = async (f) => {
+    try {
+      const data = JSON.parse(await f.text());
+      if (data?.format !== 'ornn-planner-community') throw new Error(t('commAdmin.badFile'));
+      const r = await api.post('/api/admin/community/import', data);
+      setMsg(t('commAdmin.imported', { added: r.added, total: r.total }));
+      load();
+    } catch (e) {
+      setMsg(e.message);
+    }
+  };
+  const review = async (g, status) => {
+    try {
+      await api.put(`/api/admin/community/${g.id}`, { status });
+      load();
+    } catch (e) {
+      setMsg(e.message);
+    }
+  };
+  const file = useRef(null);
+  const items = (steps) => (steps ?? []).filter((s) => s.kind !== 'moment' && s.kind !== 'sell' && s.itemId != null);
+  return (
+    <section className="panel">
+      <div className="spread">
+        <h3>{t('commAdmin.title')}</h3>
+        <button onClick={() => file.current?.click()}>{t('commAdmin.import')}</button>
+        <input ref={file} type="file" accept="application/json,.json" hidden
+          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) importFile(f); }} />
+      </div>
+      <p className="muted small">{t('commAdmin.help')}</p>
+      {msg && <p className="small">{msg}</p>}
+      {list.length > 0 && (
+        <table className="data">
+          <thead>
+            <tr>
+              <th className="l">{t('commAdmin.col.champion')}</th><th className="l">{t('comm.col.items')}</th>
+              <th>{t('comm.col.votes')}</th><th>{t('comm.col.score')}</th><th>{t('commAdmin.col.status')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((g) => (
+              <tr key={g.id}>
+                <td className="l">{g.unitCode}</td>
+                <td className="l"><span className="step-row">{items(g.build?.steps).map((s, i) => <ItemIcon key={i} id={s.itemId} size={20} />)}</span></td>
+                <td>{g.votes}</td>
+                <td>{g.score != null ? n2(g.score) : '—'}{g.grade ? ` · ${t(`efx.grade.${g.grade}`)}` : ''}</td>
+                <td>
+                  <select value={g.status} onChange={(e) => review(g, e.target.value)} aria-label={t('commAdmin.col.status')}>
+                    {['candidata', 'aprovada', 'recusada'].map((s) => <option key={s} value={s}>{t(`commAdmin.status.${s}`)}</option>)}
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </section>
   );

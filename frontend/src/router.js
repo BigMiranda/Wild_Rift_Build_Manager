@@ -18,10 +18,10 @@ const LOCAL_ROUTES = {
 /**
  * The public version (Rodada 11): no Admin, no training, laboratory, whole match or calculator, no ranking (they run
  * fights the public server does not); the laboratory keeps only "seen under effects"; the discovery shows what was
- * calculated before the export. "Sobre" moves to Builds.
+ * calculated before the export. "Sobre" moves to Builds, next to the guides of the administrator and of the community.
  */
 const PUBLIC_ROUTES = {
-  builds: ['lista', 'sobre'],
+  builds: ['lista', 'comunidade', 'sobre'],
   build: LOCAL_ROUTES.build,
   relatorios: ['analise', 'campeao', 'efetividade', 'relevancia', 'ouro', 'comparar-builds'],
   simulacoes: ['arena', 'laboratorio', 'descoberta'],

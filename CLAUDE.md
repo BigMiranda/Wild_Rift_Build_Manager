@@ -106,7 +106,9 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   `regras_loja.yml`); the planner's timeline applies it, `/api/meta` sends it to the shop screen.
 - `publico/` — the public version (Rodada 11): `PublicApi` (allow-list), `PublicApiFilter` (404 / origin / per-IP
   limits), `ComputeGuard` (fixed workers, time limit), `PublicRequests` (what a visitor may ask), `PublicExporter`
-  (`VACUUM INTO` copy with only the folders and guides marked `publico`).
+  (`VACUUM INTO` copy with only the folders and guides marked `publico`), `CommunityService` (visitors' shared builds,
+  with consent, in a writable SQLite of their own; votes by fingerprint; light background election) and
+  `CommunityGuides` (table `community_guide`: candidates reviewed in the local Admin, approved ones exported).
 - `seed/` — `SchemaManager` (migrations), `CatalogImporter` (YAML → SQLite), catalogs for champions, runes, item
   effects, shop rules, `ReferenceSeeder`.
 - `repo/` — JdbcTemplate data access. `service/PlannerService` assembles reference data and runs the engine.

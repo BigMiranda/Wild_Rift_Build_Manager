@@ -5,6 +5,8 @@
  * folders and builds of the server (positive ids) are read-only: saving one makes a copy here.
  */
 
+import { shareIfAllowed } from './community.js';
+
 const KEY = 'ornn-public-store';
 
 const now = () => new Date().toISOString();
@@ -118,6 +120,7 @@ export async function handleLocal(method, url, body, network) {
       const b = { ...checkBuild(body ?? {}, s), id: -s.next++, createdAt: now(), updatedAt: now() };
       s.builds.push(b);
       store(s);
+      shareIfAllowed(b);   // only when the visitor allowed the sharing (community.js)
       return { value: clean(b) };
     }
   }
@@ -151,11 +154,13 @@ export async function handleLocal(method, url, body, network) {
         const b = { ...checkBuild(body ?? {}, s), id: -s.next++, createdAt: now(), updatedAt: now() };
         s.builds.push(b);
         store(s);
+        shareIfAllowed(b);
         return { value: clean(b) };
       }
       const b = { ...checkBuild(body ?? {}, s), id, createdAt: s.builds[i].createdAt, updatedAt: now() };
       s.builds[i] = b;
       store(s);
+      shareIfAllowed(b);
       return { value: clean(b) };
     }
     if (method === 'DELETE') {

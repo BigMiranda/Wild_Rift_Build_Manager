@@ -360,6 +360,10 @@ public class PublicExporter {
         ex.add("de que print cada item foi transcrito (item.capture)");
         n = delete(c, "build_guide", "publico = 0");
         ex.add(n + " guia(s) não marcada(s)");
+        if (tableExists(c, "community_guide")) {
+            n = delete(c, "community_guide", "status <> 'aprovada'");
+            ex.add(n + " guia(s) da comunidade não aprovada(s) (candidatas e recusadas)");
+        }
         n = delete(c, "arena_scenario", "id NOT IN " + in(scenarioIds));
         ex.add(n + " cenário(s) da Arena com builds que não são públicas");
         n = delete(c, "arena_policy", "id NOT IN " + in(policyIds));

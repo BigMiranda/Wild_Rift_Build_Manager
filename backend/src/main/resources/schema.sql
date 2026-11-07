@@ -26,6 +26,7 @@
 --   (build_discovery), and the guides of decisions (build_guide).
 -- Version 26 (Rodada 11): what goes to the public version: folders and guides marked public (folder.publico,
 --   build_guide.publico).
+-- Version 27 (Rodada 11, part 4): community guides imported from the public server for review (community_guide).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -310,4 +311,21 @@ CREATE TABLE IF NOT EXISTS build_guide (
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL,
     publico     INTEGER NOT NULL DEFAULT 0        -- 1 = goes to the public version's export (v26)
+);
+
+-- Builds the public version's visitors shared and the server elected (Rodada 11, part 4), imported here for the
+-- administrator's review; only the approved ones go to the next export. One row per build (its fingerprint).
+CREATE TABLE IF NOT EXISTS community_guide (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    fingerprint  TEXT NOT NULL UNIQUE,
+    unit_code    TEXT NOT NULL,
+    patch        TEXT,
+    build        TEXT NOT NULL,                   -- the build only (champion, purchases, runes, spells, pace), as JSON
+    votes        INTEGER NOT NULL DEFAULT 0,      -- visitors who sent this build or one alike (its group)
+    score        REAL,                            -- basic effectiveness index at its last purchase
+    grade        TEXT,
+    minute       REAL,
+    status       TEXT NOT NULL DEFAULT 'candidata', -- candidata | aprovada | recusada
+    imported_at  TEXT NOT NULL,
+    reviewed_at  TEXT
 );

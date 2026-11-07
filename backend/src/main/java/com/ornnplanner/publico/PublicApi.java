@@ -32,6 +32,10 @@ public final class PublicApi {
         return new Rule("POST", path, true);
     }
 
+    private static Rule send(String method, String path) {
+        return new Rule(method, path, false);
+    }
+
     public static final List<Rule> RULES = List.of(
             // catalog and reference data
             get("/api/meta"), get("/api/items"), get("/api/items/*/image"), get("/api/stat-prices"),
@@ -48,6 +52,9 @@ public final class PublicApi {
             get("/api/arena/scenarios"), get("/api/arena/scenarios/*"), get("/api/arena/policies"),
             get("/api/arena/combos"),
             get("/api/public/info"), get("/api/public/effect"),
+            // the community (part 4): send with consent, take back, read the approved guides; candidates by token
+            send("POST", "/api/community/builds"), send("DELETE", "/api/community/mine"),
+            get("/api/community/guides"), get("/api/community/candidates"),
             // the planner (timeline, sheet, relevance, estimated effective gold), the quick comparison, seen under
             // effects, the basic effectiveness and a short Arena fight in a public scenario
             calc("/api/calculate"), calc("/api/relevance"), calc("/api/archetypes"),

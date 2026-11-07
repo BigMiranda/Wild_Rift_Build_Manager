@@ -62,7 +62,7 @@
       "runtimeExecutable": "cmd",
       "runtimeArgs": [
         "/c",
-        "set SERVER_PORT=8094&& set SPRING_PROFILES_ACTIVE=publico&& set PLANNER_PUBLIC_ALLOWED_ORIGINS=http://localhost:5178&& cd backend && .\\mvnw.cmd spring-boot:run"
+        "set SERVER_PORT=8094&& set SPRING_PROFILES_ACTIVE=publico&& set PLANNER_PUBLIC_ALLOWED_ORIGINS=http://localhost:5178&& set PLANNER_COMMUNITY_DB_PATH=./data/comunidade-teste/comunidade.db&& set PLANNER_COMMUNITY_ADMIN_TOKEN=token-local-de-teste&& set PLANNER_COMMUNITY_MIN_VOTES=1&& set PLANNER_COMMUNITY_INTERVAL_MINUTES=1&& cd backend && .\\mvnw.cmd spring-boot:run"
       ],
       "port": 8094,
       "autoPort": false
