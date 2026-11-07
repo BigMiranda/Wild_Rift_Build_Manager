@@ -113,6 +113,8 @@ public class CalculatorService {
         /** The search's space: candidates by kind, and the mode. */
         public Map<String, Integer> space = new LinkedHashMap<>();
         public String mode;
+        /** classe | relatorio: what the scores are. */
+        public String measure;
         /** Moderate: which component of each item to buy first (kept in {@link #best}). */
         public List<Map<String, Object>> componentFirst = new ArrayList<>();
         public List<Line> alternatives = new ArrayList<>();
@@ -146,6 +148,8 @@ public class CalculatorService {
     public static class Estimate {
         public int candidates;
         public Map<String, Integer> space = new LinkedHashMap<>();
+        /** Measures the whole search would take (before the budget caps it). */
+        public long needed;
         /** Aggressive mode: the space is much larger (the screen warns). */
         public boolean large;
         public long measures;
@@ -171,10 +175,12 @@ public class CalculatorService {
     private volatile double secondsPerMeasure = 0.4;
 
     private final com.ornnplanner.arena.BuildDeltaService deltas;
+    private final BuildScore scorer;
 
     public CalculatorService(PlannerService planner, BuildRepository builds, EffectTestService effect, ArenaService arena,
-                             com.ornnplanner.arena.BuildDeltaService deltas) {
+                             com.ornnplanner.arena.BuildDeltaService deltas, BuildScore scorer) {
         this.deltas = deltas;
+        this.scorer = scorer;
         this.planner = planner;
         this.builds = builds;
         this.effect = effect;
@@ -285,6 +291,7 @@ public class CalculatorService {
             long lines = (long) Math.pow(r.k, r.depth);
             measures += lines * lines * Math.min(3, r.minutes.size());
         }
+        e.needed = measures;
         e.measures = Math.min(measures, r.budget);
         e.seconds = e.measures * secondsPerMeasure;
         return e;
@@ -331,6 +338,7 @@ public class CalculatorService {
         Answer a = new Answer();
         a.minutes = minutes;
         a.mode = sp.aggressive ? AGGRESSIVE : MODERATE;
+        a.measure = rival != null ? "duelo" : "arena".equals(r.target) ? "arena" : r.measure;
         a.space = census(sp);
         oracle.limit = (long) (r.budget * SEARCH_SHARE);
         List<BuildSearch.Ranked> found = new ArrayList<>(BuildSearch.steps(oracle, sp, Math.max(r.beam, 4), minutes));
@@ -621,7 +629,12 @@ public class CalculatorService {
             Set<Long> held = side.held(order, minute);
             return scores.computeIfAbsent(held + "@" + minute, k -> {
                 counted();
-                return "arena".equals(r.target) ? arenaScore(held, minute) : reportScore(held, minute);
+                if ("arena".equals(r.target)) {
+                    return arenaScore(held, minute);
+                }
+                // the class score (part 1): a tank is not rewarded for damage items, a marksman is
+                return "relatorio".equals(r.measure) ? reportScore(held, minute)
+                        : scorer.score(side.order(new ArrayList<>(held)), minute).total;
             });
         }
 

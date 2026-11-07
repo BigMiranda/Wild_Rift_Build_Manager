@@ -1,0 +1,59 @@
+# O que é uma "boa build" (Rodada 9, parte 1): a nota de uma build num minuto, pela classe do campeão e pelo arquétipo
+# da build. Nenhuma regra cita campeão, item ou runa por nome: a classe vem do perfil (classificacao_7_3d.yml) e o
+# arquétipo, do ouro dos status (Rodada 7).
+#
+# As três partes, todas na mesma escala ("pontos": 0 = como a referência sem itens, 100 = perfeita):
+#   defensiva  o índice da Efetividade defensiva (o relatório `relatorio_defensivo`), que já é "quanto da taxa de dano
+#              líquida da referência a build cancela";
+#   ofensiva   o índice ofensivo (parte 1b) convertido: 100 x (1 - 100 / índice), a parte do tempo para matar da
+#              referência que a build economiza (índice 200 = 50 pontos; abaixo de 100, negativo);
+#   utilidade  o controle aplicado (s de controle por 10 s de luta, x `utilidade.controle_por_10s`) e a parte do dano
+#              do time que a build absorveu nos cenários com aliados (`utilidade.absorvido`), até 100.
+#   duelos     opcional: x1 contra os representativos de cada classe (fichas A ou B), com o cérebro automático, no
+#              mesmo minuto: 100 x (vida que sobra minha - a do adversário). Desligado por padrão (peso 0): precisa de
+#              builds salvas dos adversários e custa uma luta por par.
+#
+# piso  atiradores, magos e assassinos: abaixo deste valor de defensiva, a nota perde (piso - defensiva) x `piso_peso`.
+patch: "7.3d"
+
+relatorio_defensivo: basico
+leitura:
+  defensiva: fixo        # o comportamento fixo da Rodada 7: a diferença é da build, não da sorte da IA
+  ofensiva: largadas     # média de largadas (a ofensiva não tem comportamento fixo)
+  largadas: 3
+
+classes:
+  Tanque:       {defensiva: 0.70, utilidade: 0.20, ofensiva: 0.10}
+  Lutador:      {defensiva: 0.45, ofensiva: 0.45, utilidade: 0.10}
+  Atirador:     {ofensiva: 1.00, piso: 20}
+  Mago:         {ofensiva: 1.00, piso: 20}
+  Assassino:    {ofensiva: 1.00, piso: 10}
+  Controlador:  {defensiva: 0.40, utilidade: 0.40, ofensiva: 0.20}
+  Especialista: {defensiva: 0.50, ofensiva: 0.50}
+piso_peso: 1.0
+
+# O arquétipo da build no minuto ajusta os pesos (somados aos da classe e normalizados): um lutador com build de tanque
+# conta mais a defensiva. Só os arquétipos listados ajustam.
+arquetipos:
+  tanque:          {defensiva: 0.15, ofensiva: -0.15}
+  critico:         {ofensiva: 0.15, defensiva: -0.15}
+  letalidade:      {ofensiva: 0.15, defensiva: -0.15}
+  mago_explosivo:  {ofensiva: 0.10, defensiva: -0.10}
+  suporte:         {utilidade: 0.20, ofensiva: -0.20}
+
+utilidade:
+  controle_por_10s: 25   # 4 s de controle a cada 10 s de luta = 100 pontos
+  absorvido: 1.0         # 1 ponto por % do dano do time absorvido
+
+duelos:
+  peso: 0
+  duracao: 45
+
+# Os minutos da nota robusta e o peso de cada um (decrescente: quem morre cedo não chega ao último item).
+minutos: [10, 15, 20, fim]
+pesos_minuto: [1.0, 0.9, 0.8, 0.7]
+
+# A nota final: a média ponderada entre os cenários e o percentil 20 (os piores cenários pesam).
+robustez:
+  media: 0.6
+  p20: 0.4

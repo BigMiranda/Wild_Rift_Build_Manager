@@ -157,3 +157,53 @@ sobe o índice contra "muita cura" e quase nada contra "frágil"; nos perfis de 
 com alvo (média de 4 largadas); determinismo, com os avanços sorteados.
 
 Testes: 342 → 347 (15 opcionais pulados). `npm run build` limpo. Golden sem mudança.
+
+## Parte 1 — O que é uma "boa build" (nota por classe) ✅
+
+`arena/calc/BuildScore` (+ `seed/nota_builds_7_3d.yml`, `api/ScoreController`, `/api/score`). A nota de uma build num
+minuto junta, **na mesma escala de pontos** (0 = como o campeão sem itens, 100 = perfeita):
+
+| parte | de onde vem |
+|---|---|
+| defensiva | o índice da Efetividade defensiva no relatório Básico, com o **comportamento fixo** da Rodada 7 |
+| ofensiva | o índice ofensivo da Parte 1b em pontos: 100 × (1 − 100 / índice), na **média de 3 largadas** |
+| utilidade | controle aplicado (s por 10 s de luta × 25) e a parte do dano do time absorvida, até 100 |
+| duelos | x1 contra os representativos de cada classe (fichas A ou B, primeira build salva de cada classe), com o cérebro automático; **peso 0 por padrão** |
+
+**Pesos por classe** (YAML): Tanque 70% defensiva, 20% utilidade, 10% ofensiva; Lutador 45/45/10; Atirador, Mago e
+Assassino 100% ofensiva, com **piso de sobrevivência** (abaixo de 20 de defensiva, perde a diferença; Assassino 10);
+Controlador 40/40/20 de defensiva/utilidade/ofensiva. O **arquétipo** da build ajusta: build de tanque +15 de
+defensiva, crítico e letalidade +15 de ofensiva, suporte +20 de utilidade. A classe é a primeira classe principal do
+perfil (`ChampionProfiles.classesOf`); nenhuma regra cita campeão.
+
+**Robustez:** a nota de um minuto = 60% da média ponderada + 40% do **percentil 20** dos cenários das partes com peso,
+menos o piso. A nota robusta junta 10, 15, 20 min e o fim da build (última compra ou fim da partida), com pesos
+decrescentes 1,0 / 0,9 / 0,8 / 0,7. "Funciona contra a maioria" = a % de cenários-minuto em que a build supera a build
+de referência (`Robust.beatsReference`).
+
+**Exemplo (aos 20:00, `BuildScoreTest`):** Ornn com 3 itens de tanque 40,7 (defensiva 46,4, P20 34,5) contra 15,4 com
+3 itens de dano; Vayne com 3 itens de dano 42,8 (ofensiva 66,9, piso −22,3) contra 6,2 com itens de tanque.
+
+**Na calculadora:** a "Medida" padrão passou a ser a **nota por classe**; "Só o relatório defensivo" é a medida antiga.
+Isso resolve "a busca escolhia itens de dano para um tanque".
+
+**Na tela:** Relatórios › Efetividade ganhou a aba **Nota**, com a nota robusta, cada minuto (classe, arquétipo, partes
+com os pesos, média, P20, piso) e a build de referência.
+
+### Conferido na tela (servidores `backend-r9` 8092 e `frontend-r9` 5176, banco copiado em `data/dev-r9`)
+
+Calculadora com Big Carry v1, só tanque, 1 item + bota, nota por classe, orçamento 300: 249 medidas em 131 s
+(0,53 s por medida). A resposta veio, mas **o orçamento acabou antes da bota**: com 70 candidatos (30 itens, 14 botas,
+26 componentes) e 8 minutos, só o primeiro passo custa umas 200 medidas. Achados e correções:
+
+- **A busca devolvia nada** quando o orçamento acabava antes da primeira ordem completa (achei com orçamento 60).
+  Agora devolve os melhores prefixos, e a tela já dizia "o orçamento acabou".
+- **A estimativa escondia o tamanho real:** ela cortava no orçamento. Agora mostra também o total sem corte e avisa
+  quando o orçamento não cobre a busca (8.960 medidas no exemplo).
+- **Sinal duplicado** ("−-0,8") na importância cedo; corrigido.
+- Melhor achado: Cinto do Gigante (0:43) → Coração de Aço (3:17), "Cinto do Gigante antes de Coração de Aço (+2,2)".
+
+A busca inteira com a nota por classe é cara (0,5 s por medida contra 0,1 s só do relatório). É o motivo do funil da
+Parte 2.
+
+Testes: 347 → 351 (`BuildScoreTest`, 4; 15 opcionais pulados). `npm run build` limpo.

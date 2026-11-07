@@ -220,6 +220,7 @@ export default function Calculator() {
           </p>
         )}
         {estimate?.large && <p className="notice">{t('calc.largeWarn')}</p>}
+        {estimate?.needed > form.budget && <p className="notice">{t('calc.budgetShort', { n: n0(estimate.needed) })}</p>}
         <div className="row">
           <button className="primary" disabled={!form.buildId || job?.status === 'running'} onClick={start}>{t('calc.start')}</button>
           {job?.status === 'running' && <button onClick={() => api.post(`/api/calc/${job.id}/stop`, {})}>{t('calc.stop')}</button>}
@@ -306,8 +307,8 @@ export default function Calculator() {
                 <tr key={`${m.itemId}-${i}`}>
                   <td><ItemIcon id={m.itemId} size={20} /> {m.item}</td>
                   <td>{m.readyAt != null && !Number.isNaN(m.readyAt) ? mmss(m.readyAt) : '—'}</td>
-                  <td>{m.delayed == null ? '—' : `−${n1(m.delayed)}`}</td>
-                  <td>{m.advanced == null ? '—' : `${m.advanced >= 0 ? '+' : ''}${n1(m.advanced)}`}</td>
+                  <td>{m.delayed == null ? '—' : `${-m.delayed >= 0 ? '+' : '−'}${n1(Math.abs(m.delayed))}`}</td>
+                  <td>{m.advanced == null ? '—' : `${m.advanced >= 0 ? '+' : '−'}${n1(Math.abs(m.advanced))}`}</td>
                 </tr>
               ))}
             </tbody>

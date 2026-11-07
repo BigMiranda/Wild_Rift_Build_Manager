@@ -26,6 +26,7 @@ import BuildTestPanels from '../components/BuildTestPanels.jsx';
 import TestInArena from '../components/TestInArena.jsx';
 import { EffectivenessPanel } from '../components/EffectivenessReport.jsx';
 import OffensePanel from '../components/OffenseReport.jsx';
+import ScorePanel from '../components/ScorePanel.jsx';
 import QuickCompare from '../components/QuickCompare.jsx';
 import PassiveValueBar from '../components/PassiveValueBar.jsx';
 import ItemSetupExport from '../components/ItemSetupExport.jsx';
@@ -366,7 +367,7 @@ export function EffectivenessSection() {
   return (
     <>
       <div className="chips" role="tablist">
-        {['aguentar', 'causar'].map((k) => (
+        {['aguentar', 'causar', 'nota'].map((k) => (
           <button key={k} role="tab" aria-selected={side === k} className={side === k ? 'active' : ''} onClick={() => setSide(k)}>{t(`off.side.${k}`)}</button>
         ))}
       </div>
@@ -376,6 +377,7 @@ export function EffectivenessSection() {
           compareKey={`${compareIds.join(',')}|${condKey}`} compare={compareForEffect} />
       </div>
       {side === 'causar' && <OffensePanel build={payload} buildId={dirty ? null : draft.id} minute={point.minute} />}
+      {side === 'nota' && <ScorePanel build={payload} buildId={dirty ? null : draft.id} builds={builds} />}
     </>
   );
 }

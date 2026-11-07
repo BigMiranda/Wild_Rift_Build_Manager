@@ -284,6 +284,7 @@ public final class BuildSearch {
         List<List<Long>> frontier = new ArrayList<>();
         frontier.add(new ArrayList<>());
         List<Ranked> pool = new ArrayList<>();
+        List<Ranked> deepest = new ArrayList<>();
         Set<List<Long>> seen = new HashSet<>();
         for (int depth = 0; depth < sp.maxDepth() && !frontier.isEmpty(); depth++) {
             List<Ranked> next = new ArrayList<>();
@@ -308,6 +309,9 @@ public final class BuildSearch {
             if (listener != null) {
                 next = listener.depth(depth, next);
             }
+            if (!next.isEmpty()) {
+                deepest = next;
+            }
             frontier = new ArrayList<>();
             for (Ranked r : next.subList(0, Math.min(width, next.size()))) {
                 frontier.add(r.order);
@@ -317,6 +321,10 @@ public final class BuildSearch {
             }
         }
         pool.sort(Comparator.comparingDouble((Ranked r) -> -r.score));
+        if (pool.isEmpty()) {
+            // the budget ran out before any whole order: the best prefixes so far, so the answer is not empty
+            return new ArrayList<>(deepest.subList(0, Math.min(width, deepest.size())));
+        }
         return pool;
     }
 

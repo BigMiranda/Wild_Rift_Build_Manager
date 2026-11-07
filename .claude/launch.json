@@ -36,6 +36,26 @@
         "set API_TARGET=http://localhost:8090&& C:/Users/Matheus/AppData/Local/nvm/v24.15.0/node.exe frontend/node_modules/vite/bin/vite.js frontend --port 5174"
       ],
       "port": 5174
+    },
+    {
+      "name": "backend-r9",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set SERVER_PORT=8092&& set PLANNER_DB_PATH=./data/dev-r9/ornn-planner.db&& cd backend && .\\mvnw.cmd spring-boot:run"
+      ],
+      "port": 8092,
+      "autoPort": false
+    },
+    {
+      "name": "frontend-r9",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set API_TARGET=http://localhost:8092&& C:/Users/Matheus/AppData/Local/nvm/v24.15.0/node.exe frontend/node_modules/vite/bin/vite.js frontend --port 5176"
+      ],
+      "port": 5176,
+      "autoPort": false
     }
   ]
 }

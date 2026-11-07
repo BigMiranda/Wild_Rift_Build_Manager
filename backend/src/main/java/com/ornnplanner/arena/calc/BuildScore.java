@@ -1,0 +1,456 @@
+package com.ornnplanner.arena.calc;
+
+import com.ornnplanner.arena.Arena;
+import com.ornnplanner.arena.ArenaModel;
+import com.ornnplanner.arena.ArenaService;
+import com.ornnplanner.arena.EffectModel;
+import com.ornnplanner.arena.EffectTestService;
+import com.ornnplanner.arena.OffenseModel;
+import com.ornnplanner.arena.OffenseTestService;
+import com.ornnplanner.arena.fight.BuildArchetypes;
+import com.ornnplanner.arena.fight.ChampionProfiles;
+import com.ornnplanner.arena.fight.FighterBuilder;
+import com.ornnplanner.engine.Model;
+import com.ornnplanner.repo.BuildRepository;
+import com.ornnplanner.service.PlannerService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Service;
+import org.yaml.snakeyaml.Yaml;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * What a "good build" is (Rodada 9, part 1): the score of a build at a minute by the champion's class and the build's
+ * archetype, over a set of evaluation scenarios (the defensive report, the offensive targets, optionally duels), with
+ * the weights of {@code seed/nota_builds_<patch>.yml}. Robust: the weighted mean and the 20th percentile of the scenarios,
+ * and over several minutes. No rule names a champion, item or rune.
+ */
+@Service
+public class BuildScore {
+
+    public static final String DEFENSIVE = "defensiva";
+    public static final String OFFENSIVE = "ofensiva";
+    public static final String UTILITY = "utilidade";
+    public static final String DUELS = "duelos";
+    public static final List<String> PARTS = List.of(DEFENSIVE, OFFENSIVE, UTILITY, DUELS);
+
+    /** One scenario's reading, in points (0 = as the reference with no items, 100 = perfect). */
+    public static class Reading {
+        public String part;
+        public String key;
+        public String name;
+        public double points;
+        /** The raw index the points came from (defensive score, offensive index). */
+        public Double index;
+        public double weight = 1;
+    }
+
+    /** The score of a build at one minute. */
+    public static class Score {
+        public double minute;
+        public String champion;
+        public String championClass;
+        public String archetype;
+        /** The weights used, normalized (class + archetype). */
+        public Map<String, Double> weights = new LinkedHashMap<>();
+        public Map<String, Double> parts = new LinkedHashMap<>();
+        public double mean;
+        public double p20;
+        public double floorPenalty;
+        public double total;
+        public List<Reading> readings = new ArrayList<>();
+    }
+
+    /** The score over minutes: each minute's, and their weighted mean (the early ones weigh more). */
+    public static class Robust {
+        public List<Score> minutes = new ArrayList<>();
+        public double total;
+        public double mean;
+        public double p20;
+        /** Share of the scenario-minutes where it beats the reference build (null without one). */
+        public Double beatsReference;
+    }
+
+    /** Options of a reading: which parts to run (null = the weights' own). */
+    public static class Options {
+        public boolean skipDuels = true;
+    }
+
+    private final EffectTestService effect;
+    private final OffenseTestService offense;
+    private final ArenaService arena;
+    private final ChampionProfiles profiles;
+    private final BuildArchetypes archetypes;
+    private final PlannerService planner;
+    private final BuildRepository builds;
+    private Map<String, Object> rules = Map.of();
+
+    public BuildScore(EffectTestService effect, OffenseTestService offense, ArenaService arena, ChampionProfiles profiles,
+                      BuildArchetypes archetypes, PlannerService planner, BuildRepository builds,
+                      @Value("${planner.seed.build-score:classpath:seed/nota_builds_7_3d.yml}") Resource file) {
+        this.effect = effect;
+        this.offense = offense;
+        this.arena = arena;
+        this.profiles = profiles;
+        this.archetypes = archetypes;
+        this.planner = planner;
+        this.builds = builds;
+        try (InputStream in = file.getInputStream()) {
+            rules = new Yaml().load(in);
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot read seed file " + file, e);
+        }
+    }
+
+    public Map<String, Object> rules() {
+        return rules;
+    }
+
+    // ------------------------------------------------------------------ weights
+
+    /** The champion's main class (the first of its official ones, or the suggested one); Especialista when unknown. */
+    public String classOf(BuildRepository.Build b) {
+        FighterBuilder.Combatant c = new FighterBuilder.Combatant();
+        c.build = b;
+        List<String> cs = profiles.classesOf(arena.championOf(c));
+        return cs.isEmpty() ? "Especialista" : cs.get(0);
+    }
+
+    public String championOf(BuildRepository.Build b) {
+        FighterBuilder.Combatant c = new FighterBuilder.Combatant();
+        c.build = b;
+        return arena.championOf(c);
+    }
+
+    /** The class's weights plus the archetype's adjustments, normalized (negative ones count as 0). */
+    @SuppressWarnings("unchecked")
+    public Map<String, Double> weights(String championClass, String archetype) {
+        Map<String, Object> classes = (Map<String, Object>) rules.getOrDefault("classes", Map.of());
+        Map<String, Object> mine = (Map<String, Object>) classes.getOrDefault(championClass,
+                classes.getOrDefault("Especialista", Map.of(DEFENSIVE, 0.5, OFFENSIVE, 0.5)));
+        Map<String, Double> w = new LinkedHashMap<>();
+        for (String p : PARTS) {
+            w.put(p, num(mine.get(p), 0));
+        }
+        Map<String, Object> adj = archetype == null ? null
+                : (Map<String, Object>) ((Map<String, Object>) rules.getOrDefault("arquetipos", Map.of())).get(archetype);
+        if (adj != null) {
+            adj.forEach((k, v) -> w.computeIfPresent(k, (x, old) -> old + num(v, 0)));
+        }
+        Map<String, Object> duels = (Map<String, Object>) rules.getOrDefault("duelos", Map.of());
+        w.put(DUELS, Math.max(w.get(DUELS), num(duels.get("peso"), 0)));
+        double sum = 0;
+        for (String p : PARTS) {
+            w.put(p, Math.max(0, w.get(p)));
+            sum += w.get(p);
+        }
+        if (sum <= 0) {
+            w.put(DEFENSIVE, 0.5);
+            w.put(OFFENSIVE, 0.5);
+            sum = 1;
+        }
+        for (String p : PARTS) {
+            w.put(p, w.get(p) / sum);
+        }
+        return w;
+    }
+
+    @SuppressWarnings("unchecked")
+    double floor(String championClass) {
+        Map<String, Object> classes = (Map<String, Object>) rules.getOrDefault("classes", Map.of());
+        Map<String, Object> mine = (Map<String, Object>) classes.getOrDefault(championClass, Map.of());
+        return mine.get("piso") == null ? Double.NEGATIVE_INFINITY : num(mine.get("piso"), 0);
+    }
+
+    /** Offensive index to points: the share of the reference's time to kill the build saves (index 200 = 50). */
+    public static double offensivePoints(double index) {
+        return 100 * (1 - 100 / Math.max(1, index));
+    }
+
+    // ------------------------------------------------------------------ the score
+
+    /** The score of a build at a minute. */
+    @SuppressWarnings("unchecked")
+    public Score score(BuildRepository.Build build, double minute) {
+        Score s = new Score();
+        s.minute = minute;
+        s.champion = championOf(build);
+        s.championClass = classOf(build);
+        BuildArchetypes.Archetype a = archetypes.of(build, minute);
+        s.archetype = a == null ? null : a.key;
+        s.weights = weights(s.championClass, s.archetype);
+        Map<String, Object> read = (Map<String, Object>) rules.getOrDefault("leitura", Map.of());
+        if (s.weights.get(DEFENSIVE) > 0 || s.weights.get(UTILITY) > 0 || floor(s.championClass) > Double.NEGATIVE_INFINITY) {
+            defensive(build, minute, String.valueOf(read.getOrDefault("defensiva", EffectModel.FIXED)), s);
+        }
+        if (s.weights.get(OFFENSIVE) > 0) {
+            OffenseModel.Request req = new OffenseModel.Request();
+            req.build = build;
+            req.minute = minute;
+            req.readMode = String.valueOf(read.getOrDefault("ofensiva", EffectModel.STARTS));
+            req.starts = (int) num(read.get("largadas"), 3);
+            List<OffenseModel.Entry> targets = offense.report().targets;
+            for (OffenseModel.Entry e : targets) {
+                OffenseModel.Job j = new OffenseModel.Job();
+                j.targetKey = e.key;
+                req.jobs.add(j);
+            }
+            List<OffenseModel.Outcome> out = offense.evaluate(req);
+            for (int i = 0; i < out.size(); i++) {
+                if (out.get(i).index == null) {
+                    continue;
+                }
+                Reading r = new Reading();
+                r.part = OFFENSIVE;
+                r.key = targets.get(i).key;
+                r.name = out.get(i).targetName;
+                r.index = out.get(i).index;
+                r.points = offensivePoints(out.get(i).index);
+                r.weight = targets.get(i).weight;
+                s.readings.add(r);
+            }
+        }
+        if (s.weights.get(DUELS) > 0) {
+            duels(build, minute, s);
+        }
+        combine(s, floor(s.championClass), num(rules.get("piso_peso"), 1));
+        return s;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void defensive(BuildRepository.Build build, double minute, String mode, Score s) {
+        EffectModel.Report rep = effect.report(String.valueOf(rules.getOrDefault("relatorio_defensivo", "basico")));
+        EffectModel.Request req = new EffectModel.Request();
+        req.build = build;
+        req.minute = minute;
+        req.readMode = mode;
+        for (EffectModel.Entry e : rep.tests) {
+            EffectModel.Job j = new EffectModel.Job();
+            j.testKey = e.key;
+            req.jobs.add(j);
+        }
+        List<EffectModel.Outcome> out = effect.evaluate(req);
+        Map<String, Object> util = (Map<String, Object>) rules.getOrDefault("utilidade", Map.of());
+        double ccFactor = num(util.get("controle_por_10s"), 25);
+        double absorbed = num(util.get("absorvido"), 1);
+        double usum = 0;
+        int un = 0;
+        for (int i = 0; i < out.size(); i++) {
+            EffectModel.Outcome o = out.get(i);
+            if (o.index == null) {
+                continue;
+            }
+            Reading r = new Reading();
+            r.part = DEFENSIVE;
+            r.key = rep.tests.get(i).key;
+            r.name = o.testName;
+            r.index = o.index;
+            r.points = o.index;
+            r.weight = rep.tests.get(i).weight;
+            s.readings.add(r);
+            double cc = o.build.fightLength > 0 ? o.build.controlApplied / o.build.fightLength * 10 * ccFactor : 0;
+            double u = Math.min(100, cc + (o.build.absorbedShare == null ? 0 : o.build.absorbedShare * absorbed));
+            usum += u;
+            un++;
+        }
+        if (un > 0) {
+            Reading r = new Reading();
+            r.part = UTILITY;
+            r.key = "utilidade";
+            r.name = "Utilidade";
+            r.points = usum / un;
+            s.readings.add(r);
+        }
+    }
+
+    /** x1 against the representatives of each class (sheets A or B) with a saved build, at the same minute. */
+    @SuppressWarnings("unchecked")
+    private void duels(BuildRepository.Build build, double minute, Score s) {
+        Map<String, Object> cfg = (Map<String, Object>) rules.getOrDefault("duelos", Map.of());
+        double duration = num(cfg.get("duracao"), 45);
+        for (BuildRepository.Build rival : representatives(championOf(build))) {
+            ArenaModel.Slot me = slot(build, minute, 0);
+            ArenaModel.Slot them = slot(rival, minute, 1);
+            ArenaModel.Scenario sc = new ArenaModel.Scenario();
+            sc.fighters = List.of(me, them);
+            List<Arena.Input> in = arena.prepareSlots(sc);
+            Arena.Input a = in.get(0).copy();
+            Arena.Input b = in.get(1).copy();
+            a.x = 4600;
+            a.y = 0;
+            b.x = 5400;
+            b.y = 0;
+            ArenaModel.Result res = arena.runPlain(List.of(a, b), duration);
+            ArenaModel.FighterStats us = res.fighters.get(0);
+            ArenaModel.FighterStats other = res.fighters.get(1);
+            Reading r = new Reading();
+            r.part = DUELS;
+            r.key = "x1:" + rival.id;
+            r.name = "x1 " + championOf(rival) + " (" + rival.name + ")";
+            r.points = 100 * (Math.max(0, us.health) / Math.max(1, us.maxHealth) - Math.max(0, other.health) / Math.max(1, other.maxHealth));
+            s.readings.add(r);
+        }
+    }
+
+    /** The first saved build of each other champion with a sheet of quality A or B, one per class. */
+    @SuppressWarnings("unchecked")
+    public List<BuildRepository.Build> representatives(String except) {
+        Map<String, Object> kits = (Map<String, Object>) arena.kits().getOrDefault("campeoes", Map.of());
+        Map<String, BuildRepository.Build> byClass = new LinkedHashMap<>();
+        for (BuildRepository.Build b : builds.findBuildSummaries()) {
+            String champ = championOf(b);
+            Object kit = kits.get(champ);
+            Object q = kit instanceof Map ? ((Map<String, Object>) kit).get("qualidade") : null;
+            if (champ == null || champ.equals(except) || !("A".equals(q) || "B".equals(q))) {
+                continue;
+            }
+            List<String> cs = profiles.classesOf(champ);
+            String cls = cs.isEmpty() ? "Especialista" : cs.get(0);
+            if (!byClass.containsKey(cls)) {
+                builds.findBuild(b.id).ifPresent(full -> byClass.put(cls, full));
+            }
+        }
+        return new ArrayList<>(byClass.values());
+    }
+
+    private static ArenaModel.Slot slot(BuildRepository.Build b, double minute, int team) {
+        ArenaModel.Slot s = new ArenaModel.Slot();
+        s.team = team;
+        s.build = b;
+        s.minute = minute;
+        s.brain = com.ornnplanner.arena.AutoBrain.AUTO;
+        return s;
+    }
+
+    /** The parts' means, the weighted mean, the 20th percentile of the weighted parts' scenarios, the floor and the total. */
+    @SuppressWarnings("unchecked")
+    void combine(Score s, double floor, double floorWeight) {
+        Map<String, Object> robust = (Map<String, Object>) rules.getOrDefault("robustez", Map.of());
+        double wMean = num(robust.get("media"), 0.6);
+        double wP20 = num(robust.get("p20"), 0.4);
+        List<Double> counted = new ArrayList<>();
+        double mean = 0;
+        double used = 0;
+        for (String p : PARTS) {
+            double sum = 0;
+            double w = 0;
+            for (Reading r : s.readings) {
+                if (p.equals(r.part)) {
+                    sum += r.weight * r.points;
+                    w += r.weight;
+                    if (s.weights.get(p) > 0) {
+                        counted.add(r.points);
+                    }
+                }
+            }
+            if (w > 0) {
+                s.parts.put(p, sum / w);
+                mean += s.weights.get(p) * sum / w;
+                used += s.weights.get(p);
+            }
+        }
+        s.mean = used > 0 ? mean / used : 0;
+        s.p20 = percentile(counted, 0.2);
+        Double def = s.parts.get(DEFENSIVE);
+        s.floorPenalty = def != null && floor > Double.NEGATIVE_INFINITY && def < floor ? (floor - def) * floorWeight : 0;
+        s.total = (wMean * s.mean + wP20 * s.p20) / Math.max(1e-9, wMean + wP20) - s.floorPenalty;
+    }
+
+    /** Linear-interpolated percentile (q in 0..1) of the values; 0 for none. */
+    public static double percentile(List<Double> values, double q) {
+        if (values.isEmpty()) {
+            return 0;
+        }
+        List<Double> v = new ArrayList<>(values);
+        Collections.sort(v);
+        double pos = q * (v.size() - 1);
+        int lo = (int) Math.floor(pos);
+        int hi = Math.min(v.size() - 1, lo + 1);
+        return v.get(lo) + (v.get(hi) - v.get(lo)) * (pos - lo);
+    }
+
+    // ------------------------------------------------------------------ robust, over minutes
+
+    /** The minutes of the robust score: the YAML's, with "fim" as the build's last purchase (or its match end). */
+    @SuppressWarnings("unchecked")
+    public List<double[]> minutes(BuildRepository.Build b) {
+        List<Object> raw = (List<Object>) rules.getOrDefault("minutos", List.of(10, 15, 20, "fim"));
+        List<Object> ws = (List<Object>) rules.getOrDefault("pesos_minuto", List.of());
+        List<double[]> out = new ArrayList<>();
+        for (int i = 0; i < raw.size(); i++) {
+            double m;
+            if (raw.get(i) instanceof Number) {
+                m = ((Number) raw.get(i)).doubleValue();
+            } else {
+                m = end(b);
+            }
+            double w = i < ws.size() ? num(ws.get(i), 1) : 1;
+            if (out.stream().noneMatch(x -> Math.abs(x[0] - m) < 1e-6)) {
+                out.add(new double[] {m, w});
+            }
+        }
+        return out;
+    }
+
+    /** The build's end: its match end, else its last purchase. */
+    public double end(BuildRepository.Build b) {
+        if (b.matchEnd != null) {
+            return b.matchEnd;
+        }
+        Model.TimelineResult t = planner.calculate(b);
+        double last = 20;
+        for (Model.TimelineStep st : t.steps) {
+            if (!st.ignored) {
+                last = st.minute;
+            }
+        }
+        return Math.max(1, last);
+    }
+
+    /** The robust score over the minutes; with a reference build, the share of scenario-minutes it beats it. */
+    public Robust robust(BuildRepository.Build b, BuildRepository.Build reference) {
+        Robust r = new Robust();
+        double sum = 0;
+        double w = 0;
+        double mean = 0;
+        double p20 = 0;
+        int beats = 0;
+        int total = 0;
+        for (double[] mw : minutes(b)) {
+            Score s = score(b, mw[0]);
+            r.minutes.add(s);
+            sum += mw[1] * s.total;
+            mean += mw[1] * s.mean;
+            p20 += mw[1] * s.p20;
+            w += mw[1];
+            if (reference != null) {
+                Score ref = score(reference, mw[0]);
+                Map<String, Double> theirs = new LinkedHashMap<>();
+                ref.readings.forEach(x -> theirs.put(x.part + "|" + x.key, x.points));
+                for (Reading x : s.readings) {
+                    Double y = theirs.get(x.part + "|" + x.key);
+                    if (y != null && s.weights.getOrDefault(x.part, 0.0) > 0) {
+                        total++;
+                        beats += x.points > y + 1e-9 ? 1 : 0;
+                    }
+                }
+            }
+        }
+        r.total = w > 0 ? sum / w : 0;
+        r.mean = w > 0 ? mean / w : 0;
+        r.p20 = w > 0 ? p20 / w : 0;
+        r.beatsReference = reference == null || total == 0 ? null : 100.0 * beats / total;
+        return r;
+    }
+
+    private static double num(Object o, double def) {
+        return o instanceof Number ? ((Number) o).doubleValue() : def;
+    }
+}
