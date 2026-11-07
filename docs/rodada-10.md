@@ -183,3 +183,75 @@ ponto de cada rota, às 18 torres, aos 12 acampamentos, aos Aronguejos, às plan
 - Ouro e XP sobem de 4% a 9%: menos tempo morto na base, a regeneração fora da troca e o Teleporte.
 - As mortes sobem em duas sementes: ficar na rota mais tempo dá mais lutas. O vencedor muda nas sementes 2 e 3.
 - A distância para as builds continua: a partida rende uns 550 de ouro por minuto, e as builds supõem de 700 a 900.
+
+## Parte 3 — Arena mais legível ✅
+
+### Tudo o que acerta aparece no mapa
+A forma ganha `hit` (`ataque`, `avanco`, `deslocamento`, `contato`) e `crit`, e a tela desenha cada um (`HitView` em
+`pages/Arena.jsx`):
+- **ataque à distância:** o projétil, sempre visível, na cor do time, com um rastro de até 260 unidades desde o disparo.
+  A parte crítica ganha um halo amarelo, tanto mais forte quanto maior a chance de crítico. O motor usa o crítico
+  esperado e não sorteia, então o destaque mostra a chance;
+- **ataque corpo a corpo:** um segmento curto e estreito do atacante ao alvo, no quadro do golpe;
+- **avanço que causa dano:** a faixa percorrida, com a largura do acerto da ficha, desenhada enquanto o avanço dura;
+- **avanço sem dano:** a mesma faixa, mais transparente e tracejada;
+- **efeito ao contato:** a área de disparo das invocações que acertam ao encostar (minas, as que explodem), enquanto
+  estão no mapa;
+- **na faixa de tempo:** uma marca fina por ataque que acertou, amarela quando tem crítico. As marcas vêm prontas do
+  resultado (`Result.attackMarks`) e são agrupadas uma vez por resultado.
+
+### O ataque corpo a corpo acerta no caminho
+- Campo genérico em `kits_7_3d.yml`: `mapa.ataque_corpo_a_corpo: {forma: segmento, largura: 60, acerta_no_caminho: true}`.
+  Vale para todo campeão sem `velocidade_projetil`, e uma ficha pode trocá-lo pelo seu `ataque`.
+- Quem está no segmento recebe **o dano cheio do ataque**, com o crítico esperado, e os efeitos de ao acertar dos
+  itens (`onAttackItems`). Nenhuma ficha nem item define efeitos próprios para alvos secundários, então valem **os mesmos
+  do alvo**. As runas de ao atacar e o Frágil ficam só no alvo.
+- 🎯 `ArenaLegibilityTest`: Darius ataca um Renekton com uma Vayne no meio do caminho, e a Vayne recebe o golpe.
+
+### Estados de controle no campeão
+O quadro do campeão traz `airLeft`, `stunLeft` e `slow`.
+- **no ar:** o círculo sobe, deixa uma sombra no chão e mostra "no ar 0,8 s" contando para baixo;
+- **atordoado:** três estrelas;
+- **lento:** uma seta para baixo com o %;
+- **empurrado ou puxado:** um rastro desde onde estava 0,3 s antes;
+- **Frágil:** um anel rachado, azul-claro;
+- **o cartão ao tocar no campeão** mostra o estado com o tempo que falta e a lentidão.
+
+### O ataque do Ornn no alvo Frágil levanta
+- `fragil.ataques: {efeito: arremessa, duracao: 0.5}`. O arremesso encadeia com um em curso pela regra do `airborne`
+  (vale o fim mais tarde). **A duração de 0,5 s é estimativa** até o usuário confirmar: a wiki WR: não traz o número.
+  Antes era `{efeito: empurra, empurra: 150}`, um empurrão de uns 0,15 s, nunca confirmado.
+- O "no ar" desse golpe aparece no mapa como qualquer arremesso.
+- **IAs do Ornn treinadas antes:** `Arena.RULES` subiu de 2 para 3. As IAs do Ornn com regras abaixo de 3 abrem e
+  lutam, mas a tela mostra "⚠ antes do arremesso do Frágil" (`oldBrittle`). **No seu banco são 107 IAs do Ornn e de
+  classe, todas de antes.**
+
+### Golden
+Regravados com `-Darena.golden.write=true`, porque a mudança é intencional:
+- **11 cenários mudaram de resultado, todos com Ornn** (o arremesso no Frágil): os 8 duelos com Ornn de cada lado contra
+  Darius, Renekton, Rumble e Vayne, "3v3", "orders + autopilot" e "long Ornn x K'Sante". Por exemplo, Ornn x Darius
+  virou: antes Darius vencia aos 17,4 s, agora Ornn vence aos 14,0 s com 1.019 de Vida.
+- **24 mudaram só a impressão digital:** os quadros agora levam as formas dos ataques e o resultado leva as marcas. O
+  vencedor, o tempo, a Vida e o dano são os mesmos.
+- O `golden-ai-v2.txt` mudou nas 4 linhas: as impressões incluem os quadros, que agora levam os ataques, e o duelo do Ornn e o 3v3 também mudam de luta.
+
+### A prova do Ornn, antes e depois do arremesso (`OrnnProofTest`, `-Darena.proof=true`)
+
+| | antes (empurrão) | depois (arremesso de 0,5 s) |
+|---|---|---|
+| combo manual calibrado, nota | 5.630 | **5.990** |
+| manual, controle causado (parado / anda / foge) | 2,56 / 2,72 / 2,18 s | **3,46 / 3,62 / 3,08 s** |
+| manual, dano (parado) | 4.217 | 4.217 |
+| melhor achado pela busca, nota | 5.641 | **5.793** |
+| melhor achado, controle (parado) | 2,06 s | **2,44 s** |
+| melhor achado / manual | 1,002 | 0,967 |
+
+- O dano não muda. O controle sobe cerca de 0,9 s no combo manual, porque cada ataque que quebra o Frágil agora levanta
+  o alvo em vez de empurrá-lo.
+- O combo manual, que ataca depois do R, ganha mais que a sequência da busca. Por isso a razão cai para 0,967: a busca
+  não chega à ordem manual com a mesma profundidade.
+- **Um teste mudou:** no `SourceCooldownTest` (runas que disparam ao imobilizar, em repetição), sem o empurrão o Ornn
+  passava por dentro do boneco durante o canal do W, que anda, e o último tique do W, o que dá o Frágil, errava a partir
+  do 3º ciclo. O combo do teste ganhou um passo para trás depois do ataque, e a meta é a mesma.
+
+Testes: 382 → 384 (16 opcionais pulados), 0 falhas. `npm run build` limpo.

@@ -459,6 +459,13 @@ public final class ArenaModel {
     public static class UnitFrame {
         public double x;
         public double y;
+        /** Seconds left in the air, stunned; the slow on it (share): the screen draws them on the champion. */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public Double airLeft;
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public Double stunLeft;
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public Double slow;
         public double hp;
         public double maxHp;
         public double shield;
@@ -506,6 +513,16 @@ public final class ArenaModel {
         public Double hp;
         @JsonInclude(JsonInclude.Include.NON_NULL)
         public Double maxHp;
+        /**
+         * What hits (Rodada 10): ataque (a basic attack: a ranged one's missile, a melee one's short segment), avanco (the
+         * band of a dash that deals damage), deslocamento (a dash without damage, drawn fainter), contato (what hits on
+         * touch while it is active).
+         */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public String hit;
+        /** A basic attack's critical share (0 to 1): the screen highlights it. */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public Double crit;
         /** A tower's or Nexus' attack range: the screen draws it on hover, on touch and with a champion inside. */
         @JsonInclude(JsonInclude.Include.NON_NULL)
         public Double reach;
@@ -754,6 +771,8 @@ public final class ArenaModel {
          */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public List<Action> policyOrders = new ArrayList<>();
+        /** One mark per basic attack that landed, for the time strip: {t, fighter, critical share}. Computed once per run. */
+        public List<double[]> attackMarks = new ArrayList<>();
         /** What a learned policy chose, each time its choice changed, with its three best scores. */
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         public List<Event> decisions = new ArrayList<>();

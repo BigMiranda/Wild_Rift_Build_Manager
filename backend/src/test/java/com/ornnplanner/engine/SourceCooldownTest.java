@@ -74,14 +74,18 @@ class SourceCooldownTest {
         assertEquals(1, rep.activations, what);
     }
 
-    /** W (Brittle) and an attack that breaks it (a knock-back): an immobilize every time the W is up (~12s). */
+    /** W (Brittle) and an attack that breaks it (a knock-up): an immobilize every time the W is up (~12s). */
     static Combo shortCombo() {
         Combo c = new Combo();
         c.champion = "Ornn";
         c.name = "W + ataque";
         c.origin = "manual";
         c.maxTime = 4;
-        c.steps = new ArrayList<>(List.of(new ComboStep("habilidade:2", null, 0), new ComboStep("atacar", null, 0)));
+        // since the Rodada 10 the attack knocks the target up instead of pushing it away: a step back keeps the W's
+        // channel (Ornn walks while it lasts) from walking over the dummy, so its last tick lands the Brittle again
+        ComboStep back = new ComboStep("mover:longe", null, 0);
+        back.max = 0.8;
+        c.steps = new ArrayList<>(List.of(new ComboStep("habilidade:2", null, 0), new ComboStep("atacar", null, 0), back));
         c.start = new ArrayList<>(List.of(new Condition("pronto:2", "==", 1)));
         return c;
     }
@@ -141,3 +145,4 @@ class SourceCooldownTest {
         assertEquals(n * one, r.fighters.get(0).damageBySource.getOrDefault("Suserano do Gelo", 0.0), 1e-6);
     }
 }
+

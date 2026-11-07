@@ -80,6 +80,10 @@
 #
 # As fichas passam pelo validador (arena/fight/SheetValidator): campo desconhecido, unidade estranha ou habilidade que não faz nada.
 mapa:
+  # Rodada 10: o ataque corpo a corpo é um segmento curto do atacante ao alvo, e no Wild Rift acerta as unidades que
+  # estão entre os dois (tropas no meio), com o dano cheio (confirmado pelo usuário) e os efeitos de ao acertar dos itens.
+  # Vale para todo campeão sem velocidade_projetil; uma ficha pode trocar com o seu próprio `ataque`.
+  ataque_corpo_a_corpo: {forma: segmento, largura: 60, acerta_no_caminho: true}
   # regras por tipo de controle: tenacidade (a Tenacidade encurta) e purificar (a Purificar remove)
   controles:
     atordoamento: {tenacidade: true, purificar: true}
@@ -109,9 +113,10 @@ campeoes:
     fragil:                  # passiva da W e da R: imobilizar um alvo Frágil
       dano: {tipo: magico, vida_max_alvo: 0.07, vida_max_alvo_nv15: 0.22}   # WR (pelo nível do Ornn)
       aumento_controle: 0.30                                                 # WR: +30% de duração
-      ataques: {efeito: empurra, empurra: 150}   # WR: os ataques do Ornn num alvo Frágil o empurram e quebram o Frágil; distância EST
-      # PERGUNTA ABERTA: o usuário joga contando que esse ataque "mantém o alvo no ar mais um pouco"; para testar,
-      # use {efeito: arremessa, duracao: <s>} (o padrão continua o empurrão de ~0,15s)
+      # Rodada 10: o ataque do Ornn num alvo Frágil o LEVANTA (o usuário joga contando com isso) e quebra o Frágil. O
+      # arremesso encadeia com um em curso pela regra do airborne (o maior fim). Duração: ESTIMATIVA até o usuário
+      # confirmar (a wiki WR: não traz o número), 0,5 s. Antes: {efeito: empurra, empurra: 150}, nunca confirmado.
+      ataques: {efeito: arremessa, duracao: 0.5}
     mobilidade: {"3": avanco}
     habilidades:
       "1":

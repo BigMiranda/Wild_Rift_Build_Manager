@@ -920,6 +920,8 @@ td.nowrap { white-space: nowrap; }
 .tl-order { position: absolute; top: 2px; height: 20px; min-width: 22px; transform: translateX(-11px); padding: 0 4px; font-size: 11px;
   font-weight: 700; border-radius: 4px; background: var(--surface-3); border: 1px solid var(--gold); color: var(--gold-bright); cursor: grab; z-index: 2; }
 .tl-order.active { background: var(--gold); color: var(--accent-ink); }
+.tl-hit { position: absolute; bottom: 2px; width: 2px; height: 7px; background: var(--muted, #8a9bb0); opacity: .7; pointer-events: none; }
+.tl-hit.crit { background: #ffd25a; height: 10px; opacity: 1; }
 .tl-skip { position: absolute; top: 3px; transform: translateX(-6px); color: var(--error); font-size: 13px; z-index: 2; }
 .tl-cdbar { position: absolute; top: 2px; height: 6px; border-radius: 3px; background: rgba(240, 106, 95, .55); pointer-events: none; }
 .arena-timeline { position: relative; }

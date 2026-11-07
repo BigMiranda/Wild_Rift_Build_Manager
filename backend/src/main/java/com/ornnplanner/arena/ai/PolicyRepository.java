@@ -92,6 +92,7 @@ public class PolicyRepository {
             r.otherPatch = otherPatch;
             r.arenaRules = arenaRules;
             r.oldElemental = oldElemental;
+            r.oldBrittle = oldBrittle;
             return r;
         }
 
@@ -111,6 +112,8 @@ public class PolicyRepository {
         public Integer arenaRules;
         /** An Ornn version trained with the elemental before its real length (Rodada 5): it loads, the screen warns. */
         public boolean oldElemental;
+        /** Ornn trained when his attack on a Brittle target pushed it (before the Rodada 10 it did not knock it up). */
+        public boolean oldBrittle;
 
         /**
          * Weights of the current observation and action layout, or of an older one they migrate from when read
@@ -365,6 +368,7 @@ public class PolicyRepository {
         int rules = rs.getInt("arena_rules");
         r.arenaRules = rs.wasNull() ? null : rules;
         r.oldElemental = "Ornn".equalsIgnoreCase(r.champion) && (r.arenaRules == null || r.arenaRules < 2);
+        r.oldBrittle = "Ornn".equalsIgnoreCase(r.champion) && (r.arenaRules == null || r.arenaRules < 3);
         String gl = rs.getString("guidelines");
         if (gl != null) {
             try {

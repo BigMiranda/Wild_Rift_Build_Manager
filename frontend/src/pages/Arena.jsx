@@ -629,7 +629,8 @@ const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`);
 const policyLabel = (p) => t('arena.brain.ai', { v: p.version, obj: t(`arena.obj.${p.objective}`), pct: pct(p.betterVsScript) })
   + (p.accepted ? '' : ` ${t('arena.train.notAccepted')}`) + (p.migratedFrom ? ` ${t('arena.brain.migrated', { v: p.migratedFrom })}` : '')
   + (p.otherPatch ? ` ${t('arena.brain.otherPatch', { patch: p.gamePatch })}` : '')
-  + (p.oldElemental ? ` ${t('arena.brain.oldElemental')}` : '');
+  + (p.oldElemental ? ` ${t('arena.brain.oldElemental')}` : '')
+  + (p.oldBrittle ? ` ${t('arena.brain.oldBrittle')}` : '');
 
 const OBJECTIVES = ['win_fast', 'damage', 'survive', 'team', 'escapar'];
 const RUNNING = ['queued', 'running', 'stopping'];
@@ -968,6 +969,7 @@ function TrainPanel({ sc, names, policies, onTrained, onUse, onUseMany }) {
                       {p.level === 'dicas' && !sameRules(p) && <small className="warn" title={t('arena.levels.otherRulesTitle')}> ⚠ {t('arena.levels.otherRules')}</small>}
                       {p.otherPatch && <small className="warn" title={t('arena.brain.otherPatchTitle')}> {t('arena.brain.otherPatch', { patch: p.gamePatch })}</small>}
                       {p.oldElemental && <small className="warn" title={t('arena.brain.oldElementalTitle')}> {t('arena.brain.oldElemental')}</small>}
+                      {p.oldBrittle && <small className="warn" title={t('arena.brain.oldBrittleTitle')}> {t('arena.brain.oldBrittle')}</small>}
                     </td>
                     <td>{t(`arena.obj.${p.objective}`)}</td>
                     <td>{pct(p.betterVsScript)}</td><td>{pct(p.betterVsTactical)}</td><td>{pct(p.betterVsPrevious)}</td>
@@ -1508,6 +1510,8 @@ function BuildAtMinute({ build, minute, onMinute }) {
 
 /** The map: the lane, champions as circles, everything else as simple shapes; hover while paused to identify. */
 export function ArenaMap({ result, frame, paused, names, pickPoint, onPick, onSelect, highlight }) {
+  // where each champion was a moment ago: the trail of a push or a pull
+  const before = frame ? frameAt(result, Math.max(0, frame.t - 0.3)) : null;
   const svgRef = useRef(null);
   const [hover, setHover] = useState(null);
   const [follow, setFollow] = useState(true);
@@ -1607,7 +1611,7 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick, onSe
           {frame.shapes.map((s) => <ShapeView key={s.id} s={s} lit={lit(s)} units={frame.units}
             hovered={Boolean(hover?.found?.some((h) => h.shape?.id === s.id))} />)}
           {frame.units.map((u, i) => ((seeAll || !u.invisible) ? <UnitView key={i} u={u} i={i} name={names[i]} team={result.fighters[i]?.team ?? 0} span={span}
-            lit={highlight?.fighter === i} /> : null))}
+            lit={highlight?.fighter === i} before={before?.units?.[i]} /> : null))}
         </g>
       </svg>
       {hover && (
@@ -1615,7 +1619,7 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick, onSe
           {hover.found.map((h, k) => (h.unit ? (
             <div key={k}>
               <strong>{h.i + 1} · {names[h.i]}</strong> — {n0(h.unit.hp)}/{n0(h.unit.maxHp)}{h.unit.shield > 0 ? ` +${n0(h.unit.shield)} ${t('arena.shield')}` : ''}
-              <div><small>{t(`arena.state.${h.unit.state.split(':')[0]}`)}{h.unit.state.includes(':') ? ` ${h.unit.state.split(':')[1]}` : ''}{h.unit.resource != null ? ` · ${t('arena.resource')} ${n0(h.unit.resource)}` : ''}</small></div>
+              <div><small>{t(`arena.state.${h.unit.state.split(':')[0]}`)}{h.unit.state.includes(':') ? ` ${h.unit.state.split(':')[1]}` : ''}{h.unit.airLeft > 0 ? ` ${sec(h.unit.airLeft)}` : h.unit.stunLeft > 0 ? ` ${sec(h.unit.stunLeft)}` : ''}{h.unit.slow > 0 ? ` · ${t('arena.slowed', { pct: Math.round(h.unit.slow * 100) })}` : ''}{h.unit.resource != null ? ` · ${t('arena.resource')} ${n0(h.unit.resource)}` : ''}</small></div>
               {h.unit.marks.length > 0 && <div><small>{h.unit.marks.join(' · ')}</small></div>}
               <div><small>{Object.entries(h.unit.cooldowns).map(([k2, v]) => `${k2}: ${v > 0 ? `${n1(v)}s` : t('arena.ready')}`).join(' · ')}</small></div>
             </div>
@@ -1699,6 +1703,7 @@ function ShapeView({ s, lit, units, hovered }) {
   const color = lit ? '#ffffff' : s.team < 0 ? '#9a8f7a' : TEAM[s.team];
   const fill = s.team < 0 ? 'rgba(154,143,122,.6)' : TEAM_SOFT[s.team];
   const sw = lit ? 18 : 6;
+  if (s.hit) return <HitView s={s} color={color} fill={fill} lit={lit} />;
   if (s.role === 'escombro') {
     // a fallen tower: no target any more, its rubble stays on the map
     const r = s.radius ?? 80;
@@ -1759,22 +1764,83 @@ function ShapeView({ s, lit, units, hovered }) {
   return null;
 }
 
-function UnitView({ u, i, name, team, span, lit }) {
+/**
+ * What hits, drawn on the map (Rodada 10): a ranged attack's missile with its tail, always, in the team's color (a
+ * critical share glows); a melee attack's short segment from the attacker to its target; a dash's band (fainter when
+ * it deals no damage); the area that hits on touch while it is out.
+ */
+function HitView({ s, color, fill, lit }) {
+  const deg = ((s.angle ?? 0) * 180) / Math.PI;
+  const glow = s.crit > 0 ? <circle cx={s.x} cy={s.y} r={46} fill="none" stroke="#ffd25a" strokeWidth={12} opacity={0.35 + 0.65 * s.crit} /> : null;
+  if (s.hit === 'ataque' && s.kind === 'circle') {
+    const tail = s.length ?? 0;
+    const tx = s.x - Math.cos(s.angle ?? 0) * tail;
+    const ty = s.y - Math.sin(s.angle ?? 0) * tail;
+    return (
+      <g>
+        <title>{s.label}</title>
+        <line x1={tx} y1={ty} x2={s.x} y2={s.y} stroke={color} strokeWidth={16} strokeLinecap="round" opacity={0.6} />
+        <circle cx={s.x} cy={s.y} r={Math.max(22, s.radius ?? 20)} fill={color} stroke="#0b1621" strokeWidth={4} />
+        {glow}
+      </g>
+    );
+  }
+  if (s.kind === 'rect') {
+    const faint = s.hit === 'deslocamento';
+    return (
+      <g>
+        <title>{s.label}</title>
+        <rect x={s.x - s.length / 2} y={s.y - s.width / 2} width={s.length} height={s.width} fill={s.hit === 'ataque' ? color : fill}
+          fillOpacity={s.hit === 'ataque' ? 0.55 : faint ? 0.18 : 0.5} stroke={s.crit > 0 ? '#ffd25a' : color} strokeOpacity={faint ? 0.35 : 1}
+          strokeWidth={lit ? 18 : s.hit === 'ataque' ? 6 : 8} strokeDasharray={faint ? '22 16' : undefined} transform={`rotate(${deg} ${s.x} ${s.y})`} />
+      </g>
+    );
+  }
+  return (
+    <g>
+      <title>{s.label}</title>
+      <circle cx={s.x} cy={s.y} r={s.radius ?? 60} fill={fill} fillOpacity={0.25} stroke={color} strokeWidth={6} strokeDasharray="14 10" />
+    </g>
+  );
+}
+
+const sec = (v) => (v == null ? '' : `${String(Math.round(v * 10) / 10).replace('.', ',')} s`);
+
+/**
+ * A champion with its control states readable on it: in the air the circle rises over a shadow with "no ar 0,8 s"
+ * counting down; stunned, stars; slowed, an arrow down with the %; pushed or pulled, a trail; Brittle, a cracked ring.
+ */
+function UnitView({ u, i, name, team, span, lit, before }) {
   const r = 80;
   const dead = u.state === 'dead';
   const pct = u.maxHp > 0 ? Math.max(0, u.hp / u.maxHp) : 0;
   const font = Math.max(60, span / 45);
+  const air = !dead && u.airLeft > 0;
+  const lift = air ? 70 : 0;
+  const cy = u.y + lift;
+  const brittle = !dead && (u.marks ?? []).includes('Frágil');
+  const moved = !dead && u.state === 'displaced' && before && Math.hypot(before.x - u.x, before.y - u.y) > 20;
   return (
     <g opacity={dead ? 0.3 : u.invisible ? 0.45 : 1}>
-      {lit && <circle cx={u.x} cy={u.y} r={r + 34} fill="none" stroke="#ffffff" strokeWidth={10} strokeDasharray="24 14" />}
-      <circle cx={u.x} cy={u.y} r={r} fill={TEAM[team]} stroke={u.state === 'stun' || u.state === 'air' ? '#fff' : '#0b1621'} strokeWidth={u.state === 'stun' || u.state === 'air' ? 18 : 8}
+      {moved && <line x1={before.x} y1={before.y} x2={u.x} y2={u.y} stroke={TEAM[team]} strokeWidth={r * 1.2} strokeLinecap="round" opacity={0.25} />}
+      {air && <ellipse cx={u.x} cy={u.y - 30} rx={r * 0.9} ry={r * 0.35} fill="#000" opacity={0.35} />}
+      {lit && <circle cx={u.x} cy={cy} r={r + 34} fill="none" stroke="#ffffff" strokeWidth={10} strokeDasharray="24 14" />}
+      {brittle && <circle cx={u.x} cy={cy} r={r + 22} fill="none" stroke="#9fd8ff" strokeWidth={10} strokeDasharray="34 8 14 10 22 6" />}
+      <circle cx={u.x} cy={cy} r={r} fill={TEAM[team]} stroke={u.state === 'stun' || air ? '#fff' : '#0b1621'} strokeWidth={u.state === 'stun' || air ? 18 : 8}
         strokeDasharray={u.state === 'stasis' ? '20 12' : undefined} />
-      <rect x={u.x - 110} y={u.y + r + 30} width={220} height={26} fill="#0b1621" />
-      <rect x={u.x - 110} y={u.y + r + 30} width={220 * pct} height={26} fill={team === 0 ? '#6fd486' : '#f39a4a'} />
-      {u.shield > 0 && <rect x={u.x - 110} y={u.y + r + 60} width={Math.min(220, (220 * u.shield) / Math.max(1, u.maxHp))} height={14} fill="#e8e2d4" />}
-      <g transform={`translate(${u.x},${u.y}) scale(1,-1)`}>
+      <rect x={u.x - 110} y={cy + r + 30} width={220} height={26} fill="#0b1621" />
+      <rect x={u.x - 110} y={cy + r + 30} width={220 * pct} height={26} fill={team === 0 ? '#6fd486' : '#f39a4a'} />
+      {u.shield > 0 && <rect x={u.x - 110} y={cy + r + 60} width={Math.min(220, (220 * u.shield) / Math.max(1, u.maxHp))} height={14} fill="#e8e2d4" />}
+      <g transform={`translate(${u.x},${cy}) scale(1,-1)`}>
         <text x={0} y={font / 3} textAnchor="middle" fontSize={font} fill="#fff" fontWeight="700">{i + 1}</text>
         <text x={0} y={-r - 70} textAnchor="middle" fontSize={font * 0.7} fill="#e8e2d4">{name}</text>
+        {air && <text x={0} y={-r - 70 - font * 0.8} textAnchor="middle" fontSize={font * 0.6} fill="#ffffff">{t('arena.inAir', { s: sec(u.airLeft) })}</text>}
+        {!dead && u.stunLeft > 0 && (
+          <text x={0} y={-r - 70 - font * (air ? 1.5 : 0.8)} textAnchor="middle" fontSize={font * 0.7} fill="#ffd25a">★ ★ ★</text>
+        )}
+        {!dead && u.slow > 0 && (
+          <text x={r + 30} y={font / 3} fontSize={font * 0.6} fill="#9fd8ff">↓ {Math.round(u.slow * 100)}%</text>
+        )}
       </g>
     </g>
   );
@@ -1798,6 +1864,12 @@ function Timeline({ sc, result, time, names, editing, selected, onTime, onAdd, o
     return Math.max(0, Math.min(sc.duration, ((ev.clientX - box.left) / pageZoom() + ref.current.scrollLeft - 110) / PX_PER_S));
   };
   const cds = useMemo(() => cooldownBars(result), [result]);
+  // the attacks that landed, by fighter: once per result
+  const hitMarks = useMemo(() => {
+    const out = [];
+    (result?.attackMarks ?? []).forEach((m) => { (out[m[1]] ??= []).push(m); });
+    return out;
+  }, [result]);
   const selKey = selected ? `${selected.fighter}|${selected.key}` : null;
   useEffect(() => {
     if (selKey) ref.current?.querySelector('.tl-cd.selected')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -1827,6 +1899,9 @@ function Timeline({ sc, result, time, names, editing, selected, onTime, onAdd, o
               )))}
               {result && (result.skipped ?? []).filter((e) => e.fighter === fi).map((e, k) => (
                 <span key={`s${k}`} className="tl-skip" style={{ left: e.t * PX_PER_S }} title={e.text}>⊘</span>
+              ))}
+              {(hitMarks[fi] ?? []).map((m, k) => (
+                <span key={`h${k}`} className={`tl-hit${m[2] > 0 ? ' crit' : ''}`} style={{ left: m[0] * PX_PER_S }} />
               ))}
             </div>
           </div>
@@ -1858,7 +1933,7 @@ function Timeline({ sc, result, time, names, editing, selected, onTime, onAdd, o
       ))}
     </>
     // toTime reads the ref and the duration only; handlers come from `on`
-  ), [sc.fighters, sc.actions, sc.duration, result, cds, names, editing, selKey, width]);
+  ), [sc.fighters, sc.actions, sc.duration, result, cds, hitMarks, names, editing, selKey, width]);
   return (
     <div className="arena-timeline" ref={ref}
       onMouseMove={(ev) => { if (on.current.drag != null) on.current.onMove(on.current.drag, toTime(ev)); }}

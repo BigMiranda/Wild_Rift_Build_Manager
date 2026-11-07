@@ -68,9 +68,10 @@ public class Arena {
     public static final double DT = 0.02;
     /**
      * Version of the fight rules learned policies are trained with (saved with each version): 2 = Ornn's elemental with
-     * its real length (Rodada 5); versions before it have none.
+     * its real length (Rodada 5); 3 = Ornn's attack on a Brittle target knocks it up, and melee attacks hit what is on
+     * their way (Rodada 10); versions before it have none.
      */
-    public static final int RULES = 2;
+    public static final int RULES = 3;
     public static final double FRAME_EVERY = 0.1;
     private static final int ATTACK = 0;
     private static final int ABILITY = 1;
@@ -635,6 +636,9 @@ public class Arena {
         Runnable onEnd;
         java.util.function.Consumer<U> onHit;
         Runnable onWall;
+        /** Where it started (set on its first step): the screen draws the band it goes over. */
+        double fromX = Double.NaN;
+        double fromY = Double.NaN;
     }
 
     /** Forced movement of a champion (pull, push, knock-back): crowd control while it lasts. */
@@ -661,6 +665,11 @@ public class Arena {
         boolean pierce;
         Double stopAfterChampion;
         U only;                     // homing to one target (attacks, Condemn)
+        /** A basic attack's missile: where it left from and its critical share (drawn with the team's color). */
+        boolean basic;
+        double fromX;
+        double fromY;
+        double crit;
         Set<U> hit = new HashSet<>();
         java.util.function.Consumer<U> onHit;
         Runnable onEnd;
@@ -2639,9 +2648,63 @@ public class Arena {
                 p.width = 20;
                 p.left = 5000;
                 p.onHit = v -> attackHit(u, v);
+                p.basic = true;
+                p.fromX = u.x;
+                p.fromY = u.y;
+                p.crit = Math.min(1, u.stat("% Critical Rate") / 100);
                 projectiles.add(p);
             }
         });
+    }
+
+    /**
+     * Wild Rift: a melee attack is a short segment from the attacker to its target, and the units on that segment (minions
+     * in the middle) take the attack too, at full damage, with the attacker's on-hit items (the same as the target's: the
+     * sheets name no other ones for secondary targets). The sheet's {@code ataque}, else the map's
+     * {@code ataque_corpo_a_corpo}: {forma: segmento, largura, acerta_no_caminho}. The segment is drawn on the map.
+     */
+    private void meleeSegment(U s, U t, double raw, double critPart, double crit) {
+        Map<String, Object> spec = map(s.kit("ataque"));
+        if (spec == null) {
+            spec = map(map == null ? null : map.get("ataque_corpo_a_corpo"));
+        }
+        if (spec == null || !"segmento".equals(spec.get("forma"))) {
+            return;
+        }
+        double width = num(spec.get("largura"), 60);
+        double dx = t.x - s.x;
+        double dy = t.y - s.y;
+        double len = Math.hypot(dx, dy);
+        if (recordFrames) {
+            flash("rect", "Ataque de " + s.f.name, s, (s.x + t.x) / 2, (s.y + t.y) / 2, null, Math.max(len, 1), Math.atan2(dy, dx), width);
+            Shape last = flashes.get(flashes.size() - 1);
+            last.hit = "ataque";
+            last.crit = crit > 0 ? round(crit) : null;
+        }
+        if (!Boolean.TRUE.equals(spec.get("acerta_no_caminho")) || len < 1) {
+            return;
+        }
+        List<U> onTheWay = new ArrayList<>();
+        for (U v : units) {
+            if (v == t || v == s || v.dead || !v.targetable() || v.team() == s.team() || v.attachedTo != null) {
+                continue;
+            }
+            double u = ((v.x - s.x) * dx + (v.y - s.y) * dy) / (len * len);
+            if (u <= 0 || u >= 1) {
+                continue;
+            }
+            double off = Math.abs((v.x - s.x) * dy - (v.y - s.y) * dx) / len;
+            if (off <= width / 2 + v.radius()) {
+                onTheWay.add(v);
+            }
+        }
+        for (U v : onTheWay) {
+            deal(s, v, raw, "fisico", "Ataque (no caminho)", ATTACK, critPart);
+            if (!v.dead) {
+                onAttackItems(s, v, crit);
+            }
+            count(s, "ataque_no_caminho");
+        }
     }
 
     private void attackHit(U s, U t) {
@@ -2666,6 +2729,23 @@ public class Arena {
         }
         double raw = ad * (1 + c * (mult - 1));
         deal(s, t, raw, "fisico", "Ataque", ATTACK, ad * c * mult);
+        if (!s.npc) {
+            int fi = 0;   // the fighter's index: champions in the order of the inputs (as the frames list them)
+            for (U o : units) {
+                if (o == s) {
+                    break;
+                }
+                if (!o.npc) {
+                    fi++;
+                }
+            }
+            if (s.owner == null) {
+                result.attackMarks.add(new double[] {round(now), fi, round(c)});
+            }
+            if (s.kit("velocidade_projetil") == null) {
+                meleeSegment(s, t, raw, ad * c * mult, c);
+            }
+        }
         if (!t.dead) {
             fireAll(s, "ao_atacar", null);
             runeOnAttack(s, t);
@@ -4159,6 +4239,10 @@ public class Arena {
 
     private void moveDash(U u) {
         Dash dash = u.dash;
+        if (Double.isNaN(dash.fromX)) {
+            dash.fromX = u.x;
+            dash.fromY = u.y;
+        }
         if (dash.follow != null && !dash.follow.dead) {
             double far = dist(u.x, u.y, dash.follow.x, dash.follow.y);
             double stop = Math.max(0, far - u.radius() - dash.follow.radius());
@@ -9022,6 +9106,17 @@ public class Arena {
             uf.state = u.dead ? "dead" : now < u.stasisUntil ? "stasis" : now < u.airUntil ? "air" : now < u.stunUntil ? "stun"
                     : u.forced != null ? "displaced" : u.dash != null ? "dash" : now < u.busyUntil ? u.busyState : u.busyState;
             uf.invisible = !u.visible();
+            if (!u.dead && now < u.airUntil) {
+                uf.airLeft = round(u.airUntil - now);
+            }
+            if (!u.dead && now < u.stunUntil) {
+                uf.stunLeft = round(u.stunUntil - now);
+            }
+            for (double[] sl : u.slows) {
+                if (!u.dead && now < sl[1]) {
+                    uf.slow = Math.max(uf.slow == null ? 0 : uf.slow, round(sl[0]));
+                }
+            }
             if (rift != null) {
                 uf.gold = round(u.gold);
             }
@@ -9083,7 +9178,33 @@ public class Arena {
             s.y = round(p.y);
             s.radius = Math.max(15, p.width / 2);
             s.angle = Math.atan2(p.dy, p.dx);
+            if (p.basic) {
+                // the missile of a basic attack: a tail back to where it left from, always drawn
+                s.hit = "ataque";
+                s.length = round(Math.min(dist(p.x, p.y, p.fromX, p.fromY), 260));
+                s.angle = Math.atan2(p.y - p.fromY, p.x - p.fromX);
+                s.crit = p.crit > 0 ? round(p.crit) : null;
+            }
             f.shapes.add(s);
+        }
+        for (U u : units) {
+            if (u.dash != null && !u.dead && !Double.isNaN(u.dash.fromX)) {
+                // the band a dash goes over: its hitbox when it deals damage, a fainter one when it only moves
+                double len = dist(u.x, u.y, u.dash.fromX, u.dash.fromY);
+                if (len > 5) {
+                    double width = Math.max(2 * u.radius(), 2 * u.dash.hitRadius);
+                    Shape s = rect("dash" + u.idx, (u.dash.onHit != null ? "Avanço de " : "Movimento de ") + u.f.name, u.team(),
+                            (u.x + u.dash.fromX) / 2, (u.y + u.dash.fromY) / 2, len, width, Math.atan2(u.y - u.dash.fromY, u.x - u.dash.fromX));
+                    s.hit = u.dash.onHit != null || u.dash.hitRadius > 0 ? "avanco" : "deslocamento";
+                    f.shapes.add(s);
+                }
+            }
+            if (u.summon != null && !u.dead && u.summon.get("raio_disparo") != null) {
+                // what hits on touch (a mine, a summon that bursts): its trigger area while it is out
+                Shape s = circle("contact" + u.idx, "Contato: " + u.f.name, u.team(), u.x, u.y, num(u.summon.get("raio_disparo"), 100));
+                s.hit = "contato";
+                f.shapes.add(s);
+            }
         }
         for (Field fl : fields) {
             if (now < fl.from && !fl.terrain) {
