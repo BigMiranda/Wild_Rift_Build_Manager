@@ -262,6 +262,17 @@ export function BuildProvider({ meta, items, children }) {
     }
   };
 
+  /** Opens a build that is not saved (the calculator's and the discovery's "open as build"): a dirty draft. */
+  const openDraft = (b) => {
+    if (!confirmDiscard()) return false;
+    setDraft(fromApi({ ...b, id: null }));
+    setDirty(true);
+    setCondOverride(null);
+    setSelectedMinute(null);
+    setSelectedIdx(null);
+    return true;
+  };
+
   const newBuild = (folderId) => {
     if (!confirmDiscard()) return;
     setDraft(emptyBuild(folderId ?? folders[0]?.id));
@@ -400,7 +411,7 @@ export function BuildProvider({ meta, items, children }) {
     chartStat, setChartStat, objectives, setObjectives, quick, setQuick, toggleQuickCandidate,
     runesReady, prepEditor, setPrepEditor, effAlign, setEffAlign,
     selectedMinute, setSelectedMinute, selectedIdx, setSelectedIdx, message, setMessage,
-    passiveValues, openBuild, newBuild, save, saveAsCopy, remove, moveStepTo, addMoment, removeStep, addItem,
+    passiveValues, openBuild, openDraft, newBuild, save, saveAsCopy, remove, moveStepTo, addMoment, removeStep, addItem,
     condOverride, setCondOverride, confirmDiscard,
   };
   return <BuildContext.Provider value={value}>{children}</BuildContext.Provider>;

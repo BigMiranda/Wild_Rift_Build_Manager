@@ -52,21 +52,45 @@ public class CalculatorService {
         public List<Long> forbidden = new ArrayList<>();
         public List<Long> required = new ArrayList<>();
         public Double goldPerMin;
-        public List<Double> minutes = new ArrayList<>(List.of(8.0, 12.0, 16.0, 20.0));
-        public int length = 3;
+        /** Early minutes weigh in, so what a component or half item does early shows (Rodada 9). */
+        public List<Double> minutes = new ArrayList<>(DEFAULT_MINUTES);
+        /** Item slots to fill besides the boots (1..5): the 6th slot is always boots, unless {@link #noBoots}. */
+        public int length = 5;
         public int beam = 3;
         /** Most measures a run may take. */
-        public int budget = 400;
+        public int budget = 600;
+        /** moderado: one isolated component at most, and which component first after the search | agressivo: any. */
+        public String mode = MODERATE;
+        public boolean noBoots;
+        /** classe: the class score (Rodada 9, part 1) | relatorio: the defensive report's index alone. */
+        public String measure = "classe";
+        /** After the items, search the page of runes too (Rodada 9, part 4). */
+        public boolean runes;
         /** The tree: choices of each side at each step, and items of each side. */
         public boolean tree;
         public int k = 6;
         public int depth = 3;
     }
 
+    public static final String MODERATE = "moderado";
+    public static final String AGGRESSIVE = "agressivo";
+    public static final List<Double> DEFAULT_MINUTES = List.of(1.0, 2.0, 3.0, 4.0, 8.0, 12.0, 16.0, 20.0);
+
+    /** A step of an order: what it buys, its kind (item, boots, boots3, component) and when it is ready. */
+    public static class StepView {
+        public long id;
+        public String name;
+        public String kind;
+        public Double readyAt;
+        /** A component: the item of the order that closes it (null = never closed). */
+        public String closedBy;
+    }
+
     /** One order of the answer. */
     public static class Line {
         public List<Long> order;
         public List<String> names = new ArrayList<>();
+        public List<StepView> steps = new ArrayList<>();
         public double score;
         public double[] curve;
         /** Alternatives: the whole build against the best order at the last minute ({@link BuildDeltaService}). */
@@ -86,6 +110,11 @@ public class CalculatorService {
 
     public static class Answer {
         public Line best;
+        /** The search's space: candidates by kind, and the mode. */
+        public Map<String, Integer> space = new LinkedHashMap<>();
+        public String mode;
+        /** Moderate: which component of each item to buy first (kept in {@link #best}). */
+        public List<Map<String, Object>> componentFirst = new ArrayList<>();
         public List<Line> alternatives = new ArrayList<>();
         public List<Map<String, Object>> importance = new ArrayList<>();
         public String boots;
@@ -116,6 +145,9 @@ public class CalculatorService {
     /** What a request will cost, before it runs. */
     public static class Estimate {
         public int candidates;
+        public Map<String, Integer> space = new LinkedHashMap<>();
+        /** Aggressive mode: the space is much larger (the screen warns). */
+        public boolean large;
         public long measures;
         public double seconds;
     }
@@ -149,14 +181,14 @@ public class CalculatorService {
         this.arena = arena;
     }
 
-    /** The items a request may use: the upgraded ones of the shop, by its filters; the required ones always. */
+    /** The finished items a request may use (no boots): the upgraded ones of the shop, by its filters; the required always. */
     List<Long> candidates(Request r) {
         List<Long> out = new ArrayList<>();
         if (!r.candidates.isEmpty()) {
             out.addAll(r.candidates);
         } else {
             for (PlannerService.ItemView i : planner.itemViews()) {
-                boolean upgraded = "aprimorado".equals(i.section);
+                boolean upgraded = "aprimorado".equals(i.section) && !i.boots();
                 boolean category = r.categories.isEmpty() || i.tabs.stream().anyMatch(r.categories::contains);
                 boolean tank = !r.tanksOnly || i.tabs.contains("Defesa");
                 if (upgraded && category && tank) {
@@ -164,15 +196,91 @@ public class CalculatorService {
                 }
             }
         }
+        Map<Long, Model.ItemDef> items = planner.referenceData().items;
+        out.removeIf(id -> items.get(id) != null && items.get(id).boots());
         out.removeAll(r.forbidden);
-        r.required.stream().filter(i -> !out.contains(i)).forEach(out::add);
+        r.required.stream().filter(i -> !out.contains(i) && !(items.get(i) != null && items.get(i).boots())).forEach(out::add);
+        return out;
+    }
+
+    /**
+     * The step search's space: the items, every boots of tier 2 and 3 (never by the tab filter: one slot is always boots),
+     * and the components of the items (with their parents). Forbidden ones stay out.
+     */
+    public BuildSearch.Space space(Request r) {
+        Map<Long, Model.ItemDef> items = planner.referenceData().items;
+        BuildSearch.Space sp = new BuildSearch.Space();
+        sp.length = Math.max(1, Math.min(com.ornnplanner.engine.TimelineEngine.ITEM_SLOTS, r.length));
+        sp.aggressive = AGGRESSIVE.equals(r.mode);
+        sp.noBoots = r.noBoots;
+        List<Long> finished = candidates(r);
+        for (long id : finished) {
+            sp.add(id, BuildSearch.Kind.ITEM);
+        }
+        if (!r.noBoots) {
+            for (PlannerService.ItemView i : planner.itemViews()) {
+                if (!i.boots() || r.forbidden.contains(i.id)) {
+                    continue;
+                }
+                if ("tier_medio".equals(i.section)) {
+                    sp.add(i.id, BuildSearch.Kind.BOOTS);
+                } else if ("aprimorado".equals(i.section)) {
+                    sp.add(i.id, BuildSearch.Kind.BOOTS3);
+                }
+            }
+            for (PlannerService.ItemView i : planner.itemViews()) {
+                if (sp.kind(i.id) == BuildSearch.Kind.BOOTS3 && sp.kinds.containsKey(i.id)) {
+                    for (Model.ComponentRef c : i.components) {
+                        sp.parent(c.itemId, i.id);
+                    }
+                }
+            }
+        }
+        for (long id : finished) {
+            Model.ItemDef it = items.get(id);
+            if (it != null) {
+                components(it, id, items, sp, r);
+            }
+        }
+        sp.required = new ArrayList<>(r.required);
+        sp.required.removeIf(i -> !sp.kinds.containsKey(i));
+        return sp;
+    }
+
+    /** Every component in the recipe tree of {@code it}, as a candidate step of {@code parent} (not boots, not forbidden). */
+    private static void components(Model.ItemDef it, long parent, Map<Long, Model.ItemDef> items, BuildSearch.Space sp, Request r) {
+        for (Model.ComponentRef c : it.components) {
+            Model.ItemDef comp = items.get(c.itemId);
+            if (comp == null || comp.boots() || r.forbidden.contains(comp.id)) {
+                continue;
+            }
+            if (!sp.kinds.containsKey(comp.id)) {
+                sp.add(comp.id, BuildSearch.Kind.COMPONENT);
+            }
+            if (sp.kind(comp.id) == BuildSearch.Kind.COMPONENT) {
+                sp.parent(comp.id, parent);
+                components(comp, parent, items, sp, r);
+            }
+        }
+    }
+
+    /** How many steps of each kind a space has. */
+    static Map<String, Integer> census(BuildSearch.Space sp) {
+        Map<String, Integer> out = new LinkedHashMap<>();
+        for (BuildSearch.Kind k : BuildSearch.Kind.values()) {
+            out.put(k.name().toLowerCase(java.util.Locale.ROOT), 0);
+        }
+        sp.kinds.values().forEach(k -> out.merge(k.name().toLowerCase(java.util.Locale.ROOT), 1, Integer::sum));
         return out;
     }
 
     public Estimate estimate(Request r) {
         Estimate e = new Estimate();
-        e.candidates = candidates(r).size();
-        long measures = (long) r.beam * e.candidates * r.length * r.minutes.size();
+        BuildSearch.Space sp = space(r);
+        e.candidates = sp.kinds.size();
+        e.space = census(sp);
+        e.large = sp.aggressive;
+        long measures = (long) Math.max(r.beam, 4) * e.candidates * sp.maxDepth() * r.minutes.size();
         if (r.tree) {
             long lines = (long) Math.pow(r.k, r.depth);
             measures += lines * lines * Math.min(3, r.minutes.size());
@@ -219,16 +327,33 @@ public class CalculatorService {
         double[] minutes = r.minutes.stream().mapToDouble(Double::doubleValue).toArray();
         Side ours = new Side(base, r.goldPerMin, 0);
         Oracle oracle = rival != null ? new DuelOracle(r, j, ours, new Side(rival, null, 1), rival) : new TargetOracle(r, j, ours);
-        List<Long> candidates = candidates(r);
+        BuildSearch.Space sp = space(r);
         Answer a = new Answer();
         a.minutes = minutes;
+        a.mode = sp.aggressive ? AGGRESSIVE : MODERATE;
+        a.space = census(sp);
         oracle.limit = (long) (r.budget * SEARCH_SHARE);
-        List<BuildSearch.Ranked> found = BuildSearch.beam(oracle, candidates, r.required, r.length, Math.max(r.beam, 4), minutes);
+        List<BuildSearch.Ranked> found = new ArrayList<>(BuildSearch.steps(oracle, sp, Math.max(r.beam, 4), minutes));
         a.truncated = oracle.stopped();
         oracle.limit = r.budget;
+        if (!found.isEmpty() && !sp.aggressive) {
+            List<Long> improved = new ArrayList<>();
+            for (BuildSearch.ComponentFirst cf : BuildSearch.componentFirst(oracle, sp, found.get(0), minutes, improved)) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("item", name(cf.item));
+                row.put("itemId", cf.item);
+                row.put("component", name(cf.component));
+                row.put("componentId", cf.component);
+                row.put("gain", cf.gain);
+                a.componentFirst.add(row);
+            }
+            if (!a.componentFirst.isEmpty()) {
+                found.add(0, BuildSearch.measure(oracle, improved, minutes));
+            }
+        }
         if (!found.isEmpty()) {
-            a.best = line(found.get(0));
-            found.stream().skip(1).limit(3).forEach(x -> a.alternatives.add(line(x)));
+            a.best = line(found.get(0), ours, sp);
+            found.stream().skip(1).limit(3).forEach(x -> a.alternatives.add(line(x, ours, sp)));
             double last = minutes.length == 0 ? 20 : minutes[minutes.length - 1];
             for (Line alt : a.alternatives) {
                 alt.delta = deltas.compare(ours.timeline(a.best.order), ours.timeline(alt.order), last,
@@ -323,6 +448,32 @@ public class CalculatorService {
         return l;
     }
 
+    /** A line with its steps: kind and the minute each one is ready, by the side's timeline. */
+    private Line line(BuildSearch.Ranked r, Side side, BuildSearch.Space sp) {
+        Line l = line(r);
+        Model.TimelineResult t = side.timeline(r.order);
+        for (int i = 0; i < r.order.size(); i++) {
+            long id = r.order.get(i);
+            StepView v = new StepView();
+            v.id = id;
+            v.name = name(id);
+            v.kind = sp.kind(id).name().toLowerCase(java.util.Locale.ROOT);
+            int bi = i;
+            t.steps.stream().filter(s -> !s.implied && s.buildIndex == bi && !s.ignored).findFirst().ifPresent(s -> v.readyAt = s.minute);
+            if (sp.kind(id) == BuildSearch.Kind.COMPONENT) {
+                Set<Long> ps = sp.parents.getOrDefault(id, Set.of());
+                for (int k = i + 1; k < r.order.size(); k++) {
+                    if (ps.contains(r.order.get(k))) {
+                        v.closedBy = name(r.order.get(k));
+                        break;
+                    }
+                }
+            }
+            l.steps.add(v);
+        }
+        return l;
+    }
+
     /** A side: its build, and what its timelines say. */
     private final class Side {
         final BuildRepository.Build base;
@@ -356,15 +507,21 @@ public class CalculatorService {
             return timelines.computeIfAbsent(order.toString(), k -> planner.calculate(order(order)));
         }
 
-        /** What the order holds at a minute (components count as nothing), in a key that ignores the order. */
+        /**
+         * What the order holds at a minute: the inventory after the last purchase by then (components held count, the
+         * ones an item consumed do not), in a key that ignores the order.
+         */
         Set<Long> held(List<Long> order, double minute) {
-            Set<Long> out = new TreeSet<>();
+            List<Long> inv = List.of();
             for (Model.TimelineStep s : timeline(order).steps) {
-                if (s.minute <= minute && !s.implied) {
-                    out.add(s.itemId);
+                if (s.minute > minute + 1e-9) {
+                    break;
+                }
+                if (!s.ignored) {
+                    inv = s.inventoryIds;
                 }
             }
-            return out;
+            return new TreeSet<>(inv);
         }
 
         Arena.Input input(List<Long> order, double minute) {

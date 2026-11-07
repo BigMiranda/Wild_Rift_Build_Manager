@@ -1420,3 +1420,15 @@ html[data-scale="live"] .item-icon { min-width: 26px; min-height: 26px; }
 }
 /* the settings still reachable on a phone: Admin › Sobre e configurações shows them in the page */
 .settings-page .settings { display: flex !important; flex-wrap: wrap; gap: 12px; }
+
+/* Rodada 9: help marks, step chips of an order, side-by-side lines */
+.help-q { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--border-strong); font-size: 10px; color: var(--text-2); cursor: help; vertical-align: middle; margin-left: 2px; }
+.step-row { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: flex-start; }
+.step-chip { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; padding: 2px; border-radius: 6px; border: 1px solid transparent; min-width: 34px; }
+.step-chip small { font-size: 10px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.step-chip .step-kind { color: var(--text-2); }
+.step-chip.kind-component .item-icon { opacity: 0.85; border-radius: 50%; }
+.step-chip.diff { border-color: #d9a43a; background: rgba(217, 164, 58, 0.12); }
+.calc-lines th { text-align: left; white-space: nowrap; vertical-align: top; }
+.calc-lines td { vertical-align: top; min-width: 180px; }
+.bar-mini { display: inline-block; height: 8px; background: var(--accent, #4a8); border-radius: 2px; vertical-align: middle; }

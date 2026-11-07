@@ -2,7 +2,13 @@ package com.ornnplanner.arena.calc;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * The search over purchase orders, apart from how an order is measured: a beam over the prefixes, the score of each at
@@ -35,7 +41,7 @@ public final class BuildSearch {
         /** The score at each minute asked. */
         public double[] curve;
 
-        Ranked(List<Long> order, double score, double[] curve) {
+        public Ranked(List<Long> order, double score, double[] curve) {
             this.order = order;
             this.score = score;
             this.curve = curve;
@@ -53,7 +59,7 @@ public final class BuildSearch {
         public Double advanced;
     }
 
-    static Ranked measure(Oracle o, List<Long> order, double[] minutes) {
+    public static Ranked measure(Oracle o, List<Long> order, double[] minutes) {
         double[] curve = new double[minutes.length];
         double sum = 0;
         for (int i = 0; i < minutes.length; i++) {
@@ -101,6 +107,272 @@ public final class BuildSearch {
             }
         }
         return kept;
+    }
+
+    // ------------------------------------------------------------------ steps (Rodada 9, parte 0)
+
+    /** What a step of an order is: a finished item, boots (tier 2 or 3) or a component bought on its own. */
+    public enum Kind { ITEM, BOOTS, BOOTS3, COMPONENT }
+
+    /**
+     * The space of a step search: the candidates by kind, the components' parents, the number of item slots to fill and
+     * how freely components may enter the order. Moderate: one isolated component at most. Aggressive: components may fill
+     * the slots and be closed later, or never.
+     */
+    public static class Space {
+        public final Map<Long, Kind> kinds = new LinkedHashMap<>();
+        /** Component (or tier 2 boots) -> the candidates whose recipe holds it, anywhere in the tree. */
+        public final Map<Long, Set<Long>> parents = new HashMap<>();
+        public int length = 5;
+        public boolean aggressive;
+        /** No boots in the order (rare builds); otherwise one slot is always boots. */
+        public boolean noBoots;
+        public List<Long> required = new ArrayList<>();
+
+        public Space add(long id, Kind k) {
+            kinds.put(id, k);
+            return this;
+        }
+
+        public Space parent(long component, long parent) {
+            parents.computeIfAbsent(component, x -> new TreeSet<>()).add(parent);
+            return this;
+        }
+
+        public Kind kind(long id) {
+            return kinds.getOrDefault(id, Kind.ITEM);
+        }
+
+        int maxComponents() {
+            return aggressive ? length : 1;
+        }
+
+        public int maxDepth() {
+            return length + (noBoots ? 0 : 2) + maxComponents();
+        }
+    }
+
+    /** What an order holds, counted the way the space asks. */
+    static final class Count {
+        int items;
+        int components;
+        /** Components not consumed by a later item of the order. */
+        int open;
+        int boots;
+        boolean boots3;
+        Long heldBoots;
+
+        Count(Space sp, List<Long> order) {
+            for (int i = 0; i < order.size(); i++) {
+                long id = order.get(i);
+                switch (sp.kind(id)) {
+                    case ITEM:
+                        items++;
+                        break;
+                    case BOOTS:
+                        boots++;
+                        heldBoots = id;
+                        break;
+                    case BOOTS3:
+                        boots++;
+                        boots3 = true;
+                        heldBoots = id;
+                        break;
+                    default:
+                        components++;
+                        if (!closed(sp, order, i)) {
+                            open++;
+                        }
+                }
+            }
+        }
+
+        /** Item slots the order fills at its end: items and the components still held. */
+        int slots() {
+            return items + open;
+        }
+    }
+
+    /** Whether the component at {@code i} is consumed by an item bought after it. */
+    static boolean closed(Space sp, List<Long> order, int i) {
+        Set<Long> ps = sp.parents.getOrDefault(order.get(i), Set.of());
+        for (int k = i + 1; k < order.size(); k++) {
+            if (ps.contains(order.get(k))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The order is a whole build: its slots filled the way the space asks, with boots unless there are none. */
+    public static boolean complete(Space sp, List<Long> order) {
+        Count c = new Count(sp, order);
+        boolean boots = sp.noBoots ? c.boots == 0 : c.boots > 0;
+        boolean filled = sp.aggressive ? c.slots() == sp.length : c.items == sp.length;
+        return boots && filled && order.containsAll(sp.required);
+    }
+
+    /** The steps that may follow a prefix. */
+    static List<Long> next(Space sp, List<Long> prefix) {
+        Count c = new Count(sp, prefix);
+        Set<Long> heldOpen = new HashSet<>();
+        for (int i = 0; i < prefix.size(); i++) {
+            if (sp.kind(prefix.get(i)) == Kind.COMPONENT && !closed(sp, prefix, i)) {
+                heldOpen.add(prefix.get(i));
+            }
+        }
+        int room = sp.aggressive ? sp.length - c.slots() : sp.length - c.items;
+        long missing = sp.required.stream().filter(r -> !prefix.contains(r)).count();
+        List<Long> out = new ArrayList<>();
+        for (Map.Entry<Long, Kind> e : sp.kinds.entrySet()) {
+            long id = e.getKey();
+            if (prefix.contains(id)) {
+                continue;
+            }
+            boolean closes = false;
+            for (long h : heldOpen) {
+                closes |= sp.parents.getOrDefault(h, Set.of()).contains(id);
+            }
+            switch (e.getValue()) {
+                case ITEM:
+                    if (room > 0 || closes && sp.aggressive) {
+                        boolean free = sp.required.contains(id) || closes && sp.aggressive || missing < room;
+                        if (free) {
+                            out.add(id);
+                        }
+                    }
+                    break;
+                case BOOTS:
+                    if (!sp.noBoots && c.boots == 0) {
+                        out.add(id);
+                    }
+                    break;
+                case BOOTS3:
+                    if (!sp.noBoots && !c.boots3
+                            && (c.heldBoots == null || sp.parents.getOrDefault(c.heldBoots, Set.of()).contains(id))) {
+                        out.add(id);
+                    }
+                    break;
+                default:
+                    boolean useful = false;
+                    for (long p : sp.parents.getOrDefault(id, Set.of())) {
+                        useful |= !prefix.contains(p) && sp.kind(p) == Kind.ITEM;
+                    }
+                    if (useful && c.components < sp.maxComponents() && room > 0 && missing < room) {
+                        out.add(id);
+                    }
+            }
+        }
+        return out;
+    }
+
+    /** Hears each depth of a step search: its prefixes, best first (the funnel prunes by the start with it). */
+    public interface DepthListener {
+        /** Returns the prefixes to keep (a sublist of {@code ranked}, in order). */
+        List<Ranked> depth(int depth, List<Ranked> ranked);
+    }
+
+    /**
+     * The best whole orders of the space, best first: a beam over the steps (items, boots, components), every complete
+     * order seen kept in a pool, so a short order is not lost to longer ones.
+     */
+    public static List<Ranked> steps(Oracle o, Space sp, int width, double[] minutes) {
+        return steps(o, sp, width, minutes, null);
+    }
+
+    public static List<Ranked> steps(Oracle o, Space sp, int width, double[] minutes, DepthListener listener) {
+        List<List<Long>> frontier = new ArrayList<>();
+        frontier.add(new ArrayList<>());
+        List<Ranked> pool = new ArrayList<>();
+        Set<List<Long>> seen = new HashSet<>();
+        for (int depth = 0; depth < sp.maxDepth() && !frontier.isEmpty(); depth++) {
+            List<Ranked> next = new ArrayList<>();
+            for (List<Long> prefix : frontier) {
+                for (long id : next(sp, prefix)) {
+                    if (o.stopped()) {
+                        break;
+                    }
+                    List<Long> order = new ArrayList<>(prefix);
+                    order.add(id);
+                    if (!seen.add(order) || !o.allowed(order)) {
+                        continue;
+                    }
+                    Ranked r = measure(o, order, minutes);
+                    next.add(r);
+                    if (complete(sp, order)) {
+                        pool.add(r);
+                    }
+                }
+            }
+            next.sort(Comparator.comparingDouble((Ranked r) -> -r.score));
+            if (listener != null) {
+                next = listener.depth(depth, next);
+            }
+            frontier = new ArrayList<>();
+            for (Ranked r : next.subList(0, Math.min(width, next.size()))) {
+                frontier.add(r.order);
+            }
+            if (o.stopped()) {
+                break;
+            }
+        }
+        pool.sort(Comparator.comparingDouble((Ranked r) -> -r.score));
+        return pool;
+    }
+
+    /** "Which component of the next item first": the best of an item's components bought right before it. */
+    public static class ComponentFirst {
+        public long item;
+        public long component;
+        public double gain;
+    }
+
+    /**
+     * For each item of the order, each of its components (the space's parents) is tried as a step right before it, so it
+     * is bought as gold allows and the item closes later. A gain is kept when positive; {@code improved} gets the order
+     * with all of them.
+     */
+    public static List<ComponentFirst> componentFirst(Oracle o, Space sp, Ranked best, double[] minutes, List<Long> improved) {
+        List<ComponentFirst> out = new ArrayList<>();
+        List<Long> order = new ArrayList<>(best.order);
+        double score = best.score;
+        for (long item : best.order) {
+            if (sp.kind(item) != Kind.ITEM) {
+                continue;
+            }
+            ComponentFirst top = null;
+            List<Long> topOrder = null;
+            double topScore = score;
+            for (Map.Entry<Long, Set<Long>> e : new java.util.TreeMap<>(sp.parents).entrySet()) {
+                if (!e.getValue().contains(item) || order.contains(e.getKey()) || sp.kind(e.getKey()) != Kind.COMPONENT || o.stopped()) {
+                    continue;
+                }
+                List<Long> tried = new ArrayList<>(order);
+                tried.add(tried.indexOf(item), e.getKey());
+                if (!o.allowed(tried)) {
+                    continue;
+                }
+                double s = measure(o, tried, minutes).score;
+                if (s > topScore + 1e-9) {
+                    top = new ComponentFirst();
+                    top.item = item;
+                    top.component = e.getKey();
+                    top.gain = s - score;
+                    topScore = s;
+                    topOrder = tried;
+                }
+            }
+            if (top != null) {
+                out.add(top);
+                order = topOrder;
+                score = topScore;
+            }
+        }
+        if (improved != null) {
+            improved.clear();
+            improved.addAll(order);
+        }
+        return out;
     }
 
     private static List<Long> swapped(List<Long> order, int a, int b) {

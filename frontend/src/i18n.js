@@ -1,3 +1,5 @@
+import { EN9, PT9 } from './i18n-r9.js';
+
 /**
  * Minimal i18n: the language lives in module state, set by App before each render, so plain functions (t, statLabel,
  * statAbbr) can be used anywhere without threading a context. App re-renders the whole tree when it changes.
@@ -3395,6 +3397,9 @@ const PT = {
   'settings.title': "Configurações",
   'settings.help': "Idioma, siglas e tamanho da interface, lembrados neste navegador (no celular o cabeçalho os esconde: ficam aqui).",
 };
+
+Object.assign(EN, EN9);
+Object.assign(PT, PT9);
 
 /** Translates a key, replacing {placeholders}. Falls back to pt, then to the key itself. */
 export function t(key, vars) {
