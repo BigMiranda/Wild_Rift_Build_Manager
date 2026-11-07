@@ -426,3 +426,133 @@ minuto); os caminhos pesam pela frequência; uma guia lida numa partida vira ord
 2º item lido antes dos 10 min) e a avaliação tem 4 caminhos.
 
 Testes: 364 → 368 (16 opcionais pulados). `npm run build` limpo.
+
+## Parte 8 — Busca em massa (todos os campeões) ✅
+
+Está na fila das campanhas (Parte 6), que já foi feita para isso: **"Todos os campeões"** em Admin › Campanhas, com a
+**estimativa total antes de começar** (campeões a rodar, de baixa confiança, já feitos), o **progresso por campeão**
+(estado, etapa e tempo de cada linha, e a etapa e a barra do campeão em curso) e a **ordem por campeão**:
+
+1. **as builds salvas** daquele campeão: medidas pela nota robusta e guardadas;
+2. **a Descoberta**, no orçamento escolhido (campeão sem build salva: o campeão sozinho, 700 de ouro e XP por minuto,
+   runas padrão, marcado no resultado);
+3. **as matchups**: a build padrão robusta em x1 contra um representativo de cada classe e contra os adversários de rota
+   usuais (os campeões que dividem uma rota com ele e têm build salva), aos 10, 15 e 20 min, com o cérebro automático.
+
+Fichas C, D ou sem ficha: "baixa confiança", **puladas por padrão** (opção). Pausar, retomar, cancelar e prioridade por
+linha. O que terminou fica em `build_discovery` e serve à Descoberta ("Há um resultado salvo") e à guia sugerida.
+
+### Medido 🎯 e extrapolado (cópia do banco, `DiscoveryReportTest`)
+
+| campeão (build base) | orçamento | tempo | rápidas / completas / confirmações / medidas de ordem | modelo substituto |
+|---|---|---|---|---|
+| Ornn (Big Carry v1) | rápido, runas e ordem | **245 s** | 52 / 32 / 2 / 55 | r = 0,25 |
+| Darius (Darius de CdC) | rápido, runas e ordem | **487 s** | 52 / 32 / 3 / 57 | r = −0,52 |
+| Ornn (Big Carry v1) | completo, runas e ordem | **836 s** | 262 / 128 / 7 / 818 | r = 0,39 |
+
+A estimativa do completo dizia 2.594 s e foi 836 s: as primeiras estimativas usam tempos por bateria conservadores, e a
+cada execução ela aprende o tempo real (no rápido do Darius ela errou para menos, 271 s contra 487 s, porque aprendeu com
+o Ornn, mais barato).
+
+**Extrapolação** (campanha com builds salvas e matchups, ~2 min a mais por campeão com umas 30 builds salvas):
+
+- **os 6 campeões com ficha A** (o padrão, pulando a baixa confiança): rápido ≈ 6 × 6 a 10 min ≈ **1 h**; completo ≈ 6 ×
+  15 a 30 min ≈ **2 a 3 h**;
+- **os 142 campeões** (sem pular a baixa confiança): rápido ≈ 142 × 5 a 8 min ≈ **12 a 19 h**; completo ≈ **1,5 a 3
+  dias**. Os de baixa confiança lutam com o dano lido do texto (sem ficha), então esse número tem pouca serventia hoje.
+
+## Relatório final
+
+### O espaço e o funil
+
+- **Contagens exatas** (seção "O tamanho do problema"): 77.830.488 conjuntos de 5 itens, 1,09·10⁹ builds sem ordem,
+  1,77·10¹² com ordem, 52.104 páginas de runas, 9,2·10¹⁶ ao todo.
+- **Quanto o funil avaliou** no completo do Ornn: 30 itens na lista curta + 6 coringas; 262 leituras rápidas, 128
+  baterias completas, 7 confirmações, 274 páginas de runas (3 finalistas) e 818 medidas de ordem. O resto do espaço foi
+  descartado pela triagem, pelo modelo substituto e pelas lutas rápidas.
+
+### Ornn (Big Carry v1)
+
+- **Build padrão robusta (completo):** Manto da Meia-noite, Coração de Aço, Rookern Lamúrico, Desespero Eterno, Céu
+  Dividido + Mobilização Blindada, com **Ímpeto Gradual** no lugar do Suserano do Gelo: **74,4** (média 74,7, P20 74,0,
+  confirmada 74,2).
+- **Melhores por nicho:** tanque · físico 74,4 (a padrão); tanque · sem dano 73,4 (Manto da Meia-noite, Resplendor Vazio,
+  Coração de Aço, Desespero, Duplaguarda); tanque · mágico 72,9 (… Bastão das Eras); tanque · misto 72,0 (… Eco de
+  Luden); mago explosivo 8,7 (a build salva "Malevolência…", que não é de tanque).
+- **Contra as builds do usuário:** a melhor conhecida pela nota é a **Sup Rush Warmog (71,2)**, não a Big Carry v1. As 10
+  descobertas do completo a superam por 0,8 a 3,2 pontos, trocando Armadura de Espinhos, Warmog e Duplaguarda por Coração
+  de Aço, Desespero Eterno e Céu Dividido: ganham nos cenários de dano verdadeiro (+12,7) e misto (+9,2) e perdem nos de
+  Liandry com corta-cura.
+- **Runas:** nos três finalistas a busca saiu do Suserano do Gelo (para Ímpeto Gradual, às vezes passando por Ritmo Fatal
+  ou Aperto dos Mortos-Vivos) e subiu a nota aos 15:00 de 63–66 para 69–73.
+- **Sinergias:** todas negativas entre defesas (Manto da Meia-noite + Coração de Aço −9,7): o retorno decrescente da
+  durabilidade.
+- **Tempo:** rápido 245 s; completo 836 s.
+
+### Darius (Darius de CdC, ficha A, Lutador)
+
+- **Build padrão robusta (rápido):** Placa Gargolítica, Desespero Eterno, Dança da Morte, Flechatroz de Yun Tal,
+  Lembranças do Lorde Dominik + Esmagadores Acorrentados, com as runas da busca: **53,2** (confirmada 54,4), contra
+  **45,1** da build salva.
+- **Descoberta:** troca Sinal de Sterak + Duplaguarda + Força da Trindade por Placa Gargolítica + Desespero Eterno +
+  Flechatroz; ganha em Esquiva por velocidade +30, Misto +17, Pouca vida e muita resistência +15; perde em Atirador
+  alimentado −8.
+- **Nichos:** lutador · físico 52,1 (com Sinal de Sterak e Dançarina Fantasma); tanque · físico 45,3; híbrido e mago bem
+  abaixo.
+- **Tempo:** rápido 487 s (o dobro do Ornn: as lutas do Darius custam mais).
+
+### O modelo substituto
+
+Correlação com a bateria completa em conjuntos que ele ainda não tinha visto: **0,25 e 0,39** no Ornn (rápido e
+completo) e **−0,52** no Darius (rápido, 8 pontos). Com tão poucos pontos e notas tão próximas (72 a 74), ele quase não
+separa os filhos. O teste sintético mostra que ele não piora a busca (os sorteados fogem do corte), mas **nos casos reais
+ele ainda não ajuda**. O completo, com mais gerações, melhora um pouco.
+
+### Números da rodada
+
+| parte | commit | testes depois |
+|---|---|---|
+| 0. Calculadora | a25b20d | 342 |
+| 1b. Efetividade ofensiva | 0b39219 | 347 |
+| 1. Nota por classe | 54e5159 | 351 |
+| 2 e 3. Funil e busca | 2a8919a | 359 |
+| 4, 4b e 5. Runas, ordem, começo, novidade | 1b1e295 | 364 |
+| 6 e 7. Campanhas e guias | 19b2306 | 368 |
+| 8. Busca em massa e relatório | último | 368 |
+
+- **Testes:** 336 antes → **368** depois (16 opcionais pulados), 0 falhas. `npm run build` limpo.
+- **Golden:** sem mudança na rodada (os campos novos dos bonecos só valem para quem os usa; os contadores novos ficam em
+  `events`, fora da impressão digital).
+- **Banco:** uma migração (v25) com `meta_build`, `build_discovery` e `build_guide`. Builds, cenários, IAs e combos salvos
+  seguem abrindo.
+- **Sem dependências novas.** Nenhuma regra cita campeão, item ou runa por nome no código (os testes e os YAML citam).
+- **Partes juntas num commit:** 2 e 3, 4/4b/5 e 6/7, porque mexem nos mesmos arquivos e só funcionam juntas; cada uma tem
+  sua seção aqui.
+
+## Para o usuário
+
+**Precisa de ação:**
+- **Reinicie o backend** (a migração v25 roda ao subir).
+- **A branch `rodada-9` não foi enviada nem mesclada:** 7 commits sobre o `main`.
+- Deixei em `.claude/launch.json` dois servidores desta rodada (`backend-r9` na 8092 e `frontend-r9` na 5176, banco em
+  `backend/data/dev-r9`), porque a 8090 estava ocupada por outra sessão. Apague se não quiser.
+
+**Precisa de decisão:**
+- **Margem mínima das descobertas:** hoje "nota igual ou maior que a melhor conhecida" deixa passar descobertas por 0,3
+  ponto (o completo do Ornn deu 10). Sugiro exigir 1 a 2 pontos; o lugar é `novidade` no `nota_builds_7_3d.yml`.
+- **Pesos por classe:** o Tanque recebe 10% de ofensiva e acaba com um item de dano no 5º espaço (Céu Dividido, Bastão
+  das Eras). Se não é o desejado, zere a ofensiva do Tanque no YAML.
+- **Variações do adversário (Parte 4b):** hoje as variações são os cenários. Variar pelas builds e runas do adversário pede
+  rodar as campanhas antes e duelar contra as builds descobertas deles. Vale a próxima rodada?
+- **Guia durante a partida:** a macro lê a guia só no draft. Reler a cada compra (ouro, itens do adversário) pede mudar o
+  `World` da partida.
+
+**Vale conferir:**
+- **Os perfis de esquiva quase não esquivam** numa largada (Parte 1b, calibragem). Talvez o avanço precise ser mais
+  frequente ou maior para a mira errar.
+- **A melhor build conhecida do Ornn pela nota é a Sup Rush Warmog**, não a Big Carry v1. Se a nota não concorda com o
+  que você vê no jogo, os pesos ou os cenários do relatório Básico são o lugar de mexer.
+- **O modelo substituto ainda não ajuda nos casos reais** (correlação baixa): a busca funciona, mas gasta lutas como se
+  ele não existisse.
+- **Só conferido no código, não na tela:** a sugestão de guia pela árvore da calculadora, a partida comprando pela guia
+  (há teste da leitura, não de uma partida inteira com guia) e o celular.
