@@ -25,7 +25,15 @@ cd frontend && npm run build                  # emits the SPA into backend/src/m
 cd backend && ./mvnw test                     # all tests
 cd backend && ./mvnw test -Dtest=TimelineEngineTest              # one class
 cd backend && ./mvnw test -Dtest=TimelineEngineTest#methodName   # one method
+cd backend && ./mvnw -Pexport                 # exports the public version's read-only DB (data/publico/), Rodada 11
+cd frontend && npm run build:publico          # the SPA in public mode (VITE_PUBLIC=1)
 ```
+
+The public version (Rodada 11, `docs/rodada-11.md`): Spring profile `publico` (`SPRING_PROFILES_ACTIVE=publico`) over the
+exported DB, opened read-only; `.claude/launch.json` has `backend-publico` / `frontend-publico`. Any new endpoint is
+**404 there unless added to `publico/PublicApi`** (`PublicProfileTest` scans every controller); a calculation it keeps
+goes through `ComputeGuard.run`. Visitors' builds live in the browser (`frontend/src/localStore.js`). `Dockerfile` and
+`tools/site_estatico.py` are hosting options; nothing is published.
 
 `.claude/launch.json` defines `backend` and `frontend` preview servers. There is no linter and no frontend test suite;
 "done" for a change has meant `./mvnw test` and `npm run build` both clean. Neither runs a page: open the screens too (the `backend-dev` and `frontend-dev` servers use their own database), because a React error passes both.
@@ -96,6 +104,9 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   (`Model.ItemEdit`; `passiva` in `combate_<patch>.yml` says which passive an effect belongs to).
 - `engine/ShopRuleCheck` — the single check of when the shop sells an item (upgraded boots from 10:00,
   `regras_loja.yml`); the planner's timeline applies it, `/api/meta` sends it to the shop screen.
+- `publico/` — the public version (Rodada 11): `PublicApi` (allow-list), `PublicApiFilter` (404 / origin / per-IP
+  limits), `ComputeGuard` (fixed workers, time limit), `PublicRequests` (what a visitor may ask), `PublicExporter`
+  (`VACUUM INTO` copy with only the folders and guides marked `publico`).
 - `seed/` — `SchemaManager` (migrations), `CatalogImporter` (YAML → SQLite), catalogs for champions, runes, item
   effects, shop rules, `ReferenceSeeder`.
 - `repo/` — JdbcTemplate data access. `service/PlannerService` assembles reference data and runs the engine.

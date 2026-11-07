@@ -169,3 +169,88 @@ Duas pastas marcadas (Anti Tank AD e Anti Tank AP), `./mvnw -Pexport` numa cópi
 - **No Windows, o arquivo em uso por um servidor público aberto não pode ser trocado:** pare o servidor antes de
   exportar por cima (a exportação avisa que falhou).
 - Suíte inteira: 393 testes, 0 falhas.
+
+## Parte 3 — Opções de hospedagem (para o usuário decidir) ✅
+
+**Nada foi publicado nem implantado.** Ficaram o `Dockerfile` (opção 1) e o `tools/site_estatico.py` (opção 2). Os
+preços são aproximados, de memória, e mudam: **confira na página de cada serviço antes de escolher.**
+
+### O que pesa na decisão
+- **Memória:** o servidor é uma JVM com Spring. No perfil público, com o banco de ~1 MB e 2 trabalhadores de cálculo,
+  cabe em **512 MB a 1 GB** de RAM. Uma luta curta ou a Efetividade Básica ocupa 1 núcleo por alguns segundos.
+- **Disco:** o jar (~40 MB) e o banco exportado (~1 MB hoje).
+- **Escrita:** nenhuma no banco público. Só a Parte 4 (builds compartilhadas, opcional) grava, num arquivo à parte.
+- **Atualização:** a cada exportação, troca-se o banco (imagem nova, ou o arquivo montado por cima).
+
+### Opção 1 — Servidor pequeno com o perfil público (interativo)
+O jar no perfil `publico` com o banco exportado, numa VPS ou num serviço de contêiner.
+
+| | |
+|---|---|
+| **Prós** | Tudo interativo: planejador, comparador, Visão sob efeitos, Efetividade Básica, Arena curta. Um único artefato (a imagem). Os limites da Parte 1 protegem o servidor. É a única opção em que a Parte 4 funciona. |
+| **Contras** | Custo mensal. Alguém cuida do servidor (atualizações do sistema, certificado, reinício). Um pico de visitantes recebe "tente mais tarde". |
+| **Custo aproximado** | VPS de 1–2 vCPU e 2–4 GB: **US$ 4–6/mês** (Hetzner, DigitalOcean, Vultr). Contêiner gerenciado com 512 MB–1 GB: **US$ 5–10/mês** (Fly.io, Render, Railway). Há camadas gratuitas (Oracle Cloud Always Free; Render free, que dorme sem uso e demora a acordar a JVM). Domínio: ~US$ 10–15/ano, opcional. |
+
+**Com o `Dockerfile`:** `cd backend && ./mvnw -Pexport`, depois, na raiz, `docker build -t ornn-planner-publico .` e
+`docker run -p 8080:8080 ornn-planner-publico`.
+- Três estágios: a página no modo público (Node), o jar (JDK, testes pulados: rode `./mvnw test` antes) e a imagem
+  final só com o JRE, o jar e o banco (somente leitura, `chmod 0444`, usuário sem root, `HEALTHCHECK` em
+  `/api/public/info`).
+- `.dockerignore` deixa de fora o resto de `backend/data/` (o banco completo do usuário nunca entra no contexto).
+- Atrás de um proxy com HTTPS (Caddy, nginx, o do serviço), o IP do visitante vem do `X-Forwarded-For`.
+- **O que deu para conferir aqui:** o Docker está instalado nesta máquina, mas o serviço dele estava parado e não o
+  liguei, então **a imagem não foi montada**. Simulei os passos dela: `npm run build:publico`, `./mvnw package
+  -DskipTests` (jar de 61 MB) e o jar rodando com as mesmas variáveis (`SPRING_PROFILES_ACTIVE=publico`,
+  `PLANNER_DB_PATH`, `JAVA_TOOL_OPTIONS`) sobre o banco exportado marcado como somente leitura. Subiu, serviu a página
+  pública, `POST /api/admin/export` deu 404, e a Efetividade Básica rodou na tela pela mesma origem (11 cenários,
+  pontuação ponderada 76,6, os mesmos números da Parte 1).
+
+### Opção 2 — Site estático só com o pré-calculado (de graça)
+O frontend lê arquivos JSON gerados do banco exportado, em hospedagem estática.
+
+| | |
+|---|---|
+| **Prós** | **Grátis** (GitHub Pages, Cloudflare Pages, Netlify). Sem servidor para cuidar, sem limite de visitantes, rápido (CDN). |
+| **Contras** | **Sem planejador interativo:** só o que foi calculado na exportação (as builds públicas no ritmo salvo, a Efetividade Básica delas, a Descoberta, as guias, as lutas dos cenários públicos). Mudar um item, o minuto ou o ouro/min não recalcula. A Parte 4 não funciona. |
+| **Custo** | US$ 0 (domínio opcional). |
+
+**Script:** `tools/site_estatico.py` lê um servidor público **local** (o jar no perfil `publico` sobre o banco
+exportado) e grava cada resposta de leitura em `site-estatico/api/...json`, no mesmo formato da API: catálogo e
+ícones, builds públicas e a linha do tempo de cada uma, arquétipos, Efetividade pré-calculada, relatórios, guias,
+Descoberta por campeão, kits, mapa, cenários públicos e a luta de cada um já rodada. Só a biblioteca padrão do Python;
+respeita o limite de cálculos (espera no 429).
+- **Rodado** contra o servidor público local (banco exportado com a pasta Anti Tank AD): 480 arquivos, 7,5 MB (a maior
+  parte são os ícones; com `--sem-icones` fica bem menor), 1 min 27 s, com uma espera de 60 s quando passou dos 600
+  pedidos por minuto.
+- Ler do próprio servidor garante que os JSONs têm exatamente o formato que as telas já leem.
+- **Falta para o site existir:** um modo `VITE_STATIC=1` do frontend que troque `fetch('/api/x')` por
+  `fetch('api/x.json')` e esconda o que recalcula. Pelo desenho do `api.js` (um ponto só de chamadas), é **1–2 dias**.
+
+**E o planejador interativo no navegador?** Teria de portar o motor para JavaScript:
+
+| Parte | Java hoje | Estimativa |
+|---|---|---|
+| Linha do tempo, ficha, relevância, ouro efetivo (`engine/`, `PlannerService`, leitura do catálogo e dos efeitos) | ~4.000 linhas | **3–5 semanas** de uma pessoa, com testes de paridade contra o Java (o `abilityMath.js`, o `effective.js` e o `shopModel.js` já espelham uma parte) |
+| Comparador rápido e Visão sob efeitos (usam a corrida de zero segundo da Arena: `SeenBy`, `QuickCompareService`, `BuildDeltaService`) | ~1.600 linhas, mais o que usam da Arena | +2–3 semanas |
+| Efetividade e lutas (a Arena inteira) | ~32.000 linhas em `arena/` | **meses**; e manter duas Arenas iguais quebraria o determinismo garantido pelos testes golden |
+
+- **Alternativa ao porte à mão:** compilar o Java do motor para o navegador (TeaVM ou GraalVM para WebAssembly).
+  `engine/` não usa Spring; o difícil é a leitura dos YAML (SnakeYAML), o Jackson e a reflexão. Estimo **1–2 semanas**
+  para provar se a linha do tempo compila e bate com o Java, com risco real de não compensar.
+- **Recomendação, se for estático:** começar só com o pré-calculado (1–2 dias de frontend) e deixar o porte para
+  depois de ver se há visitantes.
+
+### Opção 3 — Misto
+Estático para consultar (opção 2, de graça, na CDN) e um servidor pequeno **só** para o planejador e o comparador
+(opção 1 com os limites mais baixos).
+
+| | |
+|---|---|
+| **Prós** | A maioria das visitas (ler builds, guias, Descoberta) não toca o servidor; ele pode ser o menor plano ou uma camada gratuita que dorme. Se o servidor cair, a consulta continua no ar. |
+| **Contras** | Dois deploys a manter em sincronia a cada exportação; o servidor precisa liberar a origem do site estático (`planner.public.allowed-origins`, já suportado, só GET/POST/DELETE e sem cookies); o mesmo frontend precisa saber o que é estático e o que vai ao servidor. |
+| **Custo aproximado** | US$ 0 do estático + **US$ 0–6/mês** do servidor. |
+
+### Recomendação
+Para começar: **opção 1** num plano pequeno (ou numa camada gratuita), porque não exige trabalho novo, já tem os
+limites e é a única em que a Parte 4 roda. Se o custo ou a carga incomodarem, a **opção 3** reaproveita tudo isto e o
+script da opção 2. **A escolha e qualquer publicação ficam com o usuário.**

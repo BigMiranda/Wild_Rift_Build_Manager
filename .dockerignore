@@ -1,0 +1,14 @@
+# Imagem da versão pública (Rodada 11): só o código e o banco exportado entram no contexto.
+.git
+.claude
+capturas
+docs
+tools
+**/node_modules
+frontend/dist
+backend/target
+backend/src/main/resources/static
+backend/data/*
+!backend/data/publico
+backend/data/publico/*
+!backend/data/publico/ornn-planner-publico.db
