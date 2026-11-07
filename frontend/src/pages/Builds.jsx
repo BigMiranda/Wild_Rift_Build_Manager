@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import FolderTree from '../components/FolderTree.jsx';
@@ -7,6 +7,34 @@ import { useBuild } from '../buildContext.jsx';
 import { navigate } from '../router.js';
 import { PUBLIC } from '../publicMode.js';
 import { buildLink } from '../shareLink.js';
+import { mmss, n1 } from '../format.js';
+
+/** The public version's basic effectiveness of its public builds, calculated at the export (Rodada 11). */
+let precomputed = null;
+function usePrecomputed() {
+  const [rows, setRows] = useState([]);
+  useEffect(() => {
+    if (!PUBLIC) return;
+    if (!precomputed) precomputed = api.get('/api/public/effect').catch(() => []);
+    precomputed.then(setRows);
+  }, []);
+  return rows;
+}
+
+function PrecomputedEffect({ row }) {
+  if (!row) return null;
+  return (
+    <div className="notice small">
+      <strong>{t('pub.effTitle', { time: mmss(row.minute) })}</strong>{' '}
+      {row.index != null ? `${n1(row.index)}${row.grade ? ` · ${t(`efx.grade.${row.grade}`)}` : ''}` : '—'}
+      <details>
+        <summary>{t('pub.effTests', { n: row.tests?.length ?? 0 })}</summary>
+        <ul>{(row.tests ?? []).map((x) => <li key={x.key}>{x.name ?? x.key}: {x.index != null ? n1(x.index) : '—'}{x.grade ? ` · ${t(`efx.grade.${x.grade}`)}` : ''}</li>)}</ul>
+      </details>
+      <small className="muted">{t('pub.effHelp')}</small>
+    </div>
+  );
+}
 
 /**
  * The "Builds" super tab (Rodada 8): the folders and builds that were the planner's side column, with a preview of the
@@ -17,6 +45,7 @@ export default function Builds() {
   const [picked, setPicked] = useState(null);
   const [error, setError] = useState(null);
   const file = useRef(null);
+  const effects = usePrecomputed();
 
   const duplicate = async (id) => {
     try {
@@ -118,6 +147,7 @@ export default function Builds() {
                 <button onClick={() => copyLink(pickedBuild.id)} title={t('pub.linkHelp')}>{t('pub.link')}</button>
               </span>
             </div>
+            {PUBLIC && <PrecomputedEffect row={effects.find((r) => r.buildId === pickedBuild.id)} />}
             <BuildPreview id={pickedBuild.id} />
           </>
         )}

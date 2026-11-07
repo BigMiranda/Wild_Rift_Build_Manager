@@ -232,6 +232,8 @@ public class DiscoveryRepository {
         public String tree;
         public String createdAt;
         public String updatedAt;
+        /** Goes to the public version's export (Rodada 11). */
+        public boolean publico;
     }
 
     public List<GuideRow> guides(String unitCode) {
@@ -245,6 +247,7 @@ public class DiscoveryRepository {
             g.tree = rs.getString("tree");
             g.createdAt = rs.getString("created_at");
             g.updatedAt = rs.getString("updated_at");
+            g.publico = rs.getInt("publico") == 1;
             return g;
         }, args);
     }
@@ -256,19 +259,20 @@ public class DiscoveryRepository {
     public GuideRow saveGuide(GuideRow g) {
         String now = Instant.now().toString();
         g.updatedAt = now;
-        if (g.id != null && jdbc.update("UPDATE build_guide SET unit_code = ?, name = ?, tree = ?, updated_at = ? WHERE id = ?",
-                g.unitCode, g.name, g.tree, now, g.id) > 0) {
+        if (g.id != null && jdbc.update("UPDATE build_guide SET unit_code = ?, name = ?, tree = ?, updated_at = ?, publico = ? WHERE id = ?",
+                g.unitCode, g.name, g.tree, now, g.publico ? 1 : 0, g.id) > 0) {
             return g;
         }
         KeyHolder kh = new GeneratedKeyHolder();
         jdbc.update(con -> {
-            PreparedStatement ps = con.prepareStatement("INSERT INTO build_guide (unit_code, name, tree, created_at, updated_at) VALUES (?,?,?,?,?)",
+            PreparedStatement ps = con.prepareStatement("INSERT INTO build_guide (unit_code, name, tree, created_at, updated_at, publico) VALUES (?,?,?,?,?,?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, g.unitCode);
             ps.setString(2, g.name);
             ps.setString(3, g.tree);
             ps.setString(4, now);
             ps.setString(5, now);
+            ps.setInt(6, g.publico ? 1 : 0);
             return ps;
         }, kh);
         g.id = kh.getKey().longValue();

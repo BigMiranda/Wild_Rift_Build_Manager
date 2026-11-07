@@ -54,4 +54,17 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- `./mvnw -Pexport`: exports the public version's database (Rodada 11) and exits. -->
+        <profile>
+            <id>export</id>
+            <properties>
+                <spring-boot.run.profiles>exportar</spring-boot.run.profiles>
+            </properties>
+            <build>
+                <defaultGoal>spring-boot:run</defaultGoal>
+            </build>
+        </profile>
+    </profiles>
 </project>

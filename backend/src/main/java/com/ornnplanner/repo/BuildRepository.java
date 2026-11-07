@@ -26,6 +26,8 @@ public class BuildRepository {
         public long id;
         public String name;
         public String createdAt;
+        /** Its builds go to the public version's export (Rodada 11). */
+        public boolean publico;
     }
 
     /** Ragdoll stat as typed by the user; null = left blank. */
@@ -217,6 +219,7 @@ public class BuildRepository {
             f.id = rs.getLong("id");
             f.name = rs.getString("name");
             f.createdAt = rs.getString("created_at");
+            f.publico = rs.getInt("publico") == 1;
             return f;
         });
     }
@@ -235,6 +238,10 @@ public class BuildRepository {
 
     public boolean renameFolder(long id, String name) {
         return jdbc.update("UPDATE folder SET name = ? WHERE id = ?", name, id) > 0;
+    }
+
+    public boolean markFolderPublic(long id, boolean publico) {
+        return jdbc.update("UPDATE folder SET publico = ? WHERE id = ?", publico ? 1 : 0, id) > 0;
     }
 
     public int countBuildsInFolder(long id) {

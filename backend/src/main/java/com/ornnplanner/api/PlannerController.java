@@ -132,6 +132,14 @@ public class PlannerController {
         }
     }
 
+    /** Marks a folder for the public version's export (Rodada 11): only marked folders' builds go out. */
+    @PutMapping("/folders/{id}/public")
+    public void markFolderPublic(@PathVariable long id, @RequestBody Map<String, Boolean> body) {
+        if (!builds.markFolderPublic(id, Boolean.TRUE.equals(body.get("publico")))) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+    }
+
     @DeleteMapping("/folders/{id}")
     public void deleteFolder(@PathVariable long id) {
         if (builds.countBuildsInFolder(id) > 0) {

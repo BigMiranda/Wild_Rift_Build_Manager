@@ -93,3 +93,79 @@ Prompt: `prompt-rodada-11-publica.md`, depois das Rodadas 8 a 10. Uma parte por 
 - A Efetividade Básica dessa build local rodou os 11 cenários; a Visão sob efeitos e o comparador também.
 - A Arena abriu "vs Renekton" e rodou a luta salva (vitória do lado vermelho aos 21,5 s, abaixo do teto de 30 s).
 - A Descoberta mostra só o seletor de build e o resultado salvo.
+
+## Parte 2 — Exportar a base otimizada ✅
+
+### Como exportar
+- **Linha de comando:** `cd backend && ./mvnw -Pexport`. O perfil `export` do Maven roda o app local no perfil
+  `exportar` do Spring, sem servidor web (`application-exportar.properties`); o `PublicExportRunner` exporta, imprime o
+  resumo e sai. Saída padrão: `backend/data/publico/ornn-planner-publico.db` (`planner.export.out` ou
+  `PLANNER_EXPORT_OUT`), que é o mesmo caminho que o perfil `publico` lê.
+- **Pelo Admin:** Admin › Catálogo › "Exportar a base pública" (`POST /api/admin/export`), com as contagens e o que
+  ficou de fora.
+
+### O que sai: só o marcado (esquema v26)
+- `folder.publico` e `build_guide.publico` (migração v26). Em Builds, cada pasta tem um botão 🔒/🌐; nas Guias, uma
+  caixa "Pública". **Sem nenhuma pasta marcada, a exportação recusa** ("marque ao menos uma").
+- **Builds:** só as das pastas marcadas, com as compras, os momentos e os status de boneco delas.
+- **Guias:** só as marcadas.
+- **Cenários da Arena:** só os feitos inteiramente de builds públicas (e bonecos). Não precisou de outra marcação: um
+  cenário que cita uma build privada não sai.
+- **Pré-calculado:**
+  - Descoberta e campanhas: as linhas de `build_discovery` terminadas (`feito`) do patch atual;
+  - Efetividade Básica de cada build pública, na última compra, numa tabela nova `public_effect` (a tela pública
+    mostra na prévia da build, em Builds; `GET /api/public/effect`);
+  - IAs do automático: as que têm luta no histórico e a melhor salva de cada dono (campeão ou classe), na ordem do
+    `AutoBrain`, mais as que um cenário público cita. Só pesos e o que a luta lê: a cadeia, o plano do time, a versão
+    de origem e o cenário de treino saem (`NULL`).
+- **Catálogo:** itens, status, campeões, runas e feitiços (YAML no jar), Forja, XP. O mapa e os objetivos vêm dos YAML
+  do jar.
+- `public_export`: data, patch e pastas da exportação (`GET /api/public/info`).
+
+### O que fica de fora
+- Builds, pastas e guias não marcadas; cenários com builds privadas; IAs fora da escolha do automático (histórico de
+  treino) e as linhas do histórico delas; combos inativos; a configuração da efetividade ofensiva; as builds da meta
+  digitadas; a fila de campanhas e descobertas não terminadas ou de outro patch.
+- Texto que podia citar builds privadas: de que build cada combo foi achado, a "impressão" das lutas do histórico (a
+  escolha do automático não a lê). E de que print cada item foi transcrito.
+- **Tabelas que o público não lê:** `arena_dummy`, `arena_guideline` (apagadas). **Coluna:** `build.include_conditional`
+  (sem uso desde a v3). As colunas que os repositórios leem ficam, mesmo vazias: apagar quebraria a leitura.
+  - Por isso os endpoints de diretrizes de treino saíram da lista pública.
+
+### Otimizado
+- Cópia por `VACUUM INTO` (o SQLite copia o banco aberto sem travar o app), cortes, índices para as leituras públicas
+  (`build.folder_id`, `build_step.item_id`, `build_discovery (unit_code, patch, status)`, `build_guide.unit_code`,
+  `effect_test.kind`), `ANALYZE` e **`VACUUM` de novo**: nenhuma linha apagada sobra em página livre do arquivo.
+- O arquivo é escrito ao lado (`.tmp`) e trocado no fim.
+- **Relatório:** `<banco>-relatorio.md` e `-relatorio.json` ao lado do banco: pastas, builds, cenários, linhas por
+  tabela, tamanho, tempo e a lista do que ficou de fora.
+
+### Rodado numa cópia do banco do usuário
+Duas pastas marcadas (Anti Tank AD e Anti Tank AP), `./mvnw -Pexport` numa cópia em `data/export-teste/`:
+- **6 builds** de 43, **14 IAs** de 186, **0 cenários** (os 5 citam builds de outras pastas), 6 Efetividades Básicas
+  pré-calculadas;
+- **1.232 KB** (o banco inteiro tem 9.273 KB), em **4,3 s** de exportação (22 s com a subida do Maven);
+- `integrity_check` ok; nenhum nome das 37 builds privadas aparece no arquivo (a única coincidência é um item da loja
+  com o mesmo nome de uma build).
+
+### Defeito achado na primeira rodada real
+- Com nenhum cenário público, o corte era `id NOT IN (NULL)`, que no SQL **não apaga nada**: os 5 cenários privados
+  teriam saído. Agora uma lista vazia é `()`, que o SQLite lê como lista vazia (apaga tudo). Teste próprio.
+- A contagem de builds excluídas somava as compras apagadas em cascata (420 em vez de 37): agora conta antes de apagar.
+
+### Testes
+`PublicExportTest` (3 testes): um banco com uma pasta marcada e outra não, um cenário de cada lado e uma guia de cada.
+- Só o marcado sai (pastas, builds, cenários, guias), a tabela de bonecos some, o relatório existe e bate com o arquivo.
+- **O app no perfil público sobe com o banco exportado, abre o planejador (linha do tempo), roda o comparador rápido
+  e a Efetividade Básica**, e lê a Efetividade pré-calculada. A build privada responde 404.
+- Uma lista vazia de ids apaga tudo.
+
+### Conferido nas telas
+- App local (`backend-dev`, banco de desenvolvimento): o 🔒 da pasta "Anti Tank AD" virou 🌐 (`publico: true`); a caixa
+  "Pública" aparece no editor de guias; Admin › "Exportar" gerou o banco com as 2 builds da pasta, 748 KB, 2,25 s, com
+  a lista do que ficou de fora.
+- Versão pública sobre o banco exportado: só as 6 builds das pastas marcadas, a cópia local do visitante em "Minhas
+  builds", e na prévia de "Darius de CdC" a Efetividade Básica da exportação (72,5 · Regular, aos 22:32, 11 cenários).
+- **No Windows, o arquivo em uso por um servidor público aberto não pode ser trocado:** pare o servidor antes de
+  exportar por cima (a exportação avisa que falhou).
+- Suíte inteira: 393 testes, 0 falhas.

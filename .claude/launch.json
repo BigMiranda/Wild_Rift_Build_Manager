@@ -62,7 +62,7 @@
       "runtimeExecutable": "cmd",
       "runtimeArgs": [
         "/c",
-        "set SERVER_PORT=8094&& set SPRING_PROFILES_ACTIVE=publico&& set PLANNER_PUBLIC_ALLOWED_ORIGINS=http://localhost:5178&& set PLANNER_DB_PATH=./data/publico-teste/ornn-planner.db&& cd backend && .\\mvnw.cmd spring-boot:run"
+        "set SERVER_PORT=8094&& set SPRING_PROFILES_ACTIVE=publico&& set PLANNER_PUBLIC_ALLOWED_ORIGINS=http://localhost:5178&& cd backend && .\\mvnw.cmd spring-boot:run"
       ],
       "port": 8094,
       "autoPort": false

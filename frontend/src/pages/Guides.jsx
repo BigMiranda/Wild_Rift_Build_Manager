@@ -229,6 +229,9 @@ export default function Guides() {
             {PUBLIC ? <h4>{guide.name}</h4> : (
               <div className="row">
                 <label className="inline">{t('efx.name')}<input value={guide.name ?? ''} onChange={(e) => setGuide({ ...guide, name: e.target.value })} /></label>
+                <label className="check" title={t('export.guideHelp')}>
+                  <input type="checkbox" checked={!!guide.publico} onChange={(e) => setGuide({ ...guide, publico: e.target.checked })} />{t('export.guide')}
+                </label>
                 <button className="primary" onClick={save}>{t('efx.save')}</button>
                 {guide.id && <button className="danger" onClick={remove}>{t('efx.delete')}</button>}
               </div>

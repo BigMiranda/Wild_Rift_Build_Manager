@@ -40,6 +40,8 @@ public class GuideService {
         public String name;
         public List<Guide.Node> nodes = new ArrayList<>();
         public String updatedAt;
+        /** Goes to the public version's export (Rodada 11). */
+        public boolean publico;
     }
 
     /** A match to read a guide against: builds (saved) of the enemies, the lane opponent among them, gold and minute. */
@@ -120,6 +122,7 @@ public class GuideService {
         g.unitCode = v.unitCode;
         g.name = v.name == null || v.name.isBlank() ? "Guia" : v.name.trim();
         g.tree = write(v.nodes);
+        g.publico = v.publico;
         return view(repo.saveGuide(g));
     }
 
@@ -133,6 +136,7 @@ public class GuideService {
         v.unitCode = g.unitCode;
         v.name = g.name;
         v.updatedAt = g.updatedAt;
+        v.publico = g.publico;
         try {
             v.nodes = JSON.readValue(g.tree, new TypeReference<List<Guide.Node>>() { });
         } catch (Exception e) {

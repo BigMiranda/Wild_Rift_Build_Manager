@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 25;
+    static final int VERSION = 26;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -155,6 +155,13 @@ public class SchemaManager {
             // v25 (Rodada 9): the guides; meta_build and build_discovery come with them from schema.sql below
             jdbc.execute("CREATE TABLE IF NOT EXISTS build_guide (id INTEGER PRIMARY KEY AUTOINCREMENT, unit_code TEXT NOT NULL, "
                     + "name TEXT NOT NULL, tree TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)");
+        }
+        if (version < 26 && tableExists("folder") && !columnExists("folder", "publico")) {
+            // v26 (Rodada 11): the folders and guides marked for the public version's export (nothing goes unmarked)
+            jdbc.execute("ALTER TABLE folder ADD COLUMN publico INTEGER NOT NULL DEFAULT 0");
+        }
+        if (version < 26 && tableExists("build_guide") && !columnExists("build_guide", "publico")) {
+            jdbc.execute("ALTER TABLE build_guide ADD COLUMN publico INTEGER NOT NULL DEFAULT 0");
         }
         // v16 / v17 / v18 / v24 / v25: arena_combo, arena_dummy, arena_guideline, ai_result, meta_build and build_discovery are new tables, created by schema.sql
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);

@@ -1,7 +1,7 @@
 import ItemPicker from '../components/ShopPicker.jsx';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
-import { currentLang, statLabel } from '../i18n.js';
+import { currentLang, statLabel, t } from '../i18n.js';
 import { n0, n2, pct } from '../format.js';
 import ItemIcon from '../components/ItemIcon.jsx';
 import BaseInfo from '../components/BaseInfo.jsx';
@@ -107,6 +107,7 @@ export default function Admin({ meta, items, onChanged }) {
         ))}
       </div>
       <BaseInfo base={meta?.base} />
+      <PublicExport />
       {msg && (
         <div className="notice spread"><span>{msg}</span><button className="link" onClick={() => setMsg(null)}>{a('close')}</button></div>
       )}
@@ -437,6 +438,48 @@ function CatalogAdmin({ run }) {
       <div style={{ marginTop: 10 }}><button className="primary" onClick={reimport}>{a('reimport')}</button></div>
       {report && (
         <p>{a('report', { patch: report.patch, ins: report.inserted, upd: report.updated, skip: report.skippedEdited, stats: report.statDefs })}</p>
+      )}
+    </section>
+  );
+}
+
+/** "Exportar a base pública" (Rodada 11): the read-only database of the public version, with what went out. */
+function PublicExport() {
+  const [busy, setBusy] = useState(false);
+  const [report, setReport] = useState(null);
+  const [error, setError] = useState(null);
+  const run = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      setReport(await api.post('/api/admin/export', {}));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="panel">
+      <div className="spread">
+        <h3>{t('export.title')}</h3>
+        <button onClick={run} disabled={busy}>{busy ? t('export.busy') : t('export.run')}</button>
+      </div>
+      <p className="muted small">{t('export.help')}</p>
+      {error && <p className="error">{error}</p>}
+      {report && (
+        <>
+          <p className="small">{t('export.done', { file: report.file, kb: Math.round(report.sizeBytes / 1024), s: report.seconds, n: report.builds.length, folders: report.folders.join(', ') })}</p>
+          <details>
+            <summary className="small">{t('export.details')}</summary>
+            <div className="row" style={{ alignItems: 'flex-start' }}>
+              <table className="data" style={{ width: 'auto' }}>
+                <tbody>{Object.entries(report.counts).map(([k, v]) => <tr key={k}><td className="l">{k}</td><td>{v}</td></tr>)}</tbody>
+              </table>
+              <ul className="small">{report.excluded.map((e) => <li key={e}>{e}</li>)}</ul>
+            </div>
+          </details>
+        </>
       )}
     </section>
   );

@@ -29,6 +29,8 @@ export default function FolderTree({ folders, builds, activeId, compareIds, arch
     const name = window.prompt(t('folders.renamePrompt'), f.name);
     if (name && name !== f.name) run(() => api.put(`/api/folders/${f.id}`, { name }));
   };
+  /** Marks a folder for the public version's export (Rodada 11): only marked folders' builds go out. */
+  const togglePublic = (f) => run(() => api.put(`/api/folders/${f.id}/public`, { publico: !f.publico }));
   const deleteFolder = (f) => {
     if (window.confirm(t('folders.deleteConfirm', { name: f.name }))) run(() => api.del(`/api/folders/${f.id}`));
   };
@@ -65,6 +67,10 @@ export default function FolderTree({ folders, builds, activeId, compareIds, arch
             <div className="folder-head">
               <span className="name" title={f.readOnly ? t('pub.folderPublic') : f.name}>{f.readOnly ? '🌐' : '📁'} {f.name}</span>
               {!f.readOnly && <button className="icon" title={t('folders.newBuild')} aria-label={`${t('folders.newBuild')}: ${f.name}`} onClick={() => onNew(f.id)}>+</button>}
+              {!PUBLIC && (
+                <button className={`icon${f.publico ? ' on' : ''}`} title={t(f.publico ? 'export.folderOn' : 'export.folderOff')}
+                  aria-pressed={!!f.publico} aria-label={`${t('export.folderToggle')}: ${f.name}`} onClick={() => togglePublic(f)}>{f.publico ? '🌐' : '🔒'}</button>
+              )}
               {!f.readOnly && <button className="icon" title={t('folders.rename')} aria-label={`${t('folders.rename')}: ${f.name}`} onClick={() => renameFolder(f)}>✎</button>}
               {!f.readOnly && <button className="icon danger" title={t('folders.delete')} aria-label={`${t('folders.delete')}: ${f.name}`} onClick={() => deleteFolder(f)}>✕</button>}
             </div>

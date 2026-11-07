@@ -39,8 +39,11 @@ public class AdminController {
     private final CatalogRepository catalog;
     private final ReferenceRepository reference;
     private final CatalogImporter importer;
+    private final com.ornnplanner.publico.PublicExporter exporter;
 
-    public AdminController(CatalogRepository catalog, ReferenceRepository reference, CatalogImporter importer) {
+    public AdminController(CatalogRepository catalog, ReferenceRepository reference, CatalogImporter importer,
+                           com.ornnplanner.publico.PublicExporter exporter) {
+        this.exporter = exporter;
         this.catalog = catalog;
         this.reference = reference;
         this.importer = importer;
@@ -98,6 +101,12 @@ public class AdminController {
     }
 
     /** Re-reads the bundled YAML. Items corrected by hand are kept unless overwriteEdited=true. */
+    /** Exports the public version's read-only database (Rodada 11): only the folders and guides marked public. */
+    @PostMapping("/export")
+    public com.ornnplanner.publico.PublicExporter.Report exportPublic() {
+        return exporter.export();
+    }
+
     @PostMapping("/catalog/reimport")
     public ImportReport reimport(@RequestParam(defaultValue = "false") boolean overwriteEdited) {
         return importer.importAll(overwriteEdited);

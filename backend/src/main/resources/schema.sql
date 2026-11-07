@@ -24,6 +24,8 @@
 -- Version 24: what each AI did in each fight (ai_result), read by the automatic brain.
 -- Version 25 (Rodada 9): meta builds kept by the user (meta_build), discovery results and the campaigns' queue
 --   (build_discovery), and the guides of decisions (build_guide).
+-- Version 26 (Rodada 11): what goes to the public version: folders and guides marked public (folder.publico,
+--   build_guide.publico).
 
 CREATE TABLE IF NOT EXISTS stat_def (
     name        TEXT PRIMARY KEY,
@@ -112,7 +114,8 @@ CREATE TABLE IF NOT EXISTS xp_level (
 CREATE TABLE IF NOT EXISTS folder (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     name       TEXT NOT NULL UNIQUE,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    publico    INTEGER NOT NULL DEFAULT 0      -- 1 = its builds go to the public version's export (v26)
 );
 
 CREATE TABLE IF NOT EXISTS build (
@@ -305,5 +308,6 @@ CREATE TABLE IF NOT EXISTS build_guide (
     name        TEXT NOT NULL,
     tree        TEXT NOT NULL,                    -- the tree of conditions and decisions, as JSON
     created_at  TEXT NOT NULL,
-    updated_at  TEXT NOT NULL
+    updated_at  TEXT NOT NULL,
+    publico     INTEGER NOT NULL DEFAULT 0        -- 1 = goes to the public version's export (v26)
 );

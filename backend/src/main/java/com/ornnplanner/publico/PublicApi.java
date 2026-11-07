@@ -47,7 +47,7 @@ public final class PublicApi {
             get("/api/arena/facts"), get("/api/arena/templates"), get("/api/arena/rift-rules"), get("/api/arena/kits"),
             get("/api/arena/scenarios"), get("/api/arena/scenarios/*"), get("/api/arena/policies"),
             get("/api/arena/combos"),
-            get("/api/public/info"),
+            get("/api/public/info"), get("/api/public/effect"),
             // the planner (timeline, sheet, relevance, estimated effective gold), the quick comparison, seen under
             // effects, the basic effectiveness and a short Arena fight in a public scenario
             calc("/api/calculate"), calc("/api/relevance"), calc("/api/archetypes"),
