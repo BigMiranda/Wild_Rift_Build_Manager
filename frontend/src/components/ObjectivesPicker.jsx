@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 
-export const ELEMENTS = ['infernal', 'montanha', 'oceano', 'gelo'];
+/** The three elemental drakes of Wild Rift (prints of the user, 05/11/2026): no Cloud, Ice or Hextech. */
+export const ELEMENTS = ['oceano', 'montanha', 'infernal'];
 
 let cached = null;
 /** The numbers of the objectives (`objetivos_<patch>.yml`), read once. */
@@ -19,35 +20,55 @@ export const emptyObjectives = () => ({ dragons: {}, soul: null, elder: false, b
 
 export const hasObjectives = (o) => Boolean(o && (Object.values(o.dragons ?? {}).some((n) => n > 0) || o.soul || o.elder || o.baron));
 
-/** What the objectives add to the stats at a minute: stat -> amount, by the same rule as the fight. */
-export function objectiveDelta(objectives, rules, minute, total) {
+/**
+ * What `stacks` drakes of an element add (mirror of RiftRules.dragonDelta): the fixed lines first, then each % of the
+ * total, read from the total with the other sources and the drakes' fixed part (Montanha: 4 + 3% of the total, per drake).
+ */
+export function dragonDelta(element, stacks, total) {
   const out = {};
-  if (!hasObjectives(objectives) || !rules) return out;
-  const add = (k, v) => { out[k] = (out[k] ?? 0) + v; };
+  const lines = element?.status;
+  if (!Array.isArray(lines) || !stacks) return out;
+  lines.filter((l) => l.ratio == null).forEach((l) => { out[l.stat] = (out[l.stat] ?? 0) + (l.valor ?? 0) * stacks; });
+  const fixed = { ...out };
+  lines.filter((l) => l.ratio != null).forEach((l) => {
+    const ref = l.ref ?? l.stat;
+    out[l.stat] = (out[l.stat] ?? 0) + l.ratio * stacks * ((total?.[ref] ?? 0) + (fixed[ref] ?? 0));
+  });
+  return out;
+}
+
+/** Each source of the objectives with what it adds: [{ source, stacks, delta }], the drakes by element, then Baron. */
+export function objectiveParts(objectives, rules, minute, total) {
+  const parts = [];
+  if (!hasObjectives(objectives) || !rules) return parts;
   Object.entries(objectives.dragons ?? {}).forEach(([element, stacks]) => {
-    const status = rules.elementos?.[element]?.status;
-    if (!status || !stacks) return;
-    Object.entries(status).forEach(([stat, list]) => {
-      const v = list[Math.min(2, stacks - 1)];
-      if (stat.startsWith('% ')) add(stat.slice(2), ((total?.[stat.slice(2)] ?? 0) * v) / 100);
-      else add(stat, v);
-    });
+    const delta = dragonDelta(rules.elementos?.[element], stacks, total);
+    if (Object.keys(delta).length) parts.push({ source: element, stacks, delta });
   });
   if (objectives.baron && rules.mao_do_barao) {
     const g = rules.mao_do_barao.dda_pdh_por_min;
-    add('Attack Damage', g.base_dda + g.dda * minute);
-    add('Ability Power', g.base_pdh + g.pdh * minute);
+    parts.push({ source: 'baron', delta: { 'Attack Damage': g.base_dda + g.dda * minute, 'Ability Power': g.base_pdh + g.pdh * minute } });
   }
+  return parts;
+}
+
+/** What the objectives add to the stats at a minute: stat -> amount, by the same rule as the fight. */
+export function objectiveDelta(objectives, rules, minute, total) {
+  const out = {};
+  objectiveParts(objectives, rules, minute, total).forEach((p) => {
+    Object.entries(p.delta).forEach(([k, v]) => { out[k] = (out[k] ?? 0) + v; });
+  });
   return out;
 }
 
 /** The point of a minute with the objectives on top: the sheet and the bar read it as any other. */
 export function withObjectives(point, objectives, rules) {
   if (!point || !hasObjectives(objectives) || !rules) return point;
+  const parts = objectiveParts(objectives, rules, point.minute, point.total);
   const delta = objectiveDelta(objectives, rules, point.minute, point.total);
   const total = { ...point.total };
   Object.entries(delta).forEach(([k, v]) => { total[k] = (total[k] ?? 0) + v; });
-  return { ...point, total, objectiveDelta: delta };
+  return { ...point, total, objectiveDelta: delta, objectiveParts: parts };
 }
 
 /** Drake stacks by element, the soul, the Elder and the Hand of Baron. */

@@ -61,6 +61,74 @@ public final class RiftRules {
         return t;
     }
 
+    /** How many waves left before {@code second}. */
+    public int wavesBefore(double second) {
+        int n = 0;
+        double t = num(30, "tropas", "primeira_onda");
+        while (t < second - 1e-9) {
+            n++;
+            t += waveGap(t);
+        }
+        return n;
+    }
+
+    /** Second a camp first appears: the jungle's first spawn, and the buff camps a moment later. */
+    public double campAppears(String camp) {
+        double first = num(20, "selva", "primeira_aparicao");
+        Map<String, Object> c = map("selva", "acampamentos", camp);
+        return c != null && c.get("buff") != null ? first + num(0, "selva", "buffs_depois") : first;
+    }
+
+    /** The elements of the drakes in the order they come in a match: drawn by the seed when the rules say so. */
+    @SuppressWarnings("unchecked")
+    public List<String> dragonOrder(long seed) {
+        Map<String, Object> o = map("objetivos", "dragao", "ordem");
+        List<String> out = new java.util.ArrayList<>();
+        if (o != null && o.get("valores") instanceof List) {
+            out.addAll((List<String>) o.get("valores"));
+        } else {
+            Map<String, Object> e = map("objetivos", "dragao", "elementos");
+            if (e != null) {
+                out.addAll(e.keySet());
+            }
+        }
+        if (o != null && Boolean.TRUE.equals(o.get("sorteada"))) {
+            java.util.SplittableRandom r = new java.util.SplittableRandom(seed * 0x9E3779B97F4A7C15L + 77);
+            for (int i = out.size() - 1; i > 0; i--) {
+                java.util.Collections.swap(out, i, r.nextInt(i + 1));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * What {@code stacks} drakes of an element add to the stats: the fixed lines first, then the % of the total, which
+     * reads the total after every other source and the fixed part of the drakes ({@code total} gives the stat before the
+     * drakes). Each drake adds its lines again. Stat -> amount, in the order of the lines.
+     */
+    @SuppressWarnings("unchecked")
+    public static Map<String, Double> dragonDelta(Map<String, Object> element, int stacks, java.util.function.ToDoubleFunction<String> total) {
+        Map<String, Double> out = new java.util.LinkedHashMap<>();
+        Object status = element == null ? null : element.get("status");
+        if (!(status instanceof List) || stacks <= 0) {
+            return out;
+        }
+        for (Map<String, Object> l : (List<Map<String, Object>>) status) {
+            if (l.get("ratio") == null) {
+                out.merge(String.valueOf(l.get("stat")), value(l.get("valor"), 0) * stacks, Double::sum);
+            }
+        }
+        Map<String, Double> fixed = new java.util.LinkedHashMap<>(out);
+        for (Map<String, Object> l : (List<Map<String, Object>>) status) {
+            if (l.get("ratio") != null) {
+                String ref = String.valueOf(l.getOrDefault("ref", l.get("stat")));
+                double before = total.applyAsDouble(ref) + fixed.getOrDefault(ref, 0.0);
+                out.merge(String.valueOf(l.get("stat")), value(l.get("ratio"), 0) * stacks * before, Double::sum);
+            }
+        }
+        return out;
+    }
+
     /** Seconds from a wave at {@code second} to the next. */
     public double waveGap(double second) {
         Map<String, Object> fast = map("tropas", "intervalo_rapido");

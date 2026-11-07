@@ -89,8 +89,8 @@ class RiftTest {
 
     @Test
     void thePathGoesAroundAWall() {
-        double[][] way = MAP.path(3300, 4800, 4400, 4800);
-        assertFalse(MAP.clear(3300, 4800, 4400, 4800), "a wall on the straight line");
+        double[][] way = MAP.path(3300, 4800, 4600, 4800);
+        assertFalse(MAP.clear(3300, 4800, 4600, 4800), "a wall on the straight line");
         assertTrue(way.length >= 1);
         double ax = 3300;
         double ay = 4800;
@@ -105,9 +105,9 @@ class RiftTest {
     void aChampionWalksAroundWallsAndADashStopsAtThem() {
         Arena.Input a = champ("Ornn", 0, 3300, 4800);
         Arena.Input b = champ("Darius", 1, 11000, 11000);
-        Result r = fight(only(o -> { }), 6, List.of(a, b), move(0, 0.1, 4400, 4800));
+        Result r = fight(only(o -> { }), 10, List.of(a, b), move(0, 0.1, 4600, 4800));
         ArenaModel.UnitFrame end = r.frames.get(r.frames.size() - 1).units.get(0);
-        assertTrue(Math.hypot(end.x - 4400, end.y - 4800) < 60, end.x + "," + end.y);
+        assertTrue(Math.hypot(end.x - 4600, end.y - 4800) < 60, end.x + "," + end.y);
         for (Frame f : r.frames) {
             assertFalse(MAP.solid(f.units.get(0).x, f.units.get(0).y), "inside a wall");
         }
@@ -119,7 +119,7 @@ class RiftTest {
         o.minute = 0;
         Arena.Input a = champ("Ornn", 0, 6000, 200);
         Arena.Input b = champ("Darius", 1, 6000, 11800);
-        Result r = fight(o, 31, List.of(a, b));
+        Result r = fight(o, 26, List.of(a, b));   // the first wave leaves at 0:25 (the user, 05/11/2026)
         Frame before = r.frames.get(r.frames.size() - 15);
         Frame after = r.frames.get(r.frames.size() - 1);
         assertEquals(0, shapes(before, "tropa"));
@@ -131,9 +131,9 @@ class RiftTest {
         assertEquals(6, RULES.wave(1, false).size());
         assertEquals(7, RULES.wave(3, false).size());
         assertEquals(8, RULES.wave(3, true).size());
-        assertEquals(30, RULES.waveGap(100), 1e-9);
+        assertEquals(25, RULES.waveGap(100), 1e-9);   // 25 s the whole match (the user, 05/11/2026)
         assertEquals(25, RULES.waveGap(300), 1e-9);
-        assertEquals(30, RULES.waveGap(610), 1e-9);
+        assertEquals(25, RULES.waveGap(610), 1e-9);
     }
 
     @Test

@@ -123,7 +123,16 @@ export function RelevanceReport({ point, prices, itemsById, draft, overlay }) {
     <section className="panel">
       <h3>{t('report.title', { time: mmss(point.minute) })}</h3>
       <p className="muted" style={{ marginTop: 0 }}>{t('report.help')}</p>
-      {objectiveGold > 0 && <p><strong>{t('objectives.title')}</strong>: {n0(objectiveGold)} ({n0(share(objectiveGold))}%)</p>}
+      {objectiveGold > 0 && (
+        <p><strong>{t('objectives.title')}</strong>: {n0(objectiveGold)} ({n0(share(objectiveGold))}%)
+          {(point.objectiveParts ?? []).length > 1 && ' — ' + point.objectiveParts.map((p) => {
+            const g = Object.entries(p.delta).reduce((sum, [k, v]) => sum + v * (prices[k] ?? 0), 0);
+            const name = p.source === 'baron' ? t('objectives.baron') : `${t(`objectives.${p.source}`)} ×${p.stacks}`;
+            return `${name}: ${n0(g)}`;
+          }).join(' · ')}
+          {(point.objectiveParts ?? []).length === 1 && ` — ${point.objectiveParts[0].source === 'baron' ? t('objectives.baron') : `${t(`objectives.${point.objectiveParts[0].source}`)} ×${point.objectiveParts[0].stacks}`}`}
+        </p>
+      )}
       {draft && rows.length > 0 && (
         <div className="pass-sources">
           <label className="check" title={t('report.passHelp')}>

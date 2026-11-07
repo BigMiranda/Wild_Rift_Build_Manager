@@ -1604,7 +1604,8 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick, onSe
             <rect key={s.id} x={s.x - s.length / 2} y={-s.width / 2} width={s.length} height={s.width} fill={TEAM_SOFT[s.team] ?? 'none'}
               stroke={TEAM[s.team]} strokeDasharray="40 30" strokeWidth={10}><title>{s.label}</title></rect>
           ))}
-          {frame.shapes.map((s) => <ShapeView key={s.id} s={s} lit={lit(s)} />)}
+          {frame.shapes.map((s) => <ShapeView key={s.id} s={s} lit={lit(s)} units={frame.units}
+            hovered={Boolean(hover?.found?.some((h) => h.shape?.id === s.id))} />)}
           {frame.units.map((u, i) => ((seeAll || !u.invisible) ? <UnitView key={i} u={u} i={i} name={names[i]} team={result.fighters[i]?.team ?? 0} span={span}
             lit={highlight?.fighter === i} /> : null))}
         </g>
@@ -1694,16 +1695,36 @@ export function RiftGround({ world }) {
   );
 }
 
-function ShapeView({ s, lit }) {
+function ShapeView({ s, lit, units, hovered }) {
   const color = lit ? '#ffffff' : s.team < 0 ? '#9a8f7a' : TEAM[s.team];
   const fill = s.team < 0 ? 'rgba(154,143,122,.6)' : TEAM_SOFT[s.team];
   const sw = lit ? 18 : 6;
+  if (s.role === 'escombro') {
+    // a fallen tower: no target any more, its rubble stays on the map
+    const r = s.radius ?? 80;
+    return (
+      <g opacity={0.7}>
+        <title>{s.label}</title>
+        <polygon points={`${s.x - r},${s.y - r * 0.6} ${s.x - r * 0.2},${s.y + r * 0.7} ${s.x + r * 0.3},${s.y - r * 0.1} ${s.x + r},${s.y + r * 0.5} ${s.x + r * 0.8},${s.y - r * 0.8}`}
+          fill="#3a3f45" stroke={TEAM[s.team] ?? '#9a8f7a'} strokeWidth={8} strokeDasharray="18 12" />
+      </g>
+    );
+  }
   if (s.role) {
     const bar = s.role === 'torre' || s.role === 'nexo' || s.role === 'objetivo';
+    // the tower's range: on hover / touch, and always while a champion is inside it
+    const inside = s.reach > 0 && (units ?? []).some((u) => u.state !== 'dead' && Math.hypot(u.x - s.x, u.y - s.y) <= s.reach);
     return (
       <g>
+        {s.reach > 0 && (hovered || inside) && (
+          <circle cx={s.x} cy={s.y} r={s.reach} fill={inside ? 'rgba(255,90,70,.08)' : 'none'} stroke={color} strokeOpacity={0.7}
+            strokeDasharray="40 24" strokeWidth={10} />
+        )}
         <circle cx={s.x} cy={s.y} r={s.radius ?? 20} fill={s.role === 'tropa' ? color : fill} stroke={color} strokeWidth={s.role === 'tropa' ? 0 : 8} />
         {bar && s.maxHp > 0 && <rect x={s.x - 110} y={s.y + (s.radius ?? 20) + 24} width={(220 * s.hp) / s.maxHp} height={24} fill={color} />}
+        {s.plates > 0 && Array.from({ length: s.plates }, (_, k) => (
+          <rect key={k} x={s.x - 110 + k * 46} y={s.y + (s.radius ?? 20) + 56} width={38} height={14} fill={color} opacity={0.6} />
+        ))}
       </g>
     );
   }

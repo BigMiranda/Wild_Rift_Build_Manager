@@ -5,14 +5,16 @@
 #   NP  nota de patch oficial (docs/patches/)
 #   PC  LoL de PC, usado como último recurso: sempre estimativa
 #   EST estimativa própria, sem fonte
-# Consultado em 31/10/2026. Tempos em segundos de partida; vida e dano por minuto (por_min) ou por nível (por_nivel).
-fonte: "RPN, WR, NP; PC e EST marcados"
-data: "2026-10-31"
+#   USU dado informado pelo usuário ou print do usuário (vale mais que as fontes online)
+# Consultado em 31/10/2026; dados do usuário de 05/11/2026 (Rodada 10). Tempos em segundos de partida; vida e dano por
+# minuto (por_min) ou por nível (por_nivel).
+fonte: "USU, RPN, WR, NP; PC e EST marcados"
+data: "2026-11-07"
 
 tropas:
-  primeira_onda: {valor: 30, fonte: "PC (estimativa)"}
-  intervalo: {valor: 30, fonte: "RPN (4.2: 30 s fora da janela)"}
-  intervalo_rapido: {de: 240, ate: 600, valor: 25, fonte: "RPN 4.2"}
+  primeira_onda: {valor: 25, fonte: "usuário (05/11/2026): a contagem começa em 0:00 e uma onda nasce a cada 25 s"}
+  intervalo: {valor: 25, fonte: "usuário (05/11/2026)"}
+  # a janela de 25 s da RPN 4.2 (4:00 a 10:00) saiu: o intervalo é 25 s a partida inteira
   onda: {combatente: 3, conjuradora: 3, fonte: "PC (estimativa)"}
   canhao_a_cada: {valor: 3, fonte: "PC (estimativa)"}          # uma onda em cada 3 traz a Tropa de Canhão
   super_apos_torre_da_base: {valor: true, fonte: "Riot, Mapa e Modos (2022): sem inibidores, a torre da base dá as supertropas"}
@@ -34,7 +36,7 @@ torres:
   alcance: {valor: 750, fonte: "PC (estimativa)"}
   velocidade_ataque: {valor: 0.83, fonte: "RPN 6.2 (0.74 contra tropas no meio)"}
   dano_estrutura_pdh: {valor: 0.4, fonte: "RPN 4.4"}            # dano de campeão em estrutura: DdA + 40% do PdH
-  placas: {quantidade: 5, ouro: 150, ate: 360, resistencia: 20, duracao: 10, fonte: "quantidade, ouro: RPN 3.3; ate: RPN 6.2; resistências: NP 7.3a"}
+  placas: {quantidade: 5, ouro: 150, ate: 360, resistencia: 20, duracao: 10, caem_com_a_primeira_torre: true, fonte: "quantidade, ouro: RPN 3.3; ate: RPN 6.2; resistências: NP 7.3a; caem com a primeira torre: regra pedida na Rodada 10, sem fonte escrita (EST, ver Para o usuário)"}
   defesa_inicio: {ate: 120, armadura: 50, rm: 50, rotas: [meio, barao], fonte: "RPN 3.3b"}
   barricadas: {valor: null, fonte: "sem fonte: nenhuma página usa o nome; ver Para o usuário"}
   tipos:
@@ -49,7 +51,11 @@ fonte_base:
   mana_por_s: {valor: 0.12, fonte: "PC (estimativa)"}
 
 selva:
-  primeira_aparicao: {valor: 20, fonte: "WR:Monster"}
+  # os monstros nascem quando as tropas estão prestes a se chocar no meio (usuário, 05/11/2026): a 1ª onda sai aos 25 s
+  # e anda 6.703 unidades pela rota do meio do mapa retraçado até o centro, a 325/s: 20,6 s, então 45,6 s. Arredondado
+  # para 46 (RiftMapTest confere a conta). Vermelho e Azul nascem 1 s depois.
+  primeira_aparicao: {valor: 46, fonte: "usuário (05/11/2026), pela caminhada da 1ª onda do meio"}
+  buffs_depois: {valor: 1, fonte: "usuário (05/11/2026)"}
   evolucao: {aos: 480, fonte: "WR:Monster"}
   acampamentos:
     Espinhento Vermelho: {vida: 2800, vida_ate: 4000, dda: 75, dda_ate: 135, armadura: 40, rm: 0, renasce: 150, ouro: 130, xp: 200, buff: vermelho, fonte: "WR:Monster; armadura e XP: EST"}
@@ -63,7 +69,7 @@ selva:
     vermelho_evoluido: {duracao: 90, dda: 10, pdh: 30, lentidao: 0.30, queimadura: [16.5, 37.5], fonte: "WR:Monster"}
     azul: {duracao: 90, aceleracao: 15, fonte: "WR:Monster"}
     azul_evoluido: {duracao: 90, aceleracao: 15, aceleracao_ult: 15, fonte: "WR:Monster"}
-  aronguejo: {vida: 400, vida_por_min: 15, velocidade: 300, aparece: 180, renasce: 150, ouro: 60, xp: 60, fonte: "WR:Monster só diz que foge ao ser atacado: EST"}
+  aronguejo: {vida: 400, vida_por_min: 15, velocidade: 300, aparece: 90, renasce: 150, ouro: 60, xp: 60, fonte: "aparece: usuário (05/11/2026); WR:Monster só diz que foge ao ser atacado: EST"}
 
 plantas:
   frutomel: {aparece: 360, renasce: 360, frutos: 3, cura_pct: 0.035, lentidao: 0.35, duracao_lentidao: 0.25, raio: 250, fonte: "3 frutos: WR:Map; demais: Jungle_plants (PC, estimativa)"}
@@ -109,17 +115,36 @@ objetivos:
     alcance: {valor: 500, fonte: "EST"}
     ouro_time: {valor: 40, fonte: "RPN 4.2"}
     xp: {valor: 400, fonte: "EST"}
-    acumulos_para_alma: {valor: 3, fonte: "WR:Dragon_Slayer"}
-    elementos:                  # bônus por acúmulo (1, 2, 3): a tabela velha da RPN 3.3b com o 1º acúmulo do 7.2c
-      infernal: {status: {"% Attack Damage": [4, 8, 16], "% Ability Power": [4, 8, 16]}, fonte: "1º: RPN 7.2c; 2º e 3º: proporção da RPN 3.3b (EST)"}
-      montanha: {status: {"Armor": [5, 10, 20], "Magic Resistance": [5, 10, 20]}, fonte: "RPN 3.3b, em pontos no lugar de 3+2 / 6+4 / 12+8% (EST)"}
-      oceano: {regeneracao_vida_perdida: [0.028, 0.056, 0.112], a_cada: 5, fonte: "1º: RPN 7.2c; 2º e 3º: proporção da RPN 3.3b (EST)"}
-      gelo: {status: {"Ability Haste": [7, 17.5, 28]}, fonte: "RPN 4.2"}
+    # Só há 3 dragões elementais no Wild Rift: Oceano, Montanha e Infernal (prints do usuário, 05/11/2026: o painel
+    # "Mata-Dragões"). Gelo e os outros elementos do LoL de PC saíram. O 1º dragão abatido na partida define o elemento
+    # da alma; a alma só vem ao time que pegar os 3 dragões.
+    acumulos_para_alma: {valor: 3, fonte: "print do usuário (05/11/2026)"}
+    ordem: {valores: [oceano, montanha, infernal], sorteada: true, fonte: "print do usuário (05/11/2026): a ordem muda por partida; a partida sorteia pela semente"}
+    elementos:                  # o efeito de CADA dragão abatido, que acumula: 2 dragões dão o dobro
+      # linhas como as de efeito de item: `valor` fixo, ou `ratio` de `ref` com `escopo: total` (o total do status depois
+      # de somar as outras fontes, incluindo o fixo dos dragões; a Forja Viva não amplifica, como a Manto da Aurora)
+      infernal:
+        status:
+          - {stat: "Attack Damage", ratio: 0.04, ref: "Attack Damage", escopo: total}
+          - {stat: "Ability Power", ratio: 0.04, ref: "Ability Power", escopo: total}
+        fonte: "print do usuário (05/11/2026): receba 4% de Dano de Ataque e Poder de Habilidade"
+      montanha:
+        status:
+          - {stat: "Armor", valor: 4}
+          - {stat: "Magic Resistance", valor: 4}
+          - {stat: "Armor", ratio: 0.03, ref: "Armor", escopo: total}
+          - {stat: "Magic Resistance", ratio: 0.03, ref: "Magic Resistance", escopo: total}
+        fonte: "print do usuário (05/11/2026): recebe 4+3% de Armadura e Resistência Mágica"
+      oceano:
+        regeneracao_vida_perdida: 0.028
+        a_cada: 5
+        fonte: "print do usuário (05/11/2026): regenera 2,8% da Vida perdida a cada 5s"
     almas:
-      infernal: {dano: {tipo: adaptativo, base: 180, dda_bonus: 0.35, pdh: 0.15}, recarga: 5, fonte: "RPN 7.2c"}
-      montanha: {escudo: 350, apos: 5, fonte: "RPN 7.2c"}
-      oceano: {cura: {base: 250, dda_bonus: 0.48, pdh: 0.25, vida_bonus: 0.10}, duracao: 4, recarga: 6, fonte: "RPN 7.2c"}
-      gelo: {lentidao: 0.5, verdadeiro_pct: 0.15, recarga: 12, fonte: "WR:Dragon_Slayer, histórico 5.0"}
+      # print do usuário (05/11/2026); os números do print (518 de cura e 228 de dano) são o valor naquele momento:
+      # 250 + 48% de DdA adicional + 25% do PdH + 10% da Vida adicional, e 180 + 35% + 15% (conferidos em RiftMapTest)
+      infernal: {dano: {tipo: adaptativo, base: 180, dda_bonus: 0.35, pdh: 0.15}, raio: 250, recarga: 5, fonte: "print do usuário (05/11/2026)"}
+      montanha: {escudo: 350, apos: 5, fonte: "print do usuário (05/11/2026): sem dano de campeões inimigos ou torres"}
+      oceano: {cura: {base: 250, dda_bonus: 0.48, pdh: 0.25, vida_bonus: 0.10}, duracao: 4, recarga: 6, fonte: "print do usuário (05/11/2026)"}
   anciao:
     aparece: {valor: 1140, apos_terceiro: true, fonte: "RPN 6.2; WR:Dragon_pit"}
     renasce: {valor: 360, fonte: "WR:Dragon_pit"}

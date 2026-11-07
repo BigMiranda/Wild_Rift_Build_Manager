@@ -163,6 +163,10 @@ public final class Match {
     private double baronHp;
     private boolean firstBlood;
     private final int[] drakes = new int[2];
+    private boolean firstTowerDown;
+    /** The order of the drakes in this match, and how many were taken by both sides. */
+    public final List<String> dragonOrder;
+    private int drakesTaken;
     public final com.ornnplanner.arena.ArenaModel.ObjectiveBuffs[] buffs = {new com.ornnplanner.arena.ArenaModel.ObjectiveBuffs(), new com.ornnplanner.arena.ArenaModel.ObjectiveBuffs()};
     final double[] baronUntil = new double[2];
 
@@ -173,6 +177,7 @@ public final class Match {
         this.world = world;
         this.policy = policy;
         this.rng = new SplittableRandom(seed);
+        this.dragonOrder = rules.dragonOrder(seed);
         for (int i = 0; i < roles.size(); i++) {
             Seat s = new Seat(i, teams.get(i), roles.get(i));
             double[] f = s.team == 0 ? map.fountainBlue : map.fountainRed;
@@ -377,6 +382,11 @@ public final class Match {
         s.stats = world.stats(s.index, 0, 1, 0);
     }
 
+    /** "do Oceano", "da Montanha", "Infernal": the element after "Dragão" or "Alma". */
+    public static String elementName(String e) {
+        return "oceano".equals(e) ? "do Oceano" : "montanha".equals(e) ? "da Montanha" : "infernal".equals(e) ? "Infernal" : e;
+    }
+
     private void note(Integer team, String text) {
         result.events.add(new MatchModel.Event(Math.round(t * 10) / 10.0, team, text));
     }
@@ -555,6 +565,15 @@ public final class Match {
             by.gold += RiftRules.value(m.get("ouro_local"), 200);
         }
         note(1 - tw.team, "torre " + tw.kind + " da rota " + tw.lane + " caiu");
+        if (!firstTowerDown) {
+            firstTowerDown = true;
+            if (Boolean.TRUE.equals(rules.map("torres", "placas").get("caem_com_a_primeira_torre"))) {
+                for (Tower o : towers) {
+                    o.plates = 0;
+                }
+                note(1 - tw.team, "primeira torre da partida: as placas das outras caíram");
+            }
+        }
     }
 
     private void tickSeat(Seat s) {
@@ -717,11 +736,18 @@ public final class Match {
         } else if ("anciao".equals(what)) {
             b.elder = true;
         } else {
+            // Wild Rift: the drakes come in the match's order (drawn by the seed); each gives its element's effect, which
+            // stacks; the first drake of the match sets the soul, for the side that takes the drakes for it
+            String element = dragonOrder.get(drakesTaken % dragonOrder.size());
+            drakesTaken++;
             drakes[s.team]++;
-            b.dragons.put("infernal", drakes[s.team]);
-            if (drakes[s.team] >= 3) {
-                b.soul = "infernal";
+            b.dragons.merge(element, 1, Integer::sum);
+            note(s.team, "pegou o Dragão " + elementName(element));
+            if (drakes[s.team] == (int) rules.num(3, "objetivos", "dragao", "acumulos_para_alma")) {
+                b.soul = dragonOrder.get(0);
+                note(s.team, "pegou a Alma " + elementName(dragonOrder.get(0)));
             }
+            return;
         }
         note(s.team, "pegou " + ("barao".equals(what) ? "o Barão" : "anciao".equals(what) ? "o Ancião" : "o Dragão"));
     }

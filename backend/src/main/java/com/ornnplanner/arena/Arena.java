@@ -382,6 +382,12 @@ public class Arena {
         /** The dragon's soul of its side, when it may act again, and the buffs of the Elder and of Baron. */
         String soul;
         double soulReady;
+        /** Ocean drakes of its side (each heals a share of the missing health every few seconds), and the next heal. */
+        int oceanStacks;
+        double nextOcean;
+        /** Last time it hurt an enemy champion, and last time an enemy champion or a tower hurt it (the souls read them). */
+        double lastHitChampion = -100;
+        double lastThreat = -100;
         double elderUntil = -1;
         double baronUntil = -1;
         /** Where it was over the last seconds ({t, x, y, hp}, every 0.1s): only with an ability that goes back in time. */
@@ -4653,6 +4659,15 @@ public class Arena {
         }
         struck(t);
         t.lastStruck = now;
+        if (!a.npc || "torre".equals(a.role)) {
+            t.lastThreat = now;
+        }
+        if (!a.npc && !t.npc && a.team() != t.team()) {
+            a.lastHitChampion = now;
+            if ("infernal".equals(a.soul) && now >= a.soulReady && rules != null) {
+                infernalSoul(a, t);
+            }
+        }
         if (rift != null) {
             if (t.role != null) {
                 raw *= structureHit(a, t, raw);
@@ -6477,6 +6492,17 @@ public class Arena {
 
     /** Health regeneration (per 5s, with the % of the items and of triggers on). */
     private void regen(U u) {
+        if (u.oceanStacks > 0 && now >= u.nextOcean - 1e-9 && !u.dead) {
+            Map<String, Object> e = rules == null ? null : rules.map("objetivos", "dragao", "elementos", "oceano");
+            u.nextOcean = now + (e == null ? 5 : num(e.get("a_cada"), 5));
+            double h = (u.maxHp - u.hp) * u.oceanStacks * (e == null ? 0 : num(e.get("regeneracao_vida_perdida"), 0));
+            if (h > 0) {
+                heal(u, h, Map.of(key(u, "Dragão do Oceano"), h));
+            }
+        }
+        if (u.soul != null && !u.npc && !u.dead && rift == null) {
+            soulTick(u, false);   // on the full map the clock of the map ticks it
+        }
         if (u.dead || now < u.nextRegen) {
             return;
         }
@@ -7140,13 +7166,12 @@ public class Arena {
             }
         }
         if (o.minions) {
-            waves[0] = (int) Math.max(0, (second - rules.num(30, "tropas", "primeira_onda")) / 30);
+            waves[0] = rules.wavesBefore(second);
             at(rules.nextWave(second) - second, this::wave);
         }
         if (o.jungle) {
-            double first = rules.num(20, "selva", "primeira_aparicao");
             for (com.ornnplanner.arena.rift.RiftMap.Spot c : rift.camps) {
-                at(Math.max(0, first - second), () -> camp(c));
+                at(Math.max(0, rules.campAppears(c.kind) - second), () -> camp(c));
             }
             for (com.ornnplanner.arena.rift.RiftMap.Spot c : rift.crabs) {
                 at(Math.max(0, num(rules.map("selva", "aronguejo").get("aparece"), 180) - second), () -> crab(c));
@@ -7284,9 +7309,37 @@ public class Arena {
     }
 
     private final int[] sideDragons = new int[2];
+    @SuppressWarnings("unchecked")
+    private final Map<String, Integer>[] sideElements = new Map[] {new LinkedHashMap<>(), new LinkedHashMap<>()};
+
+    /** Drakes taken on this map so far, by both sides: the next one is of the element after them in the order. */
+    private int drakesTaken;
+    private List<String> dragonOrder;
+
+    private List<String> dragonOrder() {
+        if (dragonOrder == null) {
+            ArenaModel.RiftOptions o = riftOptions;
+            List<String> order = new ArrayList<>();
+            if (o.dragons != null && !o.dragons.isEmpty()) {
+                order.addAll(o.dragons);
+            } else {
+                order.addAll(rules.dragonOrder(o.dragonSeed == null ? 0 : o.dragonSeed));
+                if (o.dragon != null) {
+                    order.remove(o.dragon);
+                    order.add(0, o.dragon);   // saved scenarios with an element: it comes first and is the soul
+                }
+            }
+            if (order.isEmpty()) {
+                order.add("infernal");
+            }
+            dragonOrder = order;
+        }
+        return dragonOrder;
+    }
 
     private String dragonElement() {
-        return riftOptions.dragon == null ? "infernal" : riftOptions.dragon;
+        List<String> order = dragonOrder();
+        return order.get(drakesTaken % order.size());
     }
 
     /** A champion hit an enemy champion: units of the other side around it go after it. */
@@ -7298,6 +7351,24 @@ public class Arena {
                 n.called = a;
                 n.calledUntil = now + 3;
             }
+        }
+    }
+
+    private boolean firstTowerDown;
+
+    /** The plates rule: when the match's first tower falls, the plates still on the other towers fall with it. */
+    private void firstTowerFell(U t) {
+        if (firstTowerDown) {
+            return;
+        }
+        firstTowerDown = true;
+        if (Boolean.TRUE.equals(rules.map("torres", "placas").get("caem_com_a_primeira_torre"))) {
+            for (U u : units) {
+                if ("torre".equals(u.role) && !u.dead && u.plates > 0) {
+                    u.plates = 0;
+                }
+            }
+            event(t, "foi a primeira torre: as placas das outras caíram");
         }
     }
 
@@ -7400,6 +7471,7 @@ public class Arena {
                     by.gold += Rules.num(m.get("ouro_local"));
                 }
                 event(t, "caiu");
+                firstTowerFell(t);
                 if ("base".equals(t.kind)) {
                     baseTowerDown[t.team()][LANES.indexOf(t.lane)] = true;
                 }
@@ -7546,10 +7618,16 @@ public class Arena {
             one.elder = true;
             at(now + Rules.num(m.get("renasce")), this::dragon);
         } else {
+            // Wild Rift: each drake gives its element's effect, which stacks; the first drake of the match sets the
+            // soul, which comes to the side that took the drakes for it (prints of the user, 05/11/2026)
+            String element = dragonElement();
+            drakesTaken++;
             sideDragons[team]++;
-            one.dragons.put(dragonElement(), sideDragons[team]);
-            if (sideDragons[team] >= (int) rules.num(3, "objetivos", "dragao", "acumulos_para_alma")) {
-                one.soul = dragonElement();
+            sideElements[team].merge(element, 1, Integer::sum);
+            one.dragons.put(element, sideElements[team].get(element));
+            if (sideDragons[team] == (int) rules.num(3, "objetivos", "dragao", "acumulos_para_alma")) {
+                one.soul = dragonOrder().get(0);
+                event(by, "a alma do " + dragonOrder().get(0) + " é do time");
             }
             at(now + Rules.num(m.get("renasce")), this::dragon);
         }
@@ -7585,16 +7663,17 @@ public class Arena {
     private void applyBuffs(U c, ArenaModel.ObjectiveBuffs b) {
         Map<String, Object> elements = rules.map("objetivos", "dragao", "elementos");
         b.dragons.forEach((element, stacks) -> {
-            Map<String, Object> e = map(elements.get(element));
-            Map<String, Object> status = e == null ? null : map(e.get("status"));
-            if (status != null && stacks > 0) {
-                c.statMods.removeIf(m -> ("dragao:" + element).equals(m.length > 3 ? m[3] : null));
-                status.forEach((stat, list) -> {
-                    double v = ((Number) ((List<?>) list).get(Math.min(2, stacks - 1))).doubleValue();
-                    String key = stat.startsWith("% ") ? stat.substring(2) : stat;
-                    double amount = stat.startsWith("% ") ? c.stat(key) * v / 100 : v;
-                    c.statMods.add(new Object[] {key, amount, Double.MAX_VALUE, "dragao:" + element});
-                });
+            Map<String, Object> e = elements == null ? null : map(elements.get(element));
+            if (e == null || stacks == null || stacks <= 0) {
+                return;   // an element the patch does not have (Gelo, in scenarios saved before the Rodada 10)
+            }
+            // each stack of a side replaces the last: the drakes are read again from the stats without them
+            c.statMods.removeIf(m -> ("dragao:" + element).equals(m.length > 3 ? m[3] : null));
+            com.ornnplanner.arena.rift.RiftRules.dragonDelta(e, stacks, c::stat).forEach((stat, amount) ->
+                    c.statMods.add(new Object[] {stat, amount, Double.MAX_VALUE, "dragao:" + element}));
+            if (e.get("regeneracao_vida_perdida") != null) {
+                c.oceanStacks = stacks;
+                c.nextOcean = now + num(e.get("a_cada"), 5);
             }
             count(c, "dragao:" + element);
         });
@@ -7677,15 +7756,46 @@ public class Arena {
         }
     }
 
+    /** Infernal soul: hurting an enemy champion makes a blast around it (adaptive damage), then waits its cooldown. */
+    private void infernalSoul(U a, U t) {
+        Map<String, Object> soul = rules.map("objetivos", "dragao", "almas", "infernal");
+        if (soul == null) {
+            return;
+        }
+        a.soulReady = now + num(soul.get("recarga"), 5);
+        double radius = num(soul.get("raio"), 250);
+        double dmg = formula(map(soul.get("dano")), a, t, 1);
+        double x = t.x;
+        double y = t.y;
+        at(0, () -> {
+            for (U e : enemies(a)) {
+                if (dist(x, y, e.x, e.y) <= radius + e.radius()) {
+                    deal(a, e, dmg, "adaptativo", "Alma Infernal", ITEM, 0);
+                }
+            }
+        });
+    }
+
     private void soulTick(U c, boolean second) {
         Map<String, Object> soul = c.soul == null ? null : rules.map("objetivos", "dragao", "almas", c.soul);
-        if ("montanha".equals(c.soul) && now - c.lastStruck >= num(soul.get("apos"), 5) && c.shieldLeft() <= 0 && now >= c.soulReady) {
+        if (soul == null) {
+            return;   // an element the patch does not have
+        }
+        if ("montanha".equals(c.soul) && now - c.lastThreat >= num(soul.get("apos"), 5) && c.shieldLeft() <= 0 && now >= c.soulReady) {
             addShield(c, num(soul.get("escudo"), 350), key(c, "Alma da Montanha"), now + 30, "any");
             c.soulReady = now + 5;
         }
-        if ("oceano".equals(c.soul) && now - c.lastStruck < 4 && now >= c.soulReady) {
+        if ("oceano".equals(c.soul) && now - c.lastHitChampion < 4 && now >= c.soulReady) {
+            // the heal comes over its seconds, a quarter each second (print: "dentro de 4s")
             double h = formula(map(soul.get("cura")), c, c, 1);
-            heal(c, h, Map.of(key(c, "Alma do Oceano"), h));
+            int parts = (int) Math.max(1, num(soul.get("duracao"), 4));
+            for (int k = 1; k <= parts; k++) {
+                at(k, () -> {
+                    if (!c.dead) {
+                        heal(c, h / parts, Map.of(key(c, "Alma do Oceano"), h / parts));
+                    }
+                });
+            }
             c.soulReady = now + num(soul.get("recarga"), 6);
         }
     }
@@ -8780,7 +8890,16 @@ public class Arena {
                         s.role = u.role;
                         s.hp = round(u.hp);
                         s.maxHp = round(u.maxHp);
+                        if ("torre".equals(u.role) || "nexo".equals(u.role)) {
+                            s.reach = round(u.attackRange());
+                            s.plates = u.plates > 0 && clock() < rules.num(360, "torres", "placas", "ate") ? u.plates : null;
+                        }
                     }
+                    f.shapes.add(s);
+                } else if ("torre".equals(u.role)) {
+                    // a fallen tower is no target any more; its rubble stays drawn
+                    Shape s = circle("inv" + u.idx, u.f.name + " (escombro)", u.team(), u.x, u.y, u.radius());
+                    s.role = "escombro";
                     f.shapes.add(s);
                 }
                 continue;

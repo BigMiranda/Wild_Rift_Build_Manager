@@ -1,6 +1,6 @@
 # Dados do mapa, das tropas, da selva e dos objetivos (Rodada 6.b, Parte 3)
 
-Consultado em **31/10/2026**. O que vira dado está em `backend/src/main/resources/seed/mapa_7_3d.yml` e `objetivos_7_3d.yml`, cada bloco com a sua `fonte`.
+Consultado em **31/10/2026**; atualizado na **Rodada 10 (07/11/2026)** com os prints e os dados do usuário de 05/11/2026, que valem mais que as fontes online (marcados **USU**). O que vira dado está em `backend/src/main/resources/seed/mapa_7_3d.yml` e `objetivos_7_3d.yml`, cada bloco com a sua `fonte`.
 
 **Atenção:** a maior parte deste material não tem fonte primária. A wiki não tem as páginas `WR:Minion`, `WR:Nexus`, `WR:Fountain`, `WR:Experience`, `WR:Jungle`,
 `WR:Plant` e `WR:Summoner's_Rift`, e a `WR:Turret` veio sem o texto do artigo. Nenhuma fonte traz vida e dano das tropas, alcance das torres nem o tamanho do mapa. Os números abaixo são o melhor que há, e os marcados como **estimativa** vão mudar com prints.
@@ -20,8 +20,8 @@ Consultado em **31/10/2026**. O que vira dado está em `backend/src/main/resourc
 
 | dado | valor | fonte |
 |---|---|---|
-| primeira onda | 0:30 | PC (estimativa) |
-| intervalo | 30 s; 25 s de 4:00 a 10:00 | RPN 4.2 |
+| primeira onda | **0:25** | USU: a contagem começa em 0:00 e nasce uma onda a cada 25 s |
+| intervalo | **25 s, a partida inteira** | USU (a janela da RPN 4.2 saiu) |
 | composição | 3 combatentes, 3 conjuradoras; canhão a cada 3 ondas | PC (estimativa) |
 | supertropa | depois de cair a torre da base da rota | Riot |
 | vida, dano, resistências, crescimento | todos | PC (estimativa): a RPN diz "não publicado" |
@@ -62,7 +62,7 @@ Consultado em **31/10/2026**. O que vira dado está em `backend/src/main/resourc
 | Sentinela Azul | 2.800–4.000 | 75–135 | 130 | 2:30 | WR:Monster |
 | Lobos, Aves, Krugs, Gromp | | | | | EST |
 
-Os acampamentos aparecem às 0:20. **Buffs:** Azul dá 15 de aceleração, Vermelho dá lentidão e queimadura, por 90 s; as versões evoluídas vêm aos 8:00 (WR:Monster). XP dos acampamentos e o Aronguejo não têm fonte.
+Os acampamentos aparecem **quando as tropas estão prestes a se chocar no meio** (USU): a 1ª onda sai aos 0:25 e anda 6.703 unidades até o centro pela rota do meio do mapa retraçado, a 325/s, então **0:46** (45,6 s). **Vermelho e Azul nascem 1 s depois (0:47)**. O **Aronguejo nasce aos 1:30** (USU). **Buffs:** Azul dá 15 de aceleração, Vermelho dá lentidão e queimadura, por 90 s; as versões evoluídas vêm aos 8:00 (WR:Monster). XP dos acampamentos e o Aronguejo não têm fonte.
 
 ## Plantas
 
@@ -82,7 +82,17 @@ Os números são da página geral da wiki, marcados PC (estimativa). O Wild Rift
 
 **Mão do Barão:** a primeira dura 90 s (RPN 6.2). **Os números por minuto não têm fonte:** a página do buff está vazia. Os valores de `objetivos_7_3d.yml` são EST. Tropas com o buff: faixas do 7.3d.
 
-**Dragões:** aparecem aos 6:00, renascem em 4:30, somem aos 17:30 (RPN). Vida 4.000 + 180 por nível (RPN 4.2). 3 acúmulos dão a alma, do elemento do primeiro dragão (RPN 4.4). Elementos: Infernal, Montanha, Oceano e Gelo. O Nuvens saiu (RPN 3.1).
+**Dragões:** aparecem aos 6:00, renascem em 4:30, somem aos 17:30 (RPN). Vida 4.000 + 180 por nível (RPN 4.2).
+
+**Só há 3 dragões elementais no Wild Rift: Oceano, Montanha e Infernal** (prints do usuário, 05/11/2026, painel "Mata-Dragões"). Gelo e os outros elementos do PC saíram. **O 1º dragão abatido define o elemento da alma**, e a alma só vem ao time que pegar **os 3 dragões**. Cada dragão abatido dá ao time o efeito do seu elemento, que acumula:
+
+| dragão | por dragão (acumula) | alma |
+|---|---|---|
+| Oceano | regenera 2,8% da Vida perdida a cada 5 s | recupera 250 + 48% do DdA adicional + 25% do PdH + 10% da Vida adicional ao longo de 4 s depois de causar dano a um campeão inimigo; 6 s de recarga |
+| Montanha | +4 de Armadura e RM, mais 3% da Armadura e RM totais | depois de 5 s sem dano de campeões inimigos ou torres, escudo de 350 |
+| Infernal | 4% de DdA e PdH | dano a um campeão inimigo cria uma explosão de raio 250 ao redor do alvo: 180 + 35% do DdA adicional + 15% do PdH, adaptativo; 5 s de recarga |
+
+**Montanha, a ordem:** o +4 fixo entra primeiro e os 3% leem o total depois de todas as outras fontes, incluindo esse +4: com 100 de Armadura, 1 dragão dá 100 + 4 + 3% de 104 = 107,12; 2 dragões dão 100 + 8 + 6% de 108 = 114,48. Escolhi assim porque é a ordem do motor para "% do total" (a Manto da Aurora e a Rabadon leem o total depois das fontes fixas). **Forja Viva:** os dragões entram depois da ficha, como buff de objetivo, e a Forja não os amplifica; a % lê o total já com a Forja, a mesma regra da Manto da Aurora. Os números do print (518 de cura e 228 de dano) são o valor naquele momento; as fórmulas fecham, por exemplo, com 320 de PdH e 1.880 de Vida adicional, sem DdA adicional.
 
 **Dragão Ancião:** depois do terceiro dragão, ou às 19:00 (RPN 6.2), renasce em 6:00. Buff: 450 de Dano Verdadeiro em 3 s e execução abaixo de 15%, por 120 s. Vida e dano: EST.
 
@@ -103,4 +113,6 @@ A curva de XP do planejador segue valendo. A RPN só traz totais de abate (1300�
 
 ## Mapa
 
-**A geometria é um esquema, não um traçado.** Nenhuma fonte dá as medidas do mapa do Wild Rift. A imagem da wiki (`WR_Summoner's_Rift.jpg`) recusou o download (403), e a Liquipedia também (403). As posições de torres, acampamentos e fossos são as coordenadas do LoL de PC, lembradas de memória e levadas à escala 0,807 (de 14.870 para 12.000); o fator também é estimativa, porque a Riot só diz que o mapa é menor. Paredes e moitas são blocos que reproduzem a ideia das rotas e da selva.
+**Rodada 10: o mapa foi retraçado pelo print do minimapa base** (`capturas/7.3d/mapa/minimapa-base.png`, sem moitas nem plantas). Escala, calibragem e o que mudou em `docs/rodada-10.md`. Moitas e plantas seguem como o esquema abaixo até o segundo print.
+
+**Antes da Rodada 10: a geometria era um esquema, não um traçado.** Nenhuma fonte dá as medidas do mapa do Wild Rift. A imagem da wiki (`WR_Summoner's_Rift.jpg`) recusou o download (403), e a Liquipedia também (403). As posições de torres, acampamentos e fossos são as coordenadas do LoL de PC, lembradas de memória e levadas à escala 0,807 (de 14.870 para 12.000); o fator também é estimativa, porque a Riot só diz que o mapa é menor. Paredes e moitas são blocos que reproduzem a ideia das rotas e da selva.

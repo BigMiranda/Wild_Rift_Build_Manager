@@ -75,7 +75,11 @@ public final class RiftMap {
         cell = num(m.get("grade"));
         source = String.valueOf(m.get("fonte"));
         cells = (int) Math.ceil(size / cell);
-        for (List<List<Number>> w : (List<List<List<Number>>>) m.get("paredes")) {
+        Map<String, Object> raster = (Map<String, Object>) m.get("paredes_grade");
+        if (raster != null) {
+            walls.addAll(rasterWalls((List<String>) raster.get("linhas"), num(raster.get("celula"))));
+        }
+        for (List<List<Number>> w : (List<List<List<Number>>>) m.getOrDefault("paredes", List.of())) {
             double[][] p = new double[w.size()][];
             double[][] q = new double[w.size()][];
             for (int i = 0; i < p.length; i++) {
@@ -118,7 +122,8 @@ public final class RiftMap {
             String kind = String.valueOf(t.get("tipo"));
             String lane = String.valueOf(t.get("rota"));
             towers.add(new Spot(kind, kind, lane, 0, num(t.get("x")), num(t.get("y"))));
-            towers.add(new Spot(kind, kind, lane, 1, size - num(t.get("x")), size - num(t.get("y"))));
+            // mirrored through the center, the Baron lane of one side is where the Dragon lane of the other is
+            towers.add(new Spot(kind, kind, mirrorLane(lane), 1, size - num(t.get("x")), size - num(t.get("y"))));
         }
         for (Map<String, Object> c : (List<Map<String, Object>>) m.get("acampamentos")) {
             String name = String.valueOf(c.get("nome"));
@@ -150,6 +155,63 @@ public final class RiftMap {
         riverWidth = num(r.get("largura"));
     }
 
+    /**
+     * The walls of a grid traced from the minimap ({@code paredes_grade}): rows from the top (high y) down, '#' a wall;
+     * runs of a row merged, and equal runs of the rows below them merged into one rectangle. The grid is the whole map,
+     * already mirrored by the tracing (tools/mapa_minimapa.py).
+     */
+    static List<double[][]> rasterWalls(List<String> rows, double cell) {
+        List<double[][]> out = new ArrayList<>();
+        int n = rows.size();
+        boolean[][] used = new boolean[n][];
+        for (int r = 0; r < n; r++) {
+            used[r] = new boolean[rows.get(r).length()];
+        }
+        for (int r = 0; r < n; r++) {
+            String row = rows.get(r);
+            int c = 0;
+            while (c < row.length()) {
+                if (row.charAt(c) != '#' || used[r][c]) {
+                    c++;
+                    continue;
+                }
+                int end = c;
+                while (end < row.length() && row.charAt(end) == '#' && !used[r][end]) {
+                    end++;
+                }
+                int down = r;
+                while (down + 1 < n && sameRun(rows.get(down + 1), used[down + 1], c, end)) {
+                    down++;
+                }
+                for (int k = r; k <= down; k++) {
+                    for (int j = c; j < end; j++) {
+                        used[k][j] = true;
+                    }
+                }
+                double x0 = c * cell;
+                double x1 = end * cell;
+                double y1 = (n - r) * cell;
+                double y0 = (n - 1 - down) * cell;
+                out.add(new double[][] {{x0, y0}, {x1, y0}, {x1, y1}, {x0, y1}});
+                c = end;
+            }
+        }
+        return out;
+    }
+
+    private static boolean sameRun(String row, boolean[] used, int from, int end) {
+        if (end > row.length() || from > 0 && row.charAt(from - 1) == '#' && !used[from - 1]
+                || end < row.length() && row.charAt(end) == '#' && !used[end]) {
+            return false;
+        }
+        for (int j = from; j < end; j++) {
+            if (row.charAt(j) != '#' || used[j]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static RiftMap load(Resource file) {
         try (InputStream in = file.getInputStream()) {
             Map<String, Object> m = new Yaml().load(in);
@@ -169,16 +231,56 @@ public final class RiftMap {
         return solid[index(x, y)];
     }
 
-    /** No wall on the straight line between two points. */
+    /**
+     * No wall on the straight line between two points: every cell the segment crosses is visited (a grid traversal), so
+     * the line never clips the corner of a wall between two samples (the unit walking it would stop at the corner).
+     */
     public boolean clear(double ax, double ay, double bx, double by) {
-        double d = Math.hypot(bx - ax, by - ay);
-        int n = Math.max(1, (int) (d / (cell / 2)));
-        for (int i = 0; i <= n; i++) {
-            if (solid(ax + (bx - ax) * i / n, ay + (by - ay) * i / n)) {
+        int cx = clampCell(ax);
+        int cy = clampCell(ay);
+        int ex = clampCell(bx);
+        int ey = clampCell(by);
+        double dx = bx - ax;
+        double dy = by - ay;
+        int sx = dx > 0 ? 1 : -1;
+        int sy = dy > 0 ? 1 : -1;
+        double tdx = dx == 0 ? Double.MAX_VALUE : Math.abs(cell / dx);
+        double tdy = dy == 0 ? Double.MAX_VALUE : Math.abs(cell / dy);
+        double tx = dx == 0 ? Double.MAX_VALUE : ((sx > 0 ? (cx + 1) * cell - ax : ax - cx * cell) / Math.abs(dx));
+        double ty = dy == 0 ? Double.MAX_VALUE : ((sy > 0 ? (cy + 1) * cell - ay : ay - cy * cell) / Math.abs(dy));
+        for (int guard = 0; guard < 4 * cells; guard++) {
+            if (solid[cy * cells + cx]) {
                 return false;
+            }
+            if (cx == ex && cy == ey || Math.min(tx, ty) > 1) {
+                return true;   // at the end cell, or the next crossing is past the end point
+            }
+            if (Math.abs(tx - ty) < 1e-12) {
+                // through a corner exactly: both side cells count
+                if (cx + sx >= 0 && cx + sx < cells && solid[cy * cells + cx + sx]
+                        || cy + sy >= 0 && cy + sy < cells && solid[(cy + sy) * cells + cx]) {
+                    return false;
+                }
+                cx += sx;
+                cy += sy;
+                tx += tdx;
+                ty += tdy;
+            } else if (tx < ty) {
+                cx += sx;
+                tx += tdx;
+            } else {
+                cy += sy;
+                ty += tdy;
+            }
+            if (cx < 0 || cy < 0 || cx >= cells || cy >= cells) {
+                return true;
             }
         }
         return true;
+    }
+
+    private int clampCell(double v) {
+        return Math.max(0, Math.min(cells - 1, (int) (v / cell)));
     }
 
     /** The bush a point is in, or -1. */
@@ -323,6 +425,11 @@ public final class RiftMap {
         m.put("fountains", List.of(fountainBlue, fountainRed));
         m.put("source", source);
         return m;
+    }
+
+    /** The lane of the other side at the mirrored point: Baron and Dragon swap, the middle stays. */
+    public static String mirrorLane(String lane) {
+        return "barao".equals(lane) ? "dragao" : "dragao".equals(lane) ? "barao" : lane;
     }
 
     private static double num(Object v) {

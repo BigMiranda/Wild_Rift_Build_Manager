@@ -137,7 +137,8 @@ export default function Match() {
                 <RiftGround world={result.world} />
                 {result.towers.map((tw, i) => (now.towers[i] > 0
                   ? <rect key={i} x={tw[1] - 90} y={tw[2] - 90} width={180} height={180} fill={TEAM[tw[0]]} stroke="#0b1621" strokeWidth={12}><title>{n0(now.towers[i])}</title></rect>
-                  : null))}
+                  : <polygon key={i} points={`${tw[1] - 90},${tw[2] - 50} ${tw[1] - 20},${tw[2] + 70} ${tw[1] + 30},${tw[2] - 10} ${tw[1] + 90},${tw[2] + 40} ${tw[1] + 70},${tw[2] - 80}`}
+                    fill="#3a3f45" stroke={TEAM[tw[0]]} strokeWidth={10} strokeDasharray="18 12" opacity={0.7}><title>{t('match.rubble')}</title></polygon>))}
                 {now.waves.map((w, i) => <circle key={i} cx={w[0]} cy={w[1]} r={70} fill={TEAM[w[2]]} opacity={0.6} />)}
                 {now.xy.map((p, i) => (now.dead[i] ? null : (
                   <g key={i}>

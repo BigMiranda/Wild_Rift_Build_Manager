@@ -86,9 +86,9 @@ class MatchTest {
     @Test
     void wavesLeaveOnTime() {
         Match m = five(new Simple());
-        MatchModel.Result r = m.run(29);
-        assertTrue(r.timeline.get(r.timeline.size() - 1).waves.isEmpty(), "no wave before 0:30");
-        MatchModel.Result after = five(new Simple()).run(31);
+        MatchModel.Result r = m.run(24);
+        assertTrue(r.timeline.get(r.timeline.size() - 1).waves.isEmpty(), "no wave before 0:25 (the user, 05/11/2026)");
+        MatchModel.Result after = five(new Simple()).run(26);
         assertEquals(6, after.timeline.get(after.timeline.size() - 1).waves.size(), "one per lane, per side");
     }
 

@@ -282,8 +282,11 @@ public final class ArenaModel {
         public boolean objectives = true;
         /** Bushes hide; off = everyone sees everyone. */
         public boolean vision = true;
-        /** Element of the drakes (infernal, montanha, oceano, gelo). */
+        /** Element of the first drake (infernal, montanha, oceano): the others follow in the order of the rules. */
         public String dragon;
+        /** The order of the drakes (the first one is the soul's); null = {@code dragon}, or drawn by {@code dragonSeed}. */
+        public List<String> dragons;
+        public Long dragonSeed;
         /** The blue side goes for this objective (barao, dragao) while it lives; null = it fights the champions. */
         public String takes;
         /** Structures that fell before this moment (their indexes on the map's list); only those near the fight are put on it. */
@@ -503,6 +506,12 @@ public final class ArenaModel {
         public Double hp;
         @JsonInclude(JsonInclude.Include.NON_NULL)
         public Double maxHp;
+        /** A tower's or Nexus' attack range: the screen draws it on hover, on touch and with a champion inside. */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public Double reach;
+        /** Plates still on a tower. */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public Integer plates;
     }
 
     public static class Frame {
