@@ -998,6 +998,9 @@ public class Arena {
             tickMechanics();
             if (rift != null) {
                 tickRift();
+                if (!recallChecks.isEmpty()) {
+                    tickRecalls();
+                }
             }
             tickPeriodic();
             tickSafeZone();
@@ -1300,6 +1303,10 @@ public class Arena {
                     kite(u, turn.enemy(ActionSpace.enemyOf(a)));
                 } else if (a == ActionSpace.RETREAT) {
                     retreat(u);
+                } else if (a == ActionSpace.RECOVER) {
+                    recover(u);
+                } else if (a == ActionSpace.RECALL) {
+                    startRecall(u);
                 } else if (a == ActionSpace.DODGE) {
                     dodge(u, turn.threat());
                 }
@@ -1432,6 +1439,101 @@ public class Arena {
             return new double[] {Math.abs(ax) < 1e-6 ? (u.team() == 0 ? -1 : 1) : Math.signum(ax), 0};
         }
         return new double[] {ax, ay};
+    }
+
+    /** Where a champion steps out to recover: the nearest Honeyfruit up, else under the nearest allied tower. */
+    private U recoverSpot(U u) {
+        U best = null;
+        double reach = rules == null ? 2500 : rules.num(2500, "plantas", "frutomel", "busca");
+        for (U p : units) {
+            if (!p.dead && "planta".equals(p.role) && "frutomel".equals(p.kind) && dist(u.x, u.y, p.x, p.y) <= reach
+                    && (best == null || dist(u.x, u.y, p.x, p.y) < dist(u.x, u.y, best.x, best.y))) {
+                best = p;
+            }
+        }
+        if (best != null) {
+            return best;
+        }
+        for (U t : units) {
+            if (!t.dead && "torre".equals(t.role) && t.team() == u.team()
+                    && (best == null || dist(u.x, u.y, t.x, t.y) < dist(u.x, u.y, best.x, best.y))) {
+                best = t;
+            }
+        }
+        return best;
+    }
+
+    /** Two tempos: to the Honeyfruit (broken by an attack, its fruits heal) or behind the allied tower. */
+    private void recover(U u) {
+        U spot = recoverSpot(u);
+        if (spot == null) {
+            return;
+        }
+        if ("planta".equals(spot.role)) {
+            count(u, "recuperar:frutomel");
+            chase(u, spot);
+            return;
+        }
+        count(u, "recuperar:torre");
+        double[] home = u.team() == 0 ? rift.fountainBlue : rift.fountainRed;
+        double d = Math.max(1, dist(spot.x, spot.y, home[0], home[1]));
+        double tx = spot.x + (home[0] - spot.x) / d * 250;
+        double ty = spot.y + (home[1] - spot.y) / d * 250;
+        moveTo(u, tx, ty, u.moveSpeed() * DT);
+        u.busyState = "move";
+    }
+
+    private boolean atFountain(U u) {
+        double[] f = u.team() == 0 ? rift.fountainBlue : rift.fountainRed;
+        return dist(u.x, u.y, f[0], f[1]) <= f[2];
+    }
+
+    private boolean enemyChampionWithin(U u, double r) {
+        for (U e : units) {
+            if (!e.npc && !e.dead && e.team() != u.team() && e.team() < 2 && dist(u.x, u.y, e.x, e.y) <= r) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The way back to the base: a channel that any hit breaks; at its end the champion stands at its fountain. */
+    private void startRecall(U u) {
+        double channel = rules == null ? 8 : rules.num(8, "fonte_base", "volta_s");
+        double from = now;
+        u.busyUntil = now + channel;
+        u.busyState = "recall";
+        count(u, "volta_base");
+        event(u, "começou a voltar à base");
+        at(channel, () -> {
+            if (u.dead || u.lastStruck > from + 1e-9) {
+                event(u, "a volta à base foi interrompida");
+                return;
+            }
+            double[] f = u.team() == 0 ? rift.fountainBlue : rift.fountainRed;
+            u.x = f[0];
+            u.y = f[1];
+            event(u, "voltou à base");
+        });
+        // a hit ends the channel: the champion is free again at once
+        recallChecks.add(new Object[] {u, from});
+    }
+
+    private final List<Object[]> recallChecks = new ArrayList<>();
+
+    private void tickRecalls() {
+        for (java.util.Iterator<Object[]> it = recallChecks.iterator(); it.hasNext(); ) {
+            Object[] r = it.next();
+            U u = (U) r[0];
+            double from = (double) r[1];
+            if (u.dead || now >= u.busyUntil) {
+                it.remove();
+            } else if (u.lastStruck > from + 1e-9) {
+                u.busyUntil = now;
+                u.busyState = "idle";
+                it.remove();
+            }
+        }
     }
 
     private void retreat(U u) {
@@ -1653,6 +1755,12 @@ public class Arena {
             }
             if (action == ActionSpace.DODGE) {
                 return threat() != null;
+            }
+            if (action == ActionSpace.RECOVER) {
+                return rift != null && u.hp < u.maxHp * 0.9 && recoverSpot(u) != null;
+            }
+            if (action == ActionSpace.RECALL) {
+                return rift != null && u.hp < u.maxHp * 0.95 && !atFountain(u) && !enemyChampionWithin(u, 900);
             }
             if (ActionSpace.isInstant(action) && (acted || castsOver || !u.in.autoAbilities)) {
                 return false;

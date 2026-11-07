@@ -123,7 +123,7 @@ public class MatchService {
         }
         List<String> roles = roles(slots, names);
         guides(slots, chosen, roles);
-        Live world = new Live(slots, chosen, roles);
+        Live world = new Live(slots, chosen, roles, names);
         List<Integer> teams = new ArrayList<>();
         slots.forEach(s -> teams.add(s.team));
         Match m = new Match(arena.riftMap(), arena.riftRules(), macro, world, new ScriptedMacro(macro), req.seed, roles, teams);
@@ -206,7 +206,10 @@ public class MatchService {
         final Map<String, Arena.Input> inputs = new HashMap<>();
         long fightNanos;
 
-        Live(List<MatchModel.Slot> slots, List<BuildRepository.Build> chosen, List<String> roles) {
+        final List<String> names;
+
+        Live(List<MatchModel.Slot> slots, List<BuildRepository.Build> chosen, List<String> roles, List<String> names) {
+            this.names = names;
             this.slots = slots;
             this.chosen = chosen;
             this.roles = roles;
@@ -253,6 +256,33 @@ public class MatchService {
             Arena.Input in = input(seat, done, level, minute);
             double as = in.baseAttackSpeed * (1 + in.f.stat("% Attack Speed") / 100);
             return new double[] {in.f.stat(Stats.MAX_HEALTH), in.f.stat(Stats.ATTACK_DAMAGE), as, in.f.stat(Stats.ABILITY_POWER), in.f.stat(Stats.MOVE_SPEED)};
+        }
+
+        @Override
+        public String name(int seat) {
+            return names.get(seat);
+        }
+
+        @Override
+        public boolean teleport(int seat) {
+            return chosen.get(seat).spells != null && chosen.get(seat).spells.contains("Teleporte");
+        }
+
+        @Override
+        public boolean shopsAnywhere(int seat) {
+            return Boolean.TRUE.equals(kit(seat).get("compra_fora_da_base"));
+        }
+
+        @Override
+        public boolean sellsToAllies(int seat) {
+            return Boolean.TRUE.equals(kit(seat).get("compra_para_aliados"));
+        }
+
+        @SuppressWarnings("unchecked")
+        private Map<String, Object> kit(int seat) {
+            Object all = arena.kits().get("campeoes");
+            Object k = all instanceof Map ? ((Map<String, Object>) all).get(names.get(seat)) : null;
+            return k instanceof Map ? (Map<String, Object>) k : Map.of();
         }
 
         @Override

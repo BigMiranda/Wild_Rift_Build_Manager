@@ -27,6 +27,9 @@ public final class TacticalPolicy implements Policy {
     static final double DODGE_WITHIN = 0.7;
     static final double DEFENSIVE_BELOW = 0.35;
     static final double RETREAT_BELOW = 0.25;
+    /** Full map: go back to the base below this health with no enemy within {@link #RECALL_CLEAR}. */
+    static final double RECALL_BELOW = 0.3;
+    static final double RECALL_CLEAR = 1300;
     static final double FLASH_AWAY_BELOW = 0.15;
     static final double RANGED_FROM = 400;
     /** Least predicted hit chance of an aimed ability (and of a recast) before it is cast. */
@@ -102,6 +105,13 @@ public final class TacticalPolicy implements Policy {
         if (on(BURST_FLASH) && s.recentLoss > BURST_LOSS && t.present && targetHp > hp && t.distance < 600
                 && mask.valid(ActionSpace.FLASH_AWAY)) {
             return Decision.of(ActionSpace.FLASH_AWAY);   // bursted and behind: get out
+        }
+        // two tempos (full map only: masked elsewhere): out of a lost trade, recover and come back; low and alone, go home
+        if (hp < RECALL_BELOW && (!t.present || t.distance > RECALL_CLEAR) && mask.valid(ActionSpace.RECALL)) {
+            return Decision.of(ActionSpace.RECALL);
+        }
+        if (hp < RETREAT_BELOW && t.present && targetHp > hp + 0.1 && mask.valid(ActionSpace.RECOVER)) {
+            return Decision.of(ActionSpace.RECOVER);
         }
         if (hp < RETREAT_BELOW && t.present && targetHp > hp + 0.1) {
             if (hp < FLASH_AWAY_BELOW && t.distance < 450 && mask.valid(ActionSpace.FLASH_AWAY)) {

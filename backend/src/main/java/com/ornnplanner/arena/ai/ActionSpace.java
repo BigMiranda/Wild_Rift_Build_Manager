@@ -18,6 +18,8 @@ import java.util.List;
  *   28 .. 30  kite enemy k: attack when the attack is up, else keep just inside attack reach, stepping back
  *   31        dodge: side step out of the path of the enemy skillshot coming at the champion
  *   32 .. 35  combo c: run the champion's c-th active combo (by score) on the current target
+ *   36        recover: walk to the nearest Honeyfruit up (and break it) or under the nearest allied tower (full map)
+ *   37        recall: channel the way back to the base, broken by any hit (full map)
  * </pre>
  *
  * Casts, recasts and actives are instant decisions: when one leaves the champion free, it decides again in the same
@@ -46,7 +48,10 @@ public final class ActionSpace {
     public static final int KITE = RETREAT + 1;
     public static final int DODGE = KITE + ENEMIES;
     public static final int COMBO = DODGE + 1;
-    public static final int SIZE = COMBO + COMBOS;
+    /** Playing in two tempos (Rodada 10): step out to recover, or go back to the base; only on the full map. */
+    public static final int RECOVER = COMBO + COMBOS;
+    public static final int RECALL = RECOVER + 1;
+    public static final int SIZE = RECALL + 1;
 
     /** Score of an action a migrated network did not have (a combo): never above a real action's. */
     public static final double NEW_ACTION_BIAS = -5;
@@ -111,7 +116,7 @@ public final class ActionSpace {
     }
 
     public static boolean isCombo(int action) {
-        return action >= COMBO && action < SIZE;
+        return action >= COMBO && action < COMBO + COMBOS;
     }
 
     /** Done at once, without ending the step: casts, recasts, actives, Flash. */
@@ -169,6 +174,10 @@ public final class ActionSpace {
                 return "recuar";
             case DODGE:
                 return "desviar";
+            case RECOVER:
+                return "recuar para recuperar";
+            case RECALL:
+                return "voltar à base";
             default:
                 return "parado";
         }

@@ -129,7 +129,7 @@ public class PolicyRepository {
     /** Observation schemas whose weights read into the current one, and the action counts they had. */
     static final Map<Integer, Integer> OBS_SIZES = Map.of(2, Observation.V2_SIZE, 3, Observation.SIZE);
     /** Actions of the layouts before the current one (32 until combos). */
-    static final List<Integer> OLD_ACTIONS = List.of(32);
+    static final List<Integer> OLD_ACTIONS = List.of(32, 36);
 
     public static boolean migratable(int obsSchema, int actions) {
         return OBS_SIZES.containsKey(obsSchema) && obsSchema <= Observation.SCHEMA_VERSION

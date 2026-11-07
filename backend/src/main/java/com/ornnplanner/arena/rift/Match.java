@@ -32,6 +32,31 @@ public final class Match {
 
         int levelFor(double xp);
 
+        /** The champion's name, for the log. */
+        default String name(int seat) {
+            return "campeão " + (seat + 1);
+        }
+
+        /** It carries Teleport. */
+        default boolean teleport(int seat) {
+            return false;
+        }
+
+        /** Its sheet lets it buy away from the base ({@code compra_fora_da_base}). */
+        default boolean shopsAnywhere(int seat) {
+            return false;
+        }
+
+        /** Its sheet lets nearby allies buy through it ({@code compra_para_aliados}). */
+        default boolean sellsToAllies(int seat) {
+            return false;
+        }
+
+        /** What the purchases from step {@code from} to {@code to} are worth in gold (the quick comparison's gain). */
+        default double itemGain(int seat, int from, int to) {
+            return cost(seat, to) - cost(seat, from);
+        }
+
         /** Runs a fight among these seats at the fine step. */
         FightOutcome fight(List<Seat> who, double x, double y, double minute, List<int[]> fallen, Match match);
     }
@@ -60,6 +85,11 @@ public final class Match {
         double busyUntil;
         double recallAt = -1;
         double fightAfter;
+        /** Two tempos: Teleport up again at, back to the lane by Teleport after the base, the Honeyfruit it walks to. */
+        double teleportReadyAt;
+        boolean teleportBack;
+        double[] fruit;
+        public TwoTempo.Choice lastChoice;
         MacroPolicy.Intent intent;
         double[][] path;
         int pathAt;
@@ -163,6 +193,10 @@ public final class Match {
     private double baronHp;
     private boolean firstBlood;
     private final int[] drakes = new int[2];
+    /** Honeyfruits: {x, y, up at}. */
+    final List<double[]> fruits = new ArrayList<>();
+    /** The two-tempo estimate (null: off, the old thresholds). */
+    public final TwoTempo tempo;
     private boolean firstTowerDown;
     /** The order of the drakes in this match, and how many were taken by both sides. */
     public final List<String> dragonOrder;
@@ -205,8 +239,18 @@ public final class Match {
         towers.add(new Tower(0, null, "nexo", 4, map.nexusBlue[0], map.nexusBlue[1], 0, nexus));
         towers.add(new Tower(1, null, "nexo", 4, map.nexusRed[0], map.nexusRed[1], 0, nexus));
         for (RiftMap.Spot c : map.camps) {
-            camps.add(new Camp(c, rules.num(20, "selva", "primeira_aparicao")));
+            camps.add(new Camp(c, rules.campAppears(c.name)));
         }
+        double fruitUp = RiftRules.value(rules.map("plantas", "frutomel").get("aparece"), 360);
+        for (RiftMap.Spot p : map.plants) {
+            if ("frutomel".equals(p.kind)) {
+                fruits.add(new double[] {p.x, p.y, fruitUp});
+            }
+        }
+        Object two = macro.get("dois_tempos");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> weights = two instanceof Map ? (Map<String, Object>) two : null;
+        tempo = weights == null || Boolean.FALSE.equals(weights.get("ligado")) ? null : new TwoTempo(weights);
         nextWave = rules.num(30, "tropas", "primeira_onda");
         dragonAt = rules.num(360, "objetivos", "dragao", "aparece");
         baronAt = rules.num(660, "objetivos", "barao", "aparece");
@@ -595,6 +639,12 @@ public final class Match {
         if (atBase(s)) {
             s.hp = Math.min(1, s.hp + rules.num(0.12, "fonte_base", "cura_por_s") * STEP);
             shop(s);
+            if (s.teleportBack && s.hp >= 0.95 && t >= s.busyUntil) {
+                teleportBack(s);
+                return;
+            }
+        } else if (tempo != null) {
+            s.hp = Math.min(1, s.hp + param("regen_por_s", 0.004) * STEP);   // out of the trade, it heals a little
         }
         if (t < s.busyUntil) {
             return;
@@ -612,10 +662,25 @@ public final class Match {
         if (atBase(s) && s.hp < 0.95) {
             return;   // healing up
         }
+        if (s.fruit != null) {
+            eatFruit(s);
+            return;
+        }
         s.intent = policy.decide(this, s);
         switch (s.intent.goal) {
             case RECALL:
                 s.recallAt = t + param("volta_s", 8);
+                s.teleportBack = "teleporte".equals(s.intent.what);
+                break;
+            case RETREAT:
+                s.fruit = nearestFruit(s);
+                if (s.fruit == null) {
+                    walk(s, s.intent.x, s.intent.y);
+                }
+                break;
+            case SHOP:
+                shop(s);
+                note(s.team, world.name(s.index) + " comprou sem voltar à base");
                 break;
             case JUNGLE:
                 walk(s, s.intent.x, s.intent.y);
@@ -630,6 +695,177 @@ public final class Match {
                 break;
         }
     }
+
+    // ------------------------------------------------------------------ two tempos
+
+    /** The nearest Honeyfruit up within reach, {x, y, up at}, or null. */
+    double[] nearestFruit(Seat s) {
+        double reach = param("frutomel_ate", 3000);
+        double[] best = null;
+        for (double[] f : fruits) {
+            double d = Math.hypot(f[0] - s.x, f[1] - s.y);
+            if (t >= f[2] && d <= reach && (best == null || d < Math.hypot(best[0] - s.x, best[1] - s.y))) {
+                best = f;
+            }
+        }
+        return best;
+    }
+
+    /** Walks to its Honeyfruit and breaks it: the fruits heal it. Another champion may take it first. */
+    private void eatFruit(Seat s) {
+        double[] f = s.fruit;
+        if (t < f[2]) {
+            s.fruit = null;   // gone
+            return;
+        }
+        if (Math.hypot(f[0] - s.x, f[1] - s.y) > 150) {
+            walk(s, f[0], f[1]);
+            return;
+        }
+        Map<String, Object> p = rules.map("plantas", "frutomel");
+        double heal = Math.min(1 - s.hp, RiftRules.value(p.get("cura_pct"), 0.035) * RiftRules.value(p.get("frutos"), 3));
+        s.hp += heal;
+        f[2] = t + RiftRules.value(p.get("renasce"), 360);
+        s.fruit = null;
+        note(s.team, world.name(s.index) + " comeu o Frutomel: +" + Math.round(heal * s.stats[0]) + " de vida");
+    }
+
+    /** After the base, Teleport to the lane: to its front tower in the first minutes, later to an ally out there. */
+    private void teleportBack(Seat s) {
+        s.teleportBack = false;
+        double[] to = teleportTarget(s);
+        if (to == null) {
+            return;
+        }
+        s.busyUntil = t + param("teleporte_s", 3.5);
+        s.teleportReadyAt = t + param("teleporte_recarga", 150);
+        s.x = to[0];
+        s.y = to[1];
+        s.path = null;
+        note(s.team, world.name(s.index) + " voltou à rota de Teleporte");
+    }
+
+    private double[] teleportTarget(Seat s) {
+        String lane = laneOf(s.role);
+        if (t < param("teleporte_estruturas_ate", 360)) {
+            for (Tower tw : towers) {
+                if (tw.team == s.team && lane.equals(tw.lane) && tw.hp > 0) {
+                    return new double[] {tw.x, tw.y};
+                }
+            }
+        }
+        double[] spot = laneSpot(s.team, lane);
+        Seat best = null;
+        for (Seat a : seats) {
+            if (a != s && a.team == s.team && !a.dead && !atBase(a)
+                    && (best == null || Math.hypot(a.x - spot[0], a.y - spot[1]) < Math.hypot(best.x - spot[0], best.y - spot[1]))) {
+                best = a;
+            }
+        }
+        return best == null ? null : new double[] {best.x, best.y};
+    }
+
+    /** What the champion sees now, for the two-tempo estimate. */
+    public TwoTempo.Situation situation(Seat s) {
+        TwoTempo.Situation x = new TwoTempo.Situation();
+        x.hp = s.hp;
+        x.maxHp = s.stats[0];
+        x.moveSpeed = Math.max(200, s.stats[4]);
+        x.regenPerS = param("regen_por_s", 0.004);
+        x.recallSeconds = param("volta_s", 8);
+        x.teleportSeconds = param("teleporte_s", 3.5);
+        // the lane: a wave's gold and experience over the wave gap, by the share of last hits of the role
+        String lane = laneOf(s.role);
+        double waveGold = 0;
+        double waveXp = 0;
+        for (String kind : rules.wave(3, false)) {
+            Map<String, Object> m = rules.map("tropas", "tipos", kind);
+            waveGold += RiftRules.value(m.get("ouro"), 0) / 3 * ("canhao".equals(kind) ? 1 : 3);
+            waveXp += RiftRules.value(m.get("xp"), 0) / 3 * ("canhao".equals(kind) ? 1 : 3);
+        }
+        double gap = rules.waveGap(t);
+        double share = RiftRules.value(macroMap("ultimos_golpes").get(s.role), 0.5);
+        boolean laner = !"selva".equals(s.role);
+        x.laneGoldPerS = laner ? waveGold / gap * share : 0;
+        x.laneXpPerS = laner ? waveXp / gap : 0;
+        // the trade: the strongest enemy champion near it, by the same power as the fights
+        double danger = 0;
+        double mine = Math.max(1e-9, dps(s));
+        for (Seat e : seats) {
+            if (e.team != s.team && !e.dead && Math.hypot(e.x - s.x, e.y - s.y) <= param("luta_distancia", 900) * 1.5) {
+                danger = Math.max(danger, param("dano_troca_por_s", 0.012) * dps(e) / mine * e.hp);
+            }
+        }
+        x.dangerPerS = danger;
+        x.deathCost = param("custo_morte", 600) + (param("renascer_base", 6) + param("renascer_por_nivel", 2.5) * s.level)
+                * (x.laneGoldPerS + x.laneXpPerS * 0.6);
+        Tower front = null;
+        for (Tower tw : towers) {
+            if (tw.team == s.team && lane.equals(tw.lane) && tw.hp > 0 && (front == null || tw.order < front.order)) {
+                front = tw;
+            }
+        }
+        boolean platesUp = t < RiftRules.value(rules.map("torres", "placas").get("ate"), 360);
+        x.plates = front != null && platesUp && laner ? front.plates : 0;
+        x.platesPerS = danger > 0 ? param("placas_por_s_ausente", 0.03) : 0;
+        double[] f = nearestFruit(s);
+        if (f != null) {
+            x.fruitDistance = Math.hypot(f[0] - s.x, f[1] - s.y) * 1.2;
+            Map<String, Object> p = rules.map("plantas", "frutomel");
+            x.fruitHeal = RiftRules.value(p.get("cura_pct"), 0.035) * RiftRules.value(p.get("frutos"), 3);
+        }
+        double[] base = s.team == 0 ? map.fountainBlue : map.fountainRed;
+        x.baseDistance = Math.hypot(base[0] - s.x, base[1] - s.y) * 1.2;
+        x.teleportReady = world.teleport(s.index) && t >= s.teleportReadyAt && teleportTarget(s) != null;
+        boolean ally = false;
+        for (Seat a : seats) {
+            ally |= a != s && a.team == s.team && !a.dead && world.sellsToAllies(a.index) && Math.hypot(a.x - s.x, a.y - s.y) <= 1500;
+        }
+        x.shopsHere = world.shopsAnywhere(s.index) || ally;
+        int to = s.steps;
+        while (to < world.steps(s.index) && s.gold >= world.cost(s.index, to + 1) && world.sold(s.index, to, t / 60)) {
+            to++;
+        }
+        x.itemGold = world.cost(s.index, to) - world.cost(s.index, s.steps);
+        x.itemGain = to > s.steps ? world.itemGain(s.index, s.steps, to) : 0;
+        return x;
+    }
+
+    private double dps(Seat s) {
+        return s.stats[1] * s.stats[2] + s.stats[3] * 0.5 + 40;
+    }
+
+    /** The two-tempo decision, kept and told in the log when it is not "stay". */
+    public void decided(Seat s, TwoTempo.Choice c) {
+        boolean changed = s.lastChoice == null || s.lastChoice.option != c.option;
+        s.lastChoice = c;
+        if (!changed || c.option == TwoTempo.Option.STAY) {
+            return;
+        }
+        String what;
+        switch (c.option) {
+            case HONEYFRUIT:
+                what = "recuou para o Frutomel";
+                break;
+            case RECALL_TELEPORT:
+                what = "voltou à base para voltar de Teleporte";
+                break;
+            case SHOP_HERE:
+                what = "comprou onde estava";
+                break;
+            default:
+                what = "voltou à base a pé";
+                break;
+        }
+        double stay = c.values.get(TwoTempo.Option.STAY);
+        note(s.team, world.name(s.index) + " " + what + ": deve ganhar " + Math.round(c.hpGain * s.stats[0]) + " de vida e perder "
+                + Math.round(c.minionsLost) + " tropas (ficar: " + Math.round(stay) + "; " + what.split(" ")[0] + ": "
+                + Math.round(c.values.get(c.option)) + " de ouro em " + Math.round(RiftRules.value(macroMap("dois_tempos").get("horizonte_s"), 40)) + " s)");
+        decisions++;
+    }
+
+    /** How many two-tempo decisions (not "stay") the match took. */
+    public int decisions;
 
     private void walk(Seat s, double tx, double ty) {
         double step = s.stats[4] * STEP;
@@ -837,6 +1073,7 @@ public final class Match {
             s.fightAfter = t + o.seconds + param("luta_pausa", 20);
             s.path = null;
             s.recallAt = -1;
+            s.teleportBack = false;
             if (r[3] > 0) {
                 s.dead = true;
                 s.deaths++;

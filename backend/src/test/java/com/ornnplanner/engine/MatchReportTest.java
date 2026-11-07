@@ -71,6 +71,13 @@ class MatchReportTest {
                         p.goldPerMin, p.plannedGoldPerMin, p.xpPerMin, p.plannedXpPerMin, p.minions, p.monsters, p.purchases.size()));
             }
             r.events.stream().limit(14).forEach(e -> sb.append(String.format("    %.0f %s%n", e.t, e.text)));
+            // the two-tempo decisions (Rodada 10): how many of each, and a few of them
+            for (String kind : java.util.List.of("recuou para o Frutomel", "comeu o Frutomel", "voltou à base a pé", "para voltar de Teleporte",
+                    "voltou à rota de Teleporte", "comprou")) {
+                sb.append(String.format("  dois tempos: %-28s %d%n", kind, r.events.stream().filter(e -> e.text.contains(kind)).count()));
+            }
+            r.events.stream().filter(e -> e.text.contains("Frutomel")).limit(4).forEach(e -> sb.append(String.format("    %.0f %s%n", e.t, e.text)));
+            r.events.stream().filter(e -> e.text.contains("Teleporte")).limit(2).forEach(e -> sb.append(String.format("    %.0f %s%n", e.t, e.text)));
         }
         MatchModel.Result a = matches.run(request(5));
         MatchModel.Result b = matches.run(request(5));

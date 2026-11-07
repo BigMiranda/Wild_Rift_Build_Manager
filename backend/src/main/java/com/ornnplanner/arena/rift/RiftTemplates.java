@@ -36,7 +36,24 @@ public final class RiftTemplates {
         out.add(group("barao", "Luta de equipe no Barão", "Barão vivo: quem entra no fosso sofre os debuffs", map.baronPit, 5, 20, null, 900));
         out.add(group("barao-fazendo", "Luta de equipe: azul fazendo o Barão", "o lado azul bate no Barão enquanto o vermelho chega", map.baronPit, 5, 20, "barao", 900));
         out.add(group("dragao", "Luta de equipe no Dragão", "Dragão vivo no fosso", map.dragonPit, 5, 14, null, 900));
+        out.add(honeyfruit(map));
         return out;
+    }
+
+    /**
+     * Two tempos (Rodada 10): a duel in the middle lane at 7:00, a Honeyfruit up by the river and the base at its real
+     * distance; the brains may trade on, step out to the fruit or the tower, or go home.
+     */
+    private static Template honeyfruit(RiftMap map) {
+        double[] own = tower(map, "meio", 0);
+        double[] other = tower(map, "meio", 1);
+        double[] mid = {(own[0] + other[0]) / 2, (own[1] + other[1]) / 2};
+        double[] toOther = unit(own, other);
+        Template t = base("x1-frutomel", "Troca na rota com Frutomel", "x1 no meio aos 7:00, com o Frutomel no rio e a base a uma distância real", 7, 90);
+        t.scenario.rift.plants = true;
+        t.scenario.fighters.add(slot(0, shift(mid, toOther, -350)));
+        t.scenario.fighters.add(slot(1, shift(mid, toOther, 350)));
+        return t;
     }
 
     private static void duels(List<Template> out, RiftMap map, String lane, String label) {

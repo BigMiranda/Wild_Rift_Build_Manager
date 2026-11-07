@@ -19,9 +19,43 @@ public final class ScriptedMacro implements MacroPolicy {
         return RiftRules.value(params.get(key), def);
     }
 
+    /**
+     * Playing in two tempos: when hurt or with gold for the next item, every way out is priced against staying
+     * ({@link TwoTempo}); null = stay and go on with the role.
+     */
+    private Intent twoTempos(Match m, Match.Seat me) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> w = (Map<String, Object>) params.get("dois_tempos");
+        boolean hurt = me.hpFraction() < RiftRules.value(w.get("pensar_abaixo"), 0.8);
+        boolean rich = m.canBuy(me) && me.goldInHand(m) >= num("voltar_ouro", 1100);
+        if (!hurt && !rich) {
+            return null;
+        }
+        TwoTempo.Choice c = m.tempo.choose(m.situation(me));
+        m.decided(me, c);
+        switch (c.option) {
+            case HONEYFRUIT:
+                double[] f = m.nearestFruit(me);
+                return f == null ? null : new Intent(Goal.RETREAT, f[0], f[1], "frutomel");
+            case RECALL_WALK:
+                return new Intent(Goal.RECALL, 0, 0, null);
+            case RECALL_TELEPORT:
+                return new Intent(Goal.RECALL, 0, 0, "teleporte");
+            case SHOP_HERE:
+                return new Intent(Goal.SHOP, me.x, me.y, null);
+            default:
+                return null;
+        }
+    }
+
     @Override
     public Intent decide(Match m, Match.Seat me) {
-        if (me.hpFraction() < num("voltar_vida", 0.3) || m.canBuy(me) && me.goldInHand(m) >= num("voltar_ouro", 1100) && !m.atBase(me)) {
+        if (m.tempo != null && !m.atBase(me)) {
+            Intent two = twoTempos(m, me);
+            if (two != null) {
+                return two;
+            }
+        } else if (me.hpFraction() < num("voltar_vida", 0.3) || m.canBuy(me) && me.goldInHand(m) >= num("voltar_ouro", 1100) && !m.atBase(me)) {
             return new Intent(Goal.RECALL, 0, 0, null);
         }
         double[] objective = m.objectiveUp();

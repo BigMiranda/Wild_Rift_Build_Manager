@@ -46,6 +46,7 @@ torres:
   nexo: {vida: 4000, armadura: 30, rm: 30, dda: 280, dda_passo: 8, dda_a_cada: 30, alcance: 750, fonte: "vida: NP 7.3a; dano: RPN 4.2; resistências e alcance: EST"}
 
 fonte_base:
+  volta_s: {valor: 8, fonte: "PC (estimativa): a canalização de Voltar à base"}
   laser_por_s: {valor: 800, fonte: "PC (estimativa)"}
   cura_por_s: {valor: 0.12, fonte: "PC (estimativa)"}           # fração da Vida máxima
   mana_por_s: {valor: 0.12, fonte: "PC (estimativa)"}
@@ -72,7 +73,7 @@ selva:
   aronguejo: {vida: 400, vida_por_min: 15, velocidade: 300, aparece: 90, renasce: 150, ouro: 60, xp: 60, fonte: "aparece: usuário (05/11/2026); WR:Monster só diz que foge ao ser atacado: EST"}
 
 plantas:
-  frutomel: {aparece: 360, renasce: 360, frutos: 3, cura_pct: 0.035, lentidao: 0.35, duracao_lentidao: 0.25, raio: 250, fonte: "3 frutos: WR:Map; demais: Jungle_plants (PC, estimativa)"}
+  frutomel: {aparece: 360, renasce: 360, frutos: 3, cura_pct: 0.035, lentidao: 0.35, duracao_lentidao: 0.25, raio: 250, busca: 2500, fonte: "3 frutos: WR:Map; demais: Jungle_plants (PC, estimativa); busca: até onde a IA vai buscá-lo (EST)"}
   pinstouro: {aparece: 75, renasce: 360, raio: 325, distancia: 900, fonte: "Jungle_plants (PC, estimativa)"}
   clarevidente: {aparece: 180, renasce: 330, revela_campeoes: 3, revela_outros: 12, raio: 1000, fonte: "Jungle_plants (PC, estimativa)"}
 

@@ -110,3 +110,76 @@ ponto de cada rota, às 18 torres, aos 12 acampamentos, aos Aronguejos, às plan
 | 1 | vermelho | 15:24 | 537 | 356 | 30 |
 | 2 | vermelho | 15:13 | 526 | 346 | 32 |
 | 3 | azul | 15:45 | 511 | 353 | 31 |
+
+## Parte 2 — IA que joga em dois tempos ✅
+
+### Na macro da partida
+- **`arena/rift/TwoTempo`** mede cada opção em ouro, sobre o mesmo horizonte (`horizonte_s: 40`). A macro só pensa em
+  sair quando está ferida (abaixo de 80% da Vida) ou com ouro para o próximo item.
+  - **troca contínua:** ganha a rota (ouro e XP das tropas, pela parte de últimos golpes da função). O risco de morrer
+    vem da previsão da troca: o campeão inimigo mais forte por perto, pela mesma força das lutas, tira
+    `dano_troca_por_s` × (força dele / sua) por segundo. A morte custa `custo_morte` mais a rota perdida enquanto
+    espera para renascer;
+  - **recuar e recuperar:** anda até o Frutomel mais próximo que esteja de pé (até 3.000), quebra e come os frutos, e
+    volta. A partida agora tem os Frutomel (de pé aos 6:00, renascem em 6:00) e a regeneração fora da troca
+    (`regen_por_s`);
+  - **dar base e voltar a pé:** canal de 8 s, interrompido por luta, compra e volta andando;
+  - **dar base e voltar de Teleporte:** se a build leva Teleporte e ele está pronto (150 s de recarga). Até 6:00 vai
+    para a torre da frente da rota; depois, até um aliado fora da base (a regra do feitiço em `feiticos_7_3d.yml`);
+  - **comprar sem voltar à base:** campo de ficha `compra_fora_da_base: true`, e `compra_para_aliados: true` para
+    quem vende aos aliados num raio de 1.500. Nenhuma ficha usa ainda; o campo e o teste existem.
+- **Custo e ganho:**
+  - ouro e XP perdidos fora da rota, com a negação de XP (`negacao_xp`);
+  - as placas em risco, quando há inimigo por perto;
+  - o tempo até voltar;
+  - a Vida recuperada (`ouro_por_vida`, além do risco);
+  - o item comprado: metade do ganho dele (`peso_item`). O ganho vem de `World.itemGain`, que hoje é o custo dos itens
+    que o ouro paga. **Desvio do pedido:** o comparador rápido roda uma linha do tempo por candidato e custaria tempo
+    demais por decisão. O gancho existe para trocá-lo;
+  - o risco de morrer se ficar.
+- **Pesos** em `macro_7_3d.yml` (`dois_tempos` e as linhas abaixo dele), todos EST, para calibrar. `ligado: false`
+  volta aos limiares antigos.
+- **Calibragem feita:** com 0,4 de ouro por ponto de Vida, a Vida valia demais e a macro ia ao Frutomel até sem
+  inimigo por perto. Com 0,1, a Vida quase só vale pelo risco de morrer.
+- **No log da partida** (exemplos da semente 3):
+  - "612 Renekton recuou para o Frutomel: deve ganhar 238 de vida e perder 4 tropas (ficar: −424; recuou: 432 de ouro
+    em 40 s)", e depois "619 Renekton comeu o Frutomel: +142 de vida";
+  - "300 Ornn voltou à base para voltar de Teleporte: deve ganhar 558 de vida e perder 0 tropas (ficar: 458; voltou:
+    739 de ouro em 40 s)", e depois "311 Ornn voltou à rota de Teleporte";
+  - "174 Darius voltou à base a pé: deve ganhar 353 de vida e perder 5 tropas (ficar: 876; voltou: 1197 de ouro em
+    40 s)": aqui pesou o item.
+- 🎯 `TwoTempoTest`:
+  - com 35% de Vida e a troca tirando 2% por segundo, a vida acaba antes do horizonte, e a macro **recua para o
+    Frutomel** (ficar −400, Frutomel acima de 400);
+  - com a mesma rota sem inimigo pressionando, **fica**;
+  - quase morto e sem Frutomel, volta a pé, ou de Teleporte se ele estiver pronto;
+  - com a ficha que compra fora da base, compra onde está.
+
+### Na Arena com mapa
+- **Duas ações novas** no `ActionSpace`, anexadas ao fim (36 → 38):
+  - **36 "recuar para recuperar":** anda até o Frutomel de pé mais próximo (até 2.500) e o quebra; sem Frutomel,
+    fica atrás da torre aliada mais próxima;
+  - **37 "voltar à base":** canal de 8 s (`fonte_base.volta_s`), que qualquer golpe interrompe. No fim, o campeão
+    está na fonte.
+- **Máscara:** as duas só valem com o mapa inteiro. "Recuperar" vale abaixo de 90% da Vida, com um Frutomel ou uma
+  torre aliada; "voltar" vale abaixo de 95%, fora da fonte e sem campeão inimigo a 900. **Na Rota única nada muda.**
+- **O Tático** volta à base abaixo de 30% sem inimigo a 1.300, e recupera no lugar de só recuar quando perde a troca
+  abaixo de 25%.
+- **A IA treinada:** as redes salvas com 36 ações migram como antes (`PolicyRepository.OLD_ACTIONS`), com as duas ações
+  novas em −5, o que dá o mesmo comportamento de antes. O treino num cenário com mapa aprende quando usá-las.
+- **Cenário-modelo novo:** "Troca na rota com Frutomel" (`x1-frutomel`): x1 no meio aos 7:00, plantas ligadas, o
+  Frutomel no rio e a base a uma distância real.
+- **Golden:** não mudou. A Rota única não tem as ações, e o golden das IAs não mudou com a camada de saída maior.
+- Testes: 376 → 382 (16 opcionais pulados), 0 falhas. `npm run build` limpo.
+
+### A partida antes e depois (`MatchReportTest`, as mesmas 3 sementes e builds)
+
+| semente | ouro/min médio | XP/min médio | mortes | decisões de dois tempos |
+|---|---|---|---|---|
+| 1 | 537 → **557** | 356 → **387** | 30 → 29 | 31 voltas a pé, 2 de Teleporte |
+| 2 | 526 → **551** | 346 → **361** | 32 → 39 | 26 a pé, 3 de Teleporte |
+| 3 | 511 → **541** | 353 → **364** | 31 → 37 | 32 a pé, 3 de Teleporte, 2 Frutomel |
+
+- Ouro e XP sobem de 4% a 9%: menos tempo morto na base, a regeneração fora da troca e o Teleporte.
+- As mortes sobem em duas sementes: ficar na rota mais tempo dá mais lutas. O vencedor muda nas sementes 2 e 3.
+- A distância para as builds continua: a partida rende uns 550 de ouro por minuto, e as builds supõem de 700 a 900.

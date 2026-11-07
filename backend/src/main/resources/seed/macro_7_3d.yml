@@ -23,3 +23,30 @@ ritmo_monstros: 2.5        # dano em monstros e objetivos: ataques mais habilida
 dano_monstros: 0.2         # fração do dano do monstro que chega, com o desvio e o escudo dos primeiros níveis
 renascer_base: 6           # tempo de renascer: base + por nível
 renascer_por_nivel: 2.5
+# Dois tempos (Rodada 10, Parte 2): ferido ou com ouro para o próximo item, a macro pesa ficar e trocar contra recuar
+# para o Frutomel, voltar à base a pé ou de Teleporte e comprar onde está (arena/rift/TwoTempo). Tudo em ouro sobre o
+# mesmo horizonte. Pesos meus (EST), para calibrar.
+dois_tempos:
+  ligado: true
+  pensar_abaixo: 0.8       # pensa em sair abaixo desta fração da Vida (ou com ouro para o próximo item)
+  horizonte_s: 40          # segundos em que cada opção é medida
+  ouro_por_xp: 0.6         # ouro que 1 de XP vale
+  negacao_xp: 0.5          # parte a mais da XP perdida: o inimigo ganha nível na frente
+  ouro_por_placa: 150
+  peso_placas: 1.0
+  ouro_por_vida: 0.1       # ouro que uma barra de Vida cheia vale, por ponto de Vida máxima, fora o risco de morrer
+  folga_vida: 0.8          # parte da Vida que conta antes de morrer (a troca não é exata)
+  peso_item: 0.5           # parte do ganho do item que conta agora
+  comer_s: 1               # segundos para quebrar o Frutomel e pisar nos frutos
+  na_base_s: 2             # segundos na base para comprar
+  custo_teleporte: 120     # ouro que gastar o Teleporte agora custa (não tê-lo depois)
+  margem: 40               # ficar vence empates e vantagens pequenas
+  ouro_medio_tropa: 50
+regen_por_s: 0.004         # fração da Vida máxima que volta por segundo fora da troca (com o dois_tempos)
+dano_troca_por_s: 0.012    # fração da Vida que a troca tira por segundo contra um campeão igual (previsão da troca)
+custo_morte: 600           # ouro que o inimigo ganha e o tempo fora valem, além da rota perdida
+placas_por_s_ausente: 0.03 # placas que o inimigo tira por segundo com o campeão fora da rota
+frutomel_ate: 3000         # até onde vai buscar o Frutomel
+teleporte_s: 3.5           # feiticos_7_3d.yml
+teleporte_recarga: 150     # feiticos_7_3d.yml
+teleporte_estruturas_ate: 360   # só até estruturas nos 6 primeiros minutos (feiticos_7_3d.yml)
