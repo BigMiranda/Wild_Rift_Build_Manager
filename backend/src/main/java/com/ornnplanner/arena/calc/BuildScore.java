@@ -78,9 +78,32 @@ public class BuildScore {
         public Double beatsReference;
     }
 
-    /** Options of a reading: which parts to run (null = the weights' own). */
+    /**
+     * Options of a reading (the discovery's funnel): the reading modes and starts instead of the YAML's, and at most
+     * {@code limit} scenarios of each report (0 = all), for the quick fights and the confirmation.
+     */
     public static class Options {
-        public boolean skipDuels = true;
+        public String defensiveMode;
+        public String offensiveMode;
+        public Integer starts;
+        public int limit;
+
+        public static Options quick() {
+            Options o = new Options();
+            o.defensiveMode = EffectModel.AS_PLAYED;
+            o.offensiveMode = EffectModel.AS_PLAYED;
+            o.limit = 3;
+            return o;
+        }
+
+        /** Starts the search never saw: the mean of other starts on both sides. */
+        public static Options confirm() {
+            Options o = new Options();
+            o.defensiveMode = EffectModel.STARTS;
+            o.offensiveMode = EffectModel.STARTS;
+            o.starts = 6;
+            return o;
+        }
     }
 
     private final EffectTestService effect;
@@ -179,6 +202,12 @@ public class BuildScore {
     /** The score of a build at a minute. */
     @SuppressWarnings("unchecked")
     public Score score(BuildRepository.Build build, double minute) {
+        return score(build, minute, null);
+    }
+
+    /** The score with a reading's options (null = the YAML's). */
+    @SuppressWarnings("unchecked")
+    public Score score(BuildRepository.Build build, double minute, Options o) {
         Score s = new Score();
         s.minute = minute;
         s.champion = championOf(build);
@@ -188,15 +217,16 @@ public class BuildScore {
         s.weights = weights(s.championClass, s.archetype);
         Map<String, Object> read = (Map<String, Object>) rules.getOrDefault("leitura", Map.of());
         if (s.weights.get(DEFENSIVE) > 0 || s.weights.get(UTILITY) > 0 || floor(s.championClass) > Double.NEGATIVE_INFINITY) {
-            defensive(build, minute, String.valueOf(read.getOrDefault("defensiva", EffectModel.FIXED)), s);
+            defensive(build, minute, o != null && o.defensiveMode != null ? o.defensiveMode
+                    : String.valueOf(read.getOrDefault("defensiva", EffectModel.FIXED)), o == null ? null : o.starts, o == null ? 0 : o.limit, s);
         }
         if (s.weights.get(OFFENSIVE) > 0) {
             OffenseModel.Request req = new OffenseModel.Request();
             req.build = build;
             req.minute = minute;
-            req.readMode = String.valueOf(read.getOrDefault("ofensiva", EffectModel.STARTS));
-            req.starts = (int) num(read.get("largadas"), 3);
-            List<OffenseModel.Entry> targets = offense.report().targets;
+            req.readMode = o != null && o.offensiveMode != null ? o.offensiveMode : String.valueOf(read.getOrDefault("ofensiva", EffectModel.STARTS));
+            req.starts = o != null && o.starts != null ? o.starts : (int) num(read.get("largadas"), 3);
+            List<OffenseModel.Entry> targets = limited(offense.report().targets, o);
             for (OffenseModel.Entry e : targets) {
                 OffenseModel.Job j = new OffenseModel.Job();
                 j.targetKey = e.key;
@@ -217,7 +247,7 @@ public class BuildScore {
                 s.readings.add(r);
             }
         }
-        if (s.weights.get(DUELS) > 0) {
+        if (s.weights.get(DUELS) > 0 && (o == null || o.limit == 0)) {
             duels(build, minute, s);
         }
         combine(s, floor(s.championClass), num(rules.get("piso_peso"), 1));
@@ -225,12 +255,16 @@ public class BuildScore {
     }
 
     @SuppressWarnings("unchecked")
-    private void defensive(BuildRepository.Build build, double minute, String mode, Score s) {
+    private void defensive(BuildRepository.Build build, double minute, String mode, Integer starts, int limit, Score s) {
         EffectModel.Report rep = effect.report(String.valueOf(rules.getOrDefault("relatorio_defensivo", "basico")));
+        if (limit > 0 && rep.tests.size() > limit) {
+            rep.tests = new ArrayList<>(rep.tests.subList(0, limit));
+        }
         EffectModel.Request req = new EffectModel.Request();
         req.build = build;
         req.minute = minute;
         req.readMode = mode;
+        req.starts = starts;
         for (EffectModel.Entry e : rep.tests) {
             EffectModel.Job j = new EffectModel.Job();
             j.testKey = e.key;
@@ -268,6 +302,10 @@ public class BuildScore {
             r.points = usum / un;
             s.readings.add(r);
         }
+    }
+
+    private static <T> List<T> limited(List<T> l, Options o) {
+        return o == null || o.limit <= 0 || l.size() <= o.limit ? l : new ArrayList<>(l.subList(0, o.limit));
     }
 
     /** x1 against the representatives of each class (sheets A or B) with a saved build, at the same minute. */
@@ -416,6 +454,10 @@ public class BuildScore {
 
     /** The robust score over the minutes; with a reference build, the share of scenario-minutes it beats it. */
     public Robust robust(BuildRepository.Build b, BuildRepository.Build reference) {
+        return robust(b, reference, null);
+    }
+
+    public Robust robust(BuildRepository.Build b, BuildRepository.Build reference, Options o) {
         Robust r = new Robust();
         double sum = 0;
         double w = 0;
@@ -424,14 +466,14 @@ public class BuildScore {
         int beats = 0;
         int total = 0;
         for (double[] mw : minutes(b)) {
-            Score s = score(b, mw[0]);
+            Score s = score(b, mw[0], o);
             r.minutes.add(s);
             sum += mw[1] * s.total;
             mean += mw[1] * s.mean;
             p20 += mw[1] * s.p20;
             w += mw[1];
             if (reference != null) {
-                Score ref = score(reference, mw[0]);
+                Score ref = score(reference, mw[0], o);
                 Map<String, Double> theirs = new LinkedHashMap<>();
                 ref.readings.forEach(x -> theirs.put(x.part + "|" + x.key, x.points));
                 for (Reading x : s.readings) {

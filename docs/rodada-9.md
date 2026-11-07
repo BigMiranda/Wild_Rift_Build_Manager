@@ -207,3 +207,69 @@ A busca inteira com a nota por classe é cara (0,5 s por medida contra 0,1 s só
 Parte 2.
 
 Testes: 347 → 351 (`BuildScoreTest`, 4; 15 opcionais pulados). `npm run build` limpo.
+
+## Partes 2 e 3 — Funil de avaliação e busca dos conjuntos ✅
+
+Num commit só: o funil (Parte 2) é o que mede cada passo da busca genética (Parte 3), e os dois só fazem sentido juntos.
+Os algoritmos estão separados de como uma build é medida: `arena/discovery/Funnel` e `Ridge` são puros (testados num
+mundo sintético), e `DiscoveryService` os mede pela nota por classe da Parte 1 (`/api/discovery/...`).
+
+### O funil
+
+1. **Triagem sem luta:** para cada item aprimorado, o Δ da build inteira de comprá-lo sozinho aos 15:00
+   (`BuildDeltaService`, o mesmo dos comparadores): o ouro dos status dele separado nas famílias ofensivas (pesadas pela
+   parte física e mágica do dano do campeão, do perfil da Rodada 7) e na defensiva, mais as passivas modeladas, pelos
+   pesos da classe, dividido pelo custo. Lista curta de 24 (rápido) ou 30 (completo) itens, **com cota de 2 por grupo**
+   (cada aba da loja e "com passiva" / "só status") e **coringas** (4 ou 6) sorteados entre os descartados.
+2. **Lutas rápidas:** a nota aos 15:00 com 3 cenários de cada relatório, uma largada. Corta a metade pior
+   (*successive halving*).
+3. **Bateria completa:** a nota robusta da Parte 1 (todos os cenários, 10/15/20/fim).
+4. **Confirmação:** os finalistas e o melhor de cada nicho com a média de 6 largadas nos dois lados, que a busca nunca
+   viu.
+
+O cache por (build, minuto, cenário, leitura) é o dos serviços de efetividade; as lutas rodam em paralelo dentro de cada
+leitura. Barra de progresso por etapa e "Parar" no trabalho (`DiscoveryModel.Job`).
+
+### A busca
+
+- **Genética** sobre 5 itens + 1 bota (tier 2 ou 3): torneio, cruzamento (itens sorteados da união dos pais, bota de um
+  deles), mutação (troca um item por outro da lista curta, ou a bota), elitismo (a próxima população é o melhor de
+  tudo o que foi medido). As regras da loja pela linha do tempo do planejador (a mesma checagem única).
+- **População inicial:** as builds salvas do campeão (sementes) e conjuntos sorteados.
+- **MAP-Elites:** o melhor de cada nicho. Eixos configuráveis (`axes`): arquétipo (Rodada 7), dano (físico, mágico,
+  misto, sem dano, pelo ouro dos status), durabilidade (a parte defensiva da nota: baixa, média, alta) e passivas.
+- **Modelo substituto:** ridge sobre "item presente" mais os pares dos itens dos 5 melhores, treinado a cada geração com
+  tudo o que já teve bateria completa; ordena os filhos, só a metade melhor (e 2 sorteados) vai para as lutas rápidas.
+- **Sinergias:** para os pares de itens dos 2 melhores, v(base + A + B) − v(base + A) − v(base + B) + v(base), com a base
+  sendo o finalista sem os dois (inclusão e exclusão).
+
+**Orçamentos:** rápido = população 8, 3 gerações de 16 filhos, 4 baterias por geração, 2 confirmações, 6 pares de
+sinergia; completo = 16, 10 × 32, 8, 4 e 20.
+
+### Medido 🎯 (cópia do banco, Big Carry v1, rápido)
+
+`-Ddiscovery.report=data/ornn-planner.db` (`DiscoveryReportTest`): **95 s** (a primeira estimativa dizia 564 s; ela
+aprende o tempo por bateria a cada execução), 36 leituras rápidas, 20 baterias (≈ 4 s cada), 3 confirmações.
+
+| # | nota (média, P20, confirmada) | itens + bota | nicho |
+|---|---|---|---|
+| 1 | 73,9 (75,1 · 72,1 · 73,8) | Coração de Aço, Rookern Lamúrico, Égide de Fogo Solar, Desespero Eterno, Bastão das Eras + Mobilização Blindada | tanque · mágico · durab. alta |
+| 2 | 73,5 (74,9 · 71,5 · 73,0) | … Canhão Fumegante no lugar do Bastão | tanque · físico · durab. alta |
+| 3 | 72,8 (72,5 · 73,2 · 72,1) | Manto da Meia-noite, Força da Natureza, Coração de Aço, Égide, Duplaguarda + Mobilização | tanque · sem dano · durab. alta |
+
+- **As sinergias medidas são negativas** entre itens de defesa: Rookern + Desespero Eterno −6,4, Coração de Aço +
+  Rookern −5,1. É o retorno decrescente da durabilidade (a nota satura), não um erro: a 2ª defesa vale menos que a 1ª.
+- **A confirmação segurou:** 73,8 contra 73,9 nas largadas que a busca não viu.
+- **Acerto do modelo substituto: r = 0,26** no rápido (só 8 previsões antes da bateria). Pouco dado; o completo é que dá a
+  medida (Relatório final).
+- **Item de dano no 5º espaço do tanque** (Bastão das Eras, Canhão Fumegante): a ofensiva pesa 10% para o Tanque e o
+  arquétipo continua "tanque". É a nota fazendo o que o YAML manda; se não for o desejado, o peso é do usuário.
+
+### Testes
+
+`FunnelTest` (7, mundo sintético: 30 itens, o 7 claramente melhor, sinergia plantada entre 11 e 12, 3 e 4 exclusivos):
+a busca acha o item e a sinergia (e a sinergia mede exatamente +45); as regras sempre valem, mesmo com uma semente
+proibida; o MAP-Elites guarda o melhor de cada nicho; o modelo substituto não piora a busca no mesmo orçamento (6
+sementes) e acerta r > 0,5; a lista curta mantém a cota e os coringas; determinismo; o ridge aprende um mundo aditivo.
+
+Testes: 351 → 359 (16 opcionais pulados, com o `DiscoveryReportTest`).
