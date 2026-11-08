@@ -448,3 +448,41 @@ voltar para comprar. É plausível no jogo, mas comprar ainda não ganha.
 
 Testes: 424 → **425** (17 opcionais pulados), 0 falhas. Os golden não mudaram. `npm run build` não mudou: só regras do
 backend. A aba Partida não foi reaberta nesta parte; as telas são as mesmas da parte anterior.
+
+## Depois: a troca na rota aplicada (08/11/2026)
+
+Pedido do usuário: aplicar a troca de golpes entre rotas, que os dois tempos só previam.
+
+- **`Match.tickTrades`**: a mesma conta da previsão (`TwoTempo`), agora aplicada de verdade. O campeão em rota perde, por
+  segundo, `dano_troca_por_s` (0,012) × o dano do inimigo sobre o seu × a Vida do inimigo, em fração da Vida máxima. Conta
+  o inimigo mais forte a até 1.350, com a linha livre, fora de luta e que não está voltando à base. Quem troca não
+  regenera. A troca para em 5% (`troca_piso`) e não mata: a luta, que a Vida baixa provoca, decide.
+- `MacroTraining.RULES` 3 → 4.
+
+**A medida** (24 sementes, 48 jogos do roteiro sem compras):
+
+| | roteiro sem compras contra o roteiro | mortes | lutas | duração (roteiro × roteiro) |
+|---|---|---|---|---|
+| antes (lutas calibradas) | 56,3% | 41 | 34 | 15,7 (13,7–20,8) |
+| **com a troca** | **35,4%** | **43** | **39** | **15,1 (12,0–26,8)**, 24 de 24 terminam |
+
+Agora **comprar compensa**: o roteiro que só volta à base abaixo de 50% de Vida perde para o que volta para comprar. O
+roteiro volta umas 38 vezes por partida (cerca de 4 por jogador).
+
+**O treino de novo**, nas mesmas condições: 30 gerações em 431 s. Vence **91,3%** contra o roteiro (73-7), com 568 de
+ouro/min contra 620 e partidas de 15,2 min. O `MacroReportTest` agora lê pesos salvos (`-Dmacro.weights=<arquivo>`) para
+estudar uma rede sem treinar de novo, e conta as voltas à base, os abates, as mortes e as compras de cada lado nas 4
+amostras:
+
+| nas 4 amostras | voltas à base | abates | mortes | compras |
+|---|---|---|---|---|
+| macro treinada | **0** | 49 | **120** | 349 |
+| roteiro | 96 (656 de Vida a recuperar em cada) | 96 | 56 | 388 |
+
+**Leitura:** a rede não volta à base nunca. Compra quando morre e renasce na fonte, morre o dobro e mata a metade, e
+vence segurando a rota: limpa ondas e bate em torres sem parar. O roteiro mata o dobro, mas **não transforma o abate em
+torre antes de agrupar** (14:00). Depois de matar o rota inimigo, ele continua atrás da onda, como se nada tivesse
+acontecido. No jogo, quem mata o rota empurra a torre. É o próximo ponto da partida: o roteiro empurrar a torre da rota
+quando o rota inimigo está morto ou voltando à base. Depois disso, a macro pede treino novo.
+
+Testes: **425** (17 opcionais pulados), 0 falhas. Os golden não mudaram. A tela não mudou nesta parte.

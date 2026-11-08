@@ -84,6 +84,8 @@ public final class Match {
         double respawnAt;
         double busyUntil;
         double recallAt = -1;
+        /** It traded blows with a laner this step (no regeneration then). */
+        boolean trading;
         /** A move speed bonus (share) until a time: the start of the match, the recall. */
         double haste;
         double hasteUntil;
@@ -532,6 +534,7 @@ public final class Match {
             tickClock();
             tickWaves();
             tickLaners();
+            tickTrades();
             for (Seat s : seats) {
                 tickSeat(s);
             }
@@ -677,6 +680,39 @@ public final class Match {
         waves.removeIf(w -> w.hp.isEmpty());
     }
 
+    /**
+     * The lane trade at the coarse step, the same one the two tempos forecast: a champion in lane facing an enemy
+     * champion within 1.5 × {@code luta_distancia}, with a clear line, loses {@code dano_troca_por_s} × the enemy's damage
+     * over its own × the enemy's health, per second, of its maximum health, and does not heal meanwhile. The strongest such
+     * enemy counts. It never kills: it stops at {@code troca_piso}, and the fight (which a low health invites) decides.
+     */
+    private void tickTrades() {
+        double reach = param("luta_distancia", 900) * 1.5;
+        double rate = param("dano_troca_por_s", 0.012);
+        double floor = param("troca_piso", 0.05);
+        for (Seat s : seats) {
+            s.trading = false;
+        }
+        for (Seat s : seats) {
+            if (s.dead || t < s.busyUntil || s.intent == null || s.intent.goal != MacroPolicy.Goal.LANE || atBase(s)) {
+                continue;
+            }
+            double mine = Math.max(1e-9, dps(s));
+            double worst = 0;
+            for (Seat e : seats) {
+                if (e.team == s.team || e.dead || t < e.busyUntil || e.intent == null || e.intent.goal == MacroPolicy.Goal.RECALL
+                        || Math.hypot(e.x - s.x, e.y - s.y) > reach || !map.clear(s.x, s.y, e.x, e.y)) {
+                    continue;
+                }
+                worst = Math.max(worst, rate * dps(e) / mine * e.hp);
+            }
+            if (worst > 0) {
+                s.trading = true;
+                s.hp = Math.max(Math.min(s.hp, floor), s.hp - worst * STEP);
+            }
+        }
+    }
+
     private void hitWave(Wave w, double damage) {
         while (damage > 0 && !w.hp.isEmpty()) {
             double left = w.hp.get(0);
@@ -799,7 +835,9 @@ public final class Match {
                 return;
             }
         } else if (tempo != null) {
-            s.hp = Math.min(1, s.hp + param("regen_por_s", 0.004) * STEP);   // out of the trade, it heals a little
+            if (!s.trading) {
+                s.hp = Math.min(1, s.hp + param("regen_por_s", 0.004) * STEP);   // out of the trade, it heals a little
+            }
         }
         if (t < s.busyUntil) {
             return;

@@ -47,7 +47,8 @@ dois_tempos:
   margem: 40               # ficar vence empates e vantagens pequenas
   ouro_medio_tropa: 50
 regen_por_s: 0.004         # fração da Vida máxima que volta por segundo fora da troca (com o dois_tempos)
-dano_troca_por_s: 0.012    # fração da Vida que a troca tira por segundo contra um campeão igual (previsão da troca)
+dano_troca_por_s: 0.012    # fração da Vida que a troca tira por segundo contra um campeão igual: a previsão dos dois tempos e, desde a calibragem da troca (08/11/2026), a troca aplicada no passo grosso
+troca_piso: 0.05           # a troca sozinha não desce a Vida abaixo disto: a luta decide
 custo_morte: 600           # ouro que o inimigo ganha e o tempo fora valem, além da rota perdida
 placas_por_s_ausente: 0.03 # placas que o inimigo tira por segundo com o campeão fora da rota
 frutomel_ate: 3000         # até onde vai buscar o Frutomel

@@ -88,7 +88,10 @@ class MacroReportTest {
         sb.append(String.format("script vs script: winrate %.3f (%d games), %.1f s%n", base.winrate, base.games, (System.nanoTime() - t0) / 1e9));
         List<Network> centers = new ArrayList<>();
         long t1 = System.nanoTime();
-        Network trained = t.train(MacroTraining.zeros(), new MacroTraining.Listener() {
+        // -Dmacro.weights=<file>: the weights of an earlier run (one per line), to study them without training again
+        String saved = System.getProperty("macro.weights");
+        Network trained = saved != null ? new Network(NeuralMacro.LAYERS, Files.readAllLines(Paths.get(saved)).stream()
+                .filter(x -> !x.isBlank()).mapToDouble(Double::parseDouble).toArray()) : t.train(MacroTraining.zeros(), new MacroTraining.Listener() {
             @Override
             public void generation(Trainer.Generation g) {
                 centers.add(g.center);
@@ -100,7 +103,7 @@ class MacroReportTest {
         double trainSeconds = (System.nanoTime() - t1) / 1e9;
         sb.append(String.format("training: %.0f s%n", trainSeconds));
         // the final weights and a few earlier ones, on the validation seeds
-        for (int gen : new int[] {centers.size() / 3, 2 * centers.size() / 3}) {
+        for (int gen : saved != null ? new int[0] : new int[] {centers.size() / 3, 2 * centers.size() / 3}) {
             if (gen > 0) {
                 MacroTraining.Validation v = t.validate(centers.get(gen - 1));
                 sb.append(String.format("gen %2d vs script: winrate %.3f (%d-%d of %d), fitness %+.3f, gold/min %.0f vs %.0f, %.1f deviations/match%n",
@@ -114,8 +117,27 @@ class MacroReportTest {
         Map<String, Integer> by = new TreeMap<>();
         NeuralMacro me = new NeuralMacro(trained, t.script());
         List<String> samples = new ArrayList<>();
+        // how each side goes back to base: how many times, and the health it had to win back each time (the two tempos' text)
+        int[] recalls = new int[2];
+        int[] deaths = new int[2];
+        int[] kills = new int[2];
+        int[] items = new int[2];
+        double[] missing = new double[2];
+        java.util.regex.Pattern gain = java.util.regex.Pattern.compile("deve ganhar ([0-9]+) de vida");
         for (int s = 0; s < 4; s++) {
             MatchModel.Result r = matches.run(drafts.get(s % drafts.size()), MacroTraining.VALIDATION_SEEDS + s, c.limitMinutes, me, t.script());
+            for (MatchModel.Player p : r.players) {
+                deaths[p.team] += p.deaths;
+                kills[p.team] += p.kills;
+                items[p.team] += p.purchases.size();
+            }
+            r.events.stream().filter(e -> e.team != null && e.text.contains("voltou à base") && !e.text.contains("(macro treinada)")).forEach(e -> {
+                recalls[e.team]++;
+                java.util.regex.Matcher g = gain.matcher(e.text);
+                if (g.find()) {
+                    missing[e.team] += Double.parseDouble(g.group(1));
+                }
+            });
             r.events.stream().filter(e -> e.text.contains("(macro treinada)")).forEach(e -> {
                 String what = e.text.substring(e.text.indexOf("): ") + 3);
                 by.merge(what, 1, Integer::sum);
@@ -125,6 +147,10 @@ class MacroReportTest {
             });
             sb.append(String.format("sample %d: winner %d at %.0f s%n", s, r.winner, r.seconds));
         }
+        sb.append(String.format("back to base in the 4 samples: trained %d (%.0f health to win back each), script %d (%.0f each)%n",
+                recalls[0], missing[0] / Math.max(1, recalls[0]), recalls[1], missing[1] / Math.max(1, recalls[1])));
+        sb.append(String.format("in the 4 samples: trained %d kills / %d deaths / %d purchases; script %d / %d / %d%n",
+                kills[0], deaths[0], items[0], kills[1], deaths[1], items[1]));
         by.entrySet().stream().sorted((a, b) -> b.getValue() - a.getValue()).limit(15)
                 .forEach(e -> sb.append(String.format("  %4d  %s%n", e.getValue(), e.getKey())));
         samples.forEach(x -> sb.append("    ").append(x).append('\n'));
