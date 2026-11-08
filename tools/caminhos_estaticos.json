@@ -1,0 +1,27 @@
+{
+  "_sobre": "Casos da regra de nome de arquivo do site estático (Rodada 11.b), lidos pelos dois lados: tools/test_site_estatico.py e frontend/test/staticPath.test.mjs.",
+  "json": [
+    ["/api/meta", "api/meta.json"],
+    ["/api/builds/12", "api/builds/12.json"],
+    ["/api/builds/12/timeline", "api/builds/12/timeline.json"],
+    ["/api/x?y=1", "api/x/y=1.json"],
+    ["/api/guides?unit=ORNN", "api/guides/unit=ORNN.json"],
+    ["/api/guides?unit=K'SANTE", "api/guides/unit=K~27SANTE.json"],
+    ["/api/guides?unit=K%27SANTE", "api/guides/unit=K~27SANTE.json"],
+    ["/api/a?x=1&y=2", "api/a/x=1_y=2.json"],
+    ["/api/site/build/Coração Congelado", "api/site/build/Cora~C3~A7~C3~A3o~20Congelado.json"],
+    ["/api/site/build/Cora%C3%A7%C3%A3o%20Congelado", "api/site/build/Cora~C3~A7~C3~A3o~20Congelado.json"],
+    ["/api/champions/Kai'Sa", "api/champions/Kai~27Sa.json"],
+    ["/api/busca?nome=Lâmina da Fúria+Guinsoo", "api/busca/nome=L~C3~A2mina~20da~20F~C3~BAria~20Guinsoo.json"],
+    ["/api/x?flag", "api/x/flag.json"],
+    ["/api/x?", "api/x.json"],
+    ["api/relativo/sem/barra", "api/relativo/sem/barra.json"],
+    ["/api/emoji/🌐", "api/emoji/~F0~9F~8C~90.json"]
+  ],
+  "binario": [
+    ["/api/items/3/image", "api/items/3/image.png"],
+    ["/api/runes/icons/conquistador.png", "api/runes/icons/conquistador.png"],
+    ["/api/runes/icons/arvore.png?v=2", "api/runes/icons/arvore.png"],
+    ["/api/spells/icons/Fluxo Incandescente.png", "api/spells/icons/Fluxo~20Incandescente.png"]
+  ]
+}
