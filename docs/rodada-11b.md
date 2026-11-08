@@ -174,3 +174,104 @@ Parte 4.
   manifesto, percorre as leituras da página do campeão, de uma build e da comparação de duas (`walk` de `data.js`) e
   confere que **todo pedido foi a um JSON gerado sob `api/` e respondeu 200**; e o **manifesto bate com os arquivos**
   (cada campeão, cada build da lista, a linha do tempo, os minutos-chave, as lutas).
+
+## Parte 4 — Repositório do site e publicação (preparado, não publicado) ✅
+
+### `tools/publicar_site.py`, um comando
+```
+python tools/publicar_site.py            # opções: --banco, --saida, --porta, --base, --campeoes, --sem-icones,
+                                         # --sem-lutas, --sem-ritmos, --rapido, --sem-frontend, --api
+```
+1. Confere que o banco exportado existe (`backend/data/publico/ornn-planner-publico.db`) e é do **patch atual** (o
+   `public_export.patch` contra o `campeoes_<patch>.yml` do `application.properties`). Senão, pede `./mvnw -Pexport`.
+2. Copia o banco para uma pasta temporária, sobe o app local completo sobre a cópia (`mvnw spring-boot:run`, porta
+   8097, perfil normal), espera o `/api/site/info`, gera os JSONs (Parte 2) e **desliga o app** (no Windows,
+   `taskkill /T`, que leva junto o Java filho do `mvnw.cmd`).
+3. `npm run build:estatico` (com `VITE_BASE` se `--base` for dado).
+4. Monta `site-publico/` (na raiz do repositório do app, fora do git): a página, `api/`, `api/manifest.json` e
+   `.nojekyll`.
+5. Confere o manifesto contra os arquivos e imprime o tamanho, a contagem, o maior arquivo e a folga no GitHub Pages.
+
+### Modelo do repositório do site (`tools/site-repo/`, para copiar)
+- `README.md`: o que é o site, de onde vêm os dados, onde está o patch, como enviar uma build e como atualizar.
+- `.github/workflows/pages.yml`: a cada push no `main` (ou à mão), `checkout` → `configure-pages` →
+  `upload-pages-artifact` (a raiz do repositório) → `deploy-pages`. **Só copia arquivos:** sem Java nem Node no
+  Actions, porque o build é feito no PC. Versões das ações as mesmas dos exemplos atuais da documentação
+  (`checkout@v6`, `configure-pages@v5`, `upload-pages-artifact@v4`, `deploy-pages@v4`).
+- `.github/ISSUE_TEMPLATE/enviar-build.yml`: o formulário "Enviar uma build" — campeão, rota, o link ou o arquivo e
+  um comentário. É o caminho **sem servidor** para receber builds da comunidade, revisadas à mão (substitui, no
+  estático, a Parte 4 da Rodada 11). O formulário avisa que a issue é pública.
+- `.nojekyll`.
+
+### Passo a passo (para quem nunca fez)
+1. **Criar o repositório:** em github.com, "New repository", um nome (ex.: `wild-rift-builds`), **Public** (o
+   GitHub Pages grátis exige público), sem README. O endereço do site vai ser
+   `https://<seu-usuario>.github.io/wild-rift-builds/`.
+2. **Copiar o modelo:** clone o repositório vazio ao lado deste (`git clone https://github.com/<seu-usuario>/wild-rift-builds`)
+   e copie para dentro dele **o conteúdo** de `tools/site-repo/` (inclusive as pastas ocultas `.github/` e o
+   `.nojekyll`).
+3. **Gerar o site:** neste repositório, `cd backend && ./mvnw -Pexport` (se ainda não exportou) e, na raiz,
+   `python tools/publicar_site.py`. No fim ele mostra o tamanho e "Manifesto confere com os arquivos".
+4. **Copiar e dar push:** copie **o conteúdo** de `site-publico/` (index.html, assets/, api/) para a raiz do
+   repositório do site, e lá: `git add -A`, `git commit -m "Site do patch 7.3d"`, `git push`.
+5. **Ligar o Pages:** no repositório do site, **Settings › Pages › Build and deployment › Source: "GitHub Actions"**.
+   Depois, em **Actions**, o workflow "Publicar no GitHub Pages" roda (ou rode-o à mão com "Run workflow").
+6. **Onde ver o endereço:** em Settings › Pages ("Your site is live at …") e no resumo da execução do workflow
+   (o link no passo `deploy`).
+7. **A cada patch ou campanha:** rodar as campanhas, exportar, `publicar_site.py`, apagar no repositório do site tudo
+   **menos** `.git/`, `.github/`, `README.md` e `.nojekyll`, copiar o `site-publico/` de novo, commit e push. Os
+   arquivos que não mudaram nem pesam no push (o git só manda o que mudou).
+
+### Limites do GitHub Pages (documentação conferida em 2026-11-07)
+| Limite | Valor | Este site |
+|---|---|---|
+| Site publicado | até **1 GB** | **12,8 MB** (1,3%) |
+| Repositório de origem | recomendado até **1 GB** | o mesmo tamanho (sem histórico grande: cada atualização troca arquivos) |
+| Banda | **100 GB por mês**, limite "soft" | ~1 MB por primeira visita: ~100 mil visitas/mês |
+| Builds | 10 por hora, "soft" — **não vale** para um workflow próprio do Actions (o nosso) | — |
+| Tempo de um deploy | **10 minutos** | um upload de dezenas de MB leva segundos |
+| Arquivo no git | aviso acima de 50 MiB; **recusado acima de 100 MiB** | maior arquivo: 283 KB |
+| Uso | não é hospedagem para negócio, loja ou SaaS; acima dos limites, pode responder 429 | um site pessoal de consulta |
+
+O teto deste site fica em **500 MB** (metade do limite), e o `publicar_site.py` avisa se passar.
+
+### Medido: os 6 campeões de ficha A (o 🎯 da Parte 2)
+Numa cópia do banco do usuário (`backend/data/site-teste/`, fora do git), com as pastas Anti Tank AD e AP marcadas
+públicas (como na Rodada 11):
+1. **Campanha** "Site 11b", orçamento **rápido**, Ornn, Darius, K'Sante, Renekton, Rumble e Vayne, com builds salvas e
+   matchups: **54 min** no total (Ornn 8,2 min; Darius 16,1; K'Sante 2,8; Renekton 14,8; Rumble 7,9; Vayne 4,6 — dividindo
+   a máquina com a suíte de testes e a geração de um site de teste). A estimativa da tela dizia 63 min.
+2. **Exportação** (`./mvnw -Pexport` sobre a cópia): 6 Descobertas, 6 builds públicas, 2.008 KB, 4,6 s. A limpeza da
+   Parte 1 tirou **34 conhecidas e 34 salvas privadas** (as builds da pasta Ornn, base da campanha do Ornn) e 6 nomes de
+   rivais privadas das matchups.
+3. **`python tools/publicar_site.py --banco <exportado>`:** **4 min 37 s** do começo ao fim (subir o app ~30 s,
+   gerar 240 s com 1.799 pedidos, build da página 5 s).
+
+| | |
+|---|---|
+| Campeões | 8: os 6 com Descoberta + Mordekaiser e Yasuo (só build pública) |
+| Builds | 72 (Darius 17, Renekton 17, Rumble 14, Vayne 11, K'Sante 7, Ornn 4, Mordekaiser 1, Yasuo 1) |
+| Arquivos | 412 |
+| **Tamanho** | **12,8 MB**: builds 6,8 MB (~95 KB cada), ícones 5,5 MB, catálogo e campeões ~0,5 MB, página 0,5 MB |
+| Maior arquivo | 283 KB (o JS da página); o maior JSON, 203 KB (o catálogo de itens) |
+| Tempo por campeão | 2 s (Yasuo) a 76 s (Darius, 17 builds × 3 minutos × efetividade, ofensiva e habilidades) |
+
+- **Folga:** 12,8 MB é **1,3% do limite de 1 GB** do GitHub Pages e 2,6% do teto de 500 MB deste site. A conta para o
+  futuro: ~1 MB por campeão descoberto (11 builds em média × 95 KB), então **os 142 campeões** dariam ~150 MB (+ 6,5 MB
+  fixos), ainda abaixo do teto. Se passar: `--rapido` (sem ofensiva e habilidades: ~12 KB a menos por minuto-chave, cerca de 1/3 de cada build), `--sem-icones` (−5,5 MB) ou menos campeões; `--sem-ritmos` economiza pouco (os ritmos extras já guardam só as compras).
+- **Banda:** 100 GB por mês ÷ ~1 MB numa primeira visita (abaixo) ≈ 100 mil visitas por mês.
+- **Privacidade conferida no resultado real:** os 37 nomes de builds e pastas privadas do banco (os que não coincidem
+  com um nome público ou do catálogo) não aparecem **nem no banco exportado nem em nenhum JSON do site**; "build
+  (privada)" aparece 16 vezes no site (rivais e "mais próxima").
+- O `npm test` passou sobre este site (os 8 campeões percorridos, todo pedido a um JSON gerado; o manifesto bate).
+- O app da geração foi desligado no fim (a porta 8097 não responde mais).
+
+### Carga ao abrir a página de um campeão (Darius, o maior; medida no navegador, 390 × 844, cache vazio)
+- **JSON: 31 KB** — o manifesto (2 KB), o do campeão (28 KB; **7 KB com gzip**, que o GitHub Pages aplica) e o
+  relatório básico (0,5 KB). O catálogo de itens (203 KB) **não** é baixado.
+- **Ícones: 26 itens, 525 KB** (os PNGs do jogo têm ~20 KB cada; ficam em cache para as outras telas).
+- **Página: 516 KB** de JS e CSS (~150 KB com gzip), uma vez só.
+- Abrir uma build depois baixa só o arquivo dela (~93 KB em média; ~12 KB com gzip), as runas (29 KB) e os ícones novos.
+- **Melhoria possível, não feita:** reduzir os ícones a 64 px no `publicar_site.py` cortaria ~2/3 dos 525 KB, mas
+  pede uma biblioteca de imagem (Pillow) que o script não pode usar (só a biblioteca padrão).
+

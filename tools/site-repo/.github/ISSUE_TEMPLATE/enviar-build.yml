@@ -1,0 +1,48 @@
+name: Enviar uma build
+description: Mande sua build (o link ou o arquivo) para ser calculada no app completo e, quem sabe, entrar no site.
+title: "[Build] "
+labels: ["build enviada"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Monte a build em **Montar** no site e use **Copiar link** ou **Exportar arquivo**.
+        As builds enviadas são revisadas à mão: as boas são calculadas no app completo e entram numa próxima atualização.
+        Não escreva dados pessoais aqui: esta issue é pública.
+  - type: input
+    id: campeao
+    attributes:
+      label: Campeão
+      placeholder: Ornn
+    validations:
+      required: true
+  - type: dropdown
+    id: rota
+    attributes:
+      label: Rota
+      options:
+        - Barão
+        - Selva
+        - Meio
+        - Dragão (atirador)
+        - Dragão (suporte)
+    validations:
+      required: true
+  - type: textarea
+    id: link
+    attributes:
+      label: Link da build
+      description: O link de "Copiar link" (começa com o endereço do site e tem `#/build/loja?b=`). Ou anexe o arquivo .json abaixo.
+      render: text
+  - type: textarea
+    id: arquivo
+    attributes:
+      label: Arquivo da build
+      description: Arraste o .json de "Exportar arquivo" para cá (se não mandou o link).
+  - type: textarea
+    id: comentario
+    attributes:
+      label: Comentário
+      description: Por que essa build? Contra quem ela vai bem, em que ritmo de ouro, o que muda de uma build comum.
+    validations:
+      required: true

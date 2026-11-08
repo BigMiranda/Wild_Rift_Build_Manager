@@ -1,0 +1,35 @@
+# Publica o site no GitHub Pages a cada push no main. Só copia arquivos: o site já vem pronto do PC
+# (tools/publicar_site.py no repositório do app), então não há Java, Node nem build aqui.
+# Em Settings › Pages, escolha "GitHub Actions" como fonte.
+name: Publicar no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# um deploy por vez; um push novo não cancela o que já está publicando
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/configure-pages@v5
+      # a raiz do repositório é o site (index.html, assets/, api/); .git e .github não entram no pacote
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -76,6 +76,39 @@
       ],
       "port": 5178,
       "autoPort": false
+    },
+    {
+      "name": "backend-site",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set SERVER_PORT=8096&& set PLANNER_DB_PATH=./data/site-teste/ornn-planner.db&& set PLANNER_EXPORT_OUT=./data/site-teste/publico/ornn-planner-publico.db&& cd backend && .\\mvnw.cmd spring-boot:run"
+      ],
+      "port": 8096,
+      "autoPort": false
+    },
+    {
+      "name": "site-estatico",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8099",
+        "-d",
+        "site-publico"
+      ],
+      "port": 8099,
+      "autoPort": false
+    },
+    {
+      "name": "frontend-site",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set API_TARGET=http://localhost:8096&& C:/Users/Matheus/AppData/Local/nvm/v24.15.0/node.exe frontend/node_modules/vite/bin/vite.js frontend --port 5180"
+      ],
+      "port": 5180,
+      "autoPort": false
     }
   ]
 }
