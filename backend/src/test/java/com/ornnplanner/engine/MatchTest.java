@@ -36,10 +36,12 @@ class MatchTest {
     private static final class Simple implements Match.World {
         int fights;
         int heldFrom = 1;
+        /** Times the stats: a champion strong enough to take the base alone, now that the towers shoot back. */
+        double strength = 1;
 
         @Override
         public double[] stats(int seat, int steps, int level, double minute) {
-            return new double[] {1000 + 80 * level, 80 + 40 * steps, 0.8, 0, 350};
+            return new double[] {(1000 + 80 * level) * strength, (80 + 40 * steps) * strength, 0.8, 0, 350};
         }
 
         @Override
@@ -141,9 +143,35 @@ class MatchTest {
         assertTrue(r.events.stream().anyMatch(e -> e.text.contains("Dragão")), "drake");
     }
 
+    /**
+     * The towers shoot champions at the coarse step (proposta-macro-treinada.md, Parte 3): five champions at level 1 that
+     * walk straight to an enemy tower before their minions get there die to it, and the tower stands (the anti-backdoor
+     * cut, its armor and the early defense). Before, towers never shot champions, and a trained macro won by 1:42.
+     */
+    @Test
+    void anEarlyRushWithoutMinionsDiesToTheTower() {
+        Simple w = new Simple();
+        Match[] at = new Match[1];
+        com.ornnplanner.arena.rift.MacroPolicy rush = (m, me) -> {
+            Match.Tower target = null;
+            for (Match.Tower tw : m.towers) {
+                if (tw.team == 1 && (target == null || Math.hypot(tw.x - 800, tw.y - 11200) < Math.hypot(target.x - 800, target.y - 11200))) {
+                    target = tw;
+                }
+            }
+            return new com.ornnplanner.arena.rift.MacroPolicy.Intent(com.ornnplanner.arena.rift.MacroPolicy.Goal.PUSH, target.x, target.y, "barao");
+        };
+        at[0] = new Match(MAP, RULES, MACRO, w, rush, 7, List.of("barao", "selva", "meio", "dupla", "suporte"), List.of(0, 0, 0, 0, 0));
+        MatchModel.Result r = at[0].run(50);
+        assertTrue(r.events.stream().anyMatch(e -> e.text.contains("morreu para a torre externa")), "the tower shoots them");
+        assertTrue(at[0].towers.stream().allMatch(tw -> tw.hp > 0), "no tower falls to a rush before the minions");
+        assertTrue(at[0].seats().stream().mapToInt(s -> s.deaths).sum() >= 3, "most of them died (and came back: 8,5 s at level 1)");
+    }
+
     @Test
     void aMatchCanEndWithANexus() {
         Simple w = new Simple();
+        w.strength = 4;
         Match m = match(w, List.of("meio"), List.of(0));
         MatchModel.Result r = m.run(40 * 60);
         assertEquals(0, r.winner, "the side with a champion wins alone; ended at " + r.seconds);

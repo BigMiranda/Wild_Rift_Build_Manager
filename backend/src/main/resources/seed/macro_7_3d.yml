@@ -1,5 +1,5 @@
 # Macro roteirizada da partida inteira (arena/rift/ScriptedMacro): valores meus (EST), para ajustar. A macro é trocável pela
-# interface MacroPolicy; a aprendida fica para depois.
+# interface MacroPolicy; a treinada é a NeuralMacro (proposta-macro-treinada.md).
 fonte: "EST"
 ultimos_golpes:            # chance de o campeão mais próximo da função levar o último golpe da tropa
   barao: 0.75
@@ -50,3 +50,10 @@ frutomel_ate: 3000         # até onde vai buscar o Frutomel
 teleporte_s: 3.5           # feiticos_7_3d.yml
 teleporte_recarga: 150     # feiticos_7_3d.yml
 teleporte_estruturas_ate: 360   # só até estruturas nos 6 primeiros minutos (feiticos_7_3d.yml)
+# Treino da macro (proposta-macro-treinada.md, Parte 3, arena/MacroTraining): a nota de cada partida para o lado da macro
+# treinada. Pesos meus (EST); o treino só usa a ordem das notas, então importa o que pesa mais, não a escala.
+treino_macro:
+  vitoria: 1.0             # vitória +1, derrota -1, empate (limite de tempo) 0
+  cedo: 0.2                # a mais por vencer cedo (proporcional ao tempo que sobra até o limite); a menos por perder cedo
+  ouro: 0.5                # diferença de ouro dos times, sobre o ouro dos dois
+  aceite: 0.55             # taxa de vitória mínima contra o roteiro na validação para aceitar a versão

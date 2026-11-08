@@ -195,3 +195,55 @@ partida, em vez dos do guia (08/11/2026). A velocidade das tropas do guia entrou
   - em uma partida inteira, toda intenção do roteiro é uma ação válida, e essa ação devolve a mesma intenção (meta,
     posição, rota). A observação tem sempre 50 números;
   - nessa partida aparecem a rota, a selva, o objetivo, o agrupar e a volta à base.
+
+### Parte 3 ✅ — recompensa, treino e validação
+- **`arena/MacroTraining`**: OpenAI-ES (o `Trainer` da Arena) sobre os pesos da `NeuralMacro`. Um episódio é uma semente
+  de um draft jogada duas vezes, com a candidata de cada lado. A nota (`treino_macro` em `macro_7_3d.yml`, EST) é:
+  vitória ±1, mais até ±0,2 por vencer (ou perder) cedo, mais 0,5 × a diferença de ouro sobre o ouro dos dois.
+  A validação usa sementes a partir de 1.000.000, que o treino nunca vê, sempre contra o roteiro e dos dois lados.
+  A versão é aceita com 55% (`aceite`).
+- 🎯 `MacroTrainingTest`: o roteiro contra ele mesmo dá **exatamente 50%**, com cada semente jogada dos dois lados. A
+  nota lê o vencedor e é simétrica. A mesma semente treina **os mesmos pesos em 1 e em 8 threads**.
+- **O primeiro treino real achou um furo da partida.** `MacroReportTest` (opcional, `-Dmacro.report=...`) usa cópia do
+  banco, 2 composições espelhadas, 24 candidatos, 30 gerações e 4 episódios. Em 8 gerações, a rede aprendeu a
+  **agrupar os 5 desde o segundo 0 e empurrar: o Nexo caía em 1:42**, com 100% de vitórias. No passo grosso, as torres
+  nunca atiravam em campeões, e os campeões batiam nelas sem armadura e sem anti-backdoor.
+- **A partida corrigida** (`Match`), com as regras de torre que a Arena já usa:
+  - a torre e o Nexo **atiram no campeão inimigo mais próximo** quando nenhuma tropa inimiga está ao alcance (750),
+    com o dano de `ataques_seguidos` (1,0 / 1,5 / 2,1 / 2,7) e o `towerDamage` do minuto. A armadura do campeão não
+    entra, porque o passo grosso não a tem (EST). Quem morre para a torre aparece no log;
+  - o dano de campeão em estrutura é DdA + 40% do PdH por ataque, passa pela armadura da torre e pela defesa do início
+    (meio e Barão até 2:00), e leva o corte de anti-backdoor (75%, ou 80% no Nexo) sem tropas aliadas a 1.200;
+  - **"agrupar e empurrar" agora vai com a onda** (`Match.rally`): fica atrás da onda da frente da rota escolhida e só vai
+    à estrutura quando as tropas chegam. Vale para o roteiro e para a ação da rede.
+  - 🎯 `MatchTest.anEarlyRushWithoutMinionsDiesToTheTower`: 5 campeões no nível 1 que vão direto à torre externa antes
+    das tropas morrem para ela, e nenhuma torre cai em 50 s. O teste "o lado com um campeão vence sozinho" ganhou um
+    campeão 4× mais forte: o de antes, com 200 de DdA no fim, não derruba a base com as torres revidando.
+- **A partida de base depois da correção** (`MatchReportTest`, as mesmas 3 sementes):
+
+| semente | vencedor | duração | ouro/min médio | XP/min médio | mortes | mortes para torres |
+|---|---|---|---|---|---|---|
+| 1 | azul → **empate** | 16:22 → **20:00 (limite)** | 549 → **519** | 375 → **337** | 42 → **60** | 6 nas 3 sementes |
+| 2 | vermelho → **empate** | 14:56 → **20:00** | 555 → **515** | 371 → **337** | 39 → **63** | |
+| 3 | azul → **empate** | 14:53 → **20:00** | 559 → **530** | 376 → **344** | 36 → **60** | |
+
+  **Com o roteiro, nenhuma partida termina antes dos 20 min.** O roteiro só agrupa aos 14:00 e passa a esperar a onda.
+  No jogo, uma partida termina por volta de 15 a 18 min. É a próxima calibragem da partida, fora desta proposta.
+- **O treino depois da correção**, nas mesmas condições: 30 gerações em **500 s**. A partida ficou mais longa, e o custo
+  foi de 3,3 s por partida numa thread e 4,7 partidas por segundo em 20 threads.
+
+| macro contra o roteiro (80 partidas de validação) | taxa de vitória | V-D | nota | ouro/min (roteiro) | desvios por partida |
+|---|---|---|---|---|---|
+| roteiro (pesos zerados) | 50,0% | 0-0 | 0 | | 0 |
+| geração 10 | 48,1% | 0-3 | −0,057 | 502 (544) | 125 |
+| geração 20 | 50,0% | 0-0 | −0,018 | 498 (536) | 192 |
+| **final (30)** | **73,1%** | **37-0** | **+0,521** | **508 (467)** | **35** |
+
+  - **O que ela aprendeu:** agrupar e empurrar com a onda bem antes dos 14 min, no lugar da rota, da selva e do
+    objetivo, e voltar à base de Teleporte em vez de a pé quando o Teleporte está pronto. Na validação, ela vence 37
+    partidas, empata 43 e não perde nenhuma. Uma das amostras vence aos 9:57.
+  - **Os desvios caem** de 125–192 por partida no meio do treino para 35 no fim: a rede passou a mudar menos de ideia.
+  - Isso **vale para a economia e as regras atuais da partida** (`MacroTraining.RULES` = 1). Com as partidas do roteiro
+    terminando empatadas, vence quem empurra antes. Se a partida for calibrada para terminar no tempo do jogo, a vantagem
+    pode mudar, e então a macro pede treino novo.
+

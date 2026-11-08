@@ -147,6 +147,10 @@ public final class Match {
         public double hp;
         final double maxHp;
         int plates;
+        /** Its shots at champions: the seat it aims at, how many in a row, when the next one goes. */
+        int aim = -1;
+        int streak;
+        double nextShot;
 
         Tower(int team, String lane, String kind, int order, double x, double y, double along, double hp) {
             this.team = team;
@@ -383,9 +387,17 @@ public final class Match {
         return best;
     }
 
+    /**
+     * Where the side groups to push: the enemy's next structure in the push lane once its own minions are there (the
+     * tower shoots them first, and the anti-backdoor cut is off), behind its front wave of that lane until then.
+     */
     public double[] rally(int team) {
-        Tower next = nextTower(1 - team, pushLane(team));
-        return next == null ? (team == 0 ? map.nexusRed : map.nexusBlue) : new double[] {next.x, next.y};
+        String lane = pushLane(team);
+        Tower next = nextTower(1 - team, lane);
+        if (next == null) {
+            return team == 0 ? map.nexusRed : map.nexusBlue;
+        }
+        return escorted(team, next) ? new double[] {next.x, next.y} : laneSpot(team, lane);
     }
 
     /** The next structure of a side in a lane; its Nexus when the lane is open. */
@@ -1053,12 +1065,118 @@ public final class Match {
             }
             Tower next = nextTower(1 - s.team, s.intent.what);
             if (next != null && Math.hypot(s.x - next.x, s.y - next.y) <= 700) {
-                hitStructure(next, s.stats[1] * s.stats[2] * STEP, s);
+                hitStructure(next, structureDamage(s, next) * STEP, s);
                 if (result.winner >= 0) {
                     return;
                 }
             }
         }
+        tickTowerShots();
+    }
+
+    /**
+     * A champion's damage per second on a structure, as the arena's: attack damage plus 40% of ability power per attack,
+     * through the structure's armor (and the early defense of the mid and Baron lanes), and the anti-backdoor cut when
+     * no allied minions escort it.
+     */
+    private double structureDamage(Seat s, Tower tw) {
+        Map<String, Object> all = rules.map("torres");
+        double raw = (s.stats[1] + RiftRules.value(all.get("dano_estrutura_pdh"), 0.4) * s.stats[3]) * s.stats[2];
+        Map<String, Object> kind = tw.lane == null ? rules.map("torres", "nexo") : rules.map("torres", "tipos", tw.kind);
+        double armor = RiftRules.value(kind.get("armadura"), 0);
+        Map<String, Object> early = rules.map("torres", "defesa_inicio");
+        if (early != null && tw.lane != null && t < RiftRules.value(early.get("ate"), 120) && early.get("rotas") instanceof List
+                && ((List<?>) early.get("rotas")).contains(tw.lane)) {
+            armor += RiftRules.value(early.get("armadura"), 50);
+        }
+        double mult = 100 / (100 + Math.max(0, armor));
+        if (!escorted(s.team, tw)) {
+            Map<String, Object> cut = rules.map("torres", "anti_backdoor");
+            mult *= 1 - (cut == null ? 0 : RiftRules.value(cut.get(tw.lane == null ? "nexo" : "torre"), 0));
+        }
+        return raw * mult;
+    }
+
+    /** A wave of this side is at the structure (within 1200), as the arena's escort for the anti-backdoor rule. */
+    private boolean escorted(int team, Tower tw) {
+        for (Wave w : waves) {
+            if (w.team != team || w.hp.isEmpty()) {
+                continue;
+            }
+            double[] at = onLane(w.lane, w.team, w.along);
+            if (Math.hypot(at[0] - tw.x, at[1] - tw.y) <= 1200) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Towers and Nexus shoot champions at the coarse step, as in the arena: the nearest enemy champion in reach when no
+     * enemy minions are in reach (those come first), each shot in a row on the same champion stronger
+     * ({@code torres.ataques_seguidos}). Champions in a fight are left to the fight, which has the towers around.
+     */
+    private void tickTowerShots() {
+        Map<String, Object> all = rules.map("torres");
+        double reach = RiftRules.value(all.get("alcance"), 750);
+        double speed = RiftRules.value(all.get("velocidade_ataque"), 0.83);
+        for (Tower tw : towers) {
+            if (tw.hp <= 0 || t < tw.nextShot) {
+                continue;
+            }
+            if (minionsAt(1 - tw.team, tw, reach)) {
+                tw.aim = -1;
+                continue;
+            }
+            Seat aim = null;
+            double best = reach;
+            for (Seat s : seats) {
+                if (s.team == tw.team || s.dead || t < s.busyUntil) {
+                    continue;
+                }
+                double d = Math.hypot(s.x - tw.x, s.y - tw.y);
+                if (d <= best) {
+                    best = d;
+                    aim = s;
+                }
+            }
+            if (aim == null) {
+                tw.aim = -1;
+                continue;
+            }
+            tw.streak = aim.index == tw.aim ? tw.streak + 1 : 0;
+            tw.aim = aim.index;
+            tw.nextShot = t + 1 / speed;
+            List<?> ramp = (List<?>) rules.map("torres", "ataques_seguidos").get("valores");
+            double mult = ((Number) ramp.get(Math.min(tw.streak, ramp.size() - 1))).doubleValue();
+            Map<String, Object> kind = tw.lane == null ? rules.map("torres", "nexo") : rules.map("torres", "tipos", tw.kind);
+            aim.hp -= rules.towerDamage(kind, t) * mult / Math.max(1, aim.stats[0]);
+            if (aim.hp <= 0) {
+                aim.dead = true;
+                aim.deaths++;
+                aim.hp = 0;
+                aim.path = null;
+                aim.recallAt = -1;
+                aim.teleportBack = false;
+                aim.respawnAt = t + param("renascer_base", 6) + param("renascer_por_nivel", 2.5) * aim.level;
+                tw.aim = -1;
+                note(tw.team, world.name(aim.index) + " morreu para " + (tw.lane == null ? "o Nexo" : "a torre " + tw.kind));
+            }
+        }
+    }
+
+    /** Minions of this side within reach of the structure. */
+    private boolean minionsAt(int team, Tower tw, double reach) {
+        for (Wave w : waves) {
+            if (w.team != team || w.hp.isEmpty()) {
+                continue;
+            }
+            double[] at = onLane(w.lane, w.team, w.along);
+            if (Math.hypot(at[0] - tw.x, at[1] - tw.y) <= reach) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private double power(Seat s) {
