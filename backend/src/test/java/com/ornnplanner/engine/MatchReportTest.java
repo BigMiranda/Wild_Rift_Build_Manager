@@ -83,6 +83,36 @@ class MatchReportTest {
         MatchModel.Result b = matches.run(request(5));
         assertEquals(a.seconds, b.seconds);
         assertEquals(a.fights.size(), b.fights.size());
+        // the cost of a training generation (proposta-macro-treinada.md, Parte 1): one draft played many times
+        MatchService.Draft d = matches.draft(request(1));
+        com.ornnplanner.arena.rift.MacroPolicy script = matches.scripted();
+        matches.run(d, 100, 20, script, script);
+        long t0 = System.nanoTime();
+        int one = 6;
+        for (int i = 0; i < one; i++) {
+            matches.run(d, 200 + i, 20, script, script);
+        }
+        double perMatch = (System.nanoTime() - t0) / 1e9 / one;
+        int threads = Runtime.getRuntime().availableProcessors();
+        int many = threads * 2;
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        long t1 = System.nanoTime();
+        List<java.util.concurrent.Future<MatchModel.Result>> out = new ArrayList<>();
+        for (int i = 0; i < many; i++) {
+            long seed = 300 + i;
+            out.add(pool.submit(() -> matches.run(d, seed, 20, script, script)));
+        }
+        for (java.util.concurrent.Future<MatchModel.Result> f : out) {
+            try {
+                f.get();
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+        }
+        pool.shutdown();
+        double wall = (System.nanoTime() - t1) / 1e9;
+        sb.append(String.format("training cost: %.2f s per match on a warm draft (1 thread); %d matches on %d threads in %.1f s = %.2f matches/s; %d fighters made%n",
+                perMatch, many, threads, wall, many / wall, d.fightersMade()));
         System.out.println(sb);
         Files.write(Paths.get("target/match-report.txt"), sb.toString().getBytes("UTF-8"));
     }

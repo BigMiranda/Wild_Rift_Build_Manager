@@ -98,8 +98,69 @@ public class MatchService {
         return "A".equals(q) || "B".equals(q);
     }
 
+    /**
+     * A match's draft, ready to be played many times (the macro's training): the seats, their builds after the guides,
+     * their roles, the planner's timelines and the fighters made so far. Shared by every match played on it, also across
+     * threads: the fighters' cache is keyed by everything that makes a fighter, so it gives the same fighter whoever
+     * asks first.
+     */
+    public final class Draft {
+        final List<MatchModel.Slot> slots;
+        final List<BuildRepository.Build> chosen;
+        final List<String> roles;
+        final List<String> names;
+        final List<String> left;
+        final List<List<Model.TimelineStep>> steps = new ArrayList<>();
+        final Model.ReferenceData ref = planner.referenceData();
+        final Map<String, Arena.Input> inputs = new java.util.concurrent.ConcurrentHashMap<>();
+
+        Draft(List<MatchModel.Slot> slots, List<BuildRepository.Build> chosen, List<String> roles, List<String> names, List<String> left) {
+            this.slots = slots;
+            this.chosen = chosen;
+            this.roles = roles;
+            this.names = names;
+            this.left = left;
+            for (BuildRepository.Build b : chosen) {
+                steps.add(planner.calculate(b).steps);
+            }
+        }
+
+        public List<String> roles() {
+            return roles;
+        }
+
+        public List<String> champions() {
+            return names;
+        }
+
+        public List<Integer> teams() {
+            List<Integer> out = new ArrayList<>();
+            slots.forEach(s -> out.add(s.team));
+            return out;
+        }
+
+        public int fightersMade() {
+            return inputs.size();
+        }
+    }
+
+    /** The scripted macro of {@code macro_<patch>.yml}. */
+    public com.ornnplanner.arena.rift.MacroPolicy scripted() {
+        return new ScriptedMacro(macro);
+    }
+
+    /** The parameters of {@code macro_<patch>.yml}, read-only. */
+    public Map<String, Object> macroParams() {
+        return java.util.Collections.unmodifiableMap(macro);
+    }
+
     public MatchModel.Result run(MatchModel.Request req) {
-        long start = System.nanoTime();
+        com.ornnplanner.arena.rift.MacroPolicy script = scripted();
+        return run(draft(req), req.seed, req.limit, script, script);
+    }
+
+    /** The seats of a request with a sheet good enough, their builds (after the guides) and roles. */
+    public Draft draft(MatchModel.Request req) {
         List<MatchModel.Slot> slots = new ArrayList<>();
         List<String> left = new ArrayList<>();
         List<BuildRepository.Build> chosen = new ArrayList<>();
@@ -123,10 +184,22 @@ public class MatchService {
         }
         List<String> roles = roles(slots, names);
         guides(slots, chosen, roles);
-        Live world = new Live(slots, chosen, roles, names);
-        List<Integer> teams = new ArrayList<>();
-        slots.forEach(s -> teams.add(s.team));
-        Match m = new Match(arena.riftMap(), arena.riftRules(), macro, world, new ScriptedMacro(macro), req.seed, roles, teams);
+        return new Draft(slots, chosen, roles, names, left);
+    }
+
+    /**
+     * Plays a match of a draft: the blue side's macro and the red side's (the same one for both is the plain match).
+     * Deterministic by the seed, whatever else runs on the same draft at the same time.
+     */
+    public MatchModel.Result run(Draft d, long seed, double limitMinutes, com.ornnplanner.arena.rift.MacroPolicy blue, com.ornnplanner.arena.rift.MacroPolicy red) {
+        long start = System.nanoTime();
+        List<MatchModel.Slot> slots = d.slots;
+        List<BuildRepository.Build> chosen = d.chosen;
+        List<String> roles = d.roles;
+        List<String> names = d.names;
+        Live world = new Live(d);
+        com.ornnplanner.arena.rift.MacroPolicy policy = blue == red ? blue : new com.ornnplanner.arena.rift.SeatMacro(blue, red);
+        Match m = new Match(arena.riftMap(), arena.riftRules(), macro, world, policy, seed, roles, d.teams());
         for (int i = 0; i < slots.size(); i++) {
             MatchModel.Player p = new MatchModel.Player();
             p.seat = i;
@@ -139,7 +212,7 @@ public class MatchService {
             p.plannedXpPerMin = chosen.get(i).xpPerMin;
             m.result.players.add(p);
         }
-        MatchModel.Result r = m.run(Math.max(1, req.limit) * 60);
+        MatchModel.Result r = m.run(Math.max(1, limitMinutes) * 60);
         for (Match.Seat s : m.seats()) {
             MatchModel.Player p = r.players.get(s.index);
             double minutes = Math.max(0.1, r.seconds / 60);
@@ -156,7 +229,7 @@ public class MatchService {
         }
         m.towers.forEach(t -> r.towers.add(new double[] {t.team, t.x, t.y}));
         r.world = arena.riftMap().drawing();
-        r.left = left;
+        r.left = d.left;
         r.runSeconds = (System.nanoTime() - start) / 1e9;
         r.fightSeconds = world.fightNanos / 1e9;
         return r;
@@ -200,22 +273,20 @@ public class MatchService {
     private final class Live implements Match.World {
         final List<MatchModel.Slot> slots;
         final List<BuildRepository.Build> chosen;
-        final List<String> roles;
-        final List<List<Model.TimelineStep>> steps = new ArrayList<>();
-        final Model.ReferenceData ref = planner.referenceData();
-        final Map<String, Arena.Input> inputs = new HashMap<>();
+        final List<List<Model.TimelineStep>> steps;
+        final Model.ReferenceData ref;
+        final Map<String, Arena.Input> inputs;
         long fightNanos;
 
         final List<String> names;
 
-        Live(List<MatchModel.Slot> slots, List<BuildRepository.Build> chosen, List<String> roles, List<String> names) {
-            this.names = names;
-            this.slots = slots;
-            this.chosen = chosen;
-            this.roles = roles;
-            for (BuildRepository.Build b : chosen) {
-                steps.add(planner.calculate(b).steps);
-            }
+        Live(Draft d) {
+            this.names = d.names;
+            this.slots = d.slots;
+            this.chosen = d.chosen;
+            this.steps = d.steps;
+            this.ref = d.ref;
+            this.inputs = d.inputs;
         }
 
         /** How many purchases of the build are done after this many steps of its timeline (assumed parts do not count). */
@@ -240,7 +311,8 @@ public class MatchService {
         }
 
         private Arena.Input input(int seat, int done, int level, double minute) {
-            String key = seat + "|" + prefix(seat, done) + "|" + level;
+            // everything that makes the fighter: the slot's minute is rounded the same way below
+            String key = seat + "|" + prefix(seat, done) + "|" + level + "|" + Math.max(1, Math.round(minute));
             return inputs.computeIfAbsent(key, k -> {
                 Slot other = new Slot();
                 other.team = 1 - slots.get(seat).team;

@@ -140,3 +140,31 @@ mais escolhidas por função e minuto, e três decisões comentadas, de onde a r
 2. **Uma rede para as 5 funções**, com a função na entrada, ou uma rede por função?
 3. **Adversário da fase 1:** só o roteiro, ou já o roteiro mais as versões anteriores?
 4. **Limite de aceite:** 55% contra o roteiro, em 40 partidas, está bom?
+
+## Progresso
+
+### Parte 0 ✅
+Foi feita como Rodada 12, partes 3 e 4 ([rodada-12.md](rodada-12.md)). O usuário decidiu manter os tempos observados em
+partida, em vez dos do guia (08/11/2026). A velocidade das tropas do guia entrou. A tabela de base está na parte 4.
+
+### Parte 1 ✅ — uma partida treinável
+- `MatchService.draft(req)` devolve um `Draft`: os assentos, as builds depois das guias, as funções, as linhas do tempo do
+  planejador e o cache de lutadores, num `ConcurrentHashMap`. `run(draft, seed, limite, azul, vermelho)` joga uma partida
+  dele, e `run(req)` virou `draft` + `run` com o roteiro dos dois lados.
+- `rift/SeatMacro`: uma macro por lado, sem mudar o `Match`.
+- **O risco de determinismo foi corrigido:** a chave do cache do lutador agora leva o minuto arredondado, o mesmo que
+  monta o lutador. Antes, o lutador ficava com o minuto da primeira vez que a chave aparecia. **Isso muda um pouco as
+  partidas de antes**, porque as compras e os efeitos que dependem do minuto passam a ser lidos no minuto certo:
+
+| semente | vencedor | duração | ouro/min médio | XP/min médio | mortes |
+|---|---|---|---|---|---|
+| 1 | azul | 15:08 → **16:22** | 550 → **549** | 382 → **375** | 35 → **42** |
+| 2 | vermelho | 14:56 → **14:56** | 555 → **555** | 371 → **371** | 39 → **39** |
+| 3 | azul | 15:56 → **14:53** | 552 → **559** | 366 → **376** | 41 → **36** |
+
+- 🎯 `MatchDraftTest`: com a mesma semente, o resultado é o mesmo com um draft novo, com um já usado em outra ordem e em
+  20 threads ao mesmo tempo. Uma macro por lado, com o roteiro dos dois lados, dá a mesma partida que a simples.
+- **Medida** (`MatchReportTest`, builds reais): **1,63 s por partida** numa thread, com o draft já usado, e **6,6
+  partidas por segundo em 20 threads** (40 partidas em 6,1 s). Uma geração de 24 candidatos × 4 episódios × 2 lados
+  = 192 partidas leva uns 30 s. **O treino fica com as lutas finas**, e a "luta estimada" não foi necessária.
+- Testes: 413 → 415 (16 opcionais pulados), 0 falhas.
