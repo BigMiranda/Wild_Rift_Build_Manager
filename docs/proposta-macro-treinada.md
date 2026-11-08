@@ -558,3 +558,51 @@ O que ela aprendeu sobre voltar à base aponta o próximo ajuste do roteiro: os 
 vê no jogo.
 
 Testes: **425** (17 opcionais pulados), 0 falhas. Os golden não mudaram.
+
+## Depois: os limiares da volta à base pela macro treinada (08/11/2026)
+
+Pedido do usuário: o roteiro voltar à base mais tarde, como a macro treinada aprendeu.
+
+**A medida** (`MatchReportTest -Dmatch.tune=true`, com `-Dmatch.tune.think`, `-Dmatch.tune.gold` e `-Dmatch.tune.base`):
+cada par de limiares joga como roteiro contra o roteiro atual, dos dois lados de cada semente.
+
+| `pensar_abaixo` / `voltar_ouro` | 1.100 | 1.400 | 1.600 | 1.800 | 2.200 |
+|---|---|---|---|---|---|
+| 0,80 (o atual) | 50,0% | | 49,0% | | 47,9% |
+| 0,65 | 58,3% | 54,2%\* | 62,5% / 53,6%\* | 53,1%\* | 52,1% |
+| 0,55 | | 47,9%\* | **62,5%\*** | 54,2%\* | |
+| 0,50 | 50,0% | 54,7%\* | 71,9% / 57,3%\* | 51,6%\* | 53,1% |
+| 0,40 | 62,5% | | 52,1% | | 54,2% |
+
+Sem marca: 48 jogos (sementes 701–724). \*: 96 jogos com outras sementes (2001–2048), cerca de ±5%.
+
+- **Aplicado: `pensar_abaixo` 0,8 → 0,55 e `voltar_ouro` 1.100 → 1.600.** O roteiro pensa em sair com menos Vida e volta
+  para comprar com mais ouro. Contra o roteiro de antes, vence 62,5% em 96 jogos. 1.600 de ouro foi o melhor em todas as
+  linhas.
+- Com os limiares novos, o roteiro contra ele mesmo tem mediana de 16,0 min (14,7–25,7; 23 de 24 terminam), 50,6 mortes e
+  25 a 36 voltas à base por partida. O roteiro sem compras fica em 41,7%.
+
+**O treino achou outro furo: os 5 no meio desde o começo** (regras 7). A rede mandava todos ao meio ("ir ao meio em vez de
+ficar na própria rota") e vencia 100%, com o Nexo caindo entre 5:59 e 7:10. Antes de agrupar, o roteiro só defendia a
+torre da base e o Nexo.
+- **Regra nova:** antes de agrupar, uma estrutura com 3 ou mais inimigos a 1.500 chama a defesa do time
+  (`defender_cedo_com`). `MacroTraining.RULES` 7 → 8.
+- Os mesmos pesos da corrida ao meio ainda vencem **95%** contra essa defesa, terminando por volta dos 7 min. A defesa
+  chega aos poucos, vinda das outras rotas, e perde de 5 contra 1 ou 2.
+
+**O treino novo com as regras 8** (30 gerações, 449 s): **91,3%** (73-7). A rede voltou a não voltar à base nenhuma vez:
+
+| nas 4 amostras | voltas à base | abates | mortes | compras |
+|---|---|---|---|---|
+| macro treinada | 0 | 58 | 101 | 305 |
+| roteiro | 51 (707 de Vida em cada) | 76 | 63 | 316 |
+
+**Leitura:** os 81% da rodada anterior não se sustentaram com as regras novas. A rede tem pelo menos duas saídas fáceis
+nesta partida, e o treino acha uma ou outra:
+1. **Não voltar à base.** Isso compensa porque a troca para em 5% de Vida e não mata. O campeão segue limpando ondas e
+   batendo em torres com 5% de Vida até uma luta o matar, e então renasce com a Vida cheia e compra.
+2. **Juntar os 5 cedo numa rota.** As torres do jogo têm regras contra isso que a partida ainda não usa: o Guia do Rift
+   traz +25% e +50% de dano da torre externa com 4 e 5 inimigos, armadura por inimigo perto depois de cada placa, e a
+   cristalização dos primeiros minutos.
+
+Testes: **425** (17 opcionais pulados), 0 falhas. Os golden não mudaram.

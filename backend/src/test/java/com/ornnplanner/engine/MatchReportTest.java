@@ -60,12 +60,61 @@ class MatchReportTest {
         return req;
     }
 
+    private static double[] list(String key, String def) {
+        return java.util.Arrays.stream(System.getProperty(key, def).split(",")).mapToDouble(Double::parseDouble).toArray();
+    }
+
     private static String nl() {
         return System.lineSeparator();
     }
 
     private static String mmss(double seconds) {
         return String.format("%d:%02d", (int) seconds / 60, (int) seconds % 60);
+    }
+
+    /**
+     * The recall thresholds of the two tempos (-Dmatch.tune=true): each pair (pensar_abaixo, voltar_ouro) as a script
+     * against the current one, both sides of every seed, in parallel.
+     */
+    @SuppressWarnings("unchecked")
+    private void tune(StringBuilder sb, int seeds) {
+        MatchService.Draft d = matches.draft(request(1));
+        com.ornnplanner.arena.rift.MacroPolicy current = matches.scripted();
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        try {
+            for (double think : list("match.tune.think", "0.8,0.65,0.5,0.4")) {
+                for (double gold : list("match.tune.gold", "1100,1600,2200")) {
+                    java.util.Map<String, Object> p = new java.util.LinkedHashMap<>(matches.macroParams());
+                    java.util.Map<String, Object> two = new java.util.LinkedHashMap<>((java.util.Map<String, Object>) p.get("dois_tempos"));
+                    two.put("pensar_abaixo", think);
+                    p.put("dois_tempos", two);
+                    p.put("voltar_ouro", gold);
+                    com.ornnplanner.arena.rift.MacroPolicy candidate = new com.ornnplanner.arena.rift.ScriptedMacro(p);
+                    List<java.util.concurrent.Future<MatchModel.Result>> blue = new ArrayList<>();
+                    List<java.util.concurrent.Future<MatchModel.Result>> red = new ArrayList<>();
+                    for (long s = 1; s <= seeds; s++) {
+                        long seed = Long.getLong("match.tune.base", 700) + s;
+                        blue.add(pool.submit(() -> matches.run(d, seed, 30, candidate, current)));
+                        red.add(pool.submit(() -> matches.run(d, seed, 30, current, candidate)));
+                    }
+                    double score = 0;
+                    int deaths = 0;
+                    for (int i = 0; i < seeds; i++) {
+                        MatchModel.Result b = blue.get(i).get();
+                        MatchModel.Result r = red.get(i).get();
+                        score += b.winner == 0 ? 1 : b.winner < 0 ? 0.5 : 0;
+                        score += r.winner == 1 ? 1 : r.winner < 0 ? 0.5 : 0;
+                        deaths += b.players.stream().mapToInt(x -> x.deaths).sum() + r.players.stream().mapToInt(x -> x.deaths).sum();
+                    }
+                    sb.append(String.format("tune: pensar_abaixo %.2f voltar_ouro %4.0f vs current: %5.1f%% (%d games), %.1f deaths/match%n",
+                            think, gold, 100 * score / (2 * seeds), 2 * seeds, deaths / (2.0 * seeds)));
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        } finally {
+            pool.shutdown();
+        }
     }
 
     /**
@@ -168,6 +217,9 @@ class MatchReportTest {
         sb.append("pace: ").append(String.join(" | ", pace)).append(nl());
         if (Boolean.getBoolean("match.probe")) {
             probe(sb, Math.max(seeds, 12));
+        }
+        if (Boolean.getBoolean("match.tune")) {
+            tune(sb, Math.max(seeds, 12));
         }
         MatchModel.Result a = matches.run(request(5));
         MatchModel.Result b = matches.run(request(5));

@@ -447,12 +447,12 @@ public final class Match {
 
     /**
      * The side's structure under pressure, {x, y, lane} (the Nexus: the side's push lane), or null: the one with the most
-     * enemy champions within 1500. A base tower or the Nexus at any time with one of them; the others only after the
-     * grouping, with {@code defender_com}.
+     * enemy champions within 1500. A base tower or the Nexus with one of them; the others with {@code defender_com} after
+     * the grouping, or {@code defender_cedo_com} before it.
      */
     public Object[] threat(int team) {
-        int need = (int) param("defender_com", 2);
-        boolean grouped = grouped();
+        // after the grouping, 2 enemies at a structure call the side; before it, a push of 3 or more (a dive, an early group)
+        int need = (int) (grouped() ? param("defender_com", 2) : param("defender_cedo_com", 3));
         Tower best = null;
         int most = 0;
         for (Tower tw : towers) {
@@ -460,9 +460,6 @@ public final class Match {
                 continue;
             }
             boolean base = tw.order >= 3;
-            if (!base && !grouped) {
-                continue;
-            }
             int n = 0;
             for (Seat s : seats) {
                 if (s.team != team && !s.dead && Math.hypot(s.x - tw.x, s.y - tw.y) <= 1500) {

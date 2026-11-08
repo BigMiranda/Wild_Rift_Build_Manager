@@ -9,10 +9,11 @@ ultimos_golpes:            # chance de o campeão mais próximo da função leva
   suporte: 0.05
 pressionar_vida: 0.35      # com os rotas inimigos da rota mortos, na base ou voltando, fica e pressiona (onda e torre) em vez de voltar para comprar, acima desta Vida
 voltar_vida: 0.30          # volta à base abaixo desta fração da Vida
-voltar_ouro: 1100          # ou com este ouro na mão, se ele paga a próxima compra
+voltar_ouro: 1600          # ou com este ouro na mão, se ele paga a próxima compra; 1100 até a calibragem pela macro treinada (08/11/2026)
 volta_s: 8                 # segundos de canalização da volta
 objetivo_depois_de: 5      # minuto a partir do qual selva e meio giram para os objetivos
 agrupar_aos: 14            # minuto em que todos agrupam e empurram uma rota
+defender_cedo_com: 3       # antes de agrupar, a estrutura (fora a base) com esta quantidade de inimigos a 1.500 chama o time
 defender_com: 2            # depois de agrupar, sem vantagem, defende a estrutura com esta quantidade de inimigos a 1.500
 empurrar_com_mortos: 3     # depois de agrupar, empurra antes de ir ao objetivo com a Mão do Barão ou com esta quantidade de inimigos mortos
 luta_distancia: 900        # inimigos a esta distância, com a linha livre, podem lutar
@@ -33,7 +34,7 @@ renascer_por_nivel: 2.5
 # mesmo horizonte. Pesos meus (EST), para calibrar.
 dois_tempos:
   ligado: true
-  pensar_abaixo: 0.8       # pensa em sair abaixo desta fração da Vida (ou com ouro para o próximo item)
+  pensar_abaixo: 0.55      # pensa em sair abaixo desta fração da Vida (ou com ouro para o próximo item); 0.8 até a calibragem pela macro treinada (08/11/2026)
   horizonte_s: 40          # segundos em que cada opção é medida
   ouro_por_xp: 0.6         # ouro que 1 de XP vale
   negacao_xp: 0.5          # parte a mais da XP perdida: o inimigo ganha nível na frente
