@@ -67,3 +67,23 @@ a borda (Irelia), ataque com área (Malphite), ataques alternados (Sett), status
 - A camuflagem e o dano armazenado não mudam as observações da IA (`obs_schema` igual).
 
 🎯 **Golden sem mudança.** Testes: 399 → 408 (9 novos em `MecanicasTest`), 16 opcionais pulados. `npm run build` limpo.
+
+## Parte 3 — As 16 fichas ✅
+
+As fichas estão em `kits_7_3d.yml`, depois do K'Sante. Números (dano, razões, recargas, durações, %) do texto do jogo;
+geometria do rascunho (WR quase sempre); forma e mecânicas das notas. Cada habilidade tem `fontes`, e as aproximações
+ficam em `nota` / `lacuna` (por habilidade) e `lacunas` (por campeão). A tabela completa está na Parte 5.
+
+**Campos genéricos que as fichas pediram no caminho** (nenhum cita campeão; o golden não muda):
+- `ataque` com `ataques: n` (vários ataques fortalecidos: Sett, Fiora, Camille, Shen), `velocidade_ataque` e
+  `velocidade_movimento`; o ataque fortalecido também aplica `ao_acertar` (Gwen E).
+- Termos de dano `base_nivel` (+ `_nv15`: o "({nível})" do Mordekaiser) e `arm` / `rm` (Armadura e RM **totais**: Malphite).
+- `status` / `status_pct` numa habilidade: atributos por `duracao` (Nasus R, Gwen W, Jax R, Riven R, Aatrox R).
+- Estados no lançador em qualquer forma (`invulneravel` na linha da Fiora, na zona da Kayle; `nao_selecionavel` no salto
+  da Camille); `escudo` em formas que não são `proprio` nem `avanco` (Sett W).
+- `carregar` com `reducao_dano` e `imparavel` (Irelia W).
+- Efeito `reduz_vel_ataque` (Malphite E, Nasus W, Fiora W).
+- `rouba` com uma lista de atributos e `pct` (% do atributo do alvo: Mordekaiser R).
+
+**Custos:** nenhuma ficha tem `recurso` ainda (mana do Fiora / Jax / Irelia / Malphite / Nasus / Kayle / Teemo,
+energia do Shen): sem custo, como as fichas antigas sem `recurso`.

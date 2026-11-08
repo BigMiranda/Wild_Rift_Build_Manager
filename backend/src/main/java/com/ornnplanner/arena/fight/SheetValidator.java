@@ -29,17 +29,17 @@ public final class SheetValidator {
             "custo", "alvo", "cura", "invisivel", "invulneravel", "nao_selecionavel", "imparavel_por", "canaliza", "invoca", "perpendicular",
             "segundos", "ate_ponto", "ate_alvo", "atravessa_parede", "interrompivel", "troca_forma",
             // Rodada das fichas, lote 1
-            "ao_acertar", "reducao_dano", "consome_armazenado", "deixa_marco", "linha_entre");
+            "ao_acertar", "reducao_dano", "consome_armazenado", "deixa_marco", "linha_entre", "ataques", "lacuna", "status", "status_pct");
     private static final Set<String> ZONE = Set.of("nome", "forma", "raio", "raio_interno", "angulo", "comprimento", "largura", "centro",
             "vertices", "pontos", "dano", "efeitos", "acumula");
     private static final Set<String> EFFECTS = Set.of("lentidao", "duracao", "atordoa", "atordoa_max", "arremessa", "arremessa_demais", "puxa",
             "fragil", "marca", "acumulos", "reduz_rm", "reduz_arm", "cura_propria", "escudo_proprio", "cura_vida_perdida", "cura_max",
             "cura_por_campeao", "remove_escudos", "empurra",
             "enraiza", "silencia", "cega", "provoca", "amedronta", "encanta", "adormece", "suprime", "polimorfa", "lentidao_polimorfo",
-            "afasta", "afasta_velocidade", "afasta_parede", "rouba", "executa_abaixo");
+            "afasta", "afasta_velocidade", "afasta_parede", "rouba", "executa_abaixo", "reduz_vel_ataque");
     private static final Set<String> DAMAGE = Set.of("tipo", "base", "dda", "dda_base", "dda_bonus", "pdh", "vida_max_alvo", "vida_bonus",
             "arm_bonus", "rm_bonus", "vida_max", "minimo", "base_nv15", "vida_max_alvo_nv15",
-            "vida_perdida_alvo", "vida_atual_alvo", "vida_bonus_alvo", "armazenado", "acumulos_permanentes");
+            "vida_perdida_alvo", "vida_atual_alvo", "vida_bonus_alvo", "armazenado", "acumulos_permanentes", "base_nivel", "base_nivel_nv15", "arm", "rm");
     private static final Set<String> DAMAGE_TYPES = Set.of("fisico", "magico", "verdadeiro", "adaptativo");
     private static final Set<String> SUMMON = Set.of("nome", "comportamento", "vida", "dda", "armadura", "rm", "velocidade", "velocidade_ataque",
             "alcance", "raio", "duracao", "quantidade", "fracao", "raio_disparo", "raio_explosao", "arma_em", "dano", "efeitos", "morre_com_dono",
@@ -49,7 +49,7 @@ public final class SheetValidator {
     private static final Set<String> DOES_SOMETHING = Set.of("dano", "danos", "efeitos", "zonas", "escudo", "cura", "proximo_ataque", "aura",
             "velocidade_movimento", "velocidade_ataque", "vampirismo", "dda", "vida_extra", "invisivel", "invulneravel", "nao_selecionavel",
             "imparavel_por", "invoca", "terreno", "pilar", "troca_forma", "alcance_extra", "fortalecido", "reconjurar",
-            "linha_entre", "deixa_marco", "reducao_dano");
+            "linha_entre", "deixa_marco", "reducao_dano", "status", "status_pct");
     /** Shapes that do something by moving the champion or the map. */
     private static final Set<String> ACTS_ALONE = Set.of("avanco", "piscar", "teleporte", "parede", "anexar", "volta_no_tempo", "elemental",
             "tudo_ou_nada", "empurrao");

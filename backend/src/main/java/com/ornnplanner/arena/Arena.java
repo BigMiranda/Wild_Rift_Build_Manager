@@ -229,6 +229,8 @@ public class Arena {
         int abilityHitsTaken;
         // empowered next attack
         String empowered;
+        /** Empowered attacks left after the next one ({@code ataques} of the sheet). */
+        int empoweredLeft;
         double empoweredUntil;
         double empoweredRange;
         boolean bladeArmed;
@@ -2826,8 +2828,13 @@ public class Arena {
         if (s.empowered != null && now <= s.empoweredUntil) {
             String slot = s.empowered;
             s.empowered = null;
+            if (s.empoweredLeft > 0) {
+                s.empoweredLeft--;
+                s.empowered = slot;   // the next attack is empowered too
+            }
             Map<String, Object> ab = ability(s, slot);
             credit(s, slot, false);
+            boolean wasMarked = t.sheetMarkBy == s && now < t.sheetMarkUntil;
             boolean strong = s.buffs.containsKey("fortalecido:" + slot);
             s.buffs.remove("fortalecido:" + slot);
             Map<String, Object> dmg = map(strong && ab.get("fortalecido") != null ? ab.get("fortalecido")
@@ -2839,6 +2846,10 @@ public class Arena {
                     : ab.get("efeitos"));
             if (ef != null) {
                 effects(s, t, ef, s.rank(slot), slot);
+            }
+            Map<String, Object> onHit = map(ab.get("ao_acertar"));
+            if (onHit != null && !t.npc && t.team() != s.team()) {
+                refund(s, t, onHit, slot, s.rank(slot), wasMarked);
             }
             gainResourceOnHit(s, t, true);
         }
@@ -3150,6 +3161,12 @@ public class Arena {
         if (ab.get("troca_forma") != null) {
             changeForm(u, String.valueOf(ab.get("troca_forma")));
         }
+        if (!"proprio".equals(shape) && SELF_STATES.stream().anyMatch(ab::containsKey)) {
+            selfStates(u, ab, num(ab.get("duracao"), 0), rank);   // a state on the caster with another shape (Kayle's R, Fiora's W)
+        }
+        if (ab.get("escudo") != null && !"proprio".equals(shape) && !"avanco".equals(shape)) {   // Sett's Haymaker
+            addShield(u, formula(map(ab.get("escudo")), u, u, rank), key(u, source), now + num(ab.get("duracao_escudo"), 2), "any");
+        }
         Map<String, Object> between = map(ab.get("linha_entre"));
         if (between != null) {
             lineBetween(u, ab, between, rank, tx, ty, label, source);
@@ -3317,8 +3334,16 @@ public class Arena {
                 u.empowered = slot;
                 u.empoweredUntil = now + num(ab.get("janela"), 4);
                 u.empoweredRange = num(ab.get("alcance_extra"), 0);
+                u.empoweredLeft = (int) num(ab.get("ataques"), 1) - 1;
                 if (Boolean.TRUE.equals(ab.get("reinicia_ataque"))) {
                     u.nextAttack = now;
+                }
+                if (ab.get("velocidade_ataque") != null) {
+                    u.buffs.put("vel_ataque", new double[] {val(ab, "velocidade_ataque", rank, u.f.level, 0), now + num(ab.get("janela"), 4)});
+                }
+                if (ab.get("velocidade_movimento") != null) {
+                    u.speedUps.add(new double[] {val(ab, "velocidade_movimento", rank, u.f.level, 0),
+                        now + num(ab.get("duracao_velocidade"), 2)});
                 }
                 break;
             }
@@ -3339,6 +3364,9 @@ public class Arena {
                 break;
             default:
                 break;
+        }
+        if (Boolean.TRUE.equals(ab.get("consome_armazenado")) && !"proprio".equals(shape)) {
+            u.stored.clear();   // after the hits that read it (a delayed zone reads what is left: nothing)
         }
     }
 
@@ -3495,6 +3523,10 @@ public class Arena {
         }
         if (ef.get("reduz_arm") != null) {
             shred(t, 0, map(ef.get("reduz_arm")), rank, key(s, source));
+        }
+        if (ef.get("reduz_vel_ataque") != null) {   // a share of attack speed off, for `duracao`
+            t.statMods.add(new Object[] {"% Attack Speed", -100 * val(ef, "reduz_vel_ataque", rank, s.f.level, 0),
+                now + val(ef, "duracao", rank, s.f.level, 3)});
         }
         if (Boolean.TRUE.equals(ef.get("remove_escudos"))) {
             t.shield.clear();
@@ -3728,7 +3760,7 @@ public class Arena {
                 heal(who, h, Map.of(src, h));
             }
         }
-        selfStates(u, ab, duration);
+        selfStates(u, ab, duration, rank);
         if (Boolean.TRUE.equals(ab.get("consome_armazenado"))) {
             u.stored.clear();
         }
@@ -6632,6 +6664,7 @@ public class Arena {
         {"dda_bonus", Stats.ATTACK_DAMAGE, "bonus"}, {"pdh", Stats.ABILITY_POWER, "total"},
         {"vida_max_alvo", "target max health", "alvo"}, {"vida_bonus", Stats.MAX_HEALTH, "bonus"},
         {"vida_max", Stats.MAX_HEALTH, "total"}, {"arm_bonus", Stats.ARMOR, "bonus"}, {"rm_bonus", Stats.MAGIC_RESIST, "bonus"},
+        {"base_nivel", null, ""}, {"arm", Stats.ARMOR, "total"}, {"rm", Stats.MAGIC_RESIST, "total"},
         {"armazenado", "stored damage", "armazenado"}, {"acumulos_permanentes", "permanent stacks", "acumulos"},
         {"vida_perdida_alvo", "target missing health", "alvo_perdida"}, {"vida_atual_alvo", "target current health", "alvo_atual"},
         {"vida_bonus_alvo", "target bonus health", "alvo_bonus"},
@@ -8602,11 +8635,16 @@ public class Arena {
 
     /** Stat taken from the target and given to who hit it, for a while. */
     private void steal(U s, U t, Map<String, Object> spec, int rank) {
-        String stat = String.valueOf(spec.get("status"));
-        double amount = val(spec, "valor", rank, s.f.level, 0);
+        Object st = spec.get("status");
         double until = now + val(spec, "duracao", rank, s.f.level, 5);
-        t.statMods.add(new Object[] {stat, -amount, until});
-        s.statMods.add(new Object[] {stat, amount, until});
+        for (Object o : st instanceof List ? (List<?>) st : List.of(st)) {
+            String stat = String.valueOf(o);
+            // valor: a flat amount; pct: a share of the target's own stat (Mordekaiser's Realm of Death)
+            double amount = spec.get("pct") != null ? val(spec, "pct", rank, s.f.level, 0) * t.stat(stat)
+                    : val(spec, "valor", rank, s.f.level, 0);
+            t.statMods.add(new Object[] {stat, -amount, until});
+            s.statMods.add(new Object[] {stat, amount, until});
+        }
         count(s, "status_roubado");
     }
 
@@ -8630,14 +8668,27 @@ public class Arena {
         return near.subList(0, 1);
     }
 
+    /** The fields of {@link #selfStates}. */
+    private static final List<String> SELF_STATES = List.of("invisivel", "invulneravel", "nao_selecionavel", "imparavel_por", "reducao_dano",
+            "status", "status_pct");
+
     /** Invisible, invulnerable, untargetable or unstoppable for a while, by the sheet. */
-    private void selfStates(U u, Map<String, Object> ab, double duration) {
+    private void selfStates(U u, Map<String, Object> ab, double duration, int rank) {
         Map<String, Object> stealth = map(ab.get("invisivel"));
         if (stealth != null) {
             u.stealth = stealth;
             u.invisibleUntil = now + num(stealth.get("duracao"), duration);
             u.camoSeen = false;
             u.outOfBushSince = -1;
+        }
+        for (String k : List.of("status", "status_pct")) {   // stats for a while: flat by rank, or a share of its own
+            Map<String, Object> st = map(ab.get(k));
+            if (st != null) {
+                for (String stat : st.keySet()) {
+                    double v = val(st, stat, rank, u.f.level, 0) * ("status_pct".equals(k) ? u.stat(stat) : 1);
+                    u.statMods.add(new Object[] {stat, v, now + duration});
+                }
+            }
         }
         Map<String, Object> cut = map(ab.get("reducao_dano"));
         if (cut != null) {
@@ -8739,6 +8790,14 @@ public class Arena {
         double f = max > min ? (c - min) / (max - min) : 1;
         u.busyUntil = now + c;
         u.busyState = "channel:" + slot;
+        if (hold.get("reducao_dano") != null) {   // Irelia's Defiant Dance: less damage while it holds
+            u.damageReduction = val(hold, "reducao_dano", rank, u.f.level, 0);
+            u.damageReductionUntil = now + c;
+        }
+        if (Boolean.TRUE.equals(hold.get("imparavel"))) {
+            u.immuneUntil = now + c;
+            u.immuneCc = CC_IGNORE;
+        }
         at(now + c, () -> {
             if (u.dead || !u.canAct()) {
                 count(u, "canal_interrompido:" + slot);
@@ -9712,7 +9771,8 @@ public class Arena {
 
     /** The terms on the target's health (lost, current, bonus) and on the damage the source stored (`armazenado`). */
     private static double targetTerms(Map<String, Object> d, U s, U t, int rank, int lv) {
-        double v = val(d, "armazenado", rank, lv, 0) * s.storedAmount()
+        double v = val(d, "base_nivel", rank, lv, 0) + val(d, "armazenado", rank, lv, 0) * s.storedAmount()
+                + val(d, "arm", rank, lv, 0) * s.stat(Stats.ARMOR) + val(d, "rm", rank, lv, 0) * s.stat(Stats.MAGIC_RESIST)
                 + val(d, "acumulos_permanentes", rank, lv, 0) * s.permanent.getOrDefault("P", 0.0);
         if (t == null) {
             return v;
