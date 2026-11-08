@@ -518,3 +518,43 @@ empurrar dividido: o dono da rota, ou o mais próximo, volta para defender a tor
 grupo.
 
 Testes: **425** (17 opcionais pulados), 0 falhas. Os golden não mudaram.
+
+## Depois: responder ao empurrar dividido (08/11/2026)
+
+Pedido do usuário: o roteiro não respondia a um campeão sozinho derrubando torres das outras rotas.
+
+- **`Match.defense(seat)`**: primeiro a ameaça de antes (`threat`: base e Nexo a qualquer hora; o resto, depois de
+  agrupar, contra 2). Se não houver, depois de agrupar, uma estrutura atacada por inimigo(s) sozinho(s) é defendida **só
+  pelo campeão vivo do lado mais próximo dela** (empate pelo assento), e o grupo continua junto. O roteiro e a ação
+  "defender a base" da macro usam a mesma conta.
+- **Defesa sempre luta:** quem defende luta com qualquer inimigo que esteja lá e não esteja voltando à base. Antes, só
+  lutava contra quem empurrava, e um campeão sozinho na rota não provocava luta com 1:1 de força.
+- `MacroTraining.RULES` 5 → 6.
+
+**A medida** (24 sementes, 48 jogos): o roteiro contra ele mesmo tem mediana de **16,2 min** (13,7–24,2; 22 de 24
+terminam até 30 min), 53 mortes e 42 lutas. O roteiro sem compras fica em **50,0%**.
+
+**O treino de novo** (30 gerações, 417 s):
+
+| macro contra o roteiro (80 partidas) | taxa de vitória | V-D | nota | ouro/min (roteiro) | desvios por partida |
+|---|---|---|---|---|---|
+| geração 10 | 70,6% | 55-22 | +0,419 | 558 (604) | 67 |
+| geração 20 | 78,1% | 62-17 | +0,566 | 554 (619) | 75 |
+| **final** | **81,3%** | **65-15** | **+0,641** | **565 (614)** | **57** |
+
+| nas 4 amostras | voltas à base (Vida a recuperar em cada) | abates | mortes | compras |
+|---|---|---|---|---|
+| macro treinada | **17 (1.174)** | 65 | **79** | 307 |
+| roteiro | 63 (651) | 58 | 75 | 302 |
+
+**Leitura: a rede deixou de explorar um furo e passou a jogar outra macro.**
+- **Volta à base, mas bem mais tarde**: com o dobro de Vida perdida, e cerca de um quarto das vezes do roteiro. Às vezes
+  come o Frutomel ou espera sob a torre no lugar de voltar.
+- **Troca de rota**: "ir à rota do Barão", em vez da própria rota ou da selva.
+- **Mortes equilibradas** com o roteiro (79 contra 75; antes eram 111 contra 52). Ela perde 15 das 80 partidas.
+
+O que ela aprendeu sobre voltar à base aponta o próximo ajuste do roteiro: os dois tempos voltam cedo demais
+(`pensar_abaixo: 0.8`, `voltar_ouro: 1100`). As mortes do roteiro contra ele mesmo (53 por partida) estão no alto do que se
+vê no jogo.
+
+Testes: **425** (17 opcionais pulados), 0 falhas. Os golden não mudaram.

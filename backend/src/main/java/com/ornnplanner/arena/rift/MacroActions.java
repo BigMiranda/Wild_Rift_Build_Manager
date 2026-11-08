@@ -76,7 +76,7 @@ public final class MacroActions {
             case HOLD_TOWER:
                 return m.nextTower(me.team, Match.laneOf(me.role)) != null;
             case DEFEND:
-                return m.threat(me.team) != null;
+                return m.defense(me) != null;
             default:
                 return true;
         }
@@ -114,7 +114,7 @@ public final class MacroActions {
             case SHOP_HERE:
                 return new Intent(Goal.SHOP, me.x, me.y, null);
             case DEFEND: {
-                Object[] th = m.threat(me.team);
+                Object[] th = m.defense(me);
                 return new Intent(Goal.DEFEND, (double) th[0], (double) th[1], (String) th[2]);
             }
             case HOLD_TOWER: {

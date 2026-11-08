@@ -478,6 +478,41 @@ public final class Match {
     }
 
     /**
+     * Where this seat defends, {x, y, lane}, or null: the side's {@link #threat} (everyone goes), or else, after the
+     * grouping, a structure that one or more enemies hit alone (a split push), answered only by the side's living
+     * champion nearest to it (ties by seat), so the group stays together.
+     */
+    public Object[] defense(Seat me) {
+        Object[] all = threat(me.team);
+        if (all != null || !grouped()) {
+            return all;
+        }
+        for (Tower tw : towers) {
+            if (tw.team != me.team || tw.hp <= 0) {
+                continue;
+            }
+            boolean hit = false;
+            for (Seat s : seats) {
+                hit |= s.team != me.team && !s.dead && Math.hypot(s.x - tw.x, s.y - tw.y) <= 1500;
+            }
+            if (!hit) {
+                continue;
+            }
+            Seat nearest = null;
+            for (Seat s : seats) {
+                if (s.team == me.team && !s.dead && s.recallAt < 0
+                        && (nearest == null || Math.hypot(s.x - tw.x, s.y - tw.y) < Math.hypot(nearest.x - tw.x, nearest.y - tw.y))) {
+                    nearest = s;
+                }
+            }
+            if (nearest == me) {
+                return new Object[] {tw.x, tw.y, tw.lane == null ? pushLane(me.team) : tw.lane};
+            }
+        }
+        return null;
+    }
+
+    /**
      * A laner's lane is free: before the grouping, every enemy laner of its lane (the jungler is none) is dead, at its
      * base or going back to it, and there is at least one.
      */
@@ -1380,8 +1415,8 @@ public final class Match {
                 }
                 double ratio = Math.max(sides[0], sides[1]) / Math.max(1, Math.min(sides[0], sides[1]));
                 boolean contest = a.intent != null && b.intent != null && (a.intent.goal == MacroPolicy.Goal.OBJECTIVE && b.intent.goal == MacroPolicy.Goal.OBJECTIVE
-                        || a.intent.goal == MacroPolicy.Goal.PUSH && b.intent.goal == MacroPolicy.Goal.DEFEND
-                        || a.intent.goal == MacroPolicy.Goal.DEFEND && b.intent.goal == MacroPolicy.Goal.PUSH);   // a push met by the defense
+                        || a.intent.goal == MacroPolicy.Goal.DEFEND && b.intent.goal != MacroPolicy.Goal.RECALL
+                        || b.intent.goal == MacroPolicy.Goal.DEFEND && a.intent.goal != MacroPolicy.Goal.RECALL);   // the defense meets whoever is there
                 if (contest || ratio >= param("luta_vantagem", 1.4) || rng.nextDouble() < param("luta_chance", 0.02)) {
                     runFight(who, (a.x + b.x) / 2, (a.y + b.y) / 2);
                     return;

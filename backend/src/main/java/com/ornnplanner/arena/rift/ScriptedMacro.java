@@ -98,8 +98,9 @@ public final class ScriptedMacro implements MacroPolicy {
             double[] rally = m.rally(me.team);
             return new Intent(Goal.PUSH, rally[0], rally[1], m.pushLane(me.team));
         }
-        // without an edge, a structure under pressure is defended first (the base and the Nexus at any time)
-        Object[] threat = m.threat(me.team);
+        // without an edge, a structure under pressure is defended first: the base and the Nexus at any time, a split push
+        // after the grouping by the nearest champion only
+        Object[] threat = m.defense(me);
         if (threat != null) {
             return new Intent(Goal.DEFEND, (double) threat[0], (double) threat[1], (String) threat[2]);
         }
