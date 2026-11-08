@@ -1,5 +1,20 @@
-import { PUBLIC } from './publicMode.js';
+import { PUBLIC, STATIC } from './publicMode.js';
 import { handleLocal, inlineLocalBuilds } from './localStore.js';
+import { staticFile } from './staticPath.js';
+
+/** The static site's answer to anything that would calculate (Rodada 11.b). */
+export const NOT_STATIC = 'Não existe no site estático: os números aparecem quando a build for calculada no app completo.';
+
+/** An icon's address: the backend's, or the static site's file (relative, so the site works under any folder). */
+export const asset = (url) => (STATIC ? staticFile(url, true) : url);
+
+/** The static site: a GET reads the generated file; anything else does not exist. */
+async function staticRequest(method, url) {
+  if (method !== 'GET') throw new Error(NOT_STATIC);
+  const res = await fetch(staticFile(url));
+  if (!res.ok) throw new Error(res.status === 404 ? 'Ainda não calculado para o site.' : `${res.status} ${res.statusText}`);
+  return res.json();
+}
 
 /** The public version's answers past its limits (429 / 503), in the visitor's words. */
 const LATER = 'Muitos pedidos ou servidor ocupado: tente mais tarde.';
@@ -26,6 +41,12 @@ async function network(method, url, body) {
 }
 
 async function request(method, url, body) {
+  if (STATIC) {
+    // the visitor's builds live in the browser, as in the public version; the rest is a file
+    const local = await handleLocal(method, url, body, (m, u) => staticRequest(m, u));
+    if (local) return local.value;
+    return staticRequest(method, url);
+  }
   if (PUBLIC) {
     // the visitor's folders and builds live in the browser (Rodada 11)
     const local = await handleLocal(method, url, body, network);

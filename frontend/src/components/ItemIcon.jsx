@@ -1,3 +1,4 @@
+import { asset } from '../api.js';
 import { useState } from 'react';
 
 /** Item icon served by the backend (bundled locally); renders an empty square when there is none. */
@@ -7,7 +8,7 @@ export default function ItemIcon({ id, size = 28 }) {
   if (id == null || failed) return <span className="item-icon empty" style={style} aria-hidden="true" />;
   return (
     <img
-      className="item-icon" style={style} src={`/api/items/${id}/image`} alt="" loading="lazy"
+      className="item-icon" style={style} src={asset(`/api/items/${id}/image`)} alt="" loading="lazy"
       onError={() => setFailed(true)}
     />
   );

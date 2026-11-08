@@ -1,3 +1,4 @@
+import { asset } from '../api.js';
 import { t } from '../i18n.js';
 import { EffectOptions } from './RuneEditor.jsx';
 
@@ -29,7 +30,7 @@ export default function ItemEffectsPanel({ steps, itemsById, setup, matchEnd, on
     for (const e of item.effects) {
       const entry = {
         ...e, name: itemEffectKey(item.name, e.name), label: `${item.name} · ${e.name}`,
-        iconSrc: `/api/items/${item.id}/image`, iconClass: 'item',
+        iconSrc: asset(`/api/items/${item.id}/image`), iconClass: 'item',
       };
       if (e.option || e.hasConditional || e.rate) entries.push(entry);
       else fixed.push(entry);

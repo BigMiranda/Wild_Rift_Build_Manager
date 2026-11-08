@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api } from '../api.js';
+import { api, asset } from '../api.js';
 import { t } from '../i18n.js';
 import { itemEffectKey } from './ItemEffectsPanel.jsx';
 
@@ -38,7 +38,7 @@ function ItemIcons({ items, common, size = 24 }) {
       {items.map((it) => {
         const on = !common || common.has(it.name);
         return (
-          <img key={it.name} className={`item-export-icon${on ? '' : ' off'}`} src={`/api/items/${it.id}/image`} alt={it.name}
+          <img key={it.name} className={`item-export-icon${on ? '' : ' off'}`} src={asset(`/api/items/${it.id}/image`)} alt={it.name}
             title={on ? it.name : t('itemExport.notShared', { name: it.name })} width={size} height={size} />
         );
       })}

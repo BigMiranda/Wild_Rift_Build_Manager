@@ -3,11 +3,16 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:publico": "vite build --mode publico",
+    "build:estatico": "vite build --mode estatico",
+    "dev:estatico": "vite --mode estatico",
+    "test": "node --test \"test/*.test.mjs\"",
     "preview": "vite preview"
   },
   "dependencies": {

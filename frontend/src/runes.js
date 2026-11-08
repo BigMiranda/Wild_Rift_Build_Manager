@@ -1,3 +1,4 @@
+import { asset } from './api.js';
 /** Runes and summoner spells catalog (loaded once from /api/runes) and helpers for a build's rune page. */
 
 let catalog = null;
@@ -6,10 +7,10 @@ export const setRuneCatalog = (c) => { catalog = c; };
 export const runeCatalog = () => catalog;
 
 export const runeIcon = (rune, grey = false) =>
-  (rune ? `/api/runes/icons/${grey ? rune.iconGrey : rune.icon}` : null);
+  (rune ? asset(`/api/runes/icons/${grey ? rune.iconGrey : rune.icon}`) : null);
 export const treeIcon = (tree, grey = false) =>
-  (tree ? `/api/runes/icons/${grey ? tree.iconGrey : tree.icon}?v=2` : null); // v2: diamond with transparent corners
-export const spellIcon = (spell) => (spell ? `/api/spells/icons/${spell.icon}` : null);
+  (tree ? asset(`/api/runes/icons/${grey ? tree.iconGrey : tree.icon}?v=2`) : null); // v2: diamond with transparent corners
+export const spellIcon = (spell) => (spell ? asset(`/api/spells/icons/${spell.icon}`) : null);
 
 export const findRune = (name) =>
   (catalog && name ? catalog.keystones.find((r) => r.name === name) ?? catalog.runes.find((r) => r.name === name) : null);
