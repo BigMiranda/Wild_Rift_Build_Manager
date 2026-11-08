@@ -45,7 +45,7 @@ python tools/mapa_guia.py capturas/7.3d/guia-rift/mapa/normal_nov.png capturas/7
 **Limites:**
 - a moita da metade da rota do Dragão fica sob a legenda do print e vem do espelho, da rota do Barão;
 - as **plantas** seguem como esquema. Elas aparecem no mapa, mas mudam de lugar a cada partida e por variante;
-- as **paredes** seguem as do minimapa. O mapa do guia daria uma grade melhor, mas isso fica para outra parte.
+- as **paredes** seguiam as do minimapa nesta parte; a parte 3 as traçou de novo pelo guia.
 
 ## Números das fichas (Guia do Rift, 07/11/2026)
 
@@ -116,3 +116,39 @@ o do LoL de PC (EST)**. O inibidor que volta não é uma unidade que se possa at
   perto, insígnias com o efeito à distância): só neste registro.
 - **Nomes do jogo** (Azuporã, Rubrivira, Grande Lobo Trevoguari, Acuâmina Carmesim, Krugue Ancião, Grompe,
   Florividente): os YAML seguem com os nomes antigos, que o mapa e o código usam como chave.
+
+## Parte 3: paredes, rotas e plantas pelo guia; o desenho do mapa
+
+O usuário viu no mapa da Arena paredes faltando, paredes e moitas difíceis de distinguir, símbolos confusos (o
+Frutomel) e o chão das rotas vazio.
+
+**Paredes.** A grade de 200 do minimapa (`paredes_grade`) saía desalinhada do mapa do guia em quase toda a selva. Agora
+`paredes:` tem **26 polígonos traçados à mão** sobre o mapa endireitado: as bordas, os muros da base, as cercas das
+rotas, os anéis dos acampamentos, as ilhas e pedras do rio e o fosso do Dragão. Todos foram traçados na **metade de baixo** (y até ~6500), onde
+o print é mais nítido porque está mais perto da câmera. O RiftMap espelha cada um pelo centro, e assim a metade de cima, borrada no print,
+não precisa ser traçada. Para conferir: `python tools/mapa_guia.py <nov> <tudo> --paredes paredes.png` desenha as paredes
+do seed por cima do mapa endireitado. Na vista 3D o topo das paredes sobe um pouco na tela, e por isso as paredes ficaram um
+pouco mais grossas no sentido norte-sul.
+
+**O que mudou junto**, porque o chão novo pedia:
+- **rotas**: as laterais vão pelo meio do chão da rota no guia (x ≈ 920 na do Barão, y ≈ 950 na do Dragão) e fazem a
+  curva da parede do canto. Antes passavam por (800, 10300) e (1700, 11200), que agora caem na parede;
+- **fosso do Dragão**: (7950, 3750), raio 450, onde o dragão aparece no guia. Antes era (8060, 3360), raio 560, pelo
+  minimapa. O do Barão é o espelho;
+- **Espinhento Vermelho**: (6200, 2750), dentro do anel de pedra. **Gromp**: (1850, 6600), do lado da selva da cerca;
+- **plantas**: o **Frutomel** nasce em quatro lugares, dois por lado. Um fica junto da parede das Aves, onde o guia põe o
+  marcador; o outro fica na pedra do rio mais para o meio, abaixo da torre externa do meio, onde o guia mostra a planta
+  amarela. Os dois descrevem o que o usuário viu no jogo. O Pinstouro diante do fosso do Dragão e a Florividente no
+  recanto da selva junto da rota do Dragão também vêm do guia, cada um com o seu espelho. Dois Pinstouros seguem como
+  esquema (EST).
+
+As estruturas (Nexo e torres) seguem as do minimapa. `RiftMapTest` confere que todas as rotas, torres, acampamentos,
+plantas e fossos dos dois lados ficam fora das paredes e têm caminho a pé. O desvio de parede de `RiftTest` passou a usar
+(3500, 5300) → (5000, 5300), porque o ponto antigo caiu dentro da parede dos Lobos.
+
+**Desenho** (`RiftGround`, `RiftLegend` e `NpcGlyph` em `pages/Arena.jsx`, usados também pela Partida):
+- parede em pedra cinza com a borda clara; moita em capim verde com o contorno tracejado;
+- chão das rotas numa faixa de terra de 900; rio azul; a base de cada time num tom da sua cor;
+- as torres são quadrados; os monstros, círculos marrons (os objetivos com borda dourada);
+- as plantas são uma flor da cor de cada uma: Frutomel amarelo, Pinstouro vermelho, Florividente ciano;
+- uma legenda embaixo do mapa diz o que é cada símbolo.

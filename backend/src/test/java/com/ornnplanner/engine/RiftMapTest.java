@@ -52,8 +52,8 @@ class RiftMapTest {
     }
 
     @Test
-    void theWallsComeFromTheTracedGridAndAreMirrored() {
-        assertTrue(MAP.walls.size() > 50, "the traced grid: " + MAP.walls.size());
+    void theWallsComeFromTheGuideTracingAndAreMirrored() {
+        assertTrue(MAP.walls.size() > 50, "the traced polygons, both halves: " + MAP.walls.size());
         // every wall cell has its mirror (at the centers of the path's cells, whose mirrors are centers too)
         for (double x = 150; x < MAP.size; x += 200) {
             for (double y = 150; y < MAP.size; y += 200) {

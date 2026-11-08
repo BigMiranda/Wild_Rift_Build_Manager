@@ -4,7 +4,7 @@ import { useTask } from '../tasks.js';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { mmss, n0 } from '../format.js';
-import { RiftGround, TEAM } from './Arena.jsx';
+import { RiftGround, RiftLegend, TEAM } from './Arena.jsx';
 
 const SEATS = 5;
 const STORE = 'ornn-planner-match';
@@ -150,6 +150,7 @@ export default function Match() {
                 )))}
               </g>
             </svg>
+            <RiftLegend />
           </section>
           <section className="panel table-scroll">
             <table className="table">

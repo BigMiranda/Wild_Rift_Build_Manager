@@ -1,4 +1,4 @@
-import { Fragment, Profiler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, Profiler, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { pageZoom } from '../zoom.js';
 import { BuildLink } from '../components/BuildPreview.jsx';
 import { useTask } from '../tasks.js';
@@ -1623,6 +1623,7 @@ export function ArenaMap({ result, frame, paused, names, pickPoint, onPick, onSe
             lit={highlight?.fighter === i} before={before?.units?.[i]} /> : null))}
         </g>
       </svg>
+      {world && <RiftLegend />}
       {hover && (
         <div className="arena-tip" style={{ left: hover.x / pageZoom() + 14, top: hover.y / pageZoom() + 14 }}>
           {hover.found.map((h, k) => (h.unit ? (
@@ -1693,19 +1694,84 @@ function shapeOwner(s, result) {
   return { fighter: fi, key: use?.key ?? null };
 }
 
-/** The ground of the full map: river, walls, bushes, pits and fountains. */
+/** The colors of the full map's ground, shared by the drawing and its legend. */
+export const RIFT = {
+  wall: '#59606b', wallEdge: '#9aa3ad', bush: '#2f6e36', bushEdge: '#86d977', lane: '#6b5a41', river: 'rgba(70,140,205,.32)',
+  plant: { frutomel: '#f2c94c', pinstouro: '#e5534b', clarevidente: '#4fd6ec' },
+};
+
+/** The ground of the full map: base platforms, lane floors, river, walls, bushes, pits and fountains. */
 export function RiftGround({ world }) {
   const [a, b] = world.river;
+  // a hidden copy of the screen (every visited screen stays mounted) must not own the pattern the visible one uses
+  const grass = `rift-grass-${useId().replace(/:/g, '')}`;
   return (
     <>
+      <defs>
+        <pattern id={grass} width={140} height={140} patternUnits="userSpaceOnUse">
+          <rect width={140} height={140} fill={RIFT.bush} />
+          <path d="M14 130 L34 46 L46 130 M62 130 L82 30 L94 130 M104 130 L120 58 L130 130" stroke={RIFT.bushEdge} strokeOpacity={0.55} strokeWidth={9} fill="none" />
+        </pattern>
+      </defs>
       <rect x={0} y={0} width={world.size} height={world.size} className="arena-lane" />
-      <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="rgba(90,150,200,.25)" strokeWidth={world.riverWidth} />
-      {world.walls.map((w, i) => <polygon key={i} points={w.map((p) => p.join(',')).join(' ')} fill="#2b3a33" stroke="#1a241f" strokeWidth={10} />)}
-      {world.bushes.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={p[2]} fill="rgba(70,140,80,.45)" />)}
-      {[world.baronPit, world.dragonPit].map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={p[2]} fill="none" stroke="#9a8f7a" strokeDasharray="30 20" strokeWidth={8} />)}
+      {world.fountains.map((f, i) => <circle key={i} cx={f[0]} cy={f[1]} r={3000} fill={TEAM_SOFT[i]} opacity={0.35} />)}
+      <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={RIFT.river} strokeWidth={world.riverWidth} strokeLinecap="round" />
+      {Object.entries(world.lanes ?? {}).map(([name, pts]) => (
+        <polyline key={name} points={pts.map((p) => p.join(',')).join(' ')} fill="none" stroke={RIFT.lane} strokeOpacity={0.6}
+          strokeWidth={900} strokeLinejoin="round" strokeLinecap="round" />
+      ))}
+      {world.walls.map((w, i) => <polygon key={i} points={w.map((p) => p.join(',')).join(' ')} fill={RIFT.wall} stroke={RIFT.wallEdge}
+        strokeWidth={16} strokeLinejoin="round" />)}
+      {world.bushes.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={p[2]} fill={`url(#${grass})`} stroke={RIFT.bushEdge}
+        strokeWidth={12} strokeDasharray="34 20" />)}
+      {[world.baronPit, world.dragonPit].map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={p[2]} fill="none" stroke="#c9b48a" strokeDasharray="30 20" strokeWidth={10} />)}
       {world.fountains.map((f, i) => <circle key={i} cx={f[0]} cy={f[1]} r={f[2]} fill={TEAM_SOFT[i]} />)}
     </>
   );
+}
+
+/** What the symbols of the full map are. */
+export function RiftLegend() {
+  const sw = (style) => <span className="rift-swatch" style={style} />;
+  return (
+    <div className="rift-legend">
+      <span>{sw({ background: RIFT.wall, borderColor: RIFT.wallEdge })}{t('arena.legend.wall')}</span>
+      <span>{sw({ background: RIFT.bush, borderColor: RIFT.bushEdge, borderStyle: 'dashed', borderRadius: '50%' })}{t('arena.legend.bush')}</span>
+      <span>{sw({ background: RIFT.lane, opacity: 0.8 })}{t('arena.legend.lane')}</span>
+      <span>{sw({ background: RIFT.river })}{t('arena.legend.river')}</span>
+      <span>{sw({ background: TEAM_SOFT[0], borderColor: TEAM[0] })}{t('arena.legend.tower')}</span>
+      <span>{sw({ background: MONSTER.fill, borderColor: MONSTER.edge, borderRadius: '50%' })}{t('arena.legend.monster')}</span>
+      {Object.entries(RIFT.plant).map(([k, c]) => <span key={k}>{sw({ background: c, borderRadius: '50%' })}{PLANT_NAMES[k]}</span>)}
+    </div>
+  );
+}
+
+const MONSTER = { fill: '#6e5a3e', edge: '#e0c48c' };
+// game names (pt-BR shop/guide names, never translated); the seed keys stay the old ones
+const PLANT_NAMES = { frutomel: 'Frutomel', pinstouro: 'Pinstouro', clarevidente: 'Florividente' };
+
+/** A neutral unit of the full map, drawn by what it is: towers square, plants as a flower of their color, monsters brown. */
+function NpcGlyph({ s, color, fill }) {
+  const r = s.radius ?? 20;
+  if (s.role === 'planta') {
+    const c = RIFT.plant[String(s.label).toLowerCase()] ?? '#c8e070';
+    const p = 80;
+    return (
+      <g>
+        {[[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy], k) => <circle key={k} cx={s.x + dx * p} cy={s.y + dy * p} r={62} fill={c} opacity={0.8} />)}
+        <circle cx={s.x} cy={s.y} r={56} fill="#3a2a10" stroke={c} strokeWidth={16} />
+      </g>
+    );
+  }
+  if (s.role === 'torre') {
+    const h = Math.max(r, 90);
+    return <rect x={s.x - h} y={s.y - h} width={2 * h} height={2 * h} fill={fill} stroke={color} strokeWidth={14} />;
+  }
+  if (s.role === 'monstro' || s.role === 'objetivo') {
+    return <circle cx={s.x} cy={s.y} r={r} fill={MONSTER.fill} stroke={s.role === 'objetivo' ? '#ffd76a' : MONSTER.edge}
+      strokeWidth={s.role === 'objetivo' ? 18 : 10} />;
+  }
+  return <circle cx={s.x} cy={s.y} r={r} fill={s.role === 'tropa' ? color : fill} stroke={color} strokeWidth={s.role === 'tropa' ? 0 : 8} />;
 }
 
 function ShapeView({ s, lit, units, hovered }) {
@@ -1734,7 +1800,8 @@ function ShapeView({ s, lit, units, hovered }) {
           <circle cx={s.x} cy={s.y} r={s.reach} fill={inside ? 'rgba(255,90,70,.08)' : 'none'} stroke={color} strokeOpacity={0.7}
             strokeDasharray="40 24" strokeWidth={10} />
         )}
-        <circle cx={s.x} cy={s.y} r={s.radius ?? 20} fill={s.role === 'tropa' ? color : fill} stroke={color} strokeWidth={s.role === 'tropa' ? 0 : 8} />
+        <title>{s.label}</title>
+        <NpcGlyph s={s} color={color} fill={fill} />
         {bar && s.maxHp > 0 && <rect x={s.x - 110} y={s.y + (s.radius ?? 20) + 24} width={(220 * s.hp) / s.maxHp} height={24} fill={color} />}
         {s.plates > 0 && Array.from({ length: s.plates }, (_, k) => (
           <rect key={k} x={s.x - 110 + k * 46} y={s.y + (s.radius ?? 20) + 56} width={38} height={14} fill={color} opacity={0.6} />

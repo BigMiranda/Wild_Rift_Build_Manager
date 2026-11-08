@@ -901,6 +901,9 @@ td.nowrap { white-space: nowrap; }
 .arena-map.empty { padding: 40px; text-align: center; border: 1px dashed var(--border); border-radius: 6px; }
 .arena-map svg { background: #0a1520; border: 1px solid var(--border); border-radius: 6px; display: block; }
 .arena-lane { fill: #13212f; stroke: #2a3c4f; stroke-width: 10; }
+.rift-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted, #9fb0c0); margin-top: 6px; }
+.rift-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+.rift-swatch { display: inline-block; width: 14px; height: 14px; border: 2px solid transparent; border-radius: 2px; }
 .arena-map-tools { gap: 12px; margin-bottom: 4px; }
 .arena-tip { position: fixed; z-index: 20; max-width: 340px; padding: 6px 8px; border-radius: 6px; pointer-events: none;
   background: rgba(8, 17, 28, .96); border: 1px solid var(--border-strong); font-size: 12px; display: flex; flex-direction: column; gap: 6px; }

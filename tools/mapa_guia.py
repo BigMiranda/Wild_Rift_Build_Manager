@@ -2,7 +2,7 @@
 
 Uso:
   python tools/mapa_guia.py capturas/7.3d/guia-rift/mapa/normal_nov.png capturas/7.3d/guia-rift/mapa/normal_tudo.png
-         [--png saida.png] [--plano plano.png]
+         [--png saida.png] [--plano plano.png] [--paredes paredes.png]
 
 A tela do guia (botão "i" da seleção de modo) mostra o mapa inteiro numa vista 3D inclinada, bem mais nítida que o
 minimapa: dá para ver as moitas, as plantas e as bordas das paredes. O print é do celular, 2756 × 1268 px, com o zoom
@@ -216,6 +216,22 @@ def main():
         for x, y in SEMENTES:
             d.point([(x / UPP, (SIZE - y) / UPP)], fill=(255, 255, 0))
         out.save(sys.argv[sys.argv.index('--png') + 1])
+    if '--paredes' in sys.argv:
+        walls_overlay(flat).save(sys.argv[sys.argv.index('--paredes') + 1])
+
+
+def walls_overlay(flat, seed='backend/src/main/resources/seed/mapa_7_3d.yml'):
+    """O mapa endireitado com as `paredes:` do seed (e o espelho de cada uma) por cima, para conferir o traçado à mão
+    (Rodada 12, parte 3: os polígonos da metade de baixo, onde o print é mais nítido)."""
+    import yaml
+    m = yaml.safe_load(open(seed, encoding='utf-8'))
+    im = flat.convert('RGBA')
+    ov = Image.new('RGBA', im.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(ov)
+    for p in m.get('paredes') or []:
+        for q in (p, [(SIZE - x, SIZE - y) for x, y in p]):
+            d.polygon([(x / UPP, (SIZE - y) / UPP) for x, y in q], fill=(255, 0, 0, 70), outline=(255, 40, 40, 255))
+    return Image.alpha_composite(im, ov).convert('RGB')
 
 
 if __name__ == '__main__':
