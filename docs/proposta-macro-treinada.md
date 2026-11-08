@@ -396,3 +396,55 @@ Pedido do usuário: com as torres revidando, o roteiro não fechava a partida em
 Testes: 423 → **424** (17 opcionais pulados), 0 falhas. Os golden não mudaram. `npm run build` limpo, `npm test` 4 de 4.
 Conferido na tela (servidor de desenvolvimento): a v1 antiga do banco `data/dev` aparece com o aviso, e a partida roda com
 "Azul: Roteiro · Vermelho: Roteiro", sem erro.
+
+## Depois: calibragem das lutas e da volta à base (08/11/2026)
+
+Pedido do usuário: a macro treinada vencia 100% só por não voltar à base. Os itens quase não pesavam, porque a luta do
+passo grosso só começava com 2,2 vezes de vantagem de força.
+
+**A medida** (`MatchReportTest -Dmatch.probe=true`): partidas do roteiro contra ele mesmo e contra um "roteiro sem
+compras", que só volta à base com menos de 50% da Vida. Rodam em paralelo, com 30 min de limite, e cada semente é jogada
+dos dois lados. Se comprar compensa, o roteiro sem compras fica em 50% ou menos.
+
+| mudança | roteiro sem compras contra o roteiro | mortes por partida | duração (roteiro × roteiro) |
+|---|---|---|---|
+| antes (vantagem 2,2) | 70,8% (24 jogos) | 33 | mediana 15,9, de 14,7 a 20,0 |
+| vantagem 1,6 | 70,8% | 40 | 16,0 (13,6–17,8) |
+| vantagem 1,3 | 58,3% | 48 | 16,1 (14,5–24,7) |
+| + velocidade na base e no Retorno, vantagem 2,2 | 66,7% | 37 | 16,2 (14,6–23,8) |
+| + velocidade, vantagem 1,5 (24 sementes) | **56,3% (48 jogos)** | **41** | **15,7 (13,7–20,8), 24 de 24 terminam** |
+| + velocidade, vantagem 1,4 (24 sementes) | 54,2% (48 jogos) | 47 | 15,8 (13,7–25,8), 23 de 24 |
+
+**O que mudou:**
+- `luta_vantagem` 2,2 → **1,5** (EST, escolhido pela tabela). A 1,3 e a 1,4, o roteiro sem compras cai pouco mais, mas
+  as mortes sobem para 47 a 53 por partida e surgem partidas de 25 a 28 min.
+- **A velocidade da base, pelo Guia do Rift** (`fonte_base` em `objetivos_7_3d.yml`):
+  - de 80% junto da fonte a 40% nas torres do inibidor, linear (a ordem entre os dois é EST);
+  - +80% por 10 s no começo da partida;
+  - +30% por 8 s depois do Retorno, a partir de 0:30;
+  - vale o maior bônus. Fica em `Match.speedBonus`, só no passo grosso. 🎯 `MatchTest.theBaseSpeedsChampionsUp`.
+- `MacroTraining.RULES` 2 → 3.
+
+**Leitura:** com 48 jogos, 54% a 56% está dentro do ruído de 50% (cerca de ±7%). Voltar à base só ferido empata com
+voltar para comprar. É plausível no jogo, mas comprar ainda não ganha.
+
+**O treino de novo**, nas mesmas condições: 30 gerações em 422 s.
+
+| macro contra o roteiro (80 partidas) | taxa de vitória | V-D | nota | ouro/min (roteiro) | desvios por partida |
+|---|---|---|---|---|---|
+| geração 10 | 91,3% | 73-7 | +0,858 | 578 (616) | 21 |
+| geração 20 | 87,5% | 70-10 | +0,784 | 580 (611) | 23 |
+| **final** | **88,8%** | **71-9** | **+0,808** | **576 (611)** | **30** |
+
+- **Ela perde partidas agora** (antes era 80-0) e **ganha menos ouro que o roteiro** (576 contra 611 por minuto).
+- O que ela faz:
+  - ainda fica na rota em vez de voltar à base (45 desvios nas 4 amostras);
+  - **leva dois campeões ao meio no começo** (25 desvios "ir ao meio em vez de ficar na própria rota");
+  - às vezes não defende a base para segurar a rota.
+- **O que falta para a volta à base pesar como no jogo:** no passo grosso, ficar na rota não custa Vida. O `TwoTempo`
+  prevê o dano da troca (`dano_troca_por_s`), mas a partida não o aplica: o campeão só perde Vida nas lutas e para as
+  torres. No jogo, quem fica na rota perde Vida nas trocas e é forçado a voltar. Aplicar essa troca contínua entre rotas
+  frente a frente é o próximo passo, e de novo pede treino novo da macro.
+
+Testes: 424 → **425** (17 opcionais pulados), 0 falhas. Os golden não mudaram. `npm run build` não mudou: só regras do
+backend. A aba Partida não foi reaberta nesta parte; as telas são as mesmas da parte anterior.

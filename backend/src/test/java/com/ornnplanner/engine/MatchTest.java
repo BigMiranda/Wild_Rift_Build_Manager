@@ -198,6 +198,29 @@ class MatchTest {
         assertTrue(m.threat(0) == null, "an outer tower is only defended after the grouping");
     }
 
+    /** Guia do Rift: 80% faster by the fountain, 40% at the inhibitor towers, nothing out of the base. */
+    @Test
+    void theBaseSpeedsChampionsUp() {
+        Match m = five(new Simple());
+        Match.Seat s = m.seats().get(0);
+        s.x = MAP.fountainBlue[0];
+        s.y = MAP.fountainBlue[1];
+        assertEquals(0.8, m.speedBonus(s), 1e-9);
+        Match.Tower base = null;
+        for (Match.Tower tw : m.towers) {
+            if (tw.team == 0 && Math.hypot(tw.x - MAP.fountainBlue[0], tw.y - MAP.fountainBlue[1]) < 3500
+                    && (base == null || Math.hypot(tw.x - MAP.fountainBlue[0], tw.y - MAP.fountainBlue[1]) > Math.hypot(base.x - MAP.fountainBlue[0], base.y - MAP.fountainBlue[1]))) {
+                base = tw;
+            }
+        }
+        s.x = base.x;
+        s.y = base.y;
+        assertEquals(0.4, m.speedBonus(s), 0.05);
+        s.x = 6000;
+        s.y = 6000;
+        assertEquals(0, m.speedBonus(s), 1e-9);
+    }
+
     @Test
     void aMatchCanEndWithANexus() {
         Simple w = new Simple();

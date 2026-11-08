@@ -84,6 +84,9 @@ public final class Match {
         double respawnAt;
         double busyUntil;
         double recallAt = -1;
+        /** A move speed bonus (share) until a time: the start of the match, the recall. */
+        double haste;
+        double hasteUntil;
         double fightAfter;
         /** Two tempos: Teleport up again at, back to the lane by Teleport after the base, the Honeyfruit it walks to. */
         double teleportReadyAt;
@@ -209,6 +212,8 @@ public final class Match {
     private int drakesTaken;
     public final com.ornnplanner.arena.ArenaModel.ObjectiveBuffs[] buffs = {new com.ornnplanner.arena.ArenaModel.ObjectiveBuffs(), new com.ornnplanner.arena.ArenaModel.ObjectiveBuffs()};
     final double[] baronUntil = new double[2];
+    /** How far from its fountain each side's base reaches: its farthest inhibitor (base) tower. */
+    private final double[] baseReach = new double[2];
 
     public Match(RiftMap map, RiftRules rules, Map<String, Object> macro, World world, MacroPolicy policy, long seed, List<String> roles, List<Integer> teams) {
         this.map = map;
@@ -240,6 +245,12 @@ public final class Match {
             Tower tw = new Tower(s.team, s.lane, s.kind, order, s.x, s.y, projected(s.lane, s.team, s.x, s.y), hp);
             tw.plates = order == 1 ? 5 : 0;
             towers.add(tw);
+        }
+        for (Tower tw : towers) {
+            if (tw.order == 3) {
+                double[] f = tw.team == 0 ? map.fountainBlue : map.fountainRed;
+                baseReach[tw.team] = Math.max(baseReach[tw.team], Math.hypot(tw.x - f[0], tw.y - f[1]));
+            }
         }
         double nexus = RiftRules.value(rules.map("torres", "nexo").get("vida"), 4000);
         towers.add(new Tower(0, null, "nexo", 4, map.nexusBlue[0], map.nexusBlue[1], 0, nexus));
@@ -538,6 +549,11 @@ public final class Match {
 
     private void step0(Seat s) {
         s.stats = world.stats(s.index, 0, 1, 0);
+        Map<String, Object> start = rules.map("fonte_base", "velocidade_inicio");
+        if (start != null) {
+            s.haste = RiftRules.value(start.get("valor"), 0);
+            s.hasteUntil = RiftRules.value(start.get("duracao"), 10);
+        }
     }
 
     /** "do Oceano", "da Montanha", "Infernal": the element after "Dragão" or "Alma". */
@@ -795,6 +811,11 @@ public final class Match {
                 s.x = f[0];
                 s.y = f[1];
                 s.path = null;
+                Map<String, Object> back = rules.map("fonte_base", "velocidade_retorno");
+                if (back != null && t >= RiftRules.value(back.get("depois_de"), 30)) {
+                    s.haste = RiftRules.value(back.get("valor"), 0);
+                    s.hasteUntil = t + RiftRules.value(back.get("duracao"), 8);
+                }
             }
             return;
         }
@@ -1007,7 +1028,7 @@ public final class Match {
     public int decisions;
 
     private void walk(Seat s, double tx, double ty) {
-        double step = s.stats[4] * STEP;
+        double step = s.stats[4] * (1 + speedBonus(s)) * STEP;
         double d = Math.hypot(tx - s.x, ty - s.y);
         if (d < 30) {
             return;
@@ -1032,6 +1053,26 @@ public final class Match {
                 step = 0;
             }
         }
+    }
+
+    /**
+     * The move speed bonus (share) of the base and the fountain (Guia do Rift): from 80% by the fountain to 40% at the
+     * side's inhibitor towers, and the bonus of the start or of a recall while it lasts; the larger one counts.
+     */
+    public double speedBonus(Seat s) {
+        double bonus = t < s.hasteUntil ? s.haste : 0;
+        Map<String, Object> zone = rules.map("fonte_base", "velocidade_na_base");
+        if (zone != null) {
+            double[] f = s.team == 0 ? map.fountainBlue : map.fountainRed;
+            double reach = baseReach[s.team];
+            double d = Math.hypot(s.x - f[0], s.y - f[1]);
+            if (d <= reach) {
+                double near = RiftRules.value(zone.get("perto"), 0);
+                double far = RiftRules.value(zone.get("longe"), 0);
+                bonus = Math.max(bonus, near + (far - near) * d / Math.max(1, reach));
+            }
+        }
+        return bonus;
     }
 
     /** Buys what the gold covers, in the build's order and by the shop's rules. */

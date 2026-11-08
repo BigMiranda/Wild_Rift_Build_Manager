@@ -68,6 +68,68 @@ class MatchReportTest {
         return String.format("%d:%02d", (int) seconds / 60, (int) seconds % 60);
     }
 
+    /**
+     * The calibration of the fights (-Dmatch.probe=true): over many seeds, in parallel, the script against itself (length,
+     * deaths, fights) and against the script that never goes back to buy above half health (does buying pay?).
+     */
+    private void probe(StringBuilder sb, int seeds) {
+        MatchService.Draft d = matches.draft(request(1));
+        com.ornnplanner.arena.rift.ScriptedMacro script = (com.ornnplanner.arena.rift.ScriptedMacro) matches.scripted();
+        com.ornnplanner.arena.rift.MacroPolicy noBuy = (m, me) -> {
+            com.ornnplanner.arena.rift.MacroPolicy.Intent i = script.suggest(m, me).intent;
+            if (i.goal != com.ornnplanner.arena.rift.MacroPolicy.Goal.RECALL || me.hpFraction() < 0.5) {
+                return i;
+            }
+            int a = "selva".equals(me.role) && m.nextCamp(me) != null ? com.ornnplanner.arena.rift.MacroActions.JUNGLE : com.ornnplanner.arena.rift.MacroActions.OWN_LANE;
+            return com.ornnplanner.arena.rift.MacroActions.intent(a, m, me);
+        };
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        List<java.util.concurrent.Future<MatchModel.Result>> even = new ArrayList<>();
+        List<java.util.concurrent.Future<MatchModel.Result>> blue = new ArrayList<>();
+        List<java.util.concurrent.Future<MatchModel.Result>> red = new ArrayList<>();
+        for (long s = 1; s <= seeds; s++) {
+            long seed = 500 + s;
+            even.add(pool.submit(() -> matches.run(d, seed, 30, script, script)));
+            blue.add(pool.submit(() -> matches.run(d, seed, 30, noBuy, script)));
+            red.add(pool.submit(() -> matches.run(d, seed, 30, script, noBuy)));
+        }
+        try {
+            double minutes = 0;
+            int ended = 0;
+            int deaths = 0;
+            int fights = 0;
+            int purchases = 0;
+            List<Double> lengths = new ArrayList<>();
+            for (java.util.concurrent.Future<MatchModel.Result> f : even) {
+                MatchModel.Result r = f.get();
+                if (r.winner >= 0) {
+                    ended++;
+                    minutes += r.seconds / 60;
+                    lengths.add(r.seconds / 60);
+                }
+                deaths += r.players.stream().mapToInt(p -> p.deaths).sum();
+                fights += r.fights.size();
+                purchases += r.players.stream().mapToInt(p -> p.purchases.size()).sum();
+            }
+            java.util.Collections.sort(lengths);
+            double score = 0;
+            for (int i = 0; i < seeds; i++) {
+                MatchModel.Result b = blue.get(i).get();
+                MatchModel.Result r = red.get(i).get();
+                score += b.winner == 0 ? 1 : b.winner < 0 ? 0.5 : 0;
+                score += r.winner == 1 ? 1 : r.winner < 0 ? 0.5 : 0;
+            }
+            sb.append(String.format("probe (%d seeds, limit 30): script vs script ended %d (median %.1f min, range %.1f-%.1f), %.1f deaths, %.1f fights, %.1f items per match%n",
+                    seeds, ended, lengths.isEmpty() ? 0 : lengths.get(lengths.size() / 2), lengths.isEmpty() ? 0 : lengths.get(0),
+                    lengths.isEmpty() ? 0 : lengths.get(lengths.size() - 1), deaths / (double) seeds, fights / (double) seeds, purchases / (double) seeds));
+            sb.append(String.format("probe: never back to buy above half health vs script: %.1f%% (%d games)%n", 100 * score / (2 * seeds), 2 * seeds));
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        } finally {
+            pool.shutdown();
+        }
+    }
+
     @Test
     void report() throws IOException {
         StringBuilder sb = new StringBuilder();
@@ -104,6 +166,9 @@ class MatchReportTest {
                     r.events.stream().filter(e -> e.text.contains("morreu para")).findFirst().map(e -> mmss(e.t)).orElse("-")));
         }
         sb.append("pace: ").append(String.join(" | ", pace)).append(nl());
+        if (Boolean.getBoolean("match.probe")) {
+            probe(sb, Math.max(seeds, 12));
+        }
         MatchModel.Result a = matches.run(request(5));
         MatchModel.Result b = matches.run(request(5));
         assertEquals(a.seconds, b.seconds);

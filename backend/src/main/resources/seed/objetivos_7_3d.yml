@@ -48,6 +48,9 @@ torres:
 
 fonte_base:
   volta_s: {valor: 8, fonte: "PC (estimativa): a canalização de Voltar à base"}
+  velocidade_na_base: {perto: 0.80, longe: 0.40, fonte: "Guia do Rift (07/11/2026): de 40% a 80% de Velocidade de Movimento entre a fonte e as torres do inibidor (80% junto da fonte, 40% nas torres: a ordem é EST)"}
+  velocidade_inicio: {valor: 0.80, duracao: 10, fonte: "Guia do Rift (07/11/2026): +80% por 10 s até 0:30 (aplicado ao sair da fonte no começo da partida)"}
+  velocidade_retorno: {valor: 0.30, duracao: 8, depois_de: 30, fonte: "Guia do Rift (07/11/2026): +30% por 8 s ao usar o Retorno depois de 0:30"}
   laser_por_s: {valor: 800, fonte: "PC (estimativa)"}
   cura_por_s: {valor: 0.12, fonte: "PC (estimativa)"}           # fração da Vida máxima
   mana_por_s: {valor: 0.12, fonte: "PC (estimativa)"}
