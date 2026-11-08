@@ -70,6 +70,10 @@ public final class ScriptedMacro implements MacroPolicy {
     /** What the script would do now, with no trace in the match: the learned macro's base. */
     public Suggestion suggest(Match m, Match.Seat me) {
         TwoTempo.Choice weighed = null;
+        // the lane is free (its enemy laners dead, at base or going back): press it, the wave and the tower, before buying
+        if (m.laneFree(me) && !m.atBase(me) && me.hpFraction() >= num("pressionar_vida", 0.35)) {
+            return new Suggestion(role(m, me), null);
+        }
         if (m.tempo != null && !m.atBase(me)) {
             Suggestion two = twoTempos(m, me);
             if (two != null) {

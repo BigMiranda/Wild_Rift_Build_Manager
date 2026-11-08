@@ -477,6 +477,28 @@ public final class Match {
         return best == null ? null : new Object[] {best.x, best.y, best.lane == null ? pushLane(team) : best.lane};
     }
 
+    /**
+     * A laner's lane is free: before the grouping, every enemy laner of its lane (the jungler is none) is dead, at its
+     * base or going back to it, and there is at least one.
+     */
+    public boolean laneFree(Seat me) {
+        if ("selva".equals(me.role) || grouped()) {
+            return false;
+        }
+        String lane = laneOf(me.role);
+        int laners = 0;
+        for (Seat e : seats) {
+            if (e.team == me.team || "selva".equals(e.role) || !lane.equals(laneOf(e.role))) {
+                continue;
+            }
+            laners++;
+            if (!e.dead && !atBase(e) && e.recallAt < 0) {
+                return false;
+            }
+        }
+        return laners > 0;
+    }
+
     /** How many champions of a side are dead now. */
     int dead(int team) {
         int n = 0;

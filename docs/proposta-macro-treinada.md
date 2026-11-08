@@ -486,3 +486,35 @@ acontecido. No jogo, quem mata o rota empurra a torre. É o próximo ponto da pa
 quando o rota inimigo está morto ou voltando à base. Depois disso, a macro pede treino novo.
 
 Testes: **425** (17 opcionais pulados), 0 falhas. Os golden não mudaram. A tela não mudou nesta parte.
+
+## Depois: pressionar a rota vazia (08/11/2026)
+
+Pedido do usuário: o roteiro não transformava o abate em torre antes de agrupar.
+
+- **O que acontecia:** o rota do roteiro já batia na torre quando a onda chegava. O que travava era a volta à base: o abate
+  dá ouro, o roteiro passa a ter dinheiro para o próximo item e volta para comprar logo depois, e a rota fica vazia dos
+  dois lados.
+- **`Match.laneFree`** e a regra nova do roteiro: antes de agrupar, com todos os rotas inimigos da sua rota mortos, na base
+  ou voltando, o rota não volta para comprar enquanto tiver 35% de Vida ou mais (`pressionar_vida`). Ele fica e pressiona
+  a onda e a torre. O caçador não entra nessa regra.
+- `MacroTraining.RULES` 4 → 5.
+
+**A medida** (24 sementes, 48 jogos): o roteiro contra ele mesmo tem mediana de 15,4 min (13,6–27,4; 23 de 24 terminam),
+49,5 mortes e 41 lutas. O roteiro sem compras fica em 43,8%, e ele também pressiona, porque parte do mesmo roteiro.
+
+**O treino de novo** (30 gerações, 435 s): a macro treinada vence **96,3%** (77-3), com 570 de ouro/min contra 620.
+
+| nas 4 amostras | voltas à base | abates | mortes | compras |
+|---|---|---|---|---|
+| macro treinada | 0 | 44 | 111 | 314 |
+| roteiro | 79 | 85 | 52 | 361 |
+
+**Leitura:** pressionar não mudou o que a rede aprende, então o abate não era o que decidia. Os desvios mostram outra
+coisa: depois dos 14:00, a rede fica **cada um na sua rota em vez de agrupar** ("em vez de agrupar e empurrar", 9 vezes)
+e **não defende** ("em vez de defender a base", 7 vezes). É um **empurrar dividido**. O roteiro agrupa os 5 numa rota e só
+defende uma torre externa ou interna contra 2 ou mais inimigos. Por isso, um campeão sozinho derruba as torres das
+outras rotas sem resposta. Uma das amostras termina aos 10:37, antes de agrupar. O próximo ponto do roteiro é responder ao
+empurrar dividido: o dono da rota, ou o mais próximo, volta para defender a torre contra 1 inimigo, sem tirar o resto do
+grupo.
+
+Testes: **425** (17 opcionais pulados), 0 falhas. Os golden não mudaram.

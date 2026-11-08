@@ -7,6 +7,7 @@ ultimos_golpes:            # chance de o campeão mais próximo da função leva
   dupla: 0.85
   selva: 0.30
   suporte: 0.05
+pressionar_vida: 0.35      # com os rotas inimigos da rota mortos, na base ou voltando, fica e pressiona (onda e torre) em vez de voltar para comprar, acima desta Vida
 voltar_vida: 0.30          # volta à base abaixo desta fração da Vida
 voltar_ouro: 1100          # ou com este ouro na mão, se ele paga a próxima compra
 volta_s: 8                 # segundos de canalização da volta
