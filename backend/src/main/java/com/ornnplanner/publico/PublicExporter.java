@@ -132,6 +132,7 @@ public class PublicExporter {
         Set<Long> buildIds = publicBuilds.stream().map(b -> b.id).collect(Collectors.toCollection(LinkedHashSet::new));
         publicBuilds.forEach(b -> rep.builds.add(b.name));
         Map<Long, String> scenarios = publicScenarios(buildIds, rep);
+        PublicScrubber scrubber = scrubber(publicBuilds, buildIds);
 
         // 2. calculated before the copy, on the full app: the basic effectiveness of each public build
         List<Object[]> effects = basicEffects(publicBuilds);
@@ -147,6 +148,7 @@ public class PublicExporter {
             jdbc.execute("VACUUM INTO '" + tmp.toAbsolutePath().toString().replace("'", "''") + "'");
             try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + tmp.toAbsolutePath())) {
                 trim(c, folderIds, buildIds, scenarios.keySet(), keptPolicies, rep);
+                scrub(c, scrubber, rep);
                 write(c, effects, rep);
                 indexes(c);
                 try (Statement st = c.createStatement()) {
@@ -307,6 +309,61 @@ public class PublicExporter {
             return wa;
         }
         return a.version > b.version;
+    }
+
+    /** What the private builds are called (Rodada 11.b, part 1): every build of the summary, the public ones with items. */
+    private PublicScrubber scrubber(List<BuildRepository.Build> publicBuilds, Set<Long> publicIds) {
+        Map<Long, BuildRepository.Build> full = new LinkedHashMap<>();
+        publicBuilds.forEach(b -> full.put(b.id, b));
+        List<PublicScrubber.BuildRef> all = new ArrayList<>();
+        for (BuildRepository.Build s : builds.findBuildSummaries()) {
+            BuildRepository.Build b = full.getOrDefault(s.id, s);
+            List<Long> items = new ArrayList<>();
+            if (b.steps != null) {
+                b.steps.stream().filter(x -> x.itemId != null).forEach(x -> items.add(x.itemId));
+            }
+            all.add(new PublicScrubber.BuildRef(s.id, s.name, s.unitCode, items));
+        }
+        List<String> privateFolders = new ArrayList<>();
+        List<String> kept = new ArrayList<>();
+        for (BuildRepository.Folder f : builds.findFolders()) {
+            (f.publico ? kept : privateFolders).add(f.name);
+        }
+        // names the public version shows anyway: the catalog's, the public guides'
+        kept.addAll(jdbc.queryForList("SELECT name FROM item", String.class));
+        kept.addAll(jdbc.queryForList("SELECT name FROM unit", String.class));
+        kept.addAll(jdbc.queryForList("SELECT code FROM unit", String.class));
+        kept.addAll(jdbc.queryForList("SELECT name FROM build_guide WHERE publico = 1", String.class));
+        return new PublicScrubber(all, publicIds, privateFolders, kept);
+    }
+
+    /** The discovery's results without the private builds, then every text of the copy swept for their names and ids. */
+    private static void scrub(Connection c, PublicScrubber s, Report rep) throws SQLException {
+        c.setAutoCommit(false);
+        Map<Long, String[]> rows = new LinkedHashMap<>();
+        try (Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT id, unit_code, config, result FROM build_discovery")) {
+            while (rs.next()) {
+                String unit = rs.getString(2);
+                String config = rs.getString(3);
+                Long base = s.baseOf(config, unit);
+                String result = rs.getString(4);
+                rows.put(rs.getLong(1), new String[] {s.config(config), result == null ? null : s.result(result, unit, base)});
+            }
+        }
+        try (PreparedStatement ps = c.prepareStatement("UPDATE build_discovery SET config = ?, result = ? WHERE id = ?")) {
+            for (Map.Entry<Long, String[]> e : rows.entrySet()) {
+                ps.setString(1, e.getValue()[0]);
+                ps.setString(2, e.getValue()[1]);
+                ps.setLong(3, e.getKey());
+                ps.executeUpdate();
+            }
+        }
+        int swept = s.sweep(c);
+        c.commit();
+        c.setAutoCommit(true);
+        rep.excluded.add("das Descobertas: as builds conhecidas e salvas de pastas não marcadas, o nome da build base privada e o das "
+                + "rivais privadas das matchups; e " + swept + " texto(s) que citavam nome ou id de build privada (" + s.touched + ")");
     }
 
     // ------------------------------------------------------------------ the copy
