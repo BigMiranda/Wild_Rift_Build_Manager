@@ -381,6 +381,8 @@ public class Arena {
         /** A summon: who summoned it, its sheet and when it goes (null owner = a champion). */
         U owner;
         Map<String, Object> summon;
+        /** The rank of the ability that summoned it (its damage by rank). */
+        int summonRank = 1;
         double summonUntil = -1;
         /** Attached to an ally: it stays with it, and nobody can target it. */
         U attachedTo;
@@ -8687,6 +8689,7 @@ public class Arena {
                 for (String stat : st.keySet()) {
                     double v = val(st, stat, rank, u.f.level, 0) * ("status_pct".equals(k) ? u.stat(stat) : 1);
                     u.statMods.add(new Object[] {stat, v, now + duration});
+                    count(u, "status:" + stat);
                 }
             }
         }
@@ -9051,6 +9054,7 @@ public class Arena {
             s.owner = owner;
             s.npc = true;
             s.summon = spec;
+            s.summonRank = rank;
             s.summonUntil = now + val(spec, "duracao", rank, owner.f.level, 10);
             if ("mina".equals(spec.get("comportamento"))) {
                 s.untargetableUntil = Double.MAX_VALUE;
@@ -9119,7 +9123,7 @@ public class Arena {
         String source = "Invocação · " + s.f.name;
         for (U v : enemies(s)) {
             if (dist(s.x, s.y, v.x, v.y) <= r + v.radius()) {
-                hitAbility(s.owner, v, spec, 1, source, 1, null);
+                hitAbility(s.owner, v, spec, s.summonRank, source, 1, null);
             }
         }
         count(s.owner, "explodiu:" + s.f.name);

@@ -100,6 +100,23 @@ class ClassificationTest {
     }
 
     /** By thresholds of stats and kinds of effects. */
+    /** The sheets of the first batch: the profile reads them, and matches the official class or says it does not. */
+    @Test
+    void theFirstBatchSheetsMatchTheirClassOrWarn() {
+        StringBuilder report = new StringBuilder();
+        for (String c : FichasLote1Test.LOTE) {
+            ChampionProfiles.Profile p = profiles.of(c);
+            assertNotNull(p, c);
+            assertNotNull(p.abilityRange, c + ": the profile reads its sheet");
+            boolean matches = p.mainClasses.contains(p.suggested);
+            assertNotNull(p.suggested, c);
+            assertFalse(matches && p.divergent, c + ": a warning only when the class differs");
+            report.append(String.format("%-12s oficial %-24s calculada %-12s %s%n", c, p.mainClasses, p.suggested,
+                    matches ? "bate" : p.divergent ? "AVISO (divergente)" : "próxima"));
+        }
+        System.out.print(report);
+    }
+
     @Test
     void archetypesComeFromTheStatsAndEffects() {
         assertEquals("tanque", archetypes.of(build("ORNN", "Coração de Aço", "Armadura de Espinhos", "Presságio de Randuin"), 25.0).key);
