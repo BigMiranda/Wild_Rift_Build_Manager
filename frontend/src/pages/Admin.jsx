@@ -6,6 +6,7 @@ import { n0, n2, pct } from '../format.js';
 import ItemIcon from '../components/ItemIcon.jsx';
 import BaseInfo from '../components/BaseInfo.jsx';
 import { StatIcon } from '../components/StatIcon.jsx';
+import SitePublicPanel from '../components/SitePublicPanel.jsx';
 
 /** Admin-only strings (kept here instead of the shared dictionary). */
 const L = {
@@ -107,6 +108,7 @@ export default function Admin({ meta, items, onChanged }) {
         ))}
       </div>
       <BaseInfo base={meta?.base} />
+      <SitePublicPanel />
       <PublicExport />
       <CommunityReview />
       {msg && (

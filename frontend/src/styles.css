@@ -1451,3 +1451,8 @@ html[data-scale="live"] .item-icon { min-width: 26px; min-height: 26px; }
 /* Rodada 11: the public version */
 fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .public-banner { background: var(--surface-2); border-bottom: 1px solid var(--border); padding: 4px 12px; font-size: 0.85em; }
+
+/* Admin › "Site público" (Rodada 11.b): the five steps of feeding the static site */
+.site-steps { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
+.site-step > div { margin: 2px 0 0 24px; }
+.site-step code { font-size: 12px; }

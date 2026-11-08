@@ -275,3 +275,73 @@ públicas (como na Rodada 11):
 - **Melhoria possível, não feita:** reduzir os ícones a 64 px no `publicar_site.py` cortaria ~2/3 dos 525 KB, mas
   pede uma biblioteca de imagem (Pillow) que o script não pode usar (só a biblioteca padrão).
 
+## Parte 5 — Como abastecer o site ✅
+
+### Na tela: Admin › Catálogo › "Site público"
+Acima do "Exportar a base pública", um roteiro dos 5 passos com o estado de cada um no patch atual
+(`GET /api/site/status`, só no app local):
+1. **Rodar as campanhas** — quantos dos campeões têm ficha boa (A ou B; hoje 6 de 142: Ornn, Darius, Renekton, Rumble,
+   Vayne, K'Sante; os outros são pulados como "baixa confiança"), a **estimativa** de "Todos os campeões" no orçamento
+   rápido ou completo (`/api/campaigns/estimate`), quais têm Descoberta terminada e quantos estão na fila; link para
+   Admin › Campanhas.
+2. **Marcar as pastas e guias públicas** (🔒/🌐) — as pastas públicas e quantas builds e guias.
+3. **Exportar** — a data, o patch, o tamanho e as pastas da última exportação (lidos do relatório ao lado do banco);
+   avisa se é de outro patch. O botão de exportar fica logo abaixo.
+4. **Gerar o site** — o comando e o último site gerado (data, campeões, arquivos, tamanho, lidos do
+   `site-publico/api/manifest.json`); avisa se é anterior à última exportação.
+5. **Copiar para o repositório e dar push** — o lembrete e onde está o passo a passo.
+- No topo, o resumo do patch: campeões com Descoberta terminada, builds públicas, **tamanho estimado do site**
+  (6,5 MB fixos + ~100 KB por build: as públicas e 11 por campeão descoberto, as médias medidas) e a data da última
+  exportação.
+- **Conferido na tela** (app local sobre o banco de teste, durante a campanha): os 5 passos com o estado certo
+  (campanhas ✅ com Darius e Ornn já descobertos e "6 campeões, ~1,3 h, 2 já feitos" no rápido; pastas ✅; exportação
+  ⬜ "ainda não exportada"; site ⬜ com o gerado de teste).
+
+- **Conferido de novo depois da exportação e do site medidos:** os passos 1 a 4 com ✅ (6 campeões com Descoberta,
+  as 2 pastas públicas, a exportação de 01:49 UTC, o site com 8 campeões, 406 arquivos de dados e 12,8 MB), e a
+  estimativa do topo em 13,7 MB, perto dos 12,8 medidos.
+
+### O fluxo do usuário
+1. **Rodar as campanhas:** Admin › Campanhas › "Todos os campeões", orçamento rápido (~10 min por campeão aqui) ou
+   completo (horas). Só os de ficha boa rodam.
+2. **Marcar as pastas e guias públicas** (🔒/🌐 em Builds; "Pública" nas Guias). As privadas nunca saem, nem de dentro
+   da Descoberta (Parte 1).
+3. **Exportar:** Admin › Catálogo › "Exportar a base pública", ou `cd backend && ./mvnw -Pexport`.
+4. **Gerar o site:** `python tools/publicar_site.py`.
+5. **Copiar para o repositório e dar push** (passo a passo da Parte 4).
+
+## Fechamento
+
+- **Commits:** um por parte, no `main`, sem push. **Nada foi publicado.**
+- **Testes:** `./mvnw test` 400 testes, 0 falhas (16 opcionais pulados) nas partes 1, 2–3 e 5; `npm run build`,
+  `build:publico` e `build:estatico` limpos; `npm test` (4 testes em Node, sobre o site real) e
+  `python -m unittest tools/test_site_estatico.py` (5 testes) passam.
+- O app local e o perfil público seguem como antes: o app completo abriu (Build › Loja, Admin) com o carregamento novo
+  do `main.jsx`; o `SiteController` não existe no público (404, coberto pelo `PublicProfileTest`).
+
+### Relatório final
+- **Tamanho e tempo dos 6 campeões de ficha A:** campanha rápida 54 min; exportação 4,6 s; site **12,8 MB, 412
+  arquivos, 72 builds, 4 min 37 s** com um comando. 1,3% do limite do GitHub Pages; ~1 MB por campeão descoberto, então
+  todos os 142 caberiam em ~150 MB.
+- **As telas:** retrato 390 × 844, paisagem 844 × 390 e 1920 × 1080 conferidas (Parte 3), sem rolagem lateral.
+- **Publicação:** passo a passo na Parte 4 (criar o repositório público, copiar `tools/site-repo/`, rodar o
+  `publicar_site.py`, copiar `site-publico/`, push, Settings › Pages › "GitHub Actions").
+- **O que ficou de fora do estático, e por quê:**
+  - tudo o que calcula (Arena ao vivo, comparador que recalcula, Efetividade nova, treino, Descoberta, calculadora):
+    precisa do motor em Java, e o Java no navegador foi descartado por causa do celular;
+  - a comunidade da Rodada 11 (envio automático e votos): precisa de servidor; no estático, o formulário de issue;
+  - os números de uma build montada pelo visitante: só a soma do preço; os cálculos em JS não têm como passar no teste
+    de paridade sem o ponto da linha do tempo do Java;
+  - o Admin.
+
+### Para o usuário
+1. **Os dados de teste ficaram em `backend/data/site-teste/`** (fora do git): a cópia do banco com as 2 pastas Anti
+   Tank marcadas públicas e a campanha dos 6 campeões, e a exportação dela. **O banco real não foi mudado:** nele
+   nenhuma pasta é pública e não há Descoberta terminada. Para publicar de verdade, rode a campanha e marque as pastas no
+   banco real (ou use essa cópia), exporte e gere.
+2. `site-publico/` (na raiz, fora do git) tem o site gerado dessa cópia, pronto para conferir com
+   `python -m http.server 8099 -d site-publico` (`site-estatico` no `launch.json`).
+3. **As rivais das matchups** vêm de todas as builds salvas; as privadas aparecem como "build (privada)" com o
+   campeão e a medida. Se preferir que nem apareçam, é uma linha no `PublicScrubber`.
+4. O repositório do site precisa ser **público** para o GitHub Pages gratuito, e o formulário de issue é público:
+   quem enviar uma build expõe o que escrever.

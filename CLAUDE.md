@@ -27,6 +27,10 @@ cd backend && ./mvnw test -Dtest=TimelineEngineTest              # one class
 cd backend && ./mvnw test -Dtest=TimelineEngineTest#methodName   # one method
 cd backend && ./mvnw -Pexport                 # exports the public version's read-only DB (data/publico/), Rodada 11
 cd frontend && npm run build:publico          # the SPA in public mode (VITE_PUBLIC=1)
+cd frontend && npm run build:estatico         # the static site's page (VITE_STATIC=1 -> frontend/dist-estatico), Rodada 11.b
+python tools/publicar_site.py                 # the whole static site in site-publico/ (needs an export), Rodada 11.b
+cd frontend && npm test                       # node --test: the static file-name rule and the generated site
+python -m unittest tools/test_site_estatico.py
 ```
 
 The public version (Rodada 11, `docs/rodada-11.md`): Spring profile `publico` (`SPRING_PROFILES_ACTIVE=publico`) over the
@@ -35,7 +39,14 @@ exported DB, opened read-only; `.claude/launch.json` has `backend-publico` / `fr
 goes through `ComputeGuard.run`. Visitors' builds live in the browser (`frontend/src/localStore.js`). `Dockerfile` and
 `tools/site_estatico.py` are hosting options; nothing is published.
 
-`.claude/launch.json` defines `backend` and `frontend` preview servers. There is no linter and no frontend test suite;
+The static site (Rodada 11.b, `docs/rodada-11b.md`) is the public target now: GitHub Pages in its own repository
+(template in `tools/site-repo/`), only precomputed JSON. `tools/site_estatico.py` reads the full local app over a copy of
+the export; `frontend/src/site/` is its own small app (`main.jsx` picks it when `VITE_STATIC=1`); every GET maps to a file
+by `staticPath.js` = `arquivo_estatico` (same cases in `tools/caminhos_estaticos.json`). The export scrubs private builds
+out of the discovery, guides and combos (`publico/PublicScrubber`).
+
+`.claude/launch.json` defines `backend` and `frontend` preview servers. There is no linter; the only frontend tests are
+the static site's (`npm test`);
 "done" for a change has meant `./mvnw test` and `npm run build` both clean. Neither runs a page: open the screens too (the `backend-dev` and `frontend-dev` servers use their own database), because a React error passes both.
 
 Opt-in tests, gated by system properties (skipped by default):

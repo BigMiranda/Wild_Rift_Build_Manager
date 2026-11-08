@@ -37,10 +37,12 @@ import java.util.TreeSet;
 public class SiteController {
 
     private static final ObjectMapper JSON = new ObjectMapper();
-    /** Bytes of one build's precomputed files (timelines, effectiveness, abilities at the key minutes), measured in part 2. */
-    static final long BYTES_PER_BUILD = 160_000;
-    /** The catalog, the icons and the page itself. */
-    static final long BYTES_FIXED = 8_000_000;
+    /** Bytes of one build's precomputed files (timelines, effectiveness, abilities at the key minutes): 95 KB measured. */
+    static final long BYTES_PER_BUILD = 100_000;
+    /** The catalog, the icons and the page itself (6,5 MB measured). */
+    static final long BYTES_FIXED = 6_500_000;
+    /** Builds a discovered champion gets (the standard, the niches, the discoveries): 11 on average for the 6 measured. */
+    static final int BUILDS_PER_DISCOVERY = 11;
 
     private final JdbcTemplate jdbc;
     private final DiscoveryRepository discoveries;
@@ -170,9 +172,7 @@ public class SiteController {
         JsonNode manifest = readJson(site.resolve("api").resolve("manifest.json"));
         m.put("site", manifest);
         long buildsOfTheSite = publicBuilds;
-        for (String c : done) {
-            buildsOfTheSite += 5;   // the standard, about three niches and a discovery
-        }
+        buildsOfTheSite += (long) done.size() * BUILDS_PER_DISCOVERY;
         m.put("estimatedBytes", BYTES_FIXED + buildsOfTheSite * BYTES_PER_BUILD);
         return m;
     }
