@@ -791,7 +791,9 @@ public class Arena {
     private int nexusDown = -1;
     private final int[] waves = new int[1];
     private boolean firstBlood;
-    private final boolean[][] baseTowerDown = new boolean[2][3];
+    /** When each team's base (inhibitor) tower of each lane fell, NaN while it stands: the enemy's super minions come
+     * from then until the inhibitor grows back ({@code tropas.inibidor_renasce}, Guia do Rift). */
+    private final double[][] baseTowerDownAt = {{Double.NaN, Double.NaN, Double.NaN}, {Double.NaN, Double.NaN, Double.NaN}};
     private double nextGold;
     private double nextSight;
     private final Map<String, double[]> revealed = new LinkedHashMap<>();
@@ -7412,7 +7414,10 @@ public class Arena {
         for (int team = 0; team < 2; team++) {
             for (String lane : LANES) {
                 double[][] route = route(lane, team);
-                boolean strong = rules.map("tropas").get("super_apos_torre_da_base") != null && baseTowerDown[1 - team][LANES.indexOf(lane)];
+                double fell = baseTowerDownAt[1 - team][LANES.indexOf(lane)];
+                double back = rules.num(Double.POSITIVE_INFINITY, "tropas", "inibidor_renasce");
+                boolean strong = rules.map("tropas").get("super_apos_torre_da_base") != null && !Double.isNaN(fell)
+                        && clock() < fell + back;
                 int k = 0;
                 for (String kind : rules.wave(waves[0], strong)) {
                     minion(kind, team, lane, route, k++);
@@ -7583,7 +7588,12 @@ public class Arena {
         }
         if (t.plates > 0 && clock() < num(rules.map("torres", "placas").get("ate"), 360)) {
             Map<String, Object> p = rules.map("torres", "placas");
-            double left = t.maxHp * (t.plates - 1) / 5;
+            // the barricades fall at fixed fractions of health (Guia do Rift: 90/75/55/30/0%); without the list, equal fifths
+            int total = (int) num(p.get("quantidade"), 5);
+            Object cuts = p.get("limiares");
+            double left = cuts instanceof List && ((List<?>) cuts).size() == total
+                    ? t.maxHp * ((Number) ((List<?>) cuts).get(total - t.plates)).doubleValue()
+                    : t.maxHp * (t.plates - 1) / 5;
             if (t.hp - raw * mult <= left) {
                 t.plates--;
                 t.statMods.add(new Object[] {Stats.ARMOR, num(p.get("resistencia"), 20), now + num(p.get("duracao"), 10)});
@@ -7665,7 +7675,7 @@ public class Arena {
                 event(t, "caiu");
                 firstTowerFell(t);
                 if ("base".equals(t.kind)) {
-                    baseTowerDown[t.team()][LANES.indexOf(t.lane)] = true;
+                    baseTowerDownAt[t.team()][LANES.indexOf(t.lane)] = clock();
                 }
                 break;
             }

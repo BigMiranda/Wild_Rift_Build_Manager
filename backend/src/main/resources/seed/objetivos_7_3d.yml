@@ -17,9 +17,10 @@ tropas:
   # a janela de 25 s da RPN 4.2 (4:00 a 10:00) saiu: o intervalo é 25 s a partida inteira
   onda: {combatente: 3, conjuradora: 3, fonte: "PC (estimativa)"}
   canhao_a_cada: {valor: 3, fonte: "PC (estimativa)"}          # uma onda em cada 3 traz a Tropa de Canhão
-  super_apos_torre_da_base: {valor: true, fonte: "Riot, Mapa e Modos (2022): sem inibidores, a torre da base dá as supertropas"}
+  super_apos_torre_da_base: {valor: true, fonte: "Guia do Rift (07/11/2026): a Torre do Inibidor caída dá supertropas na rota (Riot, 2022, dizia que não havia inibidores)"}
+  inibidor_renasce: {valor: 300, fonte: "Guia do Rift (07/11/2026): a torre volta como inibidor depois de um tempo e as supertropas param; o tempo é o do LoL de PC (EST)"}
   velocidade: {valor: 325, fonte: "PC (estimativa)"}
-  bonus_velocidade: {aos: 720, valor: 10, fonte: "RPN 3.1a"}
+  bonus_velocidade: {aos: 480, valor: 25, a_cada: 150, ate: 1080, fonte: "Guia do Rift (07/11/2026): +25 de Velocidade de Movimento a partir de 8:00, sobe a cada 150 s até 18:00 (o tamanho de cada passo não está na ficha)"}
   agro: {valor: 1, fonte: "RPN 4.2"}                            # segundos
   alcance_alerta: {valor: 700, fonte: "PC (estimativa)"}
   tipos:
@@ -36,13 +37,13 @@ torres:
   alcance: {valor: 750, fonte: "PC (estimativa)"}
   velocidade_ataque: {valor: 0.83, fonte: "RPN 6.2 (0.74 contra tropas no meio)"}
   dano_estrutura_pdh: {valor: 0.4, fonte: "RPN 4.4"}            # dano de campeão em estrutura: DdA + 40% do PdH
-  placas: {quantidade: 5, ouro: 150, ate: 360, resistencia: 20, duracao: 10, caem_com_a_primeira_torre: true, fonte: "quantidade, ouro: RPN 3.3; ate: RPN 6.2; resistências: NP 7.3a; caem com a primeira torre: regra pedida na Rodada 10, sem fonte escrita (EST, ver Para o usuário)"}
+  placas: {quantidade: 5, limiares: [0.90, 0.75, 0.55, 0.30, 0.0], ouro: 120, ate: 360, resistencia: 30, duracao: 20, por_inimigo: 5, caem_com_a_primeira_torre: true, fonte: "barricadas: limiares, 120 de ouro e +30 de Armadura e RM por 20 s na externa (+5 por inimigo perto, fora do modelo): Guia do Rift (07/11/2026); ate: RPN 6.2; caem com a primeira torre: regra pedida na Rodada 10, sem fonte escrita (EST, ver Para o usuário)"}
   defesa_inicio: {ate: 120, armadura: 50, rm: 50, rotas: [meio, barao], fonte: "RPN 3.3b"}
-  barricadas: {valor: null, fonte: "sem fonte: nenhuma página usa o nome; ver Para o usuário"}
+  barricadas: {valor: null, fonte: "Guia do Rift (07/11/2026): são as placas (ver placas)"}
   tipos:
     externa: {vida: 3500, armadura: 60, rm: 60, dda: 200, dda_ate: 325, dda_em: 1050, ouro_local: 200, ouro_global: 75, fonte: "armadura, RM: RPN 6.2h; dano: RPN 3.3b; ouro: RPN 3.3 e 3.1; vida: EST (registro antigo sem patch)"}
-    interna: {vida: 3000, armadura: 15, rm: 15, dda: 200, dda_passo: 8, dda_a_cada: 30, dda_de: 450, dda_passos: 25, ouro_local: 350, ouro_global: 75, fonte: "RPN 4.2, 6.2h e 7.0"}
-    base: {vida: 3200, armadura: 30, rm: 30, dda: 200, dda_passo: 8, dda_a_cada: 30, dda_de: 450, dda_passos: 25, ouro_local: 200, ouro_global: 75, fonte: "RPN 3.3, 4.2, 5.2, 6.2h e 7.0"}
+    interna: {vida: 3000, armadura: 15, rm: 15, dda: 200, dda_passo: 8, dda_a_cada: 30, dda_de: 450, dda_passos: 25, ouro_local: 350, ouro_global: 25, fonte: "RPN 4.2, 6.2h e 7.0; ouro global: Guia do Rift (07/11/2026)"}
+    base: {vida: 3200, armadura: 30, rm: 30, dda: 200, dda_passo: 8, dda_a_cada: 30, dda_de: 450, dda_passos: 25, ouro_local: 200, ouro_global: 25, fonte: "RPN 3.3, 4.2, 5.2, 6.2h e 7.0; ouro global: Guia do Rift (07/11/2026)"}
   nexo: {vida: 4000, armadura: 30, rm: 30, dda: 280, dda_passo: 8, dda_a_cada: 30, alcance: 750, fonte: "vida: NP 7.3a; dano: RPN 4.2; resistências e alcance: EST"}
 
 fonte_base:
@@ -61,21 +62,21 @@ selva:
   acampamentos:
     Espinhento Vermelho: {vida: 2800, vida_ate: 4000, dda: 75, dda_ate: 135, armadura: 40, rm: 0, renasce: 150, ouro: 130, xp: 200, buff: vermelho, fonte: "WR:Monster; armadura e XP: EST"}
     Sentinela Azul: {vida: 2800, vida_ate: 4000, dda: 75, dda_ate: 135, armadura: 0, rm: 40, renasce: 150, ouro: 130, xp: 200, buff: azul, fonte: "WR:Monster; RM e XP: EST"}
-    Lobos: {vida: 2100, vida_ate: 3000, dda: 60, dda_ate: 110, armadura: 10, rm: 10, renasce: 135, ouro: 95, xp: 150, fonte: "EST"}
-    Aves Carniceiras: {vida: 2000, vida_ate: 2900, dda: 55, dda_ate: 100, armadura: 15, rm: 15, renasce: 135, ouro: 95, xp: 150, fonte: "EST; WR:Monster: 3 aves em vez de 5"}
-    Krugs: {vida: 2300, vida_ate: 3200, dda: 60, dda_ate: 110, armadura: 25, rm: 0, renasce: 135, ouro: 95, xp: 150, fonte: "EST"}
-    Gromp: {vida: 2300, vida_ate: 3200, dda: 80, dda_ate: 130, armadura: 0, rm: 0, renasce: 135, ouro: 95, xp: 150, fonte: "EST"}
+    Lobos: {vida: 2100, vida_ate: 3000, dda: 60, dda_ate: 110, armadura: 10, rm: 10, renasce: 110, ouro: 95, xp: 150, fonte: "EST; renasce: Guia do Rift (07/11/2026)"}
+    Aves Carniceiras: {vida: 2000, vida_ate: 2900, dda: 55, dda_ate: 100, armadura: 15, rm: 15, renasce: 110, ouro: 95, xp: 150, fonte: "EST; WR:Monster: 3 aves em vez de 5; renasce: Guia do Rift (07/11/2026)"}
+    Krugs: {vida: 2300, vida_ate: 3200, dda: 60, dda_ate: 110, armadura: 25, rm: 0, renasce: 110, ouro: 95, xp: 150, fonte: "EST; renasce: Guia do Rift (07/11/2026)"}
+    Gromp: {vida: 2300, vida_ate: 3200, dda: 80, dda_ate: 130, armadura: 0, rm: 0, renasce: 110, ouro: 95, xp: 150, fonte: "EST; renasce: Guia do Rift (07/11/2026)"}
   buffs:
     vermelho: {duracao: 90, lentidao: 0.20, queimadura: [11, 25], fonte: "WR:Monster"}
     vermelho_evoluido: {duracao: 90, dda: 10, pdh: 30, lentidao: 0.30, queimadura: [16.5, 37.5], fonte: "WR:Monster"}
     azul: {duracao: 90, aceleracao: 15, fonte: "WR:Monster"}
     azul_evoluido: {duracao: 90, aceleracao: 15, aceleracao_ult: 15, fonte: "WR:Monster"}
-  aronguejo: {vida: 400, vida_por_min: 15, velocidade: 300, aparece: 90, renasce: 150, ouro: 60, xp: 60, fonte: "aparece: usuário (05/11/2026); WR:Monster só diz que foge ao ser atacado: EST"}
+  aronguejo: {vida: 400, vida_por_min: 15, velocidade: 300, aparece: 90, renasce: 120, ouro: 60, xp: 60, fonte: "aparece: usuário (05/11/2026; o Guia do Rift diz 85 s); renasce: Guia do Rift (07/11/2026); WR:Monster só diz que foge ao ser atacado: EST"}
 
 plantas:
-  frutomel: {aparece: 360, renasce: 360, frutos: 3, cura_pct: 0.035, lentidao: 0.35, duracao_lentidao: 0.25, raio: 250, busca: 2500, fonte: "3 frutos: WR:Map; demais: Jungle_plants (PC, estimativa); busca: até onde a IA vai buscá-lo (EST)"}
-  pinstouro: {aparece: 75, renasce: 360, raio: 325, distancia: 900, fonte: "Jungle_plants (PC, estimativa)"}
-  clarevidente: {aparece: 180, renasce: 330, revela_campeoes: 3, revela_outros: 12, raio: 1000, fonte: "Jungle_plants (PC, estimativa)"}
+  frutomel: {aparece: 360, renasce: 120, broto: 45, amadurece: 75, frutos: 3, cura_pct: 0.035, lentidao: 0.35, duracao_lentidao: 0.25, raio: 250, busca: 2500, fonte: "3 frutos: WR:Map; demais: Jungle_plants (PC, estimativa); busca: até onde a IA vai buscá-lo (EST); renasce (broto em 45 s + 75 s até amadurecer): Guia do Rift (07/11/2026)"}
+  pinstouro: {aparece: 75, renasce: 260, raio: 325, distancia: 900, fonte: "Jungle_plants (PC, estimativa); renasce (semente a cada 240 s + 20 s para abrir): Guia do Rift (07/11/2026)"}
+  clarevidente: {aparece: 180, renasce: 120, revela_campeoes: 3, revela_outros: 12, raio: 1000, fonte: "Jungle_plants (PC, estimativa); no jogo, Florividente; renasce (100 s + 20 s para abrir) e revelação 3 / 12 s: Guia do Rift (07/11/2026)"}
 
 objetivos:
   barao:
@@ -98,7 +99,7 @@ objetivos:
     ouro: {valor: 200, fonte: "WR:Baron_pit"}
     xp: {valor: 800, fonte: "EST"}
   mao_do_barao:
-    duracao: {valor: 90, fonte: "RPN 6.2 (a primeira); as demais 120: WR:Baron_pit"}
+    duracao: {valor: 120, fonte: "Guia do Rift (07/11/2026) (a RPN 6.2 dava 90 à primeira)"}
     dda_pdh_por_min: {dda: 2, pdh: 3, base_dda: 24, base_pdh: 40, fonte: "EST: a página diz que cresce por minuto, sem números"}
     tropas:
       reducao_contra_campeoes: {combatente: 0.65, conjuradora: 0.65, canhao: 0.35, fonte: "NP 7.3d (55–75% e 35%; o meio da faixa)"}
@@ -106,8 +107,9 @@ objetivos:
       dano_contra_torres: {valor: 0.30, fonte: "NP 7.3d"}
   dragao:
     aparece: {valor: 360, fonte: "RPN 6.2"}
-    renasce: {valor: 270, fonte: "RPN 4.2"}
-    some: {valor: 1050, em_luta: 1070, fonte: "RPN 4.2"}
+    renasce: {valor: 255, fonte: "Guia do Rift (07/11/2026) (era 270, RPN 4.2)"}
+    some: {valor: 1110, em_luta: 1130, fonte: "Guia do Rift (07/11/2026): 18:30 (era 17:30, RPN 4.2); em luta: +20 s, como antes (EST)"}
+    elementais_por_partida: {valor: 3, fonte: "Guia do Rift (07/11/2026): até 3, sem repetir; o terreno muda depois do 1º (fora do modelo)"}
     vida: {valor: 4000, por_nivel: 180, fonte: "RPN 4.2"}
     dda: {valor: 110, por_nivel: 12, fonte: "EST"}
     armadura: {valor: 40, fonte: "EST"}
@@ -148,7 +150,7 @@ objetivos:
       oceano: {cura: {base: 250, dda_bonus: 0.48, pdh: 0.25, vida_bonus: 0.10}, duracao: 4, recarga: 6, fonte: "print do usuário (05/11/2026)"}
   anciao:
     aparece: {valor: 1140, apos_terceiro: true, fonte: "RPN 6.2; WR:Dragon_pit"}
-    renasce: {valor: 360, fonte: "WR:Dragon_pit"}
+    renasce: {valor: 270, fonte: "Guia do Rift (07/11/2026) (era 360, WR:Dragon_pit)"}
     vida: {valor: 7000, por_min: 120, fonte: "EST"}
     dda: {valor: 200, fonte: "EST"}
     armadura: {valor: 70, fonte: "EST"}
@@ -157,7 +159,7 @@ objetivos:
     alcance: {valor: 500, fonte: "EST"}
     buff: {duracao: 120, verdadeiro: 450, em: 3, executa_abaixo: 0.15, fonte: "WR:Dragon_Slayer; dano: RPN 6.2"}
   arauto:
-    existe: {valor: false, fonte: "RPN 5.2: trocado por Torreta Guerrilha ou Mímico Hextec, sem números; ver Para o usuário"}
+    existe: {valor: false, fonte: "Guia do Rift (07/11/2026): EXISTE (surge aos 360 s, não volta, some se não for abatido em 690 s, invocado arremete contra a torre mais próxima); falta modelar, por isso false. A RPN 5.2 dizia que saiu"}
 
 ouro:
   inicial: {valor: 500, fonte: "WR:Gold; planejador"}

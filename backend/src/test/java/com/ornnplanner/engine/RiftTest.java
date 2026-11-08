@@ -63,6 +63,30 @@ class RiftTest {
     }
 
     @Test
+    void theRulesFollowTheInGameRiftGuide() {
+        // docs/rodada-12.md: the timers of the guide's cards (07/11/2026)
+        assertEquals(255, RULES.num(0, "objetivos", "dragao", "renasce"));
+        assertEquals(1110, RULES.num(0, "objetivos", "dragao", "some"));
+        assertEquals(270, RULES.num(0, "objetivos", "anciao", "renasce"));
+        assertEquals(120, RULES.num(0, "objetivos", "mao_do_barao", "duracao"));
+        assertEquals(120, RULES.num(0, "selva", "aronguejo", "renasce"));
+        assertEquals(110, RiftRules.value(RULES.map("selva", "acampamentos", "Gromp").get("renasce"), 0));
+        assertEquals(120, RiftRules.value(RULES.map("plantas", "frutomel").get("renasce"), 0));
+        assertEquals(260, RiftRules.value(RULES.map("plantas", "pinstouro").get("renasce"), 0));
+        assertEquals(120, RiftRules.value(RULES.map("plantas", "clarevidente").get("renasce"), 0));
+        // the barricades: one threshold per plate, falling, the last at zero health
+        List<?> cuts = (List<?>) RULES.map("torres", "placas").get("limiares");
+        assertEquals((int) RiftRules.value(RULES.map("torres", "placas").get("quantidade"), 0), cuts.size());
+        for (int i = 1; i < cuts.size(); i++) {
+            assertTrue(((Number) cuts.get(i)).doubleValue() < ((Number) cuts.get(i - 1)).doubleValue());
+        }
+        assertEquals(0.0, ((Number) cuts.get(cuts.size() - 1)).doubleValue());
+        assertEquals(120, RiftRules.value(RULES.map("torres", "placas").get("ouro"), 0));
+        // a fallen inhibitor tower grows back: the super minions stop after a finite time
+        assertTrue(RULES.num(Double.POSITIVE_INFINITY, "tropas", "inibidor_renasce") < 3600);
+    }
+
+    @Test
     void everyPlaceOfTheMapCanBeReachedOnFoot() {
         List<double[]> places = new ArrayList<>();
         MAP.towers.forEach(s -> places.add(new double[] {s.x, s.y}));

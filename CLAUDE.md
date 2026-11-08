@@ -58,7 +58,9 @@ Opt-in tests, gated by system properties (skipped by default):
 
 Catalog tooling (Python, needs `opencv-python-headless numpy pyyaml`): `python tools/capturas_receitas.py capturas/7.3`
 verifies transcribed recipes against shop screenshots; `tools/capturas_icones.py` crops item icons into
-`seed/icones/`. Screenshots in `capturas/` are not versioned.
+`seed/icones/`. Screenshots in `capturas/` are not versioned. Map: `tools/mapa_minimapa.py` traces the wall grid from the
+minimap; `tools/mapa_guia.py` (Pillow + numpy) rectifies the in-game "Guia do Rift" screenshot (`capturas/7.3d/guia-rift/`)
+and reads the `moitas` from hand-picked seeds (`docs/rodada-12.md`, which also holds the guide's timers not yet applied).
 
 ## Architecture
 
