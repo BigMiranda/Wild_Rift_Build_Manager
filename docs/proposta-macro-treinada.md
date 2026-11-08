@@ -274,3 +274,64 @@ partida, em vez dos do guia (08/11/2026). A velocidade das tropas do guia entrou
     "Roteiro";
   - a mesma macro, com outro `obs_schema`, é recusada;
   - um treino mínimo pelo serviço roda, valida (2 partidas) e salva.
+
+### Parte 5 ✅ — relatório
+`MacroReportTest` (opcional) foi feito na Parte 3, porque o treino de verdade guiou a correção da partida:
+`./mvnw test -Dtest=MacroReportTest -Dmacro.report=data/ornn-planner.db` (+ `-Dmacro.generations=30
+-Dmacro.population=24 -Dmacro.episodes=4 -Dmacro.seed=1`).
+- Ele treina sobre uma cópia do banco, com 2 composições espelhadas das builds salvas.
+- Depois mede contra o roteiro: as gerações 10 e 20 e a final, nas sementes de validação.
+- Lista os desvios mais comuns ("agrupar e empurrar em vez de ficar na própria rota") e alguns do log, com o tempo.
+- Escreve `target/macro-report.txt` e os pesos em `target/macro-weights.txt`.
+
+Conferido na tela (servidor de desenvolvimento, porta 8090, banco `data/dev`, que subiu para o esquema 28):
+- o painel "Treinar a macro" lista a composição das builds escolhidas e roda um treino de 2 gerações × 4 candidatos,
+  com "Geração 1/2 · média −0,047 · melhor −0,012 · 17 s" e o sino de tarefas com 1;
+- no fim, a v1 aparece na tabela: 50% em 40 partidas, não aceita;
+- com "Macro treinada v1" no azul, a partida mostra "Azul: Macro treinada v1 · Vermelho: Roteiro", e o log traz as linhas
+  "(macro treinada): ir à rota do Dragão em vez de ficar na própria rota";
+- nenhum erro do React. Os 500 do console são das telas escondidas, de quando o backend estava parado.
+
+## Relatório final
+
+| parte | commit | testes depois |
+|---|---|---|
+| 0. Rodada 12, partes 3 e 4 (mapa do guia, tropas mais rápidas, partida de base) | 9adbcfd, ef24258 | 413 |
+| 1. Partida treinável | 94ca45b | 415 |
+| 2. Ações, observação e macro neural | da0baa7 | 417 |
+| 3. Treino, validação e as torres que revidam | 8b1d056 | 421 |
+| 4. Tabela, API e tela | 06a2b41 | 423 |
+| 5. Relatório | este | 423 |
+
+- **Testes:** 413 → **423** (17 opcionais pulados), 0 falhas. Os golden da Arena não mudaram, porque a Rota única não usa
+  a partida. `npm run build` limpo e `npm test` com 4 de 4.
+- **A macro treinada vence o roteiro:** **73% de vitórias** (37-0, com 43 empates) em 80 partidas de validação que o
+  treino não viu, depois de 30 gerações (8 min e 20 s em 20 threads).
+- **O que mudou na partida, também com o roteiro:** as torres atiram em campeões, o dano em estrutura passa pela
+  armadura e pelo anti-backdoor, e o empurrar vai com a onda. Com isso, **as partidas do roteiro não terminam antes dos
+  20 min**: 3 de 3 empatam no limite, com 515 a 530 de ouro/min e cerca de 60 mortes.
+- **Determinismo:**
+  - a mesma semente dá a mesma partida em 1 e em 20 threads, com o draft novo ou usado;
+  - a mesma semente treina os mesmos pesos em 1 e em 8 threads;
+  - com os pesos zerados, a partida é idêntica à do roteiro, log incluído.
+- **Banco:** esquema 28, com a tabela nova `macro_policy`. Os dados antigos não mudam.
+
+## Para o usuário
+
+**Precisa de ação:**
+- **Reinicie o backend da porta 8080.** Ele está rodando desde 11:10 com o código de antes. Ao subir, o seu banco passa
+  para o esquema 28.
+- **Os 7 commits estão no `main`, sem push.**
+
+**Precisa de decisão:**
+- **A duração da partida:** com as torres revidando, o roteiro não fecha a partida em 20 min. No jogo, ela termina por
+  volta de 15 a 18 min. Calibrar isso (o roteiro agrupar antes dos 14:00, o dano das torres, as tropas) muda o jogo que a
+  macro aprende. Depois da calibragem, `MacroTraining.RULES` sobe para 2, e as macros salvas pedem treino novo (a tela
+  avisa).
+- **O dano da torre em campeões ignora a armadura do campeão**, porque o passo grosso não a tem. A Arena a aplica. Vale
+  levar a armadura ao passo grosso?
+
+**Vale conferir:**
+- **A nota do treino** (`treino_macro`: vitória 1, cedo 0,2, ouro 0,5) e o aceite de 55% são estimativas.
+- **O treino é sobre composições espelhadas** (as mesmas 5 builds dos dois lados). Composições diferentes de cada lado
+  entram quando você escolhe builds diferentes nos dois lados da aba Partida.

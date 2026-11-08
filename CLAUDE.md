@@ -61,6 +61,8 @@ Opt-in tests, gated by system properties (skipped by default):
 - `-Dauto.report=data/ornn-planner.db` (+ `-Dauto.scenario=2 -Dauto.fighter=0 -Dauto.classGenerations=15`) — `AutoTrainReportTest`: on a
   copy, the automatic brain's choice in a saved scenario, a "Treinar automaticamente" until the clean victory, and the class AIs.
 - `-Dmatch.report=data/ornn-planner.db` — `MatchReportTest`: whole matches of the saved builds on a copy, with cost, gold and XP against the builds'.
+- `-Dmacro.report=data/ornn-planner.db` (+ `-Dmacro.generations=30 -Dmacro.population=24 -Dmacro.episodes=4`) —
+  `MacroReportTest`: on a copy, trains the whole match's macro against the script and validates it on unseen seeds.
 - `-Dcalc.report=data/ornn-planner.db` — `CalculatorReportTest`: the calculator's measured examples on a copy.
 - `-Darena.golden.write=true` — **re-records** the golden files in `src/test/resources/arena/`
   (`ArenaRegressionTest`: SHA-256 fingerprints of full fight results for ~35 scenarios; `ArenaPolicyMigrationTest`:
@@ -106,6 +108,11 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   AI of a class (`ArenaTrainingService.startClass`); `startAuto` is "Treinar automaticamente".
 - `arena/fight/HitShape` and `SheetValidator` — the hit areas of ability zones (`forma: zonas`; one test, the target's circle against the shape) and the check of any kit sheet. Synthetic sheets, one per mechanic: `src/test/resources/arena/fichas-sinteticas.yml`.
 - `arena/rift/` — the full map: `RiftMap` (walls grid, A*), `RiftRules` (`objetivos_<patch>.yml`), `RiftTemplates`; `Arena.withRift` puts minions, towers, camps, plants and objectives on it as `npc` units. `Match` is a whole match at a coarse 0.25s step (waves in batches, `MacroPolicy`, `macro_<patch>.yml`), and its fights run on `Arena` at the fine step through `arena/MatchService` (`api/MatchController`). `Scenario.rift == null` is the single lane.
+  The match's macro is a `MacroPolicy` per side (`SeatMacro`): `ScriptedMacro`, or `NeuralMacro` (residual over the
+  script, zero weights == script; `MacroActions`, `MacroObservation` with its own `SCHEMA`) trained by `arena/MacroTraining`
+  on `MatchService.Draft`s (a match's draft played many times, deterministic across threads) and saved in table
+  `macro_policy` (`MacroTrainingService`); plan and log in `docs/proposta-macro-treinada.md`. `MacroTraining.RULES` goes
+  up when a match rule change makes saved macros stale.
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.
