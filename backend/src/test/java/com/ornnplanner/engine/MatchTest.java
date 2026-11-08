@@ -125,7 +125,8 @@ class MatchTest {
     @Test
     void itBuysInTheBuildsOrderAndTheShopRuleHoldsTheSecondStep() {
         Simple w = new Simple();
-        Match m = match(w, List.of("meio"), List.of(0));
+        // a mid on each side: alone, it clears the waves and takes the base before 10:00
+        Match m = match(w, List.of("meio", "meio"), List.of(0, 1));
         m.run(780);
         Match.Seat s = m.seats().get(0);
         assertTrue(s.purchases.size() >= 2, "bought " + s.purchases.size());
@@ -166,6 +167,35 @@ class MatchTest {
         assertTrue(r.events.stream().anyMatch(e -> e.text.contains("morreu para a torre externa")), "the tower shoots them");
         assertTrue(at[0].towers.stream().allMatch(tw -> tw.hp > 0), "no tower falls to a rush before the minions");
         assertTrue(at[0].seats().stream().mapToInt(s -> s.deaths).sum() >= 3, "most of them died (and came back: 8,5 s at level 1)");
+    }
+
+    /**
+     * The calibration of the match's length: an enemy at the Nexus is a threat at any time, and the script goes to defend
+     * it; one at an outer tower is not, before the grouping.
+     */
+    @Test
+    void theScriptDefendsItsNexusAtAnyTime() {
+        Match m = five(new Simple());
+        Match.Seat red = m.seats().get(5);
+        red.x = MAP.nexusBlue[0] + 300;
+        red.y = MAP.nexusBlue[1] + 300;
+        Object[] threat = m.threat(0);
+        assertTrue(threat != null, "an enemy at the Nexus");
+        // the Nexus or a base tower next to it
+        assertTrue(Math.hypot((double) threat[0] - red.x, (double) threat[1] - red.y) <= 1500);
+        com.ornnplanner.arena.rift.MacroPolicy.Intent i = new ScriptedMacro(MACRO).suggest(m, m.seats().get(2)).intent;
+        assertEquals(com.ornnplanner.arena.rift.MacroPolicy.Goal.DEFEND, i.goal);
+        // the same enemy at an outer tower, before 14:00: no threat
+        Match.Tower outer = null;
+        for (Match.Tower tw : m.towers) {
+            if (tw.team == 0 && (outer == null || Math.hypot(tw.x - MAP.nexusBlue[0], tw.y - MAP.nexusBlue[1])
+                    > Math.hypot(outer.x - MAP.nexusBlue[0], outer.y - MAP.nexusBlue[1]))) {
+                outer = tw;
+            }
+        }
+        red.x = outer.x;
+        red.y = outer.y;
+        assertTrue(m.threat(0) == null, "an outer tower is only defended after the grouping");
     }
 
     @Test

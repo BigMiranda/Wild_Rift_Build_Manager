@@ -29,7 +29,7 @@ public final class MacroTraining {
      * The version of the match's rules a macro is trained on: raise it when a change of the match (economy, map, the
      * fights' trigger) makes the saved macros play a different game; the screen warns about the older ones.
      */
-    public static final int RULES = 1;
+    public static final int RULES = 2;
 
     /** Seeds of the validation matches start here; the training ones are below it. */
     public static final long VALIDATION_SEEDS = 1_000_000;

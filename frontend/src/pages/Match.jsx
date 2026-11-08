@@ -202,7 +202,7 @@ export default function Match() {
     setPlaying(false);
     try {
       const slots = picks.map((id, i) => (id ? { buildId: Number(id), team: i < SEATS ? 0 : 1, brain: 'tactical' } : null)).filter(Boolean);
-      const known = (m) => (m === 'script' || macros.some((x) => `macro:${x.id}` === m) ? m : 'script');
+      const known = (m) => (m === 'script' || macros.some((x) => `macro:${x.id}` === m && current(x, meta)) ? m : 'script');
       const r = await api.post('/api/match/run', { slots, limit, seed, macroBlue: known(macroPick[0]), macroRed: known(macroPick[1]) });
       setResult(r);
       setSecond(0);
@@ -248,7 +248,7 @@ export default function Match() {
                 );
               })}
               <label className="inline" style={{ display: 'flex', marginTop: 6 }}>{t('match.macro')}
-                <select value={macroPick[team]} onChange={(e) => setMacroPick(macroPick.map((v, x) => (x === team ? e.target.value : v)))}>
+                <select value={macros.some((x) => `macro:${x.id}` === macroPick[team] && current(x, meta)) ? macroPick[team] : 'script'} onChange={(e) => setMacroPick(macroPick.map((v, x) => (x === team ? e.target.value : v)))}>
                   <option value="script">{t('match.macro.script')}</option>
                   {macros.filter((m) => current(m, meta)).map((m) => (
                     <option key={m.id} value={`macro:${m.id}`}>{t('match.macro.version', { v: m.version, w: Math.round(m.winrate * 100) })}</option>

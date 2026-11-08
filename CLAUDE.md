@@ -60,7 +60,7 @@ Opt-in tests, gated by system properties (skipped by default):
   to diff two patches or rule changes.
 - `-Dauto.report=data/ornn-planner.db` (+ `-Dauto.scenario=2 -Dauto.fighter=0 -Dauto.classGenerations=15`) — `AutoTrainReportTest`: on a
   copy, the automatic brain's choice in a saved scenario, a "Treinar automaticamente" until the clean victory, and the class AIs.
-- `-Dmatch.report=data/ornn-planner.db` — `MatchReportTest`: whole matches of the saved builds on a copy, with cost, gold and XP against the builds'.
+- `-Dmatch.report=data/ornn-planner.db` (+ `-Dmatch.seeds=12 -Dmatch.limit=30`) — `MatchReportTest`: whole matches of the saved builds on a copy, with cost, gold and XP against the builds', and the pace (first tower, length, structures per side).
 - `-Dmacro.report=data/ornn-planner.db` (+ `-Dmacro.generations=30 -Dmacro.population=24 -Dmacro.episodes=4`) —
   `MacroReportTest`: on a copy, trains the whole match's macro against the script and validates it on unseen seeds.
 - `-Dcalc.report=data/ornn-planner.db` — `CalculatorReportTest`: the calculator's measured examples on a copy.

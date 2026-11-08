@@ -7,7 +7,7 @@ package com.ornnplanner.arena.rift;
 public interface MacroPolicy {
 
     /** What it goes for now. */
-    enum Goal { LANE, JUNGLE, RECALL, OBJECTIVE, GROUP, PUSH, RETREAT, SHOP }
+    enum Goal { LANE, JUNGLE, RECALL, OBJECTIVE, GROUP, PUSH, RETREAT, SHOP, DEFEND }
 
     /** A goal and the place it is at. */
     final class Intent {

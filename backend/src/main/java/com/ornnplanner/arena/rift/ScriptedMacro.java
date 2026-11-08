@@ -88,6 +88,17 @@ public final class ScriptedMacro implements MacroPolicy {
     private Intent role(Match m, Match.Seat me) {
         double[] objective = m.objectiveUp();
         double group = num("agrupar_aos", 14) * 60;
+        // after grouping, an edge is pushed before any objective: the Baron buff, or enough enemies dead
+        boolean edge = m.baronBuff(me.team) || m.dead(1 - me.team) >= num("empurrar_com_mortos", 3);
+        if (m.seconds() >= group && edge) {
+            double[] rally = m.rally(me.team);
+            return new Intent(Goal.PUSH, rally[0], rally[1], m.pushLane(me.team));
+        }
+        // without an edge, a structure under pressure is defended first (the base and the Nexus at any time)
+        Object[] threat = m.threat(me.team);
+        if (threat != null) {
+            return new Intent(Goal.DEFEND, (double) threat[0], (double) threat[1], (String) threat[2]);
+        }
         boolean roams = "selva".equals(me.role) || "meio".equals(me.role) || m.seconds() >= group;
         if (objective != null && roams && m.seconds() >= num("objetivo_depois_de", 5) * 60) {
             return new Intent(Goal.OBJECTIVE, objective[0], objective[1], objective[2] > 0 ? "barao" : "dragao");

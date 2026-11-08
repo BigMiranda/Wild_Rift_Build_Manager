@@ -335,3 +335,64 @@ Conferido na tela (servidor de desenvolvimento, porta 8090, banco `data/dev`, qu
 - **A nota do treino** (`treino_macro`: vitória 1, cedo 0,2, ouro 0,5) e o aceite de 55% são estimativas.
 - **O treino é sobre composições espelhadas** (as mesmas 5 builds dos dois lados). Composições diferentes de cada lado
   entram quando você escolhe builds diferentes nos dois lados da aba Partida.
+
+## Depois: calibragem da duração da partida (08/11/2026)
+
+Pedido do usuário: com as torres revidando, o roteiro não fechava a partida em 20 min, e no jogo ela termina por volta de
+15 a 18 min. `MatchReportTest` ganhou `-Dmatch.seeds=12` (uma linha por semente: duração, estruturas caídas por lado e a
+1ª torre), `-Dmatch.limit=30` e a lista de quando cada estrutura cai.
+
+**O que segurava a partida, e o que mudou:**
+1. **O campeão nunca causava dano às tropas** no passo grosso. Ele só recebia o ouro das que morriam. Com os dois lados
+   iguais, as ondas se anulavam no meio e nenhuma torre caía antes de agrupar. Agora, o campeão em rota (e quem empurra
+   ou defende) bate na onda inimiga à frente com o seu dano (`limpar_onda: 1.0`, até 700, EST).
+2. **O rota não batia na torre**: só quem tinha a intenção "empurrar" batia. Agora o rota bate quando a onda dele está
+   lá (a torre atira nas tropas primeiro).
+3. **Depois de agrupar, o roteiro ia sempre ao objetivo**, mesmo com a Mão do Barão ou com o outro time morto. Agora ele
+   empurra antes do objetivo com a Mão do Barão ou com 3 inimigos mortos (`empurrar_com_mortos`).
+4. **Ninguém defendia**:
+   - o roteiro agora defende a torre da base e o Nexo a qualquer hora, contra 1 inimigo, e as outras estruturas depois
+     de agrupar, contra 2 (`defender_com`). É a meta nova `DEFEND`, com `Match.threat`;
+   - quem empurra e quem defende sempre lutam, como no objetivo disputado. Antes, a luta só saía com 2,2 vezes de
+     vantagem de força.
+
+**Resultado** (12 sementes, as mesmas builds):
+
+| | 1ª torre | partidas que terminam até 20:00 | duração das que terminam | empates em 20:00 |
+|---|---|---|---|---|
+| antes | 12:51 a 16:16 (3 sementes) | 0 de 3 | — | 3 de 3 |
+| só com o item 1 | 5:09 a 9:21 | 8 de 12 | 14:28 a 15:47 | 4 de 12 |
+| **com os itens 1 a 4** | **5:09 a 9:21** | **9 de 12** | **14:36 a 16:58 (mediana 15:37)** | **3 de 12** |
+
+- Com 30 min de limite, duas das três empatadas terminam aos 24:43 e aos 29:34, e uma segue empatada: 6 estruturas
+  caídas, 4 a 2.
+- As 3 sementes da tabela de base agora terminam aos 16:56, 15:00 e 15:37.
+- 🎯 `MatchTest.theScriptDefendsItsNexusAtAnyTime`: um inimigo no Nexo é ameaça a qualquer hora, e o roteiro vai defender.
+  Um inimigo na torre externa antes dos 14:00 não é ameaça.
+- `MatchTest.itBuysInTheBuildsOrderAndTheShopRuleHoldsTheSecondStep` ganhou um meio do outro lado. Sozinho, o campeão
+  agora limpa as ondas e derruba a base aos 6:54, antes da compra das 10:00 que o teste confere.
+
+**A macro e as regras:**
+- uma ação nova, **"defender a base"** (13 ações): `MacroObservation.SCHEMA` 1 → 2, com 51 números;
+- `MacroTraining.RULES` 1 → 2;
+- as macros salvas antes aparecem com "⚠ outro patch ou outras regras" e saem do seletor. Uma que estava escolhida no
+  navegador vira "Roteiro" ao rodar, sem erro.
+
+**O treino de novo**, nas mesmas condições: 30 gerações em 375 s.
+
+| macro contra o roteiro calibrado (80 partidas) | taxa de vitória | V-D | nota | ouro/min (roteiro) | desvios por partida |
+|---|---|---|---|---|---|
+| geração 10 | 97,5% | 78-2 | +0,991 | 567 (594) | 286 |
+| geração 20 | 100% | 80-0 | +1,065 | 591 (580) | 18 |
+| **final** | **100%** | **80-0** | **+1,065** | **591 (580)** | **18** |
+
+- **O que ela aprendeu agora: ficar na rota em vez de voltar à base.** O roteiro volta à base umas 30 vezes por partida
+  para comprar (os dois tempos), e a rede vence segurando a rota e a pressão nas torres. A partida média dura 13,9 min.
+- **Isso aponta o próximo ponto fraco da partida, e não uma vitória da rede:** no passo grosso, a luta só começa com 2,2
+  vezes de vantagem de força (ou num sorteio raro). Por isso, os itens quase não decidem nada, e ficar na rota vale mais
+  que comprar. No jogo, quem não volta à base perde as trocas. Calibrar quando as lutas começam (`luta_vantagem`,
+  `luta_chance`) é o próximo passo, e de novo pede treino novo da macro.
+
+Testes: 423 → **424** (17 opcionais pulados), 0 falhas. Os golden não mudaram. `npm run build` limpo, `npm test` 4 de 4.
+Conferido na tela (servidor de desenvolvimento): a v1 antiga do banco `data/dev` aparece com o aviso, e a partida roda com
+"Azul: Roteiro · Vermelho: Roteiro", sem erro.

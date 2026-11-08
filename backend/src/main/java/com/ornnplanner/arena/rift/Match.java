@@ -427,6 +427,54 @@ public final class Match {
         return drakes[team];
     }
 
+    /** The sides have grouped ({@code agrupar_aos}). */
+    boolean grouped() {
+        return t >= param("agrupar_aos", 14) * 60;
+    }
+
+    /**
+     * The side's structure under pressure, {x, y, lane} (the Nexus: the side's push lane), or null: the one with the most
+     * enemy champions within 1500. A base tower or the Nexus at any time with one of them; the others only after the
+     * grouping, with {@code defender_com}.
+     */
+    public Object[] threat(int team) {
+        int need = (int) param("defender_com", 2);
+        boolean grouped = grouped();
+        Tower best = null;
+        int most = 0;
+        for (Tower tw : towers) {
+            if (tw.team != team || tw.hp <= 0) {
+                continue;
+            }
+            boolean base = tw.order >= 3;
+            if (!base && !grouped) {
+                continue;
+            }
+            int n = 0;
+            for (Seat s : seats) {
+                if (s.team != team && !s.dead && Math.hypot(s.x - tw.x, s.y - tw.y) <= 1500) {
+                    n++;
+                }
+            }
+            if (n >= (base ? 1 : need) && n > most) {
+                most = n;
+                best = tw;
+            }
+        }
+        return best == null ? null : new Object[] {best.x, best.y, best.lane == null ? pushLane(team) : best.lane};
+    }
+
+    /** How many champions of a side are dead now. */
+    int dead(int team) {
+        int n = 0;
+        for (Seat s : seats) {
+            if (s.team == team && s.dead) {
+                n++;
+            }
+        }
+        return n;
+    }
+
     boolean baronBuff(int team) {
         return t < baronUntil[team];
     }
@@ -472,6 +520,7 @@ public final class Match {
         while (t <= limitSeconds && result.winner < 0) {
             tickClock();
             tickWaves();
+            tickLaners();
             for (Seat s : seats) {
                 tickSeat(s);
             }
@@ -585,6 +634,31 @@ public final class Match {
             }
         }
         return best;
+    }
+
+    /**
+     * Champions in lane hit the enemy wave in front of them (macro {@code limpar_onda}: the share of their damage that goes
+     * to minions, with last hits and some abilities): without it both sides' waves cancel out in the middle and no tower
+     * falls before the grouping.
+     */
+    private void tickLaners() {
+        double share = param("limpar_onda", 1);
+        double reach = param("limpar_onda_alcance", 700);
+        for (Seat s : seats) {
+            if (s.dead || t < s.busyUntil || s.intent == null || s.intent.what == null || s.intent.goal != MacroPolicy.Goal.LANE
+                    && s.intent.goal != MacroPolicy.Goal.PUSH && s.intent.goal != MacroPolicy.Goal.DEFEND || !laneLength.containsKey(s.intent.what)) {
+                continue;
+            }
+            Wave enemy = frontOf(1 - s.team, s.intent.what);
+            if (enemy == null) {
+                continue;
+            }
+            double[] at = onLane(enemy.lane, enemy.team, enemy.along);
+            if (Math.hypot(at[0] - s.x, at[1] - s.y) <= reach) {
+                hitWave(enemy, (s.stats[1] * s.stats[2] + s.stats[3] * 0.5 + 40) * share * STEP);
+            }
+        }
+        waves.removeIf(w -> w.hp.isEmpty());
     }
 
     private void hitWave(Wave w, double damage) {
@@ -1060,11 +1134,14 @@ public final class Match {
             }
         }
         for (Seat s : seats) {
-            if (s.dead || s.intent == null || s.intent.goal != MacroPolicy.Goal.PUSH || t < s.busyUntil) {
+            boolean push = s.intent != null && s.intent.goal == MacroPolicy.Goal.PUSH;
+            boolean lane = s.intent != null && s.intent.goal == MacroPolicy.Goal.LANE;
+            if (s.dead || !push && !lane || t < s.busyUntil) {
                 continue;
             }
             Tower next = nextTower(1 - s.team, s.intent.what);
-            if (next != null && Math.hypot(s.x - next.x, s.y - next.y) <= 700) {
+            // a laner hits the tower too, but only with its minions there (the tower shoots them first)
+            if (next != null && Math.hypot(s.x - next.x, s.y - next.y) <= 700 && (push || escorted(s.team, next))) {
                 hitStructure(next, structureDamage(s, next) * STEP, s);
                 if (result.winner >= 0) {
                     return;
@@ -1201,7 +1278,9 @@ public final class Match {
                     sides[s.team] += power(s);
                 }
                 double ratio = Math.max(sides[0], sides[1]) / Math.max(1, Math.min(sides[0], sides[1]));
-                boolean contest = a.intent != null && b.intent != null && a.intent.goal == MacroPolicy.Goal.OBJECTIVE && b.intent.goal == MacroPolicy.Goal.OBJECTIVE;
+                boolean contest = a.intent != null && b.intent != null && (a.intent.goal == MacroPolicy.Goal.OBJECTIVE && b.intent.goal == MacroPolicy.Goal.OBJECTIVE
+                        || a.intent.goal == MacroPolicy.Goal.PUSH && b.intent.goal == MacroPolicy.Goal.DEFEND
+                        || a.intent.goal == MacroPolicy.Goal.DEFEND && b.intent.goal == MacroPolicy.Goal.PUSH);   // a push met by the defense
                 if (contest || ratio >= param("luta_vantagem", 1.4) || rng.nextDouble() < param("luta_chance", 0.02)) {
                     runFight(who, (a.x + b.x) / 2, (a.y + b.y) / 2);
                     return;

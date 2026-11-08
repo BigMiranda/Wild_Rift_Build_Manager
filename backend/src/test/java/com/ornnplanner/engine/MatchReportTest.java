@@ -48,7 +48,7 @@ class MatchReportTest {
         }
         MatchModel.Request req = new MatchModel.Request();
         req.seed = seed;
-        req.limit = 20;
+        req.limit = Double.parseDouble(System.getProperty("match.limit", "20"));
         for (int team = 0; team < 2; team++) {
             for (long id : ids) {
                 MatchModel.Slot s = new MatchModel.Slot();
@@ -60,11 +60,29 @@ class MatchReportTest {
         return req;
     }
 
+    private static String nl() {
+        return System.lineSeparator();
+    }
+
+    private static String mmss(double seconds) {
+        return String.format("%d:%02d", (int) seconds / 60, (int) seconds % 60);
+    }
+
     @Test
     void report() throws IOException {
         StringBuilder sb = new StringBuilder();
-        for (long seed = 1; seed <= 3; seed++) {
+        // the pace over more seeds (-Dmatch.seeds=12): when the first tower falls and when the match ends
+        int seeds = Integer.parseInt(System.getProperty("match.seeds", "3"));
+        List<String> pace = new ArrayList<>();
+        for (long seed = 1; seed <= seeds; seed++) {
             MatchModel.Result r = matches.run(request(seed));
+            pace.add(String.format("%d: %s, %d structures (%d-%d), first tower %s", seed, r.winner < 0 ? "draw" : mmss(r.seconds),
+                    r.events.stream().filter(e -> e.text.contains(" caiu")).count(), r.events.stream().filter(e -> e.text.contains(" caiu") && Integer.valueOf(0).equals(e.team)).count(),
+                    r.events.stream().filter(e -> e.text.contains(" caiu") && Integer.valueOf(1).equals(e.team)).count(),
+                    r.events.stream().filter(e -> e.text.contains(" caiu")).findFirst().map(e -> mmss(e.t)).orElse("-")));
+            if (seed > 3) {
+                continue;
+            }
             sb.append(String.format("seed %d: winner %d at %.0f s; %.1f s to run, %.1f s in %d fights%n", seed, r.winner, r.seconds, r.runSeconds, r.fightSeconds, r.fights.size()));
             for (MatchModel.Player p : r.players) {
                 sb.append(String.format("  %d %-9s %-8s lv%-2d %d/%d gold/min %5.0f (build %5.0f) xp/min %5.0f (build %5.0f) cs %d+%d items %d%n", p.team, p.champion, p.role, p.level, p.kills, p.deaths,
@@ -78,7 +96,14 @@ class MatchReportTest {
             }
             r.events.stream().filter(e -> e.text.contains("Frutomel")).limit(4).forEach(e -> sb.append(String.format("    %.0f %s%n", e.t, e.text)));
             r.events.stream().filter(e -> e.text.contains("Teleporte")).limit(2).forEach(e -> sb.append(String.format("    %.0f %s%n", e.t, e.text)));
+            // the match's pace: when each structure fell, and who died to the towers
+            StringBuilder fell = new StringBuilder();
+            r.events.stream().filter(e -> e.text.contains(" caiu")).forEach(e -> fell.append(String.format(" %s %s;", mmss(e.t), e.text.replace("torre ", "").replace(" da rota", "").replace(" caiu", ""))));
+            sb.append(String.format("  structures (%d):%s%n", r.events.stream().filter(e -> e.text.contains(" caiu")).count(), fell));
+            sb.append(String.format("  deaths to towers: %d; first at %s%n", r.events.stream().filter(e -> e.text.contains("morreu para")).count(),
+                    r.events.stream().filter(e -> e.text.contains("morreu para")).findFirst().map(e -> mmss(e.t)).orElse("-")));
         }
+        sb.append("pace: ").append(String.join(" | ", pace)).append(nl());
         MatchModel.Result a = matches.run(request(5));
         MatchModel.Result b = matches.run(request(5));
         assertEquals(a.seconds, b.seconds);

@@ -10,9 +10,9 @@ public final class MacroObservation {
     private MacroObservation() {
     }
 
-    public static final int SCHEMA = 1;
+    public static final int SCHEMA = 2;
 
-    public static final int SIZE = 50;
+    public static final int SIZE = 51;
 
     private static final String[] ROLES = {"barao", "selva", "meio", "dupla", "suporte"};
 

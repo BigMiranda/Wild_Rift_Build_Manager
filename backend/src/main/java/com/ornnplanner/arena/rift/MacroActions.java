@@ -25,13 +25,14 @@ public final class MacroActions {
     public static final int RECALL_TELEPORT = 9;
     public static final int SHOP_HERE = 10;
     public static final int HOLD_TOWER = 11;
+    public static final int DEFEND = 12;
 
-    public static final int SIZE = 12;
+    public static final int SIZE = 13;
 
     /** For the log and the screen (pt-BR, as the match's log). */
     public static final String[] LABELS = {"ficar na própria rota", "ir à rota do Barão", "ir ao meio", "ir à rota do Dragão",
         "fazer a selva", "ir ao objetivo", "agrupar e empurrar", "recuar para o Frutomel", "voltar à base a pé",
-        "voltar à base de Teleporte", "comprar onde está", "esperar sob a torre"};
+        "voltar à base de Teleporte", "comprar onde está", "esperar sob a torre", "defender a base"};
 
     private static final String[] LANES = {null, "barao", "meio", "dragao"};
 
@@ -50,6 +51,8 @@ public final class MacroActions {
                 return PUSH;
             case JUNGLE:
                 return JUNGLE;
+            case DEFEND:
+                return DEFEND;
             default:
                 return OWN_LANE;
         }
@@ -72,6 +75,8 @@ public final class MacroActions {
                 return m.canBuy(me) && m.shopsHere(me);
             case HOLD_TOWER:
                 return m.nextTower(me.team, Match.laneOf(me.role)) != null;
+            case DEFEND:
+                return m.threat(me.team) != null;
             default:
                 return true;
         }
@@ -108,6 +113,10 @@ public final class MacroActions {
                 return new Intent(Goal.RECALL, 0, 0, "teleporte");
             case SHOP_HERE:
                 return new Intent(Goal.SHOP, me.x, me.y, null);
+            case DEFEND: {
+                Object[] th = m.threat(me.team);
+                return new Intent(Goal.DEFEND, (double) th[0], (double) th[1], (String) th[2]);
+            }
             case HOLD_TOWER: {
                 String lane = Match.laneOf(me.role);
                 Match.Tower tw = m.nextTower(me.team, lane);
