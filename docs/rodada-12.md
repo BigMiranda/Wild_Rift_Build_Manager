@@ -99,7 +99,7 @@ Cada linha mudada cita "Guia do Rift (07/11/2026)" na `fonte`, junto com o valor
 | Barricadas (as placas) | 5 em quintos iguais da Vida, 150 de ouro, +20 de Armadura e RM por 10 s | 5 em 90/75/55/30/0% da Vida (`limiares`), 120 de ouro, +30 por 20 s |
 | Ouro global da torre interna e da base | 75 | 25 |
 | Supertropas | da queda da torre da base até o fim da partida | da queda até o inibidor voltar (`inibidor_renasce`) |
-| Bônus de velocidade das tropas | +10 aos 12:00 | +25 aos 8:00, a cada 150 s até 18:00 (só dado: o código não lê) |
+| Bônus de velocidade das tropas | +10 aos 12:00 | +25 aos 8:00, a cada 150 s até 18:00 (aplicado na parte 4) |
 
 **Inibidor:** `Arena` guarda quando a torre da base de cada rota caiu (`baseTowerDownAt`), e não mais só se caiu. As
 supertropas do inimigo saem por `tropas.inibidor_renasce` segundos. A ficha diz apenas "depois de um tempo", por isso o tempo é **300 s,
@@ -109,7 +109,7 @@ o do LoL de PC (EST)**. O inibidor que volta não é uma unidade que se possa at
 - **Primeira onda (guia 0:00, base 0:25), acampamentos (guia 0:20, base 0:46/0:47) e Aronguejo (guia 1:25, base
   1:30):** a base segue o que o usuário viu em partida (05/11/2026), que vale mais. Se o relógio do guia começasse 25 s
   depois do da partida, os acampamentos aos 0:20 + 25 = 0:45 bateriam com os 0:46 observados. Mas o Aronguejo e os
-  objetivos não batem com esse atraso. Falta o usuário confirmar.
+  objetivos não batem com esse atraso. **Decisão do usuário (08/11/2026): ficam os tempos observados em partida.**
 - **Arauto do Vale:** existe pelo guia (surge aos 6:00, some se não for abatido em 690 s, invocado arremete contra a torre mais próxima),
   mas falta modelar; `arauto.existe` segue `false`, com a nota.
 - **Mecânicas novas** (Portais, Zona de Vento, velocidade da fonte, bônus das torres contra corpo a corpo e por inimigo
@@ -152,3 +152,40 @@ plantas e fossos dos dois lados ficam fora das paredes e têm caminho a pé. O d
 - as torres são quadrados; os monstros, círculos marrons (os objetivos com borda dourada);
 - as plantas são uma flor da cor de cada uma: Frutomel amarelo, Pinstouro vermelho, Florividente ciano;
 - uma legenda embaixo do mapa diz o que é cada símbolo.
+
+## Parte 4: velocidade das tropas e a partida de base para o treino da macro
+
+Parte 0 de [proposta-macro-treinada.md](proposta-macro-treinada.md): deixar a partida certa no que já se sabe antes de
+treinar uma macro sobre ela.
+
+- **Tempos do guia que contradizem a partida:** o usuário decidiu (08/11/2026) que **ficam os observados**: a 1ª onda aos
+  0:25, a selva aos 0:46/0:47 e o Aronguejo aos 1:30.
+- **Velocidade das tropas:** `RiftRules.minionSpeed` lê `tropas.bonus_velocidade`: +25 aos 8:00 e mais +25 a cada 150 s,
+  até 18:00, ou seja, até +125. O guia não diz o tamanho de cada passo, então os +25 por passo são EST. A partida usa a
+  velocidade do momento a cada passo. Na Arena, cada tropa nasce com a velocidade da hora em que nasce.
+  `RiftTest.theRulesFollowTheInGameRiftGuide` confere os degraus.
+- **Golden:** não mudou, porque a Rota única não tem tropas do mapa. Testes: 413, 0 falhas (16 opcionais pulados).
+  `npm run build` limpo.
+
+**A partida de base** (`MatchReportTest`, as mesmas 3 sementes e builds da Rodada 10, com o mapa das partes 1 a 3 e as
+tropas mais rápidas):
+
+| semente | vencedor | duração | ouro/min médio | XP/min médio | mortes |
+|---|---|---|---|---|---|
+| 1 | azul | 15:08 | 557 → **550** | 387 → **382** | 29 → **35** |
+| 2 | vermelho | 14:56 | 551 → **555** | 361 → **371** | 39 → **39** |
+| 3 | azul | 15:56 | 541 → **552** | 364 → **366** | 37 → **41** |
+
+(antes: a Rodada 10 depois dos dois tempos)
+
+- Ouro e XP quase não mudam. As mortes sobem um pouco: o mapa novo tem mais paredes e corredores, e as lutas saem mais
+  perto.
+- **As partidas são desequilibradas:** um lado faz 16 a 25 abates com um campeão, e o outro morre de 10 a 16 vezes com a
+  dupla ou o suporte. A macro por roteiro não recua de uma rota perdida. É justamente o que uma macro treinada pode
+  aprender.
+- **Custo:** de 3,2 a 7,1 s por partida, com 0,5 a 1,5 s em 34 a 46 lutas.
+
+Conferido na tela (servidor de desenvolvimento, porta 8090, banco `data/dev`):
+- Partida com Rumble, Ornn, Renekton, Darius e Ornn suporte dos dois lados: o vermelho vence aos 14:57. A reprodução
+  mostra as paredes, as moitas, o chão das rotas e a legenda;
+- Arena, "Troca na rota com Frutomel", Ornn contra Darius: a luta roda no mapa novo.

@@ -7632,7 +7632,7 @@ public class Arena {
         double hp = Rules.num(t.get("vida")) + Rules.num(t.get("vida_por_min")) * minute;
         double ad = Rules.num(t.get("dda")) + Rules.num(t.get("dda_por_min")) * minute;
         U u = npc("Tropa " + kind, "tropa", kind, team, route[0][0] + 60 * (k % 3), route[0][1] + 60 * (k / 3), statLine(t, hp, ad),
-                rules.num(325, "tropas", "velocidade"), Rules.num(t.get("velocidade_ataque")), Rules.num(t.get("alcance")), 40);
+                rules.minionSpeed(clock()), Rules.num(t.get("velocidade_ataque")), Rules.num(t.get("alcance")), 40);
         u.lane = lane;
         u.route = route;
         u.routeAt = 1;

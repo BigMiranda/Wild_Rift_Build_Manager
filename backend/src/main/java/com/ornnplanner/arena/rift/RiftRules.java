@@ -129,6 +129,23 @@ public final class RiftRules {
         return out;
     }
 
+    /**
+     * Minions' move speed at {@code second}: the base, plus one step of {@code tropas.bonus_velocidade} at {@code aos} and
+     * one more every {@code a_cada} seconds, the last at {@code ate}.
+     */
+    public double minionSpeed(double second) {
+        double base = num(325, "tropas", "velocidade");
+        Map<String, Object> bonus = map("tropas", "bonus_velocidade");
+        if (bonus == null || second < value(bonus.get("aos"), Double.POSITIVE_INFINITY)) {
+            return base;
+        }
+        double from = value(bonus.get("aos"), 0);
+        double every = value(bonus.get("a_cada"), 0);
+        double last = Math.min(second, value(bonus.get("ate"), from));
+        int steps = 1 + (every > 0 ? (int) Math.floor((last - from) / every + 1e-9) : 0);
+        return base + steps * value(bonus, 0);
+    }
+
     /** Seconds from a wave at {@code second} to the next. */
     public double waveGap(double second) {
         Map<String, Object> fast = map("tropas", "intervalo_rapido");

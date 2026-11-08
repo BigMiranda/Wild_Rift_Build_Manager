@@ -485,7 +485,7 @@ public final class Match {
 
     /** Waves as batches: they march, trade blows when they meet, and hit the next structure. */
     private void tickWaves() {
-        double speed = rules.num(325, "tropas", "velocidade");
+        double speed = rules.minionSpeed(t);
         for (Wave w : new ArrayList<>(waves)) {
             Wave enemy = frontOf(1 - w.team, w.lane);
             double total = laneLength.get(w.lane);

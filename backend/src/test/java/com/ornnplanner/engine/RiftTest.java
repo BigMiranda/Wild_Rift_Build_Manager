@@ -84,6 +84,14 @@ class RiftTest {
         assertEquals(120, RiftRules.value(RULES.map("torres", "placas").get("ouro"), 0));
         // a fallen inhibitor tower grows back: the super minions stop after a finite time
         assertTrue(RULES.num(Double.POSITIVE_INFINITY, "tropas", "inibidor_renasce") < 3600);
+        // the minions speed up from 8:00, one step every 150 s until 18:00
+        double base = RULES.num(0, "tropas", "velocidade");
+        assertEquals(base, RULES.minionSpeed(479));
+        assertEquals(base + 25, RULES.minionSpeed(480));
+        assertEquals(base + 25, RULES.minionSpeed(629));
+        assertEquals(base + 50, RULES.minionSpeed(630));
+        assertEquals(base + 125, RULES.minionSpeed(1080));
+        assertEquals(base + 125, RULES.minionSpeed(1500));
     }
 
     @Test

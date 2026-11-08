@@ -20,7 +20,7 @@ tropas:
   super_apos_torre_da_base: {valor: true, fonte: "Guia do Rift (07/11/2026): a Torre do Inibidor caída dá supertropas na rota (Riot, 2022, dizia que não havia inibidores)"}
   inibidor_renasce: {valor: 300, fonte: "Guia do Rift (07/11/2026): a torre volta como inibidor depois de um tempo e as supertropas param; o tempo é o do LoL de PC (EST)"}
   velocidade: {valor: 325, fonte: "PC (estimativa)"}
-  bonus_velocidade: {aos: 480, valor: 25, a_cada: 150, ate: 1080, fonte: "Guia do Rift (07/11/2026): +25 de Velocidade de Movimento a partir de 8:00, sobe a cada 150 s até 18:00 (o tamanho de cada passo não está na ficha)"}
+  bonus_velocidade: {aos: 480, valor: 25, a_cada: 150, ate: 1080, fonte: "Guia do Rift (07/11/2026): +25 de Velocidade de Movimento a partir de 8:00, sobe a cada 150 s até 18:00; o tamanho de cada passo não está na ficha: +25 por passo (EST), até +125 aos 18:00"}   # RiftRules.minionSpeed
   agro: {valor: 1, fonte: "RPN 4.2"}                            # segundos
   alcance_alerta: {valor: 700, fonte: "PC (estimativa)"}
   tipos:
