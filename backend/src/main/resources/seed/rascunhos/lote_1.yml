@@ -1,0 +1,2636 @@
+# Rascunho gerado por tools/fichas/gerar_rascunhos.py (geometria da wiki; NÃO é ficha final).
+"Mordekaiser":
+  "wiki": "Mordekaiser"
+  "modelos_wr": 10
+  "modelos_pc": 20
+  "habilidades":
+    "P":
+      "effect_radius": 375
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Self / Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "aoedot"
+      "spellshield": "false"
+      "nome_en": "Darkness Rise"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "effect_radius": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "spellshield": "PC"
+      "variantes":
+        - "Template:WR Data Mordekaiser/Darkness Rise"
+        - "Template:Data Mordekaiser/Darkness Rise"
+        - "Template:Data Mordekaiser/Iron Man"
+    "1":
+      "range": 625
+      "width": 160
+      "cast_time": 0.5
+      "skill": "1"
+      "targeting": "Direction"
+      "affects": "Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "special"
+      "projectile": "False"
+      "cooldown":
+        - 7
+        - 6
+        - 5
+        - 4
+      "cost":
+        - 20
+        - 32
+      "costtype": ""
+      "spellshield": "True"
+      "nome_en": "Obliterate"
+      "forma_sugerida": "linha"
+      "fontes":
+        "range": "WR"
+        "width": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cost": "PC"
+        "costtype": "PC"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Mordekaiser/Obliterate"
+        - "Template:Data Mordekaiser/Mace of Spades"
+        - "Template:Data Mordekaiser/Obliterate"
+    "2":
+      "target_range": 1000
+      "effect_radius":
+        - 250
+        - 125
+      "skill": "2"
+      "targeting": "Auto"
+      "affects": "Self"
+      "damagetype": "magic"
+      "spelleffects": "aoedot"
+      "cooldown":
+        - 12
+        - 11
+        - 10
+        - 9
+      "cdstart": "post-effect"
+      "cost":
+        - 25
+        - 65
+      "costtype": ""
+      "spellshield": "False"
+      "nome_en": "Indestructible"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "target_range": "PC"
+        "effect_radius": "PC"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "PC"
+        "spelleffects": "PC"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "PC"
+        "costtype": "PC"
+        "spellshield": "PC"
+      "variantes":
+        - "Template:WR Data Mordekaiser/Indestructible"
+        - "Template:Data Mordekaiser/Harvester of Sorrow"
+        - "Template:Data Mordekaiser/Indestructible"
+    "3":
+      "target_range":
+        - 700
+        - 900
+      "effect_radius":
+        - 800
+        - 200
+      "width": 200
+      "speed": 3000
+      "cast_time": 0.25
+      "skill": "3"
+      "targeting": "Location"
+      "affects": "Self, Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "aoe"
+      "projectile": "false"
+      "cooldown":
+        - 15
+        - 13
+        - 11
+        - 9
+      "spellshield": "True"
+      "nome_en": "Death's Grasp"
+      "forma_sugerida": "area (origem: ponto)"
+      "fontes":
+        "target_range": "WR"
+        "effect_radius": "PC"
+        "width": "WR"
+        "speed": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Mordekaiser/Death's Grasp"
+        - "Template:Data Mordekaiser/Death's Grasp"
+        - "Template:Data Mordekaiser/Siphon of Destruction"
+    "R":
+      "target_range": 650
+      "effect_radius": 1200
+      "cast_time": 0.5
+      "skill": "4"
+      "targeting": "Unit"
+      "affects": "Enemies"
+      "damagetype": "magic"
+      "spelleffects": "dot"
+      "cooldown":
+        - 105
+        - 90
+        - 75
+      "cdstart": "on-cast"
+      "spellshield": "special"
+      "nome_en": "Realm of Death"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "target_range": "WR"
+        "effect_radius": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "PC"
+        "spelleffects": "PC"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Mordekaiser/Realm of Death"
+        - "Template:Data Mordekaiser/Children of the Grave"
+        - "Template:Data Mordekaiser/Realm of Death"
+"Garen":
+  "wiki": "Garen"
+  "modelos_wr": 10
+  "modelos_pc": 12
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Self"
+      "spelleffects": "Heal"
+      "nome_en": "Perseverance"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "spelleffects": "WR"
+      "variantes":
+        - "Template:WR Data Garen/Perseverance"
+        - "Template:Data Garen/Perseverance"
+    "1":
+      "skill": "1"
+      "targeting": "Auto"
+      "affects": "Self, Enemies"
+      "damagetype": "Physical"
+      "spelleffects": "spell"
+      "cooldown":
+        - 9
+        - 8.5
+        - 8
+        - 7.5
+      "cdstart": "post-effect"
+      "knockdown": "False"
+      "spellshield": "Special"
+      "nome_en": "Decisive Strike"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "knockdown": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Garen/Decisive Strike"
+        - "Template:Data Garen/Decisive Strike"
+    "2":
+      "skill": "2"
+      "targeting": "Auto"
+      "affects": "Self"
+      "cooldown":
+        - 18
+        - 16
+        - 14
+        - 12
+      "cdstart": "on-cast"
+      "nome_en": "Courage"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+      "variantes":
+        - "Template:WR Data Garen/Courage"
+        - "Template:Data Garen/Courage"
+    "3":
+      "effect_radius": 325
+      "skill": "3"
+      "targeting": "Auto"
+      "affects": "Enemies"
+      "damagetype": "Physical"
+      "spelleffects": "aoedot"
+      "cooldown": 9
+      "cdstart": "post-effect"
+      "spellshield": "false"
+      "nome_en": "Judgment"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "effect_radius": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "spellshield": "PC"
+      "variantes":
+        - "Template:WR Data Garen/Judgment"
+        - "Template:Data Garen/Judgment"
+    "R":
+      "target_range": 400
+      "cast_time": 0.435
+      "skill": "4"
+      "targeting": "Unit"
+      "affects": "Enemies"
+      "damagetype": "True"
+      "spelleffects": "spell"
+      "cooldown":
+        - 70
+        - 65
+        - 60
+      "spellshield": "True"
+      "nome_en": "Demacian Justice"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "target_range": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Garen/Demacian Justice"
+        - "Template:Data Garen/Demacian Justice"
+    "?":
+      "skill": "A"
+      "targeting": "Unit"
+      "affects": "Enemies"
+      "damagetype": "Physical"
+      "nome_en": "Basic Attack"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "skill": "PC"
+        "targeting": "PC"
+        "affects": "PC"
+        "damagetype": "PC"
+      "variantes":
+        - "Template:Data Garen/Basic Attack"
+"Sett":
+  "wiki": "Sett"
+  "modelos_wr": 10
+  "modelos_pc": 11
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Self, Enemies"
+      "damagetype": "physical"
+      "spelleffects": "Proc"
+      "nome_en": "Pit Grit"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+      "variantes":
+        - "Template:WR Data Sett/Pit Grit"
+        - "Template:Data Sett/Pit Grit"
+    "1":
+      "skill": "1"
+      "targeting": "Auto"
+      "affects": "Self, Enemies"
+      "damagetype": "physical"
+      "spelleffects": "spell"
+      "cooldown":
+        - 9.5
+        - 8
+        - 6.5
+        - 5
+      "cdstart": "post-effect"
+      "spellshield": "False"
+      "nome_en": "Knuckle Down"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "skill": "WR"
+        "targeting": "PC"
+        "affects": "PC"
+        "damagetype": "WR"
+        "spelleffects": "PC"
+        "cooldown": "WR"
+        "cdstart": "PC"
+        "spellshield": "PC"
+      "variantes":
+        - "Template:WR Data Sett/Knuckle Down"
+        - "Template:Data Sett/Knuckle Down"
+    "2":
+      "range":
+        - -25
+        - 720
+        - 745
+      "width":
+        - 300
+        - 620
+        - 70
+      "cast_time": 0.75
+      "skill": "2"
+      "targeting": "Direction"
+      "affects": "Self, Enemies"
+      "damagetype": "Physical True"
+      "spelleffects": "aoe"
+      "projectile": "false"
+      "cooldown":
+        - 16
+        - 14.5
+        - 13
+        - 11.5
+      "cost": 100
+      "costtype": "Current Grit"
+      "spellshield": "True"
+      "nome_en": "Haymaker"
+      "forma_sugerida": "linha"
+      "fontes":
+        "range": "PC"
+        "width": "PC"
+        "cast_time": "PC"
+        "skill": "WR"
+        "targeting": "PC"
+        "affects": "PC"
+        "damagetype": "PC"
+        "spelleffects": "PC"
+        "projectile": "PC"
+        "cooldown": "WR"
+        "cost": "PC"
+        "costtype": "PC"
+        "spellshield": "PC"
+      "variantes":
+        - "Template:WR Data Sett/Haymaker"
+        - "Template:Data Sett/Haymaker"
+    "3":
+      "range": 450
+      "width": 280
+      "cast_time": 0.25
+      "skill": "3"
+      "targeting": "Direction"
+      "affects": "Enemies"
+      "damagetype": "physical"
+      "spelleffects": "aoe"
+      "projectile": "False"
+      "cooldown":
+        - 14
+        - 12.5
+        - 11
+        - 9.5
+      "spellshield": "true"
+      "nome_en": "Facebreaker"
+      "forma_sugerida": "linha"
+      "fontes":
+        "range": "PC"
+        "width": "PC"
+        "cast_time": "PC"
+        "skill": "WR"
+        "targeting": "PC"
+        "affects": "PC"
+        "damagetype": "WR"
+        "spelleffects": "PC"
+        "projectile": "PC"
+        "cooldown": "WR"
+        "spellshield": "PC"
+      "variantes":
+        - "Template:WR Data Sett/Facebreaker"
+        - "Template:Data Sett/Facebreaker"
+    "R":
+      "target_range": 400
+      "effect_radius": 600
+      "skill": "4"
+      "targeting": "Unit"
+      "affects": "Enemies"
+      "damagetype": "physical"
+      "spelleffects": "aoe"
+      "cooldown":
+        - 70
+        - 65
+        - 60
+      "grounded": "true"
+      "knockdown": "False"
+      "spellshield": "true"
+      "nome_en": "The Show Stopper"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "target_range": "PC"
+        "effect_radius": "PC"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "PC"
+        "damagetype": "PC"
+        "spelleffects": "PC"
+        "cooldown": "WR"
+        "grounded": "PC"
+        "knockdown": "PC"
+        "spellshield": "PC"
+      "variantes":
+        - "Template:WR Data Sett/The Show Stopper"
+        - "Template:Data Sett/The Show Stopper"
+"Jax":
+  "wiki": "Jax"
+  "modelos_wr": 11
+  "modelos_pc": 13
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Enemies, Self"
+      "nome_en": "Relentless Assault"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+      "variantes":
+        - "Template:WR Data Jax/Relentless Assault"
+        - "Template:Data Jax/Relentless Assault"
+    "1":
+      "target_range": 650
+      "skill": "1"
+      "targeting": "Unit"
+      "affects": "Enemies"
+      "damagetype": "physical"
+      "spelleffects": "single"
+      "cooldown":
+        - 7.5
+        - 7
+        - 6.5
+        - 6
+      "cost": 65
+      "costtype": "Mana"
+      "grounded": "true"
+      "knockdown": "true"
+      "spellshield": "special"
+      "nome_en": "Leap Strike"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "target_range": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "grounded": "WR"
+        "knockdown": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Jax/Leap Strike"
+        - "Template:Data Jax/Leap Strike"
+    "2":
+      "skill": "2"
+      "targeting": "Auto"
+      "affects": "Self, Enemies"
+      "damagetype": "magic"
+      "spelleffects": "spell"
+      "cooldown":
+        - 6
+        - 5
+        - 4
+        - 3
+      "cdstart": "post-effect"
+      "cost": 30
+      "costtype": "Mana"
+      "spellshield": "true"
+      "nome_en": "Empower"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Jax/Empower"
+        - "Template:Data Jax/Empower"
+    "3":
+      "effect_radius": 375
+      "skill": "3"
+      "targeting": "Auto"
+      "affects": "Self, Enemies"
+      "damagetype": "magic"
+      "spelleffects": "aoe"
+      "cooldown":
+        - 12.5
+        - 11
+        - 9.5
+        - 8
+      "cdstart": "post-effect"
+      "cost":
+        - 60
+        - 70
+        - 80
+        - 90
+      "costtype": "Mana"
+      "spellshield": "True"
+      "nome_en": "Counter Strike"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "effect_radius": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Jax/Counter Strike"
+        - "Template:Data Jax/Counter Strike"
+    "R":
+      "cast_time": 0.25
+      "skill": "4"
+      "targeting": "Auto"
+      "affects": "Enemies, Self"
+      "damagetype": "Magic"
+      "spelleffects": "special"
+      "cooldown": 55
+      "cdstart": "on-cast"
+      "cost": 100
+      "costtype": "mana"
+      "spellshield": "special"
+      "nome_en": "Grandmaster's Might"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Jax/Grandmaster's Might"
+        - "Template:WR Data Jax/Grandmaster-at-Arms"
+        - "Template:Data Jax/Grandmaster's Might"
+        - "Template:Data Jax/Grandmaster-at-Arms"
+"Fiora":
+  "wiki": "Fiora"
+  "modelos_wr": 10
+  "modelos_pc": 12
+  "habilidades":
+    "P":
+      "effect_radius":
+        - 1200
+        - 1350
+        - 250
+      "angle": 90
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Enemies"
+      "damagetype": "True"
+      "spelleffects": "Proc"
+      "spellshield": "False"
+      "nome_en": "Duelist's Dance"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "effect_radius": "WR"
+        "angle": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Fiora/Duelist's Dance"
+        - "Template:Data Fiora/Duelist's Dance"
+    "1":
+      "range": 420
+      "target_range":
+        - 50
+        - 400
+      "speed":
+        - 1100
+        - 300
+        - 350
+      "skill": "1"
+      "targeting": "Location"
+      "affects": "Enemies"
+      "damagetype": "Physical"
+      "spelleffects": "basic"
+      "cooldown":
+        - 12
+        - 10
+        - 8
+        - 6
+      "cost":
+        - 20
+        - 25
+        - 30
+        - 35
+      "costtype": "Mana"
+      "grounded": "True"
+      "knockdown": "True"
+      "spellshield": "True"
+      "nome_en": "Lunge"
+      "forma_sugerida": "area (origem: ponto)"
+      "fontes":
+        "range": "WR"
+        "target_range": "WR"
+        "speed": "PC"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "grounded": "WR"
+        "knockdown": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Fiora/Lunge"
+        - "Template:Data Fiora/Lunge"
+    "2":
+      "target_range": 900
+      "width": 140
+      "speed": 3200
+      "skill": "2"
+      "targeting": "Direction"
+      "affects": "Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "spellaoe"
+      "projectile": "True"
+      "cooldown":
+        - 18
+        - 16
+        - 14
+        - 12
+      "cdstart": "post-effect"
+      "cost": 50
+      "costtype": "Mana"
+      "spellshield": "true"
+      "nome_en": "Riposte"
+      "forma_sugerida": "linha"
+      "fontes":
+        "target_range": "WR"
+        "width": "WR"
+        "speed": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cdstart": "PC"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Fiora/Riposte"
+        - "Template:Data Fiora/Riposte"
+    "3":
+      "skill": "3"
+      "targeting": "Auto"
+      "affects": "Self"
+      "damagetype": "Physical"
+      "spelleffects": "Basic"
+      "cooldown":
+        - 11
+        - 9
+        - 7
+        - 5
+      "cdstart": "post-effect"
+      "cost":
+        - 30
+        - 35
+        - 40
+        - 45
+      "costtype": "Mana"
+      "spellshield": "special"
+      "nome_en": "Bladework"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Fiora/Bladework"
+        - "Template:Data Fiora/Bladework"
+    "R":
+      "target_range": 500
+      "effect_radius":
+        - 550
+        - 500
+      "skill": "4"
+      "targeting": "Unit"
+      "affects": "Self, Enemies"
+      "damagetype": "True"
+      "spelleffects": "Heal"
+      "cooldown":
+        - 70
+        - 60
+        - 50
+      "cdstart": "on-cast"
+      "cost": 100
+      "costtype": "Mana"
+      "spellshield": "false"
+      "nome_en": "Grand Challenge"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "target_range": "WR"
+        "effect_radius": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Fiora/Grand Challenge"
+        - "Template:Data Fiora/Grand Challenge"
+"Camille":
+  "wiki": "Camille"
+  "modelos_wr": 11
+  "modelos_pc": 13
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Self"
+      "spelleffects": "Shield"
+      "nome_en": "Adaptive Defenses"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "spelleffects": "WR"
+      "variantes":
+        - "Template:WR Data Camille/Adaptive Defenses"
+        - "Template:Data Camille/Adaptive Defenses"
+    "1":
+      "skill": "1"
+      "targeting": "Auto"
+      "affects": "Self"
+      "damagetype": "{{WRtip|Physical damage| }} / {{WRtip|True damage|"
+      "spelleffects": "spell"
+      "cooldown":
+        - 9
+        - 8
+        - 7
+        - 6
+      "cdstart": "Starts on first attack"
+      "cost": 25
+      "costtype": "Mana"
+      "spellshield": "false"
+      "nome_en": "Precision Protocol"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Camille/Precision Protocol"
+        - "Template:Data Camille/Precision Protocol"
+    "2":
+      "effect_radius":
+        - 325
+        - 650
+      "angle": 70
+      "skill": "2"
+      "targeting": "Direction"
+      "affects": "Enemies"
+      "damagetype": "Physical"
+      "spelleffects": "spellaoe"
+      "projectile": "False"
+      "cooldown":
+        - 15
+        - 13
+        - 11
+        - 9
+      "cost": 50
+      "costtype": "Mana"
+      "spellshield": "true"
+      "nome_en": "Tactical Sweep"
+      "forma_sugerida": "cone"
+      "fontes":
+        "effect_radius": "WR"
+        "angle": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "PC"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Camille/Tactical Sweep"
+        - "Template:Data Camille/Tactical Sweep"
+    "3":
+      "target_range": 575
+      "width": 100
+      "speed": 1400
+      "skill": "3"
+      "targeting": "Direction"
+      "affects": "Terrain, Self"
+      "projectile": "true"
+      "cooldown":
+        - 22
+        - 20
+        - 18
+        - 16
+      "cdstart": "on-cast"
+      "cost": 70
+      "costtype": "Mana"
+      "grounded": "special"
+      "knockdown": "true"
+      "nome_en": "Hookshot"
+      "forma_sugerida": "linha"
+      "fontes":
+        "target_range": "WR"
+        "width": "WR"
+        "speed": "PC"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "grounded": "WR"
+        "knockdown": "WR"
+      "variantes":
+        - "Template:WR Data Camille/Hookshot"
+        - "Template:WR Data Camille/Wall Dive"
+        - "Template:Data Camille/Hookshot"
+        - "Template:Data Camille/Wall Dive"
+    "R":
+      "target_range": 425
+      "effect_radius": 425
+      "skill": "4"
+      "targeting": "Unit"
+      "affects": "Enemies, Self"
+      "damagetype": "Magic"
+      "spelleffects": "Proc"
+      "cooldown":
+        - 90
+        - 80
+        - 70
+      "cost": 100
+      "costtype": "Mana"
+      "grounded": "true"
+      "knockdown": "false"
+      "spellshield": "true"
+      "nome_en": "The Hextech Ultimatum"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "target_range": "WR"
+        "effect_radius": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "grounded": "WR"
+        "knockdown": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Camille/The Hextech Ultimatum"
+        - "Template:Data Camille/The Hextech Ultimatum"
+"Irelia":
+  "wiki": "Irelia"
+  "modelos_wr": 10
+  "modelos_pc": 14
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Self"
+      "damagetype": "Magic"
+      "spelleffects": "Proc"
+      "nome_en": "Ionian Fervor"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+      "variantes":
+        - "Template:WR Data Irelia/Ionian Fervor"
+        - "Template:Data Irelia/Ionian Fervor"
+    "1":
+      "target_range": 600
+      "speed":
+        - 1400
+        - 100
+      "skill": "1"
+      "targeting": "Unit"
+      "affects": "Enemies, Self"
+      "damagetype": "Physical"
+      "spelleffects": "basic"
+      "cooldown":
+        - 9
+        - 8
+        - 7
+        - 6
+      "cost": 20
+      "costtype": "Mana"
+      "grounded": "True"
+      "knockdown": "True"
+      "spellshield": "True"
+      "nome_en": "Bladesurge"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "target_range": "WR"
+        "speed": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "grounded": "WR"
+        "knockdown": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Irelia/Bladesurge"
+        - "Template:Data Irelia/Bladesurge"
+    "2":
+      "range":
+        - 775
+        - 895
+      "effect_radius":
+        - 300
+        - 120
+      "width": 240
+      "cast_time": 0.25
+      "skill": "2"
+      "targeting": "Auto / Direction"
+      "affects": "Self / Enemies"
+      "damagetype": "Physical"
+      "spelleffects": "spellaoe"
+      "projectile": "false"
+      "cooldown":
+        - 14
+        - 13
+        - 12
+        - 11
+      "cdstart": "post-effect"
+      "cost":
+        - 75
+        - 80
+        - 85
+        - 90
+      "costtype": "Mana"
+      "spellshield": "True"
+      "nome_en": "Defiant Dance"
+      "forma_sugerida": "linha"
+      "fontes":
+        "range": "WR"
+        "effect_radius": "WR"
+        "width": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Irelia/Defiant Dance"
+        - "Template:Data Irelia/Defiant Dance"
+        - "Template:Data Irelia/Hiten Style"
+    "3":
+      "target_range": 775
+      "speed": 2000
+      "skill": "3"
+      "targeting": "Location"
+      "affects": "Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "Area of effect"
+      "projectile": "true"
+      "cooldown":
+        - 12
+        - 11
+        - 10
+        - 9
+      "cdstart": "post-effect"
+      "cost": 50
+      "costtype": "Mana"
+      "spellshield": "True"
+      "nome_en": "Flawless Duet"
+      "forma_sugerida": "area (origem: ponto)"
+      "fontes":
+        "target_range": "WR"
+        "speed": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Irelia/Flawless Duet"
+        - "Template:Data Irelia/Equilibrium Strike"
+        - "Template:Data Irelia/Flawless Duet"
+    "R":
+      "target_range": 1000
+      "width": 320
+      "speed": 2000
+      "cast_time": 0.4
+      "skill": "4"
+      "targeting": "Direction"
+      "affects": "Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "spellaoe"
+      "projectile": "true"
+      "cooldown":
+        - 70
+        - 65
+        - 60
+      "cost": 100
+      "costtype": "Mana"
+      "spellshield": "True"
+      "nome_en": "Vanguard's Edge"
+      "forma_sugerida": "linha"
+      "fontes":
+        "target_range": "WR"
+        "width": "WR"
+        "speed": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Irelia/Vanguard's Edge"
+        - "Template:Data Irelia/Transcendent Blades"
+        - "Template:Data Irelia/Vanguard's Edge"
+"Riven":
+  "wiki": "Riven"
+  "modelos_wr": 11
+  "modelos_pc": 11
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Enemies"
+      "damagetype": "physical"
+      "spelleffects": "Proc"
+      "nome_en": "Runic Blade"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+      "variantes":
+        - "Template:WR Data Riven/Runic Blade"
+        - "Template:Data Riven/Runic Blade"
+    "1":
+      "effect_radius":
+        - 150
+        - 250
+        - 200
+        - 300
+      "skill": "1"
+      "targeting": "Unit / Auto"
+      "affects": "Enemies"
+      "damagetype": "physical"
+      "spelleffects": "spellaoe"
+      "cooldown": 12
+      "cdstart": "on-cast"
+      "grounded": "true"
+      "knockdown": "true"
+      "spellshield": "true"
+      "nome_en": "Broken Wings"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "effect_radius": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "grounded": "WR"
+        "knockdown": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Riven/Broken Wings"
+        - "Template:Data Riven/Broken Wings"
+    "2":
+      "effect_radius":
+        - 300
+        - 360
+      "cast_time": 0.25
+      "skill": "2"
+      "targeting": "Auto"
+      "affects": "Enemies"
+      "damagetype": "physical"
+      "spelleffects": "spellaoe"
+      "cooldown":
+        - 8.5
+        - 8
+        - 7.5
+        - 7
+      "spellshield": "True"
+      "nome_en": "Ki Burst"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "effect_radius": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Riven/Ki Burst"
+        - "Template:Data Riven/Ki Burst"
+    "3":
+      "range": 250
+      "skill": "3"
+      "targeting": "Location"
+      "affects": "Self"
+      "cooldown":
+        - 9
+        - 8
+        - 7
+        - 6
+      "grounded": "true"
+      "knockdown": "true"
+      "nome_en": "Valor"
+      "forma_sugerida": "area (origem: ponto)"
+      "fontes":
+        "range": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "cooldown": "WR"
+        "grounded": "WR"
+        "knockdown": "WR"
+      "variantes":
+        - "Template:WR Data Riven/Valor"
+        - "Template:Data Riven/Valor"
+    "R":
+      "cast_time": 0.25
+      "skill": "4"
+      "targeting": "Auto"
+      "affects": "Self"
+      "cooldown":
+        - 75
+        - 60
+        - 45
+      "cdstart": "post-effect"
+      "nome_en": "Blade of the Exile"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+      "variantes":
+        - "Template:WR Data Riven/Blade of the Exile"
+        - "Template:WR Data Riven/Wind Slash"
+        - "Template:Data Riven/Blade of the Exile"
+        - "Template:Data Riven/Wind Slash"
+"Aatrox":
+  "wiki": "Aatrox"
+  "modelos_wr": 10
+  "modelos_pc": 21
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Self, Enemies"
+      "damagetype": "physical"
+      "spelleffects": "proc"
+      "spellshield": "False"
+      "nome_en": "Deathbringer Stance"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Aatrox/Deathbringer Stance"
+        - "Template:Data Aatrox/Blood Well"
+        - "Template:Data Aatrox/Deathbringer Stance"
+    "1":
+      "target_range": 650
+      "effect_radius": 225
+      "inner_radius": 75
+      "cast_time": 0.6
+      "skill": "1"
+      "targeting": "Direction"
+      "affects": "Enemies"
+      "damagetype": "Physical"
+      "spelleffects": "spellaoe"
+      "cooldown":
+        - 12
+        - 10
+        - 8
+        - 6
+      "cdstart": "on-cast"
+      "grounded": "True"
+      "knockdown": "False"
+      "spellshield": "True"
+      "nome_en": "The Darkin Blade"
+      "forma_sugerida": "avanco?"
+      "fontes":
+        "target_range": "PC"
+        "effect_radius": "PC"
+        "inner_radius": "PC"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "grounded": "PC"
+        "knockdown": "PC"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Aatrox/The Darkin Blade"
+        - "Template:Data Aatrox/Dark Flight"
+        - "Template:Data Aatrox/The Darkin Blade"
+    "2":
+      "range": 800
+      "width": 160
+      "speed": 1800
+      "cast_time": 0.25
+      "skill": "2"
+      "targeting": "Direction"
+      "affects": "Enemies"
+      "damagetype": "Physical"
+      "spelleffects": "spell"
+      "projectile": "True"
+      "cooldown":
+        - 15
+        - 14
+        - 13
+        - 12
+      "spellshield": "Special"
+      "nome_en": "Infernal Chains"
+      "forma_sugerida": "linha"
+      "fontes":
+        "range": "WR"
+        "width": "WR"
+        "speed": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Aatrox/Infernal Chains"
+        - "Template:Data Aatrox/Blood Thirst / Blood Price"
+        - "Template:Data Aatrox/Infernal Chains"
+    "3":
+      "range": 250
+      "target_range": 1000
+      "skill": "3"
+      "targeting": "Location"
+      "affects": "Self"
+      "damagetype": "Physical"
+      "spelleffects": "Area of effect"
+      "projectile": "True"
+      "cooldown":
+        - 8
+        - 7
+        - 6
+        - 5
+      "cost": 30
+      "costtype": "health"
+      "grounded": "True"
+      "knockdown": "True"
+      "spellshield": "True"
+      "nome_en": "Umbral Dash"
+      "forma_sugerida": "area (origem: ponto)"
+      "fontes":
+        "range": "WR"
+        "target_range": "PC"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "PC"
+        "spelleffects": "PC"
+        "projectile": "PC"
+        "cooldown": "WR"
+        "cost": "PC"
+        "costtype": "PC"
+        "grounded": "WR"
+        "knockdown": "WR"
+        "spellshield": "PC"
+      "variantes":
+        - "Template:WR Data Aatrox/Umbral Dash"
+        - "Template:Data Aatrox/Blades of Torment"
+        - "Template:Data Aatrox/Umbral Dash"
+    "R":
+      "effect_radius": 500
+      "cast_time": 0.25
+      "skill": "4"
+      "targeting": "Auto"
+      "affects": "Self, Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "Area of effect"
+      "cooldown":
+        - 75
+        - 65
+        - 55
+      "cdstart": "on-cast"
+      "spellshield": "True"
+      "nome_en": "World Ender"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "effect_radius": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "PC"
+        "spelleffects": "PC"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "spellshield": "PC"
+      "variantes":
+        - "Template:WR Data Aatrox/World Ender"
+        - "Template:Data Aatrox/Massacre"
+        - "Template:Data Aatrox/World Ender"
+"Malphite":
+  "wiki": "Malphite"
+  "modelos_wr": 10
+  "modelos_pc": 11
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Self"
+      "spelleffects": "Shield"
+      "nome_en": "Granite Shield"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "spelleffects": "WR"
+      "variantes":
+        - "Template:WR Data Malphite/Granite Shield"
+        - "Template:Data Malphite/Granite Shield"
+    "1":
+      "target_range": 625
+      "speed": 1200
+      "cast_time": 0.25
+      "skill": "1"
+      "targeting": "Unit"
+      "affects": "Enemies"
+      "damagetype": "magic"
+      "spelleffects": "single"
+      "projectile": "true"
+      "cooldown": 8
+      "cost":
+        - 75
+        - 80
+        - 85
+        - 90
+      "costtype": "Mana"
+      "spellshield": "Special"
+      "nome_en": "Seismic Shard"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "target_range": "WR"
+        "speed": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Malphite/Seismic Shard"
+        - "Template:Data Malphite/Seismic Shard"
+    "2":
+      "effect_radius": 225
+      "skill": "2"
+      "targeting": "Auto"
+      "affects": "Self"
+      "damagetype": "physical"
+      "spelleffects": "Proc"
+      "cooldown":
+        - 10
+        - 9
+        - 8
+        - 7
+      "cdstart": "on-cast"
+      "cost": 25
+      "costtype": "mana"
+      "spellshield": "False"
+      "nome_en": "Thunderclap"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "effect_radius": "PC"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Malphite/Thunderclap"
+        - "Template:Data Malphite/Brutal Strikes"
+        - "Template:Data Malphite/Thunderclap"
+    "3":
+      "effect_radius": 400
+      "cast_time": 0.2419
+      "skill": "3"
+      "targeting": "Auto"
+      "affects": "Enemies"
+      "damagetype": "magic"
+      "spelleffects": "aoe"
+      "cooldown": 7
+      "cost":
+        - 55
+        - 60
+        - 65
+        - 70
+      "costtype": "Mana"
+      "spellshield": "True"
+      "nome_en": "Ground Slam"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "effect_radius": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Malphite/Ground Slam"
+        - "Template:Data Malphite/Ground Slam"
+    "R":
+      "target_range": 1000
+      "effect_radius": 325
+      "speed":
+        - 1500
+        - 100
+      "skill": "4"
+      "targeting": "Location"
+      "affects": "Enemies"
+      "damagetype": "magic"
+      "spelleffects": "aoe"
+      "cooldown":
+        - 75
+        - 70
+        - 65
+      "cost": 100
+      "costtype": "Mana"
+      "grounded": "true"
+      "knockdown": "false"
+      "spellshield": "True"
+      "nome_en": "Unstoppable Force"
+      "forma_sugerida": "area (origem: ponto)"
+      "fontes":
+        "target_range": "WR"
+        "effect_radius": "WR"
+        "speed": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "grounded": "WR"
+        "knockdown": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Malphite/Unstoppable Force"
+        - "Template:Data Malphite/Unstoppable Force"
+"Nasus":
+  "wiki": "Nasus"
+  "modelos_wr": 10
+  "modelos_pc": 10
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Self"
+      "nome_en": "Soul Eater"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+      "variantes":
+        - "Template:WR Data Nasus/Soul Eater"
+        - "Template:Data Nasus/Soul Eater"
+    "1":
+      "skill": "1"
+      "targeting": "Auto"
+      "affects": "Self"
+      "damagetype": "Physical"
+      "spelleffects": "spell"
+      "cooldown":
+        - 7
+        - 6
+        - 5
+        - 4
+      "cdstart": "post-effect"
+      "cost": 15
+      "costtype": "Mana"
+      "spellshield": "false"
+      "nome_en": "Siphoning Strike"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Nasus/Siphoning Strike"
+        - "Template:Data Nasus/Siphoning Strike"
+    "2":
+      "target_range": 600
+      "effect_radius": 300
+      "cast_time": 0.25
+      "skill": "2"
+      "targeting": "Location"
+      "affects": "Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "AoEDoT"
+      "cooldown": 12
+      "cost":
+        - 110
+        - 120
+        - 130
+        - 140
+      "costtype": "Mana"
+      "spellshield": "False"
+      "nome_en": "Spirit Fire"
+      "forma_sugerida": "area (origem: ponto)"
+      "fontes":
+        "target_range": "WR"
+        "effect_radius": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Nasus/Spirit Fire"
+        - "Template:WR Data Nasus/Wither"
+        - "Template:Data Nasus/Wither"
+    "3":
+      "target_range": 650
+      "effect_radius":
+        - 400
+        - 200
+      "cast_time": 0.25
+      "skill": "E"
+      "targeting": "Location"
+      "affects": "Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "AoEDoT"
+      "cooldown": 12
+      "cost":
+        - 60
+        - 100
+      "costtype": "Mana"
+      "spellshield": "False"
+      "nome_en": "Spirit Fire"
+      "forma_sugerida": "area (origem: ponto)"
+      "fontes":
+        "target_range": "PC"
+        "effect_radius": "PC"
+        "cast_time": "PC"
+        "skill": "PC"
+        "targeting": "PC"
+        "affects": "PC"
+        "damagetype": "PC"
+        "spelleffects": "PC"
+        "cooldown": "PC"
+        "cost": "PC"
+        "costtype": "PC"
+        "spellshield": "PC"
+      "variantes":
+        - "Template:Data Nasus/Spirit Fire"
+    "R":
+      "effect_radius": 275
+      "cast_time": 0.2
+      "skill": "4"
+      "targeting": "Auto"
+      "affects": "Self"
+      "damagetype": "Magic"
+      "spelleffects": "aoedot"
+      "cooldown":
+        - 90
+        - 80
+        - 70
+      "cdstart": "on-cast"
+      "cost": 100
+      "costtype": "Mana"
+      "nome_en": "Fury of the Sands"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "effect_radius": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+      "variantes":
+        - "Template:WR Data Nasus/Fury of the Sands"
+        - "Template:Data Nasus/Fury of the Sands"
+"Gwen":
+  "wiki": "Gwen"
+  "modelos_wr": 10
+  "modelos_pc": 10
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Self, Enemies"
+      "damagetype": "magic"
+      "spelleffects": "proc"
+      "nome_en": "A Thousand Cuts"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+      "variantes":
+        - "Template:WR Data Gwen/A Thousand Cuts"
+        - "Template:Data Gwen/A Thousand Cuts"
+    "1":
+      "effect_radius":
+        - -50
+        - 465
+        - 515
+      "width":
+        - 75
+        - 360
+        - 25
+      "cast_time": 0.5
+      "skill": "1"
+      "targeting": "Direction"
+      "affects": "Enemies"
+      "damagetype": "/"
+      "spelleffects": "aoe"
+      "cooldown":
+        - 6.5
+        - 5.5
+        - 4.5
+        - 3.5
+      "cost": 35
+      "costtype": "Mana + All Snippy"
+      "spellshield": "special"
+      "nome_en": "Snip Snip!"
+      "forma_sugerida": "linha"
+      "fontes":
+        "effect_radius": "PC"
+        "width": "PC"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Gwen/Snip Snip!"
+        - "Template:Data Gwen/Snip Snip!"
+    "2":
+      "effect_radius": 350
+      "speed": 2000
+      "skill": "2"
+      "targeting": "Auto"
+      "affects": "Self"
+      "cooldown":
+        - 17
+        - 16
+        - 15
+        - 14
+      "cdstart": "post-effect"
+      "cost": 60
+      "costtype": "Mana"
+      "nome_en": "Hallowed Mist"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "effect_radius": "WR"
+        "speed": "PC"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+      "variantes":
+        - "Template:WR Data Gwen/Hallowed Mist"
+        - "Template:Data Gwen/Hallowed Mist"
+    "3":
+      "target_range":
+        - 350
+        - 450
+      "skill": "3"
+      "targeting": "Direction"
+      "affects": "self"
+      "damagetype": "magic"
+      "spelleffects": "proc"
+      "cooldown":
+        - 13.5
+        - 12
+        - 10.5
+        - 9
+      "cost": 35
+      "costtype": "Mana"
+      "grounded": "true"
+      "knockdown": "true"
+      "nome_en": "Skip 'n Slash"
+      "forma_sugerida": "avanco?"
+      "fontes":
+        "target_range": "PC"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "grounded": "WR"
+        "knockdown": "WR"
+      "variantes":
+        - "Template:WR Data Gwen/Skip 'n Slash"
+        - "Template:Data Gwen/Skip 'n Slash"
+    "R":
+      "range":
+        - -100
+        - 1350
+        - 100
+        - 1350
+      "width":
+        - 240
+        - 30
+        - -140
+      "speed": 1800
+      "cast_time": 0.3
+      "skill": "4"
+      "targeting": "Direction"
+      "affects": "Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "aoe"
+      "projectile": "true"
+      "cooldown":
+        - 75
+        - 65
+        - 55
+      "cdstart": "on-cast"
+      "cost": 100
+      "costtype": "Mana"
+      "spellshield": "special"
+      "nome_en": "Needlework"
+      "forma_sugerida": "linha"
+      "fontes":
+        "range": "PC"
+        "width": "PC"
+        "speed": "PC"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "PC"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Gwen/Needlework"
+        - "Template:Data Gwen/Needlework"
+"Kayle":
+  "wiki": "Kayle"
+  "modelos_wr": 10
+  "modelos_pc": 19
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Self, Enemies"
+      "damagetype": "magic"
+      "spelleffects": "AoE"
+      "projectile": "special"
+      "nome_en": "Divine Ascent"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+      "variantes":
+        - "Template:WR Data Kayle/Divine Ascent"
+        - "Template:Data Kayle/Divine Ascent"
+        - "Template:Data Kayle/Holy Fervor"
+    "1":
+      "range": 900
+      "width": 150
+      "speed": 1600
+      "skill": "1"
+      "targeting": "Direction"
+      "affects": "Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "spellaoe"
+      "projectile": "true"
+      "cooldown":
+        - 11
+        - 10
+        - 9
+        - 8
+      "cost":
+        - 80
+        - 85
+        - 90
+        - 95
+      "costtype": "Mana"
+      "spellshield": "true"
+      "nome_en": "Radiant Blast"
+      "forma_sugerida": "linha"
+      "fontes":
+        "range": "WR"
+        "width": "WR"
+        "speed": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Kayle/Radiant Blast"
+        - "Template:Data Kayle/Radiant Blast"
+        - "Template:Data Kayle/Reckoning"
+    "2":
+      "target_range": 900
+      "cast_time": 0.25
+      "skill": "2"
+      "targeting": "Unit / Auto"
+      "affects": "Self, Allies"
+      "cooldown": 14
+      "cost":
+        - 85
+        - 90
+        - 95
+        - 100
+      "costtype": "Mana"
+      "nome_en": "Celestial Blessing"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "target_range": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+      "variantes":
+        - "Template:WR Data Kayle/Celestial Blessing"
+        - "Template:Data Kayle/Celestial Blessing"
+        - "Template:Data Kayle/Divine Blessing"
+    "3":
+      "effect_radius": 350
+      "skill": "3"
+      "targeting": "Auto"
+      "affects": "Self, Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "Special"
+      "projectile": "true"
+      "cooldown":
+        - 8
+        - 7.5
+        - 7
+        - 6.5
+      "cdstart": "post-effect"
+      "cost": 45
+      "costtype": "Mana"
+      "spellshield": "true"
+      "nome_en": "Starfire Spellblade"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "effect_radius": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "PC"
+        "costtype": "PC"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Kayle/Starfire Spellblade"
+        - "Template:Data Kayle/Righteous Fury"
+        - "Template:Data Kayle/Starfire Spellblade"
+    "R":
+      "target_range": 900
+      "effect_radius":
+        - 675
+        - 675
+        - 775
+      "cast_time": 0.5
+      "skill": "4"
+      "targeting": "Unit"
+      "affects": "Allies, Self"
+      "damagetype": "Magic"
+      "spelleffects": "spellaoe"
+      "cooldown":
+        - 100
+        - 90
+        - 80
+      "cost":
+        - 100
+        - 50
+        - 0
+      "costtype": "mana"
+      "spellshield": "True"
+      "nome_en": "Divine Judgment"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "target_range": "WR"
+        "effect_radius": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Kayle/Divine Judgment"
+        - "Template:Data Kayle/Divine Judgment"
+        - "Template:Data Kayle/Intervention"
+"Teemo":
+  "wiki": "Teemo"
+  "modelos_wr": 10
+  "modelos_pc": 11
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Self"
+      "damagetype": "Magic"
+      "spelleffects": "proc"
+      "spellshield": "False"
+      "nome_en": "Toxic Shot"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Teemo/Toxic Shot"
+        - "Template:Data Teemo/Guerrilla Warfare"
+    "1":
+      "target_range": 550
+      "speed": 2500
+      "cast_time": 0.25
+      "skill": "1"
+      "targeting": "Unit"
+      "affects": "Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "Single target"
+      "projectile": "True"
+      "cooldown": 8
+      "cost":
+        - 75
+        - 80
+        - 85
+        - 90
+      "costtype": "Mana"
+      "spellshield": "True"
+      "nome_en": "Blinding Dart"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "target_range": "WR"
+        "speed": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Teemo/Blinding Dart"
+        - "Template:Data Teemo/Blinding Dart"
+    "2":
+      "skill": "2"
+      "targeting": "Auto"
+      "affects": "Self"
+      "cooldown":
+        - 17
+        - 16
+        - 15
+        - 14
+      "cdstart": "on-cast"
+      "cost": 40
+      "costtype": "mana"
+      "nome_en": "Move Quick"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+      "variantes":
+        - "Template:WR Data Teemo/Move Quick"
+        - "Template:Data Teemo/Move Quick"
+    "3":
+      "cast_time": 0.5
+      "skill": "3"
+      "targeting": "Auto"
+      "affects": "Self"
+      "damagetype": "Magic"
+      "spelleffects": "mixed"
+      "cooldown":
+        - 25
+        - 23
+        - 21
+        - 19
+      "cdstart": "post-effect"
+      "cost": 40
+      "costtype": "mana"
+      "spellshield": "False"
+      "nome_en": "Guerrilla Warfare"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "PC"
+        "spelleffects": "PC"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "PC"
+      "variantes":
+        - "Template:WR Data Teemo/Guerrilla Warfare"
+        - "Template:Data Teemo/Toxic Shot"
+    "R":
+      "target_range":
+        - 600
+        - 750
+        - 900
+      "collision_radius":
+        - 160
+        - 150
+      "effect_radius": 250
+      "cast_time": 0.25
+      "skill": "4"
+      "targeting": "Location"
+      "affects": "Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "aoedot"
+      "projectile": "True"
+      "cooldown": 1
+      "cost": 75
+      "costtype": "Mana + 1 Charge"
+      "recharge":
+        - 30
+        - 25
+        - 20
+      "spellshield": "Special"
+      "nome_en": "Noxious Trap"
+      "forma_sugerida": "area (origem: ponto)"
+      "fontes":
+        "target_range": "WR"
+        "collision_radius": "WR"
+        "effect_radius": "WR"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "recharge": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Teemo/Noxious Trap"
+        - "Template:Data Teemo/Noxious Trap"
+"Shen":
+  "wiki": "Shen"
+  "modelos_wr": 10
+  "modelos_pc": 13
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Passive"
+      "affects": "Self"
+      "spelleffects": "Shield"
+      "nome_en": "Ki Barrier"
+      "forma_sugerida": "passiva"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "spelleffects": "WR"
+      "variantes":
+        - "Template:WR Data Shen/Ki Barrier"
+        - "Template:Data Shen/Ki Barrier"
+    "1":
+      "width": 160
+      "speed":
+        - 2000
+        - 5000
+        - 2000
+      "skill": "1"
+      "targeting": "Auto"
+      "affects": "Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "Spell"
+      "projectile": "Special"
+      "cooldown":
+        - 8
+        - 7
+        - 6
+        - 5
+      "cdstart": "on-cast"
+      "cost":
+        - 75
+        - 70
+        - 65
+        - 60
+      "costtype": "energy"
+      "spellshield": "True"
+      "nome_en": "Twilight Assault"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "width": "WR"
+        "speed": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Shen/Twilight Assault"
+        - "Template:Data Shen/Twilight Assault"
+    "2":
+      "effect_radius": 350
+      "skill": "2"
+      "targeting": "Auto"
+      "affects": "Allies"
+      "cooldown":
+        - 18
+        - 16
+        - 14
+        - 12
+      "cdstart": "post-effect"
+      "cost": 20
+      "costtype": "energy"
+      "nome_en": "Spirit's Refuge"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "effect_radius": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+      "variantes":
+        - "Template:WR Data Shen/Spirit's Refuge"
+        - "Template:Data Shen/Spirit's Refuge"
+    "3":
+      "target_range": 600
+      "collision_radius":
+        - 60
+        - 150
+      "speed":
+        - 800
+        - 100
+      "skill": "3"
+      "targeting": "Location"
+      "affects": "Enemies"
+      "damagetype": "Physical"
+      "spelleffects": "Area of effect"
+      "cooldown":
+        - 16
+        - 14
+        - 12
+        - 10
+      "cdstart": "post-effect"
+      "cost": 75
+      "costtype": "energy"
+      "grounded": "True"
+      "knockdown": "True"
+      "spellshield": "True"
+      "nome_en": "Shadow Dash"
+      "forma_sugerida": "area (origem: ponto)"
+      "fontes":
+        "target_range": "WR"
+        "collision_radius": "WR"
+        "speed": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "grounded": "WR"
+        "knockdown": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Shen/Shadow Dash"
+        - "Template:Data Shen/Shadow Dash"
+    "R":
+      "skill": "4"
+      "targeting": "Unit"
+      "affects": "Allies"
+      "spelleffects": "Shield"
+      "cooldown":
+        - 110
+        - 100
+        - 90
+      "cdstart": "on-cast"
+      "grounded": "True"
+      "nome_en": "Stand United"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "grounded": "WR"
+      "variantes":
+        - "Template:WR Data Shen/Stand United"
+        - "Template:Data Shen/Stand United"
+"Sion":
+  "wiki": "Sion"
+  "modelos_wr": 11
+  "modelos_pc": 13
+  "habilidades":
+    "P":
+      "skill": "I"
+      "targeting": "Auto"
+      "affects": "Self"
+      "cooldown": 100
+      "nome_en": "Death Surge"
+      "forma_sugerida": "alvo"
+      "fontes":
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "cooldown": "WR"
+      "variantes":
+        - "Template:WR Data Sion/Death Surge"
+        - "Template:WR Data Sion/Glory in Death"
+        - "Template:Data Sion/Death Surge"
+        - "Template:Data Sion/Glory in Death"
+    "1":
+      "range":
+        - 200
+        - 675
+        - 0
+        - 0.75
+        - 0.25
+      "skill": "1"
+      "targeting": "Direction"
+      "affects": "Enemies"
+      "damagetype": "Physical"
+      "spelleffects": "Area of effect"
+      "projectile": "False"
+      "cooldown":
+        - 9
+        - 8
+        - 7
+        - 6
+      "cdstart": "post-effect"
+      "cost": 45
+      "costtype": "Mana"
+      "spellshield": "True"
+      "nome_en": "Decimating Smash"
+      "forma_sugerida": "avanco?"
+      "fontes":
+        "range": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cdstart": "PC"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Sion/Decimating Smash"
+        - "Template:Data Sion/Decimating Smash"
+    "2":
+      "effect_radius": 475
+      "skill": "2"
+      "targeting": "Auto"
+      "affects": "Self, Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "spellaoe"
+      "cooldown":
+        - 14
+        - 13
+        - 12
+        - 11
+      "cdstart": "post-effect"
+      "cost": 65
+      "costtype": "Mana"
+      "spellshield": "True"
+      "nome_en": "Soul Furnace"
+      "forma_sugerida": "area (no lançador)"
+      "fontes":
+        "effect_radius": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Sion/Soul Furnace"
+        - "Template:Data Sion/Soul Furnace"
+    "3":
+      "range":
+        - 600
+        - 2
+        - 161100
+      "effect_radius": 130
+      "width": 160
+      "speed": 1800
+      "cast_time": 0.25
+      "skill": "3"
+      "targeting": "Direction"
+      "affects": "Enemies"
+      "damagetype": "Magic"
+      "spelleffects": "Area of effect"
+      "projectile": "Special"
+      "cooldown":
+        - 11
+        - 10
+        - 9
+        - 8
+      "cost": null
+      "costtype": "Mana"
+      "spellshield": "True"
+      "nome_en": "Roar of the Slayer"
+      "forma_sugerida": "linha"
+      "fontes":
+        "range": "WR"
+        "effect_radius": "PC"
+        "width": "PC"
+        "speed": "PC"
+        "cast_time": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "projectile": "WR"
+        "cooldown": "WR"
+        "cost": "WR"
+        "costtype": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Sion/Roar of the Slayer"
+        - "Template:Data Sion/Roar of the Slayer"
+    "R":
+      "effect_radius": 350
+      "inner_radius": 175
+      "skill": "4"
+      "targeting": "Direction / Auto"
+      "affects": "Self, Enemies"
+      "damagetype": "Physical"
+      "spelleffects": "Area of effect"
+      "cooldown":
+        - 90
+        - 70
+        - 50
+      "cdstart": "post-effect"
+      "cost": 100
+      "costtype": "Mana"
+      "grounded": "True"
+      "spellshield": "True"
+      "nome_en": "Unstoppable Onslaught"
+      "forma_sugerida": "avanco?"
+      "fontes":
+        "effect_radius": "WR"
+        "inner_radius": "WR"
+        "skill": "WR"
+        "targeting": "WR"
+        "affects": "WR"
+        "damagetype": "WR"
+        "spelleffects": "WR"
+        "cooldown": "WR"
+        "cdstart": "PC"
+        "cost": "WR"
+        "costtype": "WR"
+        "grounded": "WR"
+        "spellshield": "WR"
+      "variantes":
+        - "Template:WR Data Sion/Unstoppable Onslaught"
+        - "Template:Data Sion/Unstoppable Onslaught"

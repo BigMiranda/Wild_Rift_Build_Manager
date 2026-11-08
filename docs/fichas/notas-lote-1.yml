@@ -1,0 +1,273 @@
+# Notas de mecânica — Lote 1 (toplaners). Preparadas fora do Claude Code, a partir dos textos do jogo (campeoes_7_3d.yml).
+#
+# Como usar (Claude Code):
+#   - Números de dano, razões, recargas, durações e % vêm do TEXTO DO JOGO (campeoes_7_3d.yml), não daqui nem da wiki.
+#   - Geometria (alcance, largura, raio, ângulo, velocidade, conjuração) vem do rascunho da wiki (rascunhos/lote_1.yml),
+#     marcada `PC` ou `WR` em `fontes`. Sem número na wiki: estime e marque `EST`.
+#   - Este arquivo diz a FORMA de cada habilidade, quais campos de mecânica do motor usar e o que o motor ainda não tem
+#     (`lacuna:`). Os nomes de campo são os do cabeçalho de kits_7_3d.yml.
+#   - `wr:` = diferença do Wild Rift para o LoL de PC que o texto do jogo mostra. O texto do jogo manda.
+#
+# Lacunas do motor que aparecem neste lote (a lista consolidada está no fim do arquivo).
+
+Mordekaiser:
+  P:
+    mecanicas: "acúmulos (3, 5 s) ao acertar campeão/monstro grande com ataque ou habilidade básica; com 3: aura `campo` com `segue: true` (raio da wiki, 375 no WR) que causa dano mágico por segundo e dá vel. de movimento; renova ao acertar"
+    wr: "texto do jogo: 1% da Vida máx. do alvo por s ({nível}) e 3% de penetração mágica inata ({nível}); ataques causam 30% de dano mágico adicional (confirmar se é 30% do PdH)"
+  "1":
+    forma: "zonas: retângulo à frente (o martelo); dano aumenta 45% se atingir só um inimigo"
+    lacuna: [bonus_alvo_unico]
+  "2":
+    forma: proprio
+    mecanicas: "escudo por 4 s igual ao dano armazenado (35% do causado, 7% do sofrido; 25% contra não campeões), mínimo 5% e máximo 30% da Vida; reconjurar: 35% do escudo restante vira Vida"
+    lacuna: [armazenar_dano]
+  "3":
+    forma: "zonas: retângulo à frente (largo) que puxa em direção ao Mordekaiser"
+    mecanicas: "puxa + lentidao 30% 1 s"
+    wr: "o texto do jogo não cita a penetração mágica passiva do E do PC: não modele"
+  R:
+    forma: alvo
+    mecanicas: "rouba 8% de PdH, DdA, VdA, Armadura, RM e Vida máx. por 7 s (campo `rouba`)"
+    lacuna: [isolamento]
+    nota: "Reino da Morte isola os dois do resto da luta por 7 s. Até existir `isolamento`: os dois ficam não selecionáveis para os outros e não afetam os outros"
+
+Garen:
+  P: {mecanicas: "fora de combate por 5 s (sem dano nem habilidade de campeão): regenera 1,2% da Vida perdida por s ({nível}); dano de tropas e monstros não épicos não interrompe"}
+  "1":
+    forma: ataque
+    mecanicas: "remove e imuniza a lentidão por 0,5 s; +35% vel. de movimento por 2 s; próximo ataque em 3 s: dano + silencia 1,5 s"
+  "2":
+    forma: proprio
+    mecanicas: "passivo: +10% de Armadura e RM adicionais; ativo: reduz o dano sofrido em 30% por 4 s, 60% de Tenacidade por 1 s e escudo que decai após 1 s (dura 2,5 s)"
+  "3":
+    forma: "canal (giro) com `segue: true`, zona círculo no Garen; 8 golpes em 3 s (+1 a cada 4 níveis, até 11)"
+    mecanicas: "reconjurar após 1 s encerra e devolve recarga pelo tempo restante; após 6 golpes no mesmo campeão: reduz_arm 10% por 4,5 s (renova a cada acerto); o alvo mais próximo sofre +20%"
+    lacuna: [bonus_alvo_mais_proximo]
+  R:
+    forma: "alvo, com zona extra em círculo ao redor do alvo (os próximos)"
+    mecanicas: "dano verdadeiro: 150 + 15% da Vida PERDIDA do alvo (+0,12% por DdA adicional); os próximos: 75 + 7,5% da Vida perdida deles"
+    wr: "no Wild Rift a R também acerta os inimigos próximos (no PC, só o alvo)"
+    lacuna: [dano_vida_perdida_alvo]
+
+Sett:
+  P:
+    mecanicas: "ataques alternam esquerda/direita; o direito sai logo após o esquerdo (vel. de ataque 8x) com dano adicional; +0,25 de regeneração de Vida ({nível}) a cada 5% de Vida perdida"
+    lacuna: [ataques_alternados]
+    nota: "aproximação aceitável: a cada 2 ataques, o 2º sai após um intervalo curto com o dano adicional"
+  "1": {forma: ataque, mecanicas: "+35% vel. de movimento em direção a campeões por 1,5 s; 2 ataques fortalecidos com dano de % da Vida máx. do alvo"}
+  "2":
+    forma: "zonas: retângulo à frente com faixa central (dano verdadeiro) e laterais (dano físico); com conjuração curta"
+    mecanicas: "passivo: armazena 100% do dano sofrido (Ousadia), até 50% da Vida, decai 4 s depois; ativo: escudo = Ousadia, decai em 3 s; dano escala com a Ousadia consumida"
+    lacuna: [armazenar_dano]
+  "3":
+    forma: "zonas: dois retângulos, um de cada lado do Sett, que puxam para o centro"
+    mecanicas: "lentidao 50% 0,5 s; se puxou ao menos um inimigo de CADA lado: atordoa todos 1 s"
+    lacuna: [condicao_dois_lados]
+  R:
+    forma: "avanco com alvo (agarra e carrega) + zona círculo no ponto de queda com dano que diminui com a distância (anéis)"
+    mecanicas: "suprime o alvo enquanto carrega; dano = base + DdA adicional + 35% da Vida ADICIONAL do agarrado; lentidao 99% 1 s nos próximos"
+    lacuna: [dano_vida_bonus_alvo]
+
+Jax:
+  P: {mecanicas: "ataques em campeões e tropas: +6% vel. de ataque ({nível}) por 3 s, até 5 acúmulos"}
+  "1": {forma: "avanco com alvo (aliado ou inimigo), salto (atravessa parede)", mecanicas: "dano só se o alvo for inimigo"}
+  "2": {forma: ataque, mecanicas: "fortalece o próximo ataque OU o próximo Salto Atacante"}
+  "3":
+    forma: "proprio (postura até 2 s) + zona círculo no fim"
+    mecanicas: "esquiva todos os ataques básicos; −25% de dano em área de campeões; no fim: atordoa 1 s e dano (+20% por ataque esquivado, até +100%); reconjurar encerra antes"
+    lacuna: [esquivar_ataques]
+  R:
+    forma: "proprio + zona círculo no Jax (ativo)"
+    mecanicas: "passivo: a cada 3 ataques em 3 s, dano mágico adicional; ativo: dano em área + Armadura e RM por campeões atingidos (1 campeão: valores cheios; cada adicional: metade) por 8 s"
+    lacuna: [buff_por_alvos_atingidos]
+
+Fiora:
+  P:
+    mecanicas: "Pontos Vitais: a cada ~2 s revela um ponto (um lado do alvo); acertar = dano verdadeiro de 4% da Vida máx. + cura + vel. de movimento que decai"
+    lacuna: [pontos_vitais]
+    nota: "aproximação até existir: o próximo ataque ou Estocada no mesmo campeão após o tempo de revelar conta como acerto do ponto, se a Fiora estiver do lado oposto ao do movimento do alvo; senão, a cada 1 ponto por janela"
+  "1": {forma: "avanco curto em direção + golpe no alvo mais próximo", mecanicas: "acertar devolve 50% da recarga; prioriza Pontos Vitais", lacuna: [devolve_recarga]}
+  "2":
+    forma: "proprio (aparar 0,75 s) + linha que acerta o 1º campeão"
+    mecanicas: "invulneravel e imune a efeitos por 0,75 s; depois, dano + lentidão de 50% em vel. de movimento e de ataque por 1,5 s; atordoa no lugar se aparou um imobilizante"
+    lacuna: [aparar]
+  "3": {forma: ataque, mecanicas: "2 ataques com +60% vel. de ataque; o 1º dá lentidão 30% 1 s e não critica; o 2º é sempre crítico de 170%"}
+  R:
+    forma: alvo
+    mecanicas: "revela 4 Pontos Vitais por 8 s; ao acertar os 4 (ou se o alvo morrer após 1): cura por s a Fiora e aliados próximos por 2–5 s; os 4: 16% da Vida máx. em verdadeiro"
+    lacuna: [pontos_vitais]
+
+Camille:
+  P: {mecanicas: "atacar um campeão dá escudo de 20% da Vida por 2 s contra o tipo de dano do alvo (físico ou mágico); recarga pela wiki"}
+  "1": {forma: ataque, mecanicas: "próximo ataque fortalecido + 25% vel. de movimento 1,5 s; 1,6 s depois, outro ataque fortalecido com 40% ({nível}) do dano em verdadeiro"}
+  "2":
+    forma: "zonas: setor anelar externo (a ponta do golpe) e setor interno, após carga curta"
+    mecanicas: "dano + 3% da Vida máx. do alvo; na zona externa: lentidao 80% que decai em 2 s e cura 80% do dano em campeões"
+  "3":
+    forma: "duas conjurações (reconjurar.versoes): 1ª gancho em linha até TERRENO (puxa a Camille); 2ª salto até um ponto"
+    mecanicas: "errar o gancho: recarga de 3 s; salto acertando campeão: atordoa 0,75 s e −5 s de recarga; o próximo ataque em 3 s dá +50% vel. de ataque por 5 s"
+    lacuna: [precisa_terreno]
+  R:
+    forma: "avanco com alvo (salto; não selecionável durante o salto) + zona círculo que fica 2 s"
+    mecanicas: "dano 30 + 15% da Vida ATUAL do alvo; empurra os outros inimigos para fora; o alvo não pode sair da zona; acaba se a Camille sair"
+    lacuna: [zona_inescapavel, dano_vida_atual_alvo]
+
+Irelia:
+  P: {mecanicas: "acertar habilidades: +3% vel. de ataque ({nível}) por 6 s, até 4 (mais de um campeão = mais acúmulos); com 4: ataques com dano mágico adicional"}
+  "1":
+    forma: "avanco com alvo"
+    mecanicas: "cura; zera a recarga se o alvo estiver com Marca ou morrer em seguida; 150% em tropas"
+    lacuna: [devolve_recarga]
+  "2":
+    forma: "canal com carregar (até 1,5 s) e soltar: retângulo à frente"
+    mecanicas: "enquanto segura: redução de dano 60% (+7% PdH); dano aumenta até 100% com a carga; não pode ser interrompida (imparavel)"
+  "3":
+    forma: "duas conjurações em pontos (reconjurar em 3 s); a hitbox é a LINHA ENTRE OS DOIS PONTOS quando as lâminas convergem"
+    mecanicas: "atordoa 1 s e aplica Marca 5 s"
+    lacuna: [linha_entre_pontos]
+  R:
+    forma: "linha (projétil em leque) que para no 1º campeão e forma uma parede em anel por 3 s"
+    mecanicas: "dano + Marca 5 s; a parede causa dano e lentidão 90% 1 s a quem a atravessar"
+    lacuna: [dano_ao_atravessar_borda]
+
+Riven:
+  P: {mecanicas: "cada habilidade dá 1 carga (até 3); cada ataque consome 1 para dano adicional"}
+  "1":
+    forma: "3 conjurações (reconjurar.versoes): avanço curto + zona à frente; a 3ª é um salto (atravessa terreno) que arremessa 0,5 s"
+  "2": {forma: "area no lançador", mecanicas: "atordoa 0,75 s"}
+  "3": {forma: "avanco em direção (não atravessa terreno)", mecanicas: "escudo por 2 s"}
+  R:
+    forma: "proprio (12 s) + Golpe de Vento: cone/onda à frente (1 conjuração)"
+    mecanicas: "+25% DdA, alcance de ataques e habilidades maior; abates renovam o Golpe de Vento e estendem 3 s (até 12 s); Golpe de Vento: 100 a 300 pelo % de Vida perdida dos inimigos"
+    lacuna: [dano_vida_perdida_alvo]
+
+Aatrox:
+  P: {mecanicas: "próximo ataque a cada 24 s: dano adicional de 4% ({nível}) da Vida máx. do alvo e cura igual; −3 s de recarga ao acertar campeão ou monstro grande"}
+  "1":
+    forma: "3 conjurações (reconjurar.versoes), cada uma com zonas: a BORDA (ponta da lâmina) arremessa 0,25 s e causa +60%; o resto, dano normal. 1ª e 2ª: retângulos; 3ª: círculo"
+    mecanicas: "cada conjuração +25% de dano"
+  "2":
+    forma: "linha que acerta o 1º inimigo + zona círculo no ponto de impacto"
+    mecanicas: "dano + lentidao 25% 1,5 s; se o campeão ainda estiver na zona após 1,5 s, é puxado ao centro e sofre o dano de novo"
+    lacuna: [condicao_ainda_na_zona]
+  "3": {forma: "avanco curto em direção (pode ser usado durante outras habilidades)", mecanicas: "passivo: 19% de vampirismo físico contra campeões (24% durante a R)"}
+  R: {forma: proprio, mecanicas: "10 s: +30% DdA, +25% de cura recebida, +60% vel. de movimento que decai; abates estendem 5 s (até +10 s); tropas e monstros próximos sofrem medo 3 s"}
+
+Malphite:
+  P: {mecanicas: "escudo de 10% da Vida máx. após 8 s ({nível}) sem sofrer dano"}
+  "1": {forma: "alvo (projétil)", mecanicas: "dano + lentidao 20% e +20% vel. de movimento ao Malphite por 3 s"}
+  "2":
+    forma: proprio
+    mecanicas: "passivo: Armadura adicional (texto: 10 de Armadura (25% Arm)); ativo 6 s: ataques causam dano em CONE atrás do alvo; o 1º ataque é fortalecido"
+    lacuna: [ataque_com_area]
+  "3": {forma: "area no lançador", mecanicas: "dano (escala com Armadura) + reduz a vel. de ataque em 35% por 3 s"}
+  R: {forma: "avanco até ponto, imparável, + zona círculo no fim", mecanicas: "arremessa 1,5 s"}
+
+Nasus:
+  P: {mecanicas: "6% de vampirismo físico ({nível})"}
+  "1":
+    forma: ataque
+    mecanicas: "dano adicional permanente: +5 por abate com o golpe, +14 por campeão, tropa grande ou monstro grande"
+    lacuna: [acumulos_permanentes_por_minuto]
+  "2": {forma: alvo, mecanicas: "lentidao 35% que sobe a 45% ao longo de 5 s + reduz vel. de ataque 22,5%"}
+  "3": {forma: "campo no ponto (5 s, acerta a cada intervalo)", mecanicas: "dano inicial + dano no tempo + reduz_arm 20% enquanto dentro"}
+  R: {forma: "proprio (12 s) + aura campo segue", mecanicas: "+300 de Vida, +40 de Armadura e RM; aura: 3% da Vida máx. por s (máx. 240/s); recarga do Ataque Sifão −50%"}
+
+Gwen:
+  P: {mecanicas: "ataques: dano mágico de 1% da Vida máx. do alvo; cura 70% do dano em campeões (com limite)"}
+  "1":
+    forma: "zonas: corte com centro (dano verdadeiro + aplica a passiva) e bordas (dano mágico); 2 cortes + 1 por carga (cargas: 1 por ataque, até 4, duram 6 s); o último é o maior"
+  "2":
+    forma: "campo no lançador (4 s)"
+    mecanicas: "Gwen não selecionável por inimigos FORA da névoa enquanto estiver dentro; +Armadura e RM dentro; a névoa se move até ela uma vez"
+    lacuna: [nao_selecionavel_de_fora]
+  "3": {forma: "avanco curto em direção", mecanicas: "4 s: ataques com +20% vel. de ataque, dano mágico e +100 de alcance; o 1º que acertar devolve 50% da recarga", lacuna: [devolve_recarga]}
+  R: {forma: "3 conjurações (reconjurar.versoes): linha com 1, depois 3, depois 5 agulhas em leque", mecanicas: "lentidao 35% 1,5 s e aplica a passiva"}
+
+Kayle:
+  P:
+    mecanicas: "ataques: +vel. de ataque por 5 s (até 5); com 5: +8% vel. de movimento; nível 5: alcance 525; nível 9: com 5 acúmulos os ataques soltam ondas (dano da Lâmina de Fogo Estelar em linha); nível 13: alcance 575 e acúmulos permanentes"
+    lacuna: [status_por_nivel_na_passiva]
+  "1": {forma: linha, mecanicas: "lentidao 26% 2 s + reduz_arm e reduz_rm 20% por 4 s"}
+  "2": {forma: "alvo aliado (e ela mesma)", mecanicas: "cura + vel. de movimento 2 s"}
+  "3":
+    forma: ataque
+    mecanicas: "passivo: dano mágico ao acertar; ativo: próximo ataque com alcance maior + 7% da Vida PERDIDA do alvo; nível 9: em área"
+    lacuna: [dano_vida_perdida_alvo]
+  R: {forma: "alvo aliado (ou ela) + zona círculo ao redor do aliado ao fim", mecanicas: "invulneravel 2,5 s; ao fim, dano em área"}
+
+Teemo:
+  P: {mecanicas: "ataques: dano mágico ao impacto + dano por s por 4 s"}
+  "1": {forma: "alvo (projétil)", mecanicas: "cega 1,25 s"}
+  "2":
+    forma: "proprio + avanco curto (rolamento)"
+    wr: "no Wild Rift o ativo ROLA para frente uma curta distância (no PC, não)"
+    mecanicas: "passivo: +15% vel. de movimento se não foi ferido por campeão/estrutura em 5 s; ativo: corre 3 s com o dobro e sem perder por dano"
+  "3":
+    forma: proprio
+    wr: "no Wild Rift é CAMUFLAGEM, não invisibilidade total: campeões dentro do raio de detecção o veem; torres revelam; acaba ao sair do arbusto por mais de 3 s; ataques e habilidades ofensivas acabam com ela; ao sair: +30% vel. de ataque 3 s"
+    mecanicas: "use `invisivel` com revelação por proximidade (raio de detecção; mesmo modelo para Evelynn, Twitch e Akshan); depende das moitas do mapa (a camuflagem só começa no arbusto)"
+    lacuna: [camuflagem_por_moita]
+  R: {forma: "invocacao mina no ponto", mecanicas: "dispara ao pisar: dano ao longo de 3 s e lentidao 30% 3 s; dura 2 min", wr: "o texto do jogo não fala de cargas: modele uma armadilha por conjuração, com a recarga do texto"}
+
+Shen:
+  P: {mecanicas: "escudo por 2,5 s ao concluir uma habilidade (−4 s de recarga se afetou campeão); +10 de Energia ({nível}) quando habilidades causam dano"}
+  "1":
+    forma: "a espada volta da posição dela até o Shen: hitbox LINHA ENTRE A ESPADA E O SHEN"
+    mecanicas: "3 ataques fortalecidos com dano de % da Vida máx. (maior se a espada atravessou um campeão, + 50% vel. de ataque); campeões atravessados: lentidao 15% 2 s ao se afastar do Shen"
+    lacuna: [linha_entre_pontos, posicao_da_espada]
+    nota: "a espada fica onde o Shen a deixou (posição inicial: com ele; muda com o W). Aproximação: a espada parada no ponto da última W, ou atrás do Shen"
+  "2":
+    forma: "campo no ponto da espada (1,75 s)"
+    mecanicas: "bloqueia os ataques básicos inimigos contra aliados dentro da área"
+    lacuna: [esquivar_ataques]
+  "3": {forma: "avanco em direção", mecanicas: "dano a campeões e monstros + provoca 1,5 s"}
+  R: {forma: "canal 3 s (interrompível) + teleporte até o aliado ao fim", mecanicas: "escudo no aliado-alvo por 5 s (+0–60% pela Vida perdida do aliado); alcance global", lacuna: [escudo_pela_vida_perdida]}
+
+Sion:
+  P:
+    mecanicas: "ao sofrer dano fatal, reanima com 100% de Vida que decai rapidamente; ataca 1,75/s com 100% de vampirismo e +10% da Vida máx. em dano mágico; habilidades viram uma corrida de +67% de vel. que decai em 2,38 s; Vida permanente por abate (+5; +20 grandes e campeões)"
+    lacuna: [reviver_em_forma, acumulos_permanentes_por_minuto]
+  "1":
+    forma: "carregar (até 1,75 s) + reconjurar: retângulo à frente que cresce com a carga"
+    mecanicas: "lentidao 50% 0,25 s; dano de 79 a 187 pela carga; com 0,75 s ou mais: arremessa e atordoa 1–2 s pela carga"
+  "2": {forma: "proprio + reconjurar após 2 s: zona círculo", mecanicas: "escudo 6 s; detonar: dano + 10% da Vida máx. dos inimigos; detona sozinho em 6 s"}
+  "3": {forma: linha, mecanicas: "lentidao 50% 2,5 s e reduz_arm 20% 4 s; tropa empurrada acerta outros (ignore tropas por enquanto)"}
+  R:
+    forma: "avanco longo em direção (imparável, pode virar), para ao colidir com campeão, estrutura, terreno ou reconjurar; zona círculo no impacto"
+    mecanicas: "dano 150–400 e atordoa + arremessa 0,5–1,5 s pelo tempo correndo"
+    lacuna: [avanco_dirigivel]
+    nota: "aproximação: avanço reto até o alvo escolhido pela IA, com o tempo de corrida pela distância"
+
+# ---------------------------------------------------------------------------------------------------------------
+# LACUNAS DO MOTOR neste lote. Regra da 6.b: implementar como campo genérico de ficha quando servir a 3+ campeões
+# (contando o resto da base pelo docs/mecanicas-campeoes.yml e pelos textos); o resto vira aproximação documentada.
+lacunas:
+  dano_vida_perdida_alvo: {lote1: [Garen, Riven, Kayle], provavel_na_base: "muitos (execuções)", sugestao: "termo de dano `vida_perdida_alvo` (fração)"}
+  dano_vida_atual_alvo: {lote1: [Camille], sugestao: "termo `vida_atual_alvo`"}
+  dano_vida_bonus_alvo: {lote1: [Sett], sugestao: "termo `vida_bonus_alvo`"}
+  devolve_recarga: {lote1: [Fiora, Irelia, Gwen], sugestao: "`ao_acertar: {devolve_recarga: pct}` e `zera_recarga_se: [marca, abate]`"}
+  armazenar_dano: {lote1: [Mordekaiser, Sett], sugestao: "acumulador de dano causado/sofrido com decaimento, consumido por escudo ou dano"}
+  esquivar_ataques: {lote1: [Jax, Shen], sugestao: "`esquiva_ataques: s` (em si) e campo que bloqueia ataques contra aliados dentro"}
+  linha_entre_pontos: {lote1: [Irelia, Shen], sugestao: "hitbox segmento entre dois pontos (duas conjurações, ou objeto e lançador)"}
+  acumulos_permanentes_por_minuto: {lote1: [Nasus, Sion], sugestao: "parâmetro do slot (estimado pelo minuto, editável), não simulado"}
+  bonus_alvo_unico: {lote1: [Mordekaiser]}
+  bonus_alvo_mais_proximo: {lote1: [Garen]}
+  buff_por_alvos_atingidos: {lote1: [Jax]}
+  pontos_vitais: {lote1: [Fiora], nota: "único; aproximação documentada"}
+  aparar: {lote1: [Fiora]}
+  isolamento: {lote1: [Mordekaiser]}
+  zona_inescapavel: {lote1: [Camille]}
+  precisa_terreno: {lote1: [Camille]}
+  condicao_dois_lados: {lote1: [Sett]}
+  condicao_ainda_na_zona: {lote1: [Aatrox]}
+  dano_ao_atravessar_borda: {lote1: [Irelia]}
+  ataque_com_area: {lote1: [Malphite], nota: "também itens/campeões com dano em cone ao atacar"}
+  ataques_alternados: {lote1: [Sett]}
+  status_por_nivel_na_passiva: {lote1: [Kayle]}
+  camuflagem_por_moita: {lote1: [Teemo], nota: "Evelynn, Twitch e Akshan usam o mesmo modelo de camuflagem"}
+  nao_selecionavel_de_fora: {lote1: [Gwen]}
+  escudo_pela_vida_perdida: {lote1: [Shen]}
+  posicao_da_espada: {lote1: [Shen]}
+  reviver_em_forma: {lote1: [Sion]}
+  avanco_dirigivel: {lote1: [Sion]}

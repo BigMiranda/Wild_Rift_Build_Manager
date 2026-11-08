@@ -1,0 +1,355 @@
+{
+ "Mordekaiser": {
+  "1": [
+   "effect_radius",
+   "speed"
+  ],
+  "2": [
+   "width",
+   "speed",
+   "cast_time"
+  ],
+  "R": [
+   "width",
+   "speed"
+  ]
+ },
+ "Garen": {
+  "1": [
+   "range",
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ],
+  "2": [
+   "range",
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ],
+  "3": [
+   "range",
+   "width",
+   "speed",
+   "cast_time"
+  ],
+  "R": [
+   "width",
+   "effect_radius",
+   "speed"
+  ]
+ },
+ "Sett": {
+  "1": [
+   "range",
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ],
+  "2": [
+   "effect_radius",
+   "speed"
+  ],
+  "3": [
+   "effect_radius",
+   "speed"
+  ],
+  "R": [
+   "width",
+   "speed",
+   "cast_time"
+  ]
+ },
+ "Jax": {
+  "1": [
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ],
+  "2": [
+   "range",
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ],
+  "3": [
+   "range",
+   "width",
+   "speed",
+   "cast_time"
+  ],
+  "R": [
+   "range",
+   "width",
+   "effect_radius",
+   "speed"
+  ]
+ },
+ "Fiora": {
+  "1": [
+   "width",
+   "effect_radius",
+   "cast_time"
+  ],
+  "2": [
+   "effect_radius",
+   "cast_time"
+  ],
+  "3": [
+   "range",
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ],
+  "R": [
+   "width",
+   "speed",
+   "cast_time"
+  ]
+ },
+ "Camille": {
+  "1": [
+   "range",
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ],
+  "2": [
+   "range",
+   "width",
+   "speed",
+   "cast_time"
+  ],
+  "3": [
+   "effect_radius",
+   "cast_time"
+  ],
+  "R": [
+   "width",
+   "speed",
+   "cast_time"
+  ]
+ },
+ "Irelia": {
+  "1": [
+   "width",
+   "effect_radius",
+   "cast_time"
+  ],
+  "2": [
+   "speed"
+  ],
+  "3": [
+   "width",
+   "effect_radius",
+   "cast_time"
+  ],
+  "R": [
+   "effect_radius"
+  ]
+ },
+ "Riven": {
+  "1": [
+   "range",
+   "width",
+   "speed",
+   "cast_time"
+  ],
+  "2": [
+   "range",
+   "width",
+   "speed"
+  ],
+  "3": [
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ],
+  "R": [
+   "range",
+   "width",
+   "effect_radius",
+   "speed"
+  ]
+ },
+ "Aatrox": {
+  "1": [
+   "width",
+   "speed"
+  ],
+  "2": [
+   "effect_radius"
+  ],
+  "3": [
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ],
+  "R": [
+   "range",
+   "width",
+   "speed"
+  ]
+ },
+ "Malphite": {
+  "1": [
+   "width",
+   "effect_radius"
+  ],
+  "2": [
+   "range",
+   "width",
+   "speed",
+   "cast_time"
+  ],
+  "3": [
+   "range",
+   "width",
+   "speed"
+  ],
+  "R": [
+   "width",
+   "cast_time"
+  ]
+ },
+ "Nasus": {
+  "1": [
+   "range",
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ],
+  "2": [
+   "width",
+   "speed"
+  ],
+  "3": [
+   "width",
+   "speed"
+  ],
+  "R": [
+   "range",
+   "width",
+   "speed"
+  ]
+ },
+ "Gwen": {
+  "1": [
+   "range",
+   "speed"
+  ],
+  "2": [
+   "range",
+   "width",
+   "cast_time"
+  ],
+  "3": [
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ],
+  "R": [
+   "effect_radius"
+  ]
+ },
+ "Kayle": {
+  "1": [
+   "effect_radius",
+   "cast_time"
+  ],
+  "2": [
+   "width",
+   "effect_radius",
+   "speed"
+  ],
+  "3": [
+   "range",
+   "width",
+   "speed",
+   "cast_time"
+  ],
+  "R": [
+   "width",
+   "speed"
+  ]
+ },
+ "Teemo": {
+  "1": [
+   "width",
+   "effect_radius"
+  ],
+  "2": [
+   "range",
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ],
+  "3": [
+   "range",
+   "width",
+   "effect_radius",
+   "speed"
+  ],
+  "R": [
+   "width",
+   "speed"
+  ]
+ },
+ "Shen": {
+  "1": [
+   "range",
+   "effect_radius",
+   "cast_time"
+  ],
+  "2": [
+   "range",
+   "width",
+   "speed",
+   "cast_time"
+  ],
+  "3": [
+   "width",
+   "effect_radius",
+   "cast_time"
+  ],
+  "R": [
+   "range",
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ]
+ },
+ "Sion": {
+  "1": [
+   "width",
+   "effect_radius",
+   "speed",
+   "cast_time"
+  ],
+  "2": [
+   "range",
+   "width",
+   "speed",
+   "cast_time"
+  ],
+  "R": [
+   "range",
+   "width",
+   "speed",
+   "cast_time"
+  ]
+ }
+}
