@@ -90,6 +90,8 @@ public final class Match {
         boolean teleportBack;
         double[] fruit;
         public TwoTempo.Choice lastChoice;
+        /** The learned macro's last action that the script would not take (-1: none), for its notes in the log. */
+        int macroAction = -1;
         MacroPolicy.Intent intent;
         double[][] path;
         int pathAt;
@@ -387,7 +389,7 @@ public final class Match {
     }
 
     /** The next structure of a side in a lane; its Nexus when the lane is open. */
-    private Tower nextTower(int team, String lane) {
+    Tower nextTower(int team, String lane) {
         Tower out = null;
         for (Tower tw : towers) {
             if (tw.team == team && tw.hp > 0 && (lane.equals(tw.lane) || tw.lane == null) && (out == null || tw.order < out.order)) {
@@ -395,6 +397,57 @@ public final class Match {
             }
         }
         return out;
+    }
+
+    // ------------------------------------------------------------------ what the learned macro reads
+
+    /** Seconds until the drake comes (0: up now; -1: no more drakes). */
+    double dragonIn() {
+        return dragonHp > 0 ? 0 : dragonAt < 0 ? -1 : Math.max(0, dragonAt - t);
+    }
+
+    /** Seconds until Baron comes (0: up now; -1: not again). */
+    double baronIn() {
+        return baronHp > 0 ? 0 : baronAt < 0 ? -1 : Math.max(0, baronAt - t);
+    }
+
+    int drakes(int team) {
+        return drakes[team];
+    }
+
+    boolean baronBuff(int team) {
+        return t < baronUntil[team];
+    }
+
+    double laneLength(String lane) {
+        return laneLength.get(lane);
+    }
+
+    /** Teleport is up and has somewhere to go. */
+    boolean teleportReady(Seat s) {
+        return world.teleport(s.index) && t >= s.teleportReadyAt && teleportTarget(s) != null;
+    }
+
+    /** It may buy where it stands: its sheet, or an ally that sells to it close by. */
+    boolean shopsHere(Seat s) {
+        if (world.shopsAnywhere(s.index)) {
+            return true;
+        }
+        for (Seat a : seats) {
+            if (a != s && a.team == s.team && !a.dead && world.sellsToAllies(a.index) && Math.hypot(a.x - s.x, a.y - s.y) <= 1500) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** A champion's strength in the fights' rough measure (health × damage). */
+    double strength(Seat s) {
+        return power(s);
+    }
+
+    String name(Seat s) {
+        return world.name(s.index);
     }
 
     // ------------------------------------------------------------------ the run
@@ -431,7 +484,7 @@ public final class Match {
         return "oceano".equals(e) ? "do Oceano" : "montanha".equals(e) ? "da Montanha" : "infernal".equals(e) ? "Infernal" : e;
     }
 
-    private void note(Integer team, String text) {
+    void note(Integer team, String text) {
         result.events.add(new MatchModel.Event(Math.round(t * 10) / 10.0, team, text));
     }
 
@@ -512,7 +565,7 @@ public final class Match {
         waves.removeIf(w -> w.hp.isEmpty());
     }
 
-    private Wave frontOf(int team, String lane) {
+    Wave frontOf(int team, String lane) {
         Wave best = null;
         for (Wave w : waves) {
             if (w.team == team && w.lane.equals(lane) && !w.hp.isEmpty() && (best == null || w.along > best.along)) {

@@ -134,6 +134,57 @@ class MatchDraftTest {
         assertTrue(warm <= cold * 1.5, "a used draft is not slower: " + warm + " vs " + cold);
     }
 
+    /** Parte 2: with every weight at zero the learned macro is the script, log included, on one side or both. */
+    @Test
+    void theLearnedMacroWithZeroWeightsIsTheScript() {
+        MatchService.Draft d = matches.draft(request);
+        com.ornnplanner.arena.rift.ScriptedMacro script = (com.ornnplanner.arena.rift.ScriptedMacro) matches.scripted();
+        MacroPolicy zero = new com.ornnplanner.arena.rift.NeuralMacro(
+                com.ornnplanner.arena.ai.Network.zeros(com.ornnplanner.arena.rift.NeuralMacro.LAYERS), script);
+        for (long seed : new long[] {1, 2}) {
+            MatchModel.Result plain = matches.run(d, seed, 20, script, script);
+            MatchModel.Result both = matches.run(d, seed, 20, zero, zero);
+            MatchModel.Result blue = matches.run(d, seed, 20, zero, script);
+            assertEquals(print(plain), print(both), "seed " + seed + ", both sides");
+            assertEquals(print(plain), print(blue), "seed " + seed + ", blue side");
+            assertEquals(texts(plain), texts(both));
+        }
+    }
+
+    private static List<String> texts(MatchModel.Result r) {
+        List<String> out = new ArrayList<>();
+        r.events.forEach(e -> out.add(e.t + " " + e.text));
+        return out;
+    }
+
+    /** Parte 2: every intent the script makes in a whole match is a valid action that gives the same intent back. */
+    @Test
+    void everyIntentOfTheScriptIsAnActionAndBack() {
+        MatchService.Draft d = matches.draft(request);
+        MacroPolicy script = matches.scripted();
+        int[] seen = new int[com.ornnplanner.arena.rift.MacroActions.SIZE];
+        MacroPolicy checking = (m, me) -> {
+            MacroPolicy.Intent i = script.decide(m, me);
+            int a = com.ornnplanner.arena.rift.MacroActions.of(i, me);
+            assertTrue(com.ornnplanner.arena.rift.MacroActions.valid(a, m, me), "action " + a + " for " + i.goal);
+            MacroPolicy.Intent back = com.ornnplanner.arena.rift.MacroActions.intent(a, m, me);
+            assertEquals(i.goal, back.goal);
+            assertEquals(i.x, back.x);
+            assertEquals(i.y, back.y);
+            assertEquals(i.what, back.what);
+            assertEquals(com.ornnplanner.arena.rift.MacroObservation.SIZE, com.ornnplanner.arena.rift.MacroObservation.of(m, me, a).length);
+            seen[a]++;
+            return i;
+        };
+        matches.run(d, 3, 20, checking, checking);
+        // the script's whole range shows up in a match: lane, jungle, objective, grouping, the way back
+        for (int a : new int[] {com.ornnplanner.arena.rift.MacroActions.OWN_LANE, com.ornnplanner.arena.rift.MacroActions.JUNGLE,
+            com.ornnplanner.arena.rift.MacroActions.OBJECTIVE, com.ornnplanner.arena.rift.MacroActions.PUSH,
+            com.ornnplanner.arena.rift.MacroActions.RECALL_WALK}) {
+            assertTrue(seen[a] > 0, "action " + com.ornnplanner.arena.rift.MacroActions.LABELS[a] + " never came up");
+        }
+    }
+
     @Test
     void oneScriptPerSideIsThePlainMatch() {
         MatchService.Draft d = matches.draft(request);

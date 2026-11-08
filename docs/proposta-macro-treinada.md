@@ -168,3 +168,30 @@ partida, em vez dos do guia (08/11/2026). A velocidade das tropas do guia entrou
   partidas por segundo em 20 threads** (40 partidas em 6,1 s). Uma geração de 24 candidatos × 4 episódios × 2 lados
   = 192 partidas leva uns 30 s. **O treino fica com as lutas finas**, e a "luta estimada" não foi necessária.
 - Testes: 413 → 415 (16 opcionais pulados), 0 falhas.
+
+### Parte 2 ✅ — o que a macro vê e faz
+- **`rift/MacroActions`**: 12 ações, na ordem que as redes salvas vão guardar. São elas: ficar na própria rota, ir à rota
+  do Barão / ao meio / à rota do Dragão, fazer a selva, ir ao objetivo, agrupar e empurrar, recuar para o Frutomel,
+  voltar à base a pé / de Teleporte, comprar onde está e esperar sob a torre. `of` leva a intenção do roteiro à ação,
+  `intent` faz a intenção da ação com as mesmas contas do roteiro, e `valid` é a máscara.
+- **`rift/MacroObservation`** (`SCHEMA` 1, 50 números):
+  - o campeão: função, Vida, ouro na mão, nível, compras, Teleporte, se está na base;
+  - as distâncias à base, à rota e aos dois fossos;
+  - o relógio e os objetivos;
+  - a própria rota: torres da frente e ondas da frente dos dois lados;
+  - quem está por perto: contagens, o inimigo mais próximo e a força relativa;
+  - o placar: ouro, abates, dragões, Barão e torres;
+  - a escolha do roteiro, em one-hot.
+- **`rift/NeuralMacro`**: obs → 16 → 12, residual sobre o roteiro (+0,5 na escolha dele). Não guarda estado: o que
+  precisa lembrar fica no `Seat`.
+- **`ScriptedMacro.suggest`**: o roteiro sem deixar rastro, separado do `decide`, que registra a decisão dos dois tempos.
+  Quando a rede segue o roteiro, o log é o do roteiro. Quando a rede discorda, o log diz, uma vez por mudança,
+  "Fulano (macro treinada): voltar à base a pé em vez de ficar na própria rota".
+- **Mudou do plano:** a decisão é a cada passo grosso (0,25 s), como no roteiro, e não a cada 2 s. Decidir a cada 2 s
+  quebraria a igualdade com o roteiro quando os pesos são zero, e a rede custa pouco: 10 assentos × 4 por segundo.
+- 🎯 `MatchDraftTest`:
+  - **com os pesos zerados, a partida é idêntica à do roteiro**, nos dois lados ou só no azul, com o log igual linha a
+    linha;
+  - em uma partida inteira, toda intenção do roteiro é uma ação válida, e essa ação devolve a mesma intenção (meta,
+    posição, rota). A observação tem sempre 50 números;
+  - nessa partida aparecem a rota, a selva, o objetivo, o agrupar e a volta à base.
