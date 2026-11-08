@@ -1367,6 +1367,10 @@ function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onC
           <input type="number" value={slot.x ?? ''} placeholder="Nexus" onChange={(e) => onChange({ x: e.target.value === '' ? null : Number(e.target.value) })} aria-label="x" />
           <input type="number" value={slot.y ?? ''} placeholder="y" onChange={(e) => onChange({ y: e.target.value === '' ? null : Number(e.target.value) })} aria-label="y" />
         </label>
+        <label className="inline" title={t('arena.permanentStacksTitle')}>{t('arena.permanentStacks')}
+          <input type="number" min="0" value={slot.permanentStacks ?? ''} placeholder={t('arena.permanentStacksAuto')}
+            onChange={(e) => onChange({ permanentStacks: e.target.value === '' ? null : Number(e.target.value) })} aria-label={t('arena.permanentStacks')} />
+        </label>
         <label className="inline">{t('report.target')}
           <select value={slot.target ?? ''} onChange={(e) => onChange({ target: e.target.value === '' ? null : Number(e.target.value) })}>
             <option value="">{t('arena.nearest')}</option>

@@ -260,3 +260,64 @@ fichas:
     recurso: {tipo: sem_custo}
     habilidades:
       "1": {nome: Grátis, forma: zonas, recarga: 0.1, zonas: [{forma: circulo, raio: 900}], dano: {tipo: verdadeiro, base: 10}}
+
+  # ---- Rodada das fichas, lote 1 (docs/fichas/lote-1.md) ----
+  vida_perdida_alvo:
+    <<: *base
+    habilidades:
+      "1": {nome: Execução, forma: alvo, recarga: 30, alcance: 900, dano: {tipo: verdadeiro, base: 10, vida_perdida_alvo: 0.5}}
+  vida_atual_alvo:
+    <<: *base
+    habilidades:
+      "1": {nome: Corte, forma: alvo, recarga: 30, alcance: 900, dano: {tipo: verdadeiro, base: 10, vida_atual_alvo: 0.1}}
+  vida_bonus_alvo:
+    <<: *base
+    habilidades:
+      "1": {nome: Agarrão, forma: alvo, recarga: 30, alcance: 900, dano: {tipo: verdadeiro, base: 10, vida_bonus_alvo: 0.5}}
+  devolve_recarga:
+    <<: *base
+    habilidades:
+      "1": {nome: Estocada, forma: alvo, recarga: 10, alcance: 900, dano: {tipo: verdadeiro, base: 10}, ao_acertar: {devolve_recarga: 0.5}}
+  zera_recarga_marca:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Lâmina
+        forma: alvo
+        recarga: 10
+        alcance: 900
+        dano: {tipo: verdadeiro, base: 10}
+        ao_acertar: {zera_recarga_se: [marca, abate]}
+      "2": {nome: Marcar, forma: alvo, recarga: 30, alcance: 900, dano: {tipo: verdadeiro, base: 1}, efeitos: {marca: 5}}
+  armazena:
+    <<: *base
+    armazena: {causado: 0, sofrido: 1, max_vida: 0.5, decai_apos: 4}
+    habilidades:
+      "1": {nome: Ousadia, forma: proprio, recarga: 30, duracao: 3, escudo: {base: 10, armazenado: 1}, consome_armazenado: true}
+  linha_entre_pontos:
+    <<: *base
+    habilidades:
+      "1":
+        nome: Lâmina Lançada
+        forma: proprio
+        recarga: 30
+        alcance: 800
+        deixa_marco: {nome: lamina}
+        reconjurar:
+          apos: 0
+          janela: 4
+          versoes:
+            - {nome: Convergir, forma: proprio, linha_entre: {marco: lamina, ate: lancador, largura: 100}, dano: {tipo: verdadeiro, base: 50}, efeitos: {atordoa: 1}}
+  acumulos_permanentes:
+    <<: *base
+    acumulos_permanentes: {por_minuto: 10, max: 300, vida: 2}
+    habilidades:
+      "1": {nome: Sifão, forma: alvo, recarga: 30, alcance: 900, dano: {tipo: verdadeiro, base: 10, acumulos_permanentes: 1}}
+  camuflagem:
+    <<: *base
+    habilidades:
+      "1": {nome: Camuflar, forma: proprio, recarga: 30, invisivel: {duracao: 10, camuflagem: 250, so_em_moita: true, fora_da_moita: 3, revela_ao_atacar: true, ao_revelar: {velocidade_ataque: 0.3, duracao: 3}}}
+  reducao_dano:
+    <<: *base
+    habilidades:
+      "1": {nome: Coragem, forma: proprio, recarga: 30, reducao_dano: {pct: 0.5, duracao: 4}}

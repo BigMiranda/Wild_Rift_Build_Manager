@@ -33,3 +33,37 @@ geometria é quase toda **WR**, não PC.
 Sett W (`range: [-25, 720, 745]`), Gwen Q e R, Sion Q (alcance pela carga 200→675 em 0,75 s) e E. Nasus: o slot 2
 saiu com o nome da E (os modelos do slot vêm em ordem alfabética), mas a geometria da W (600) está certa. Nessas, a
 ficha usa o texto bruto do modelo.
+
+## Parte 2 — Lacunas do motor ✅
+
+Contagem pelos textos de `campeoes_7_3d.yml` (expressões em pt-BR, conferidas à mão), não só pelo lote. Viraram campo
+genérico de ficha as que servem a 3 ou mais campeões da base; cada uma tem ficha sintética em
+`src/test/resources/arena/fichas-sinteticas.yml` e teste em `MecanicasTest`.
+
+| mecânica | campos | campeões da base (texto do jogo) |
+|---|---|---|
+| Vida do alvo no dano | `vida_perdida_alvo`, `vida_atual_alvo`, `vida_bonus_alvo` (termos de `dano`, também em escudo e cura) | perdida: Garen, Kayle, Riven, Akshan, Caitlyn, Jinx, Kindred, Lee Sin, Samira, Viego…; atual: Camille, Dr. Mundo, Jarvan IV, Senna, Viego…; adicional: Sett (vai junto, é o mesmo cálculo) |
+| Devolver / zerar recarga | `ao_acertar: {devolve_recarga, zera_recarga_se: [marca, abate]}`; efeito `marca: s` (marca genérica) | Fiora, Irelia, Gwen, Akshan, Draven, Kalista, Kha'Zix, Nilah, Tristana, Yasuo… |
+| Dano armazenado | `armazena` (campeão), termo `armazenado`, `consome_armazenado` | Mordekaiser, Sett, Pyke |
+| Linha entre dois pontos | `deixa_marco`, `linha_entre` | Irelia (E), Shen (Q, a espada), Xayah (as plumas) |
+| Acúmulos permanentes | `acumulos_permanentes` (campeão; termo de dano de mesmo nome); campo **acúmulos** do lutador na Arena (`Slot.permanentStacks`) | Nasus, Sion, Kayle, Kayn, Thresh, Viktor, Yunara, Cho'Gath, Veigar |
+| Camuflagem | `invisivel.camuflagem` (raio de detecção), `so_em_moita`, `fora_da_moita`, `revela_ao_atacar`, `ao_revelar` | Teemo, Evelynn, Twitch, Akshan, Kha'Zix, Rengar, Pyke, Senna |
+| Redução de dano | `reducao_dano: {pct, duracao}` (já existia no motor, só pela carga do K'Sante) | Garen W, Irelia W, Jax E (aproximação da esquiva), e muitos fora do lote |
+
+**Ficaram como aproximação documentada** (1 ou 2 campeões na base): esquivar ataques (só Jax; Shen W bloqueia para
+aliados), bônus de alvo único / alvo mais próximo, Pontos Vitais e aparar (Fiora), isolamento (Mordekaiser), zona
+inescapável e gancho em terreno (Camille), condição dos dois lados (Sett), "ainda na zona" (Aatrox), dano ao atravessar
+a borda (Irelia), ataque com área (Malphite), ataques alternados (Sett), status por nível na passiva (Kayle), névoa
+(Gwen), reanimar (Sion), avanço dirigível (Sion), posição da espada além da W (Shen), Armadura/RM por alvos atingidos
+(Jax).
+
+**Decisões:**
+- A marca genérica é `marca: <segundos>`; `marca: true` continua sendo a da Vayne e a do K'Sante. O teste da marca olha
+  o alvo **antes** do acerto (senão a própria habilidade que marca zeraria a recarga).
+- `devolve_recarga` vale uma vez por conjuração (a recarga já devolvida fica guardada por slot).
+- Camuflagem: `so_em_moita` só vale no mapa inteiro (a rota única não tem moitas: ali começa em qualquer lugar).
+  Inimigos no raio de detecção a veem (`visible()`), mas ela não acaba, ao contrário de `revela_proximidade`.
+- Acúmulos permanentes não são simulados: `floor(por_minuto × (minuto − desde_min))` até `max`, ou o número do cenário.
+- A camuflagem e o dano armazenado não mudam as observações da IA (`obs_schema` igual).
+
+🎯 **Golden sem mudança.** Testes: 399 → 408 (9 novos em `MecanicasTest`), 16 opcionais pulados. `npm run build` limpo.

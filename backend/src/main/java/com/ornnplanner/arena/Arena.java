@@ -119,6 +119,8 @@ public class Arena {
         public Double startAirborne;
         /** Drills: the fighter (index) whose own mark is on this one at the start (Brittle, bolts, marks, bleed). */
         public Integer markedBy;
+        /** Permanent stacks of the sheet's {@code acumulos_permanentes} (null = estimated by the minute). */
+        public Double permanentStacks;
         /** What it starts with from the objectives (null = nothing). */
         public ArenaModel.ObjectiveBuffs objectives;
 
@@ -151,6 +153,7 @@ public class Arena {
             c.startResource = startResource;
             c.startAirborne = startAirborne;
             c.markedBy = markedBy;
+            c.permanentStacks = permanentStacks;
             c.objectives = objectives;
             return c;
         }
@@ -418,6 +421,21 @@ public class Arena {
         /** Stats over the fight (frames only): the last values written, and which conditional effects were on. */
         Map<String, Double> tracked;
         final Map<String, Boolean> trackedOn = new LinkedHashMap<>();
+        /** The generic mark of a sheet (efeito `marca: s`) on this unit: who put it and until when. */
+        U sheetMarkBy;
+        double sheetMarkUntil = -1;
+        /** Camouflage ({@code invisivel.camuflagem}): an enemy within the detection radius sees it (stealth stays on). */
+        boolean camoSeen;
+        /** When the camouflage started outside a bush counts down (rift only), -1 = in a bush or off. */
+        double outOfBushSince = -1;
+        /** Damage stored by {@code armazena} ({amount, when}), oldest first. */
+        final java.util.ArrayDeque<double[]> stored = new java.util.ArrayDeque<>();
+        /** Permanent stacks by slot ("P" = the champion's), from the minute or the scenario. */
+        final Map<String, Double> permanent = new LinkedHashMap<>();
+        /** Points left on the map by {@code deixa_marco}: name -> {x, y, until}. */
+        final Map<String, double[]> anchors = new LinkedHashMap<>();
+        /** Cooldown end already given back by {@code ao_acertar.devolve_recarga}, by slot (once per cast). */
+        final Map<String, Double> refunded = new LinkedHashMap<>();
 
         U(int idx, Input in) {
             this.idx = idx;
@@ -437,12 +455,28 @@ public class Arena {
             return f.team;
         }
 
+        /** The damage stored now ({@code armazena}): what came in the last `decai_apos` s, up to `max_vida` of the health. */
+        double storedAmount() {
+            Map<String, Object> spec = map(kit("armazena"));
+            if (spec == null || stored.isEmpty()) {
+                return 0;
+            }
+            double window = num(spec.get("decai_apos"), 4);
+            double sum = 0;
+            for (double[] e : stored) {
+                if (now - e[1] < window) {
+                    sum += e[0];
+                }
+            }
+            return Math.min(sum, num(spec.get("max_vida"), 1) * maxHp);
+        }
+
         boolean targetable() {
             return !dead && !escaped && now >= stasisUntil && now >= untargetableUntil && attachedTo == null;
         }
 
         boolean visible() {
-            return now >= invisibleUntil && !hidden;
+            return (now >= invisibleUntil || camoSeen) && !hidden;
         }
 
         boolean canAct() {
@@ -1089,12 +1123,33 @@ public class Arena {
         return result;
     }
 
+    /**
+     * The champion's permanent stacks ({@code acumulos_permanentes}: Nasus' Siphoning Strike, Sion's health): the
+     * scenario's number, or {@code por_minuto} times the minutes since {@code desde_min}, up to {@code max}. Not simulated.
+     */
+    static double permanentStacks(Input in) {
+        Map<String, Object> spec = in.kit == null ? null : map(in.kit.get("acumulos_permanentes"));
+        if (spec == null) {
+            return 0;
+        }
+        if (in.permanentStacks != null) {
+            return Math.max(0, in.permanentStacks);
+        }
+        double minutes = Math.max(0, in.f.minute - num(spec.get("desde_min"), 0));
+        return Math.min(num(spec.get("max"), Double.MAX_VALUE), Math.floor(num(spec.get("por_minuto"), 0) * minutes));
+    }
+
     private U start(int i, Input in, Set<String> manualItems) {
         U u = new U(i, in);
         u.x = in.x;
         u.y = in.y;
         u.facing = in.f.team == 0 ? 0 : Math.PI;
         u.maxHp = Math.max(1, u.stat(Stats.MAX_HEALTH));
+        double stacks = permanentStacks(in);
+        if (stacks > 0) {
+            u.permanent.put("P", stacks);
+            u.maxHp += stacks * num(map(in.kit.get("acumulos_permanentes")).get("vida"), 0);
+        }
         u.hp = in.startHealth == null ? u.maxHp : Math.max(1, u.maxHp * Math.min(1, in.startHealth));
         in.f.shieldSources.forEach((src, v) -> {
             if (!manualItems.contains(src)) {
@@ -3020,6 +3075,10 @@ public class Arena {
         if (now < u.rootUntil && "avanco".equals(shape)) {
             return "wait";   // a root keeps it from dashing
         }
+        Map<String, Object> camo = map(ab.get("invisivel"));
+        if (camo != null && Boolean.TRUE.equals(camo.get("so_em_moita")) && rift != null && rift.bush(u.x, u.y) < 0) {
+            return "wait";   // the camouflage starts in a bush (the single lane has none: there it starts anywhere)
+        }
         if (List.of("alvo", "empurrao", "tudo_ou_nada").contains(shape)) {
             if (t == null || !t.targetable() || !t.visible()) {
                 return "wait";
@@ -3090,6 +3149,14 @@ public class Arena {
         }
         if (ab.get("troca_forma") != null) {
             changeForm(u, String.valueOf(ab.get("troca_forma")));
+        }
+        Map<String, Object> between = map(ab.get("linha_entre"));
+        if (between != null) {
+            lineBetween(u, ab, between, rank, tx, ty, label, source);
+        }
+        Map<String, Object> drop = map(ab.get("deixa_marco"));
+        if (drop != null) {
+            dropAnchor(u, ab, drop, tx, ty);
         }
         if (AIMED.contains(shape) && !"canal".equals(shape) && !"avanco".equals(shape)) {
             count(u, "mira_lancada");
@@ -3294,6 +3361,7 @@ public class Arena {
             u.aimPending = false;
         }
         credit(u, source, u.dash != null && u.dash.recast);
+        boolean wasMarked = v.sheetMarkBy == u && now < v.sheetMarkUntil;   // before this hit's own mark
         Map<String, Object> d = map(ab.get("dano"));
         if (d != null) {
             deal(u, v, formula(d, u, v, rank) * mult * num(ab.get("_mult"), 1), type(d), source, ABILITY, 0);
@@ -3319,7 +3387,64 @@ public class Arena {
             u.ksCounted.put(v, u.ksMarks.get(v));
             count(u, "marca_aplicada:" + ksMark(u));
         }
+        Map<String, Object> onHit = map(ab.get("ao_acertar"));
+        if (onHit != null && !v.npc && v.team() != u.team()) {
+            refund(u, v, onHit, slotOf(source), rank, wasMarked);
+        }
         onAbilityItems(u, v);
+    }
+
+    /**
+     * {@code ao_acertar} of a sheet: the hit on an enemy champion gives back part of the cooldown left
+     * ({@code devolve_recarga}, once per cast) or all of it ({@code zera_recarga_se}: the target carried this caster's
+     * mark, which is consumed, or died of the hit).
+     */
+    private void refund(U u, U v, Map<String, Object> on, String slot, int rank, boolean wasMarked) {
+        Double r = u.ready.get(slot);
+        if (r == null || r <= now) {
+            return;
+        }
+        Object when = on.get("zera_recarga_se");
+        List<?> conds = when instanceof List ? (List<?>) when : when == null ? List.of() : List.of(when);
+        for (Object c : conds) {
+            boolean marked = "marca".equals(c) && wasMarked;
+            if (marked || "abate".equals(c) && v.dead) {
+                if (marked) {
+                    v.sheetMarkUntil = -1;
+                    count(u, "marca_consumida:marca");
+                }
+                u.ready.put(slot, now);
+                count(u, "recarga_zerada:" + slot);
+                return;
+            }
+        }
+        if (on.get("devolve_recarga") != null && !r.equals(u.refunded.get(slot))) {
+            double left = r - now;
+            double back = val(on, "devolve_recarga", rank, u.f.level, 0);
+            u.ready.put(slot, now + left * (1 - back));
+            u.refunded.put(slot, u.ready.get(slot));
+            count(u, "recarga_devolvida:" + slot);
+        }
+    }
+
+    /** {@code armazena} of a sheet: share of the damage dealt / taken kept for a while (against non champions, less). */
+    private void store(U u, double dmg, boolean dealt, U other) {
+        Map<String, Object> spec = map(u.kit("armazena"));
+        if (spec == null || dmg <= 0 || other.team() == u.team()) {
+            return;
+        }
+        double share = num(spec.get(dealt ? "causado" : "sofrido"), 0);
+        if (other.npc && spec.get("contra_nao_campeoes") != null) {
+            share = num(spec.get("contra_nao_campeoes"), share);
+        }
+        if (share <= 0) {
+            return;
+        }
+        double window = num(spec.get("decai_apos"), 4);
+        while (!u.stored.isEmpty() && now - u.stored.peekFirst()[1] >= window) {
+            u.stored.pollFirst();
+        }
+        u.stored.addLast(new double[] {dmg * share, now});
     }
 
     /** Crowd control and other effects on a target hit by an ability. */
@@ -3359,6 +3484,11 @@ public class Arena {
         }
         if (ef.get("acumulos") != null) {
             addStacks(s, t, false);
+        }
+        if (ef.get("marca") instanceof Number && !t.dead) {   // the generic mark (true = Vayne's / K'Sante's own)
+            t.sheetMarkBy = s;
+            t.sheetMarkUntil = now + num(ef.get("marca"), 4);
+            count(s, "marca_aplicada:marca");
         }
         if (ef.get("reduz_rm") != null) {
             shred(t, 1, map(ef.get("reduz_rm")), rank, key(s, source));
@@ -3599,6 +3729,9 @@ public class Arena {
             }
         }
         selfStates(u, ab, duration);
+        if (Boolean.TRUE.equals(ab.get("consome_armazenado"))) {
+            u.stored.clear();
+        }
         if (ab.get("velocidade_movimento") != null) {
             u.speedUps.add(new double[] {val(ab, "velocidade_movimento", rank, u.f.level, 0) * danger,
                 now + num(ab.get("duracao_velocidade"), duration)});
@@ -4853,6 +4986,9 @@ public class Arena {
         }
         struck(t);
         t.lastStruck = now;
+        if (a.stealth != null && Boolean.TRUE.equals(a.stealth.get("revela_ao_atacar")) && (kind == ATTACK || kind == ABILITY)) {
+            reveal(a);
+        }
         if (!a.npc || "torre".equals(a.role)) {
             t.lastThreat = now;
         }
@@ -4968,6 +5104,8 @@ public class Arena {
             led(t.flatCutSource).prevented += cut;
         }
         dmg = Math.max(0, dmg - prevented);
+        store(a, dmg, true, t);
+        store(t, dmg, false, a);
         if (kind == ATTACK || kind == ABILITY) {
             a.hitsDealt++;
         }
@@ -6494,6 +6632,9 @@ public class Arena {
         {"dda_bonus", Stats.ATTACK_DAMAGE, "bonus"}, {"pdh", Stats.ABILITY_POWER, "total"},
         {"vida_max_alvo", "target max health", "alvo"}, {"vida_bonus", Stats.MAX_HEALTH, "bonus"},
         {"vida_max", Stats.MAX_HEALTH, "total"}, {"arm_bonus", Stats.ARMOR, "bonus"}, {"rm_bonus", Stats.MAGIC_RESIST, "bonus"},
+        {"armazenado", "stored damage", "armazenado"}, {"acumulos_permanentes", "permanent stacks", "acumulos"},
+        {"vida_perdida_alvo", "target missing health", "alvo_perdida"}, {"vida_atual_alvo", "target current health", "alvo_atual"},
+        {"vida_bonus_alvo", "target bonus health", "alvo_bonus"},
     };
 
     /**
@@ -6600,6 +6741,16 @@ public class Arena {
                 double amount;
                 if ("alvo".equals(k[2])) {
                     amount = t == null ? 0 : t.maxHp;
+                } else if ("alvo_perdida".equals(k[2])) {
+                    amount = t == null ? 0 : Math.max(0, t.maxHp - t.hp);
+                } else if ("alvo_atual".equals(k[2])) {
+                    amount = t == null ? 0 : Math.max(0, t.hp);
+                } else if ("alvo_bonus".equals(k[2])) {
+                    amount = t == null ? 0 : Math.max(0, t.maxHp - t.base(Stats.MAX_HEALTH));
+                } else if ("armazenado".equals(k[2])) {
+                    amount = u.storedAmount();
+                } else if ("acumulos".equals(k[2])) {
+                    amount = u.permanent.getOrDefault("P", 0.0);
                 } else if (Stats.MAX_HEALTH.equals(k[1])) {
                     amount = "bonus".equals(k[2]) ? Math.max(0, u.maxHp - u.base(Stats.MAX_HEALTH)) : u.maxHp;
                 } else if ("base".equals(k[2])) {
@@ -8350,6 +8501,31 @@ public class Arena {
         u.busyState = "move";
     }
 
+    /**
+     * Camouflage ({@code invisivel.camuflagem}: the detection radius): enemies that close see it, but it stays on. On the
+     * full map, {@code fora_da_moita} s outside a bush end it.
+     */
+    private void camouflage(U u) {
+        double near = num(u.stealth.get("camuflagem"), 0);
+        boolean seen = false;
+        for (U e : units) {
+            if (e.team() != u.team() && e.team() < 2 && !e.dead && !e.npc && dist(u.x, u.y, e.x, e.y) <= near) {
+                seen = true;
+                break;
+            }
+        }
+        u.camoSeen = seen;
+        if (rift != null && u.stealth.get("fora_da_moita") != null) {
+            if (rift.bush(u.x, u.y) >= 0) {
+                u.outOfBushSince = -1;
+            } else if (u.outOfBushSince < 0) {
+                u.outOfBushSince = now;
+            } else if (now - u.outOfBushSince >= num(u.stealth.get("fora_da_moita"), 3)) {
+                reveal(u);
+            }
+        }
+    }
+
     /** Takes damage: it wakes up, and an invisibility that damage reveals ends. */
     private void struck(U t) {
         t.sleepUntil = -1;
@@ -8359,9 +8535,16 @@ public class Arena {
     }
 
     private void reveal(U u) {
+        Map<String, Object> was = u.stealth;
         u.invisibleUntil = -1;
         u.stealth = null;
+        u.camoSeen = false;
+        u.outOfBushSince = -1;
         count(u, "revelado");
+        Map<String, Object> after = was == null ? null : map(was.get("ao_revelar"));
+        if (after != null && after.get("velocidade_ataque") != null) {
+            u.buffs.put("vel_ataque", new double[] {num(after.get("velocidade_ataque"), 0), now + num(after.get("duracao"), 3)});
+        }
     }
 
     /** Cleanse: the controls whose rule says so. */
@@ -8453,6 +8636,13 @@ public class Arena {
         if (stealth != null) {
             u.stealth = stealth;
             u.invisibleUntil = now + num(stealth.get("duracao"), duration);
+            u.camoSeen = false;
+            u.outOfBushSince = -1;
+        }
+        Map<String, Object> cut = map(ab.get("reducao_dano"));
+        if (cut != null) {
+            u.damageReduction = num(cut.get("pct"), 0);
+            u.damageReductionUntil = now + num(cut.get("duracao"), duration);
         }
         if (ab.get("invulneravel") != null) {
             u.invulnerableUntil = now + num(ab.get("invulneravel"), duration);
@@ -8479,6 +8669,8 @@ public class Arena {
             if (u.stealth != null) {
                 if (now >= u.invisibleUntil) {
                     u.stealth = null;
+                } else if (u.stealth.get("camuflagem") != null) {
+                    camouflage(u);
                 } else if (u.stealth.get("revela_proximidade") != null) {
                     double near = num(u.stealth.get("revela_proximidade"), 0);
                     for (U e : units) {
@@ -8562,6 +8754,58 @@ public class Arena {
             spec.put("_mult", from + (num(hold.get("dano_ate"), 1) - from) * f);
             perform(u, slot, spec, rank, t, tx, ty, strong, order);
         });
+    }
+
+    /**
+     * {@code deixa_marco}: a point of the caster's left on the map (Irelia's first blade, Shen's sword), {@code em}
+     * ponto (the aimed point, up to the range; default) or lancador, for {@code duracao} s (default: the whole fight).
+     */
+    private void dropAnchor(U u, Map<String, Object> ab, Map<String, Object> drop, double tx, double ty) {
+        double x = u.x;
+        double y = u.y;
+        if (!"lancador".equals(drop.get("em"))) {
+            double a = Math.atan2(ty - u.y, tx - u.x);
+            double d = Math.min(num(ab.get("alcance"), 600), dist(u.x, u.y, tx, ty));
+            x = clampX(u.x + Math.cos(a) * d);
+            y = clampY(u.y + Math.sin(a) * d);
+        }
+        u.anchors.put(String.valueOf(drop.get("nome")), new double[] {x, y, now + num(drop.get("duracao"), 1e9)});
+        flash("circle", String.valueOf(drop.get("nome")), u, x, y, 40.0, null, null, null);
+        count(u, "marco:" + drop.get("nome"));
+    }
+
+    /**
+     * {@code linha_entre}: the hitbox is the segment from the caster's {@code marco} (the caster itself when there is
+     * none) to the caster ({@code ate: lancador}, default) or to the aimed point ({@code ate: ponto}); the anchor is used
+     * up. Damage and effects of the block, or of the ability.
+     */
+    private void lineBetween(U u, Map<String, Object> ab, Map<String, Object> spec, int rank, double tx, double ty, String label,
+                             String source) {
+        String name = String.valueOf(spec.get("marco"));
+        double[] at = u.anchors.remove(name);
+        double ax = at != null && now < at[2] ? at[0] : u.x;
+        double ay = at != null && now < at[2] ? at[1] : u.y;
+        double bx = u.x;
+        double by = u.y;
+        if ("ponto".equals(spec.get("ate"))) {
+            double a = Math.atan2(ty - u.y, tx - u.x);
+            double d = Math.min(num(ab.get("alcance"), 600), dist(u.x, u.y, tx, ty));
+            bx = clampX(u.x + Math.cos(a) * d);
+            by = clampY(u.y + Math.sin(a) * d);
+        }
+        double half = num(spec.get("largura"), num(ab.get("largura"), 100)) / 2;
+        Map<String, Object> hit = new LinkedHashMap<>();
+        hit.put("dano", spec.containsKey("dano") ? spec.get("dano") : ab.get("dano"));
+        hit.put("efeitos", spec.containsKey("efeitos") ? spec.get("efeitos") : ab.get("efeitos"));
+        hit.put("ao_acertar", ab.get("ao_acertar"));
+        for (U v : enemies(u)) {
+            if (!v.dead && segDist(ax, ay, bx, by, v.x, v.y) <= half + v.radius()) {
+                hitAbility(u, v, hit, rank, source, 1, null);
+            }
+        }
+        double len = dist(ax, ay, bx, by);
+        flash("line", label, u, ax, ay, null, Math.max(1, len), Math.atan2(by - ay, bx - ax), half * 2);
+        count(u, "linha_entre:" + name + (at == null ? ":sem_marco" : ""));
     }
 
     /** The next of the different versions of a recast; the window opens again while versions are left. */
@@ -9462,7 +9706,20 @@ public class Arena {
                 + val(d, "vida_bonus", rank, lv, 0) * Math.max(0, s.maxHp - s.base(Stats.MAX_HEALTH))
                 + val(d, "vida_max", rank, lv, 0) * s.maxHp
                 + val(d, "arm_bonus", rank, lv, 0) * s.bonus(Stats.ARMOR)
-                + val(d, "rm_bonus", rank, lv, 0) * s.bonus(Stats.MAGIC_RESIST);
+                + val(d, "rm_bonus", rank, lv, 0) * s.bonus(Stats.MAGIC_RESIST)
+                + targetTerms(d, s, t, rank, lv);
+    }
+
+    /** The terms on the target's health (lost, current, bonus) and on the damage the source stored (`armazenado`). */
+    private static double targetTerms(Map<String, Object> d, U s, U t, int rank, int lv) {
+        double v = val(d, "armazenado", rank, lv, 0) * s.storedAmount()
+                + val(d, "acumulos_permanentes", rank, lv, 0) * s.permanent.getOrDefault("P", 0.0);
+        if (t == null) {
+            return v;
+        }
+        return v + val(d, "vida_perdida_alvo", rank, lv, 0) * Math.max(0, t.maxHp - t.hp)
+                + val(d, "vida_atual_alvo", rank, lv, 0) * Math.max(0, t.hp)
+                + val(d, "vida_bonus_alvo", rank, lv, 0) * Math.max(0, t.maxHp - t.base(Stats.MAX_HEALTH));
     }
 
     private static String type(Map<String, Object> p) {

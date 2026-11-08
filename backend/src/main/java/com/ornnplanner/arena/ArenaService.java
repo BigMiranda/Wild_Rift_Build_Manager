@@ -423,6 +423,7 @@ public class ArenaService {
             in.autoAbilities = slot.autoAbilities;
             in.objectives = build.objectives;
             in.startHealth = slot.startHealth;
+            in.permanentStacks = slot.permanentStacks;
             if (slot.priority != null && !slot.priority.isEmpty()) {
                 in.priority = new ArrayList<>(slot.priority);
             }

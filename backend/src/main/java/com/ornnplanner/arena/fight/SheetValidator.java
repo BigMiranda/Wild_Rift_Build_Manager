@@ -13,7 +13,8 @@ import java.util.Set;
 public final class SheetValidator {
 
     private static final Set<String> CHAMPION = Set.of("raio", "alcance", "espera_ataque", "velocidade_projetil", "efeitos_de_forma",
-            "habilidades", "fragil", "mobilidade", "acumulos", "recurso", "marcas", "marcas_ksante", "formas", "forma_inicial", "fontes", "nota", "qualidade");
+            "habilidades", "fragil", "mobilidade", "acumulos", "recurso", "marcas", "marcas_ksante", "formas", "forma_inicial", "fontes", "nota", "qualidade",
+            "armazena", "acumulos_permanentes", "lacunas");
     private static final Set<String> SHAPES = Set.of("linha", "area", "cone", "avanco", "alvo", "ataque", "proprio", "canal", "campo",
             "elemental", "empurrao", "tudo_ou_nada", "zonas", "piscar", "teleporte", "invocacao", "parede", "anexar", "volta_no_tempo");
     private static final Set<String> ABILITY = Set.of("nome", "forma", "recarga", "conjuracao", "atraso", "alcance", "largura", "raio",
@@ -26,7 +27,9 @@ public final class SheetValidator {
             "furia_ao_usar", "furia_por_s", "aura", "carregar", "segunda_carga", "empurra", "terreno_ate", "fontes", "nota",
             // mechanics of the other champions
             "custo", "alvo", "cura", "invisivel", "invulneravel", "nao_selecionavel", "imparavel_por", "canaliza", "invoca", "perpendicular",
-            "segundos", "ate_ponto", "ate_alvo", "atravessa_parede", "interrompivel", "troca_forma");
+            "segundos", "ate_ponto", "ate_alvo", "atravessa_parede", "interrompivel", "troca_forma",
+            // Rodada das fichas, lote 1
+            "ao_acertar", "reducao_dano", "consome_armazenado", "deixa_marco", "linha_entre");
     private static final Set<String> ZONE = Set.of("nome", "forma", "raio", "raio_interno", "angulo", "comprimento", "largura", "centro",
             "vertices", "pontos", "dano", "efeitos", "acumula");
     private static final Set<String> EFFECTS = Set.of("lentidao", "duracao", "atordoa", "atordoa_max", "arremessa", "arremessa_demais", "puxa",
@@ -35,7 +38,8 @@ public final class SheetValidator {
             "enraiza", "silencia", "cega", "provoca", "amedronta", "encanta", "adormece", "suprime", "polimorfa", "lentidao_polimorfo",
             "afasta", "afasta_velocidade", "afasta_parede", "rouba", "executa_abaixo");
     private static final Set<String> DAMAGE = Set.of("tipo", "base", "dda", "dda_base", "dda_bonus", "pdh", "vida_max_alvo", "vida_bonus",
-            "arm_bonus", "rm_bonus", "vida_max", "minimo", "base_nv15", "vida_max_alvo_nv15");
+            "arm_bonus", "rm_bonus", "vida_max", "minimo", "base_nv15", "vida_max_alvo_nv15",
+            "vida_perdida_alvo", "vida_atual_alvo", "vida_bonus_alvo", "armazenado", "acumulos_permanentes");
     private static final Set<String> DAMAGE_TYPES = Set.of("fisico", "magico", "verdadeiro", "adaptativo");
     private static final Set<String> SUMMON = Set.of("nome", "comportamento", "vida", "dda", "armadura", "rm", "velocidade", "velocidade_ataque",
             "alcance", "raio", "duracao", "quantidade", "fracao", "raio_disparo", "raio_explosao", "arma_em", "dano", "efeitos", "morre_com_dono",
@@ -44,7 +48,8 @@ public final class SheetValidator {
     /** Fields that make an ability do something on their own. */
     private static final Set<String> DOES_SOMETHING = Set.of("dano", "danos", "efeitos", "zonas", "escudo", "cura", "proximo_ataque", "aura",
             "velocidade_movimento", "velocidade_ataque", "vampirismo", "dda", "vida_extra", "invisivel", "invulneravel", "nao_selecionavel",
-            "imparavel_por", "invoca", "terreno", "pilar", "troca_forma", "alcance_extra", "fortalecido", "reconjurar");
+            "imparavel_por", "invoca", "terreno", "pilar", "troca_forma", "alcance_extra", "fortalecido", "reconjurar",
+            "linha_entre", "deixa_marco", "reducao_dano");
     /** Shapes that do something by moving the champion or the map. */
     private static final Set<String> ACTS_ALONE = Set.of("avanco", "piscar", "teleporte", "parede", "anexar", "volta_no_tempo", "elemental",
             "tudo_ou_nada", "empurrao");

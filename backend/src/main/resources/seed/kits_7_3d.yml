@@ -77,6 +77,24 @@
 #                 arma_em, dano, efeitos, morre_com_dono}; vida e dda podem ser fórmulas do dono
 #   recurso       tipo: mana | energia (começa cheio, paga `custo` por rank; max, por_s) | furia | calor | sem_custo. Mana sem `max`
 #                 usa o status de Mana Máxima
+# Rodada das fichas, lote 1 (docs/fichas/lote-1.md; fichas sintéticas no mesmo arquivo de teste):
+#   dano          + vida_perdida_alvo | vida_atual_alvo | vida_bonus_alvo (fração da Vida do alvo) | armazenado (fração do
+#                 dano armazenado, veja armazena) | acumulos_permanentes (valor por acúmulo)
+#   ao_acertar    {devolve_recarga: fração da recarga restante (uma vez por conjuração), zera_recarga_se: [marca, abate]}: ao
+#                 acertar um campeão inimigo (marca = o alvo tinha a marca genérica deste lançador, que é consumida)
+#   efeitos       marca: s (a marca genérica; `marca: true` segue sendo a da Vayne / do K'Sante)
+#   armazena      por campeão: {causado, sofrido, contra_nao_campeoes (frações), max_vida, decai_apos (s)}; uma habilidade
+#                 usa com o termo `armazenado` (escudo ou dano) e zera com consome_armazenado: true
+#   acumulos_permanentes  por campeão: {por_minuto, max, desde_min, vida (por acúmulo)}; não simulados: estimados pelo minuto
+#                 da build ou o número do cenário (campo "acúmulos" do lutador na Arena)
+#   deixa_marco   {nome, em: ponto (padrão, até alcance) | lancador, duracao}: um ponto do lançador no mapa
+#   linha_entre   {marco, ate: lancador (padrão) | ponto, largura, dano, efeitos}: a hitbox é o segmento do marco (ou do
+#                 lançador, sem marco) até o lançador ou o ponto mirado; o marco é consumido
+#   reducao_dano  {pct, duracao}: o lançador sofre menos dano
+#   invisivel     + camuflagem: raio de detecção (inimigos a essa distância veem, e a camuflagem continua) | so_em_moita:
+#                 true (no mapa inteiro só começa numa moita; a rota única não tem moitas) | fora_da_moita: s (no mapa
+#                 inteiro, acaba depois de s fora da moita) | revela_ao_atacar: true | ao_revelar: {velocidade_ataque, duracao}
+#   lacunas       por campeão: as mecânicas que o motor ainda não tem, aproximadas (a `nota` diz como)
 #
 # As fichas passam pelo validador (arena/fight/SheetValidator): campo desconhecido, unidade estranha ou habilidade que não faz nada.
 mapa:

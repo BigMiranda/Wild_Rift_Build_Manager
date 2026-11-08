@@ -475,6 +475,103 @@ class MecanicasTest {
         }
     }
 
+    // ------------------------------------------------------------------ Rodada das fichas, lote 1
+
+    private static double dealt(Result r, int who) {
+        return r.fighters.get(who).dealt;
+    }
+
+    @Test
+    void damageOnTheTargetsHealth() {
+        List<Arena.Input> in = pair("vida_perdida_alvo", 300);
+        in.get(1).startHealth = 0.5;
+        Result r = fight(in, 1, cast(0.1));
+        double max = at(r, 0.5).units.get(1).maxHp;
+        assertEquals(10 + 0.5 * (max - Math.max(1, max * 0.5)), dealt(r, 0), 1, "lost health");
+        Result full = fight(pair("vida_perdida_alvo", 300), 1, cast(0.1));
+        assertEquals(10, dealt(full, 0), 1e-6, "nothing lost, only the base");
+        Result now = fight(pair("vida_atual_alvo", 300), 1, cast(0.1));
+        assertEquals(10 + 0.1 * at(now, 0.5).units.get(1).maxHp, dealt(now, 0), 1, "current health");
+        Result bonus = fight(pair("vida_bonus_alvo", 300), 1, cast(0.1));
+        assertTrue(dealt(bonus, 0) >= 10, "bonus health: base plus half of what is above the base");
+    }
+
+    @Test
+    void aHitGivesBackPartOfTheCooldown() {
+        Result r = fight(pair("devolve_recarga", 300), 8, cast(0.1), cast(5.3));
+        assertEquals(2.0, ev(r, 0, "recarga_devolvida:1"), 1e-6, "once per cast (two casts)");
+        assertEquals(2, r.fighters.get(0).uses.size(), "ready again in half the time");
+        Result plain = fight(pair("vida_atual_alvo", 300), 8, cast(0.1), cast(5.3));
+        assertEquals(1, plain.fighters.get(0).uses.size(), "without it, still on cooldown");
+    }
+
+    @Test
+    void aMarkedTargetResetsTheCooldown() {
+        Action mark = ArenaScenarios.order(0, 0.1, "ability", "2", 1);
+        Result r = fight(pair("zera_recarga_marca", 300), 2, mark, cast(0.5), cast(0.8), cast(1.1));
+        assertEquals(1.0, ev(r, 0, "recarga_zerada:1"), 1e-6, "the hit on the marked target resets, once");
+        assertEquals(1.0, ev(r, 0, "marca_consumida:marca"), 1e-6, "the mark is used up");
+        assertEquals(3, r.fighters.get(0).uses.size(), "mark, the hit that resets, one more hit; the last waits");
+    }
+
+    @Test
+    void storedDamageBecomesAShield() {
+        Result r = fight(attacked("armazena", 150), 4, cast(2.5));
+        double shieldAt = at(r, 2.55).units.get(0).shield;
+        Result early = fight(attacked("armazena", 150), 4, cast(0.05));
+        assertTrue(shieldAt > at(early, 0.1).units.get(0).shield + 20, "the damage taken became shield: " + shieldAt);
+    }
+
+    @Test
+    void aLineBetweenTheBladeAndTheCaster() {
+        Action aim = cast(0.1);
+        aim.x = 3600.0;
+        aim.y = 0.0;
+        Result r = fight(pair("linha_entre_pontos", 300), 2, aim, recast(0.5));
+        assertEquals(50, dealt(r, 0), 1e-6, "the target stands on the segment");
+        assertEquals("stun", at(r, 0.8).units.get(1).state, "and gets the effects");
+        Action off = cast(0.1);
+        off.x = 3000.0;
+        off.y = 600.0;
+        assertEquals(0, dealt(fight(pair("linha_entre_pontos", 300), 2, off, recast(0.5)), 0), 1e-6, "off the segment");
+    }
+
+    @Test
+    void permanentStacksByTheMinuteOrTheScenario() {
+        List<Arena.Input> in = pair("acumulos_permanentes", 300);
+        in.get(0).permanentStacks = 50.0;
+        Result r = fight(in, 1, cast(0.1));
+        assertEquals(60, dealt(r, 0), 1e-6, "base plus one per stack");
+        List<Arena.Input> byMinute = pair("acumulos_permanentes", 300);
+        byMinute.get(0).f.minute = 12;
+        assertEquals(10 + 120, dealt(fight(byMinute, 1, cast(0.1)), 0), 1e-6, "10 per minute");
+        List<Arena.Input> late = pair("acumulos_permanentes", 300);
+        late.get(0).f.minute = 40;
+        Result capped = fight(late, 1, cast(0.1));
+        assertEquals(10 + 300, dealt(capped, 0), 1e-6, "up to the max");
+        List<Arena.Input> early = pair("acumulos_permanentes", 300);
+        early.get(0).f.minute = 0;
+        Result none = fight(early, 1, cast(0.1));
+        assertEquals(at(capped, 0.5).units.get(0).maxHp - 600, at(none, 0.5).units.get(0).maxHp, 1e-6, "2 health per stack");
+    }
+
+    @Test
+    void camouflageIsSeenOnlyUpClose() {
+        Result r = fight(pair("camuflagem", 600), 4, cast(0.1), move(1, 1, 3150, 0), move(1, 2.5, 3900, 0));
+        assertTrue(at(r, 0.5).units.get(0).invisible, "far: hidden");
+        assertFalse(at(r, 2).units.get(0).invisible, "within the detection radius: seen");
+        assertTrue(at(r, 3.9).units.get(0).invisible, "the camouflage stayed on");
+    }
+
+    @Test
+    void damageReductionOfASheet() {
+        Result with = fight(attacked("reducao_dano", 150), 3, cast(0.05));
+        Result without = fight(attacked("reducao_dano", 150), 3);
+        double a = with.fighters.get(0).taken;
+        double b = without.fighters.get(0).taken;
+        assertEquals(b * 0.5, a, b * 0.05, "half the damage");
+    }
+
     @Test
     @SuppressWarnings("unchecked")
     void theRealAndSyntheticSheetsPassTheValidator() {

@@ -23,6 +23,8 @@ public final class ArenaModel {
         public Long buildId;
         /** Game minute of the build (null = its end of match, else its last purchase). */
         public Double minute;
+        /** Permanent stacks of the sheet's `acumulos_permanentes` (Nasus, Sion); null = estimated by the minute. */
+        public Double permanentStacks;
         /** Start position (null = next to its side's Nexus). */
         public Double x;
         public Double y;
