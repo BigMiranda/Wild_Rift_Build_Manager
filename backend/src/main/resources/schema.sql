@@ -329,3 +329,29 @@ CREATE TABLE IF NOT EXISTS community_guide (
     imported_at  TEXT NOT NULL,
     reviewed_at  TEXT
 );
+
+-- The whole match's trained macros (proposta-macro-treinada.md, Parte 4): one row per training, apart from the
+-- arena's AIs (arena_policy), so they never show up among the fight AIs nor in the automatic brain.
+CREATE TABLE IF NOT EXISTS macro_policy (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    version               INTEGER NOT NULL,          -- 1, 2, ... in the order they were trained
+    parent_id             INTEGER,                   -- the version its training started from (NULL = zero weights, the script)
+    accepted              INTEGER NOT NULL DEFAULT 0, -- validation winrate against the script at or above treino_macro.aceite
+    winrate               REAL,                      -- against the script on the validation seeds, both sides
+    games                 INTEGER,
+    fitness               REAL,
+    gold_per_min          REAL,
+    opponent_gold_per_min REAL,
+    deviations            REAL,                      -- actions per match where it left the script
+    generations           INTEGER,
+    population            INTEGER,
+    episodes              INTEGER,
+    seed                  INTEGER,
+    drafts                TEXT,                      -- JSON: the build ids of each training draft (one side, mirrored)
+    weights_json          TEXT NOT NULL,
+    obs_schema            INTEGER NOT NULL,
+    actions               INTEGER NOT NULL,
+    game_patch            TEXT,
+    rules                 INTEGER,                   -- MacroTraining.RULES when it was trained
+    created_at            TEXT NOT NULL
+);

@@ -247,3 +247,30 @@ partida, em vez dos do guia (08/11/2026). A velocidade das tropas do guia entrou
     terminando empatadas, vence quem empurra antes. Se a partida for calibrada para terminar no tempo do jogo, a vantagem
     pode mudar, e então a macro pede treino novo.
 
+### Parte 4 ✅ — guardar, escolher e mostrar
+- **Tabela `macro_policy`** (`SchemaManager.VERSION` 27 → 28; tabela nova, criada pelo `schema.sql`): versão, de qual
+  partiu, se foi aceita, a validação (vitórias, partidas, nota, ouro/min, desvios), como foi treinada, as composições, os
+  pesos, `obs_schema`, o número de ações, o patch e `rules`. O export público **apaga a tabela** (`PublicExporter.DROPPED`):
+  o público não lê a macro.
+- **`MacroPolicyRepository`** e **`MacroTrainingService`**: um treino por vez, no fundo, com o progresso por geração. No
+  fim, a validação e a versão salva. "Parar" cancela sem salvar. Começar de uma versão salva recusa as de outro esquema.
+  "Também contra as versões aceitas antes" mistura o roteiro com até 3 versões aceitas como adversárias.
+- **API** (`MatchController`, só fora da versão pública):
+  - `GET /api/match/macros` e `DELETE /api/match/macros/{id}`;
+  - `POST /api/match/macros/train`, `GET /api/match/macros/train[/{id}]` e `POST .../{id}/cancel`.
+
+  `POST /api/match/run` aceita `macroBlue` e `macroRed` (`script` ou `macro:<id>`), e o resultado diz a macro de cada lado.
+  Uma macro de outro esquema de observação ou de ações é recusada com 400. `/api/match/meta` traz o esquema, as ações, as
+  regras e o patch atuais.
+- **Aba "Partida"**:
+  - um seletor "Macro" por lado: Roteiro ou uma macro treinada atual ("Macro treinada v3 · 73% contra o roteiro");
+  - o painel **"Treinar a macro"**: as builds escolhidas de cada lado viram as composições. Tem gerações, candidatos e
+    episódios, de qual versão começar, uma estimativa de partidas e minutos, o progresso por geração no sino de tarefas e
+    "Parar";
+  - a tabela das versões, com aceita ou não, vitórias contra o roteiro, ouro/min, desvios, treino, data e "Apagar". Uma
+    versão de outro patch ou de outras regras aparece com aviso e não entra no seletor.
+- 🎯 `MacroTrainingTest`:
+  - uma macro salva com pesos zerados joga a mesma partida que o roteiro, e o resultado diz "Macro treinada vN" e
+    "Roteiro";
+  - a mesma macro, com outro `obs_schema`, é recusada;
+  - um treino mínimo pelo serviço roda, valida (2 partidas) e salva.

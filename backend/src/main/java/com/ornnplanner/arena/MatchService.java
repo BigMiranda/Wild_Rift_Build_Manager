@@ -42,6 +42,7 @@ public class MatchService {
     private final Map<String, Object> macro;
 
     private final com.ornnplanner.arena.guide.GuideService guides;
+    private final MacroPolicyRepository macros;
 
     /**
      * The seats with a guide (Rodada 9, part 7) buy by it: it is read at the draft against this match (the other side's
@@ -78,8 +79,10 @@ public class MatchService {
 
     public MatchService(ArenaService arena, PlannerService planner, BuildRepository builds, ChampionProfiles profiles,
                         @org.springframework.context.annotation.Lazy com.ornnplanner.arena.guide.GuideService guides,
+                        MacroPolicyRepository macros,
                         @Value("${planner.seed.macro:classpath:seed/macro_7_3d.yml}") Resource macroFile) {
         this.guides = guides;
+        this.macros = macros;
         this.arena = arena;
         this.planner = planner;
         this.builds = builds;
@@ -156,7 +159,49 @@ public class MatchService {
 
     public MatchModel.Result run(MatchModel.Request req) {
         com.ornnplanner.arena.rift.MacroPolicy script = scripted();
-        return run(draft(req), req.seed, req.limit, script, script);
+        com.ornnplanner.arena.rift.MacroPolicy blue = macroOf(req.macroBlue, script);
+        com.ornnplanner.arena.rift.MacroPolicy red = macroOf(req.macroRed, script);
+        MatchModel.Result r = run(draft(req), req.seed, req.limit, blue, red);
+        r.macros = List.of(macroLabel(req.macroBlue), macroLabel(req.macroRed));
+        return r;
+    }
+
+    private static Long macroId(String ref) {
+        if (ref == null || ref.isBlank() || "script".equals(ref)) {
+            return null;
+        }
+        if (!ref.startsWith("macro:")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Macro desconhecida: " + ref);
+        }
+        try {
+            return Long.parseLong(ref.substring("macro:".length()));
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Macro desconhecida: " + ref);
+        }
+    }
+
+    /**
+     * A side's macro: the script, or a trained one ("macro:&lt;id&gt;") over the same script. One of another observation
+     * schema or action count is refused.
+     */
+    public com.ornnplanner.arena.rift.MacroPolicy macroOf(String ref, com.ornnplanner.arena.rift.MacroPolicy script) {
+        Long id = macroId(ref);
+        if (id == null) {
+            return script;
+        }
+        MacroPolicyRepository.Record rec = macros.find(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "A macro treinada " + id + " não existe."));
+        if (rec.obsSchema != com.ornnplanner.arena.rift.MacroObservation.SCHEMA || rec.actions != com.ornnplanner.arena.rift.MacroActions.SIZE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A macro treinada v" + rec.version
+                    + " é de outro esquema de observação ou de ações: treine de novo.");
+        }
+        MacroPolicyRepository.Weights w = macros.weights(id);
+        return new com.ornnplanner.arena.rift.NeuralMacro(w.network(), new ScriptedMacro(macro), w.bonus);
+    }
+
+    private String macroLabel(String ref) {
+        Long id = macroId(ref);
+        return id == null ? "Roteiro" : macros.find(id).map(r -> "Macro treinada v" + r.version).orElse("?");
     }
 
     /** The seats of a request with a sheet good enough, their builds (after the guides) and roles. */
@@ -452,6 +497,11 @@ public class MatchService {
         });
         m.put("champions", ok);
         m.put("roles", ROLES);
+        // what a trained macro must match to be current (the screen warns about the others)
+        m.put("macroSchema", com.ornnplanner.arena.rift.MacroObservation.SCHEMA);
+        m.put("macroActions", com.ornnplanner.arena.rift.MacroActions.SIZE);
+        m.put("macroRules", MacroTraining.RULES);
+        m.put("patch", macros.gamePatch());
         return m;
     }
 }

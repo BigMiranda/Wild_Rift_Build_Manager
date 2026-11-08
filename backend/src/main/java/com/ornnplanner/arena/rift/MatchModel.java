@@ -30,6 +30,9 @@ public final class MatchModel {
         /** Minutes to stop at, when nobody destroyed a Nexus. */
         public double limit = 20;
         public long seed = 1;
+        /** The macro of each side: "script" (null too) or "macro:&lt;id&gt;", a trained one (proposta-macro-treinada.md). */
+        public String macroBlue;
+        public String macroRed;
     }
 
     /** One second of the replay: everyone's place, health, gold and level, and the towers standing. */
@@ -102,6 +105,8 @@ public final class MatchModel {
         public List<double[]> towers = new ArrayList<>();
         public Map<String, Object> world = new LinkedHashMap<>();
         public List<String> left = new ArrayList<>();
+        /** The macro of each side, for the screen: "Roteiro" or "Macro treinada v3". */
+        public List<String> macros = new ArrayList<>();
         /** What the run cost, for the report: seconds of the machine, and how many of them in fights. */
         public double runSeconds;
         public double fightSeconds;

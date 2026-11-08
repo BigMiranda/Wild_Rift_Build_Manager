@@ -9,6 +9,139 @@ import { RiftGround, RiftLegend, TEAM } from './Arena.jsx';
 const SEATS = 5;
 const STORE = 'ornn-planner-match';
 
+/** A trained macro of this schema, action count, rules and patch (the others still list, with a warning). */
+const current = (m, meta) => !meta || (m.obsSchema === meta.macroSchema && m.actions === meta.macroActions
+  && m.rules === meta.macroRules && (!meta.patch || m.gamePatch === meta.patch));
+
+const signed = (x) => `${x >= 0 ? '+' : ''}${x.toFixed(3).replace('.', ',')}`;
+
+/**
+ * "Treinar a macro" (proposta-macro-treinada.md): the picked builds of each side as one composition, the training in the
+ * background with its progress, and the trained versions with how they did against the script.
+ */
+function MacroPanel({ picks, builds, meta, macros, reload }) {
+  const [generations, setGenerations] = useState(30);
+  const [population, setPopulation] = useState(24);
+  const [episodes, setEpisodes] = useState(4);
+  const [parent, setParent] = useState('');
+  const [againstPrevious, setAgainstPrevious] = useState(false);
+  const [job, setJob] = useState(null);
+  const [error, setError] = useState(null);
+  const running = !!job && (job.status === 'rodando' || job.status === 'validando');
+  const last = job?.progress?.[job.progress.length - 1];
+  useTask('macro', running, { label: t('tasks.macro'), done: last ? last[0] : 0, total: job?.generations, path: '/simulacoes/partida' });
+
+  const drafts = useMemo(() => {
+    const out = [];
+    [0, 1].forEach((team) => {
+      const ids = picks.slice(team * SEATS, team * SEATS + SEATS).filter(Boolean).map(Number);
+      if (ids.length && !out.some((d) => d.join() === ids.join())) out.push(ids);
+    });
+    return out;
+  }, [picks]);
+  const name = (id) => builds.find((b) => b.id === id)?.name ?? id;
+
+  useEffect(() => {
+    api.get('/api/match/macros/train').then((jobs) => {
+      const live = jobs.find((j) => j.status === 'rodando' || j.status === 'validando');
+      if (live) setJob(live);
+    }).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!running) return undefined;
+    const id = setInterval(() => {
+      api.get(`/api/match/macros/train/${job.id}`).then((j) => {
+        setJob(j);
+        if (j.status !== 'rodando' && j.status !== 'validando') reload();
+      }).catch((e) => setError(e.message));
+    }, 2000);
+    return () => clearInterval(id);
+  }, [running, job?.id]);
+
+  const start = async () => {
+    setError(null);
+    try {
+      setJob(await api.post('/api/match/macros/train', {
+        drafts, generations, population, episodes, parentId: parent ? Number(parent) : null, againstPrevious,
+      }));
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const stop = async () => {
+    try {
+      setJob(await api.post(`/api/match/macros/train/${job.id}/cancel`));
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const remove = async (id) => {
+    try {
+      await api.del(`/api/match/macros/${id}`);
+      reload();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const matches = generations * population * episodes * 2;
+
+  return (
+    <section className="panel">
+      <h3>{t('macro.title')}</h3>
+      <p className="muted" style={{ marginTop: 0 }}>{t('macro.help')}</p>
+      <p>{drafts.length ? t('macro.drafts', { list: drafts.map((d) => d.map(name).join(', ')).join(' | ') }) : t('macro.none')}</p>
+      <div className="row">
+        <label className="inline">{t('macro.generations')}<input type="number" min={1} max={200} value={generations} style={{ width: 64 }} onChange={(e) => setGenerations(Number(e.target.value) || 1)} /></label>
+        <label className="inline">{t('macro.population')}<input type="number" min={2} max={128} value={population} style={{ width: 64 }} onChange={(e) => setPopulation(Number(e.target.value) || 2)} /></label>
+        <label className="inline">{t('macro.episodes')}<input type="number" min={1} max={32} value={episodes} style={{ width: 64 }} onChange={(e) => setEpisodes(Number(e.target.value) || 1)} /></label>
+        <label className="inline">{t('macro.from')}
+          <select value={parent} onChange={(e) => setParent(e.target.value)}>
+            <option value="">{t('macro.fromZero')}</option>
+            {macros.filter((m) => current(m, meta)).map((m) => <option key={m.id} value={m.id}>v{m.version}</option>)}
+          </select>
+        </label>
+        <label className="inline"><input type="checkbox" checked={againstPrevious} onChange={(e) => setAgainstPrevious(e.target.checked)} />{t('macro.againstPrevious')}</label>
+      </div>
+      <div className="row">
+        <span className="muted">{t('macro.estimate', { n: n0(matches), min: n0(matches / 10 / 60) })}</span>
+        {running
+          ? <button onClick={stop}>{t('macro.stop')}</button>
+          : <button className="primary" disabled={!drafts.length} onClick={start}>{t('macro.start')}</button>}
+      </div>
+      {job && (
+        <p className={job.status === 'erro' ? 'error' : 'muted'}>
+          {job.status === 'validando' ? t('macro.validating') : last && job.status === 'rodando'
+            ? t('macro.generation', { g: last[0], n: job.generations, mean: signed(last[1]), best: signed(last[2]), s: n0(last[3]) })
+            : job.message}
+        </p>
+      )}
+      {error && <p className="error">{error}</p>}
+      <h4>{t('macro.versions')}</h4>
+      {macros.length === 0 ? <p className="muted">{t('macro.empty')}</p> : (
+        <div className="table-scroll">
+          <table className="table">
+            <thead><tr><th>{t('macro.col.version')}</th><th>{t('macro.col.winrate')}</th><th>{t('macro.col.gold')}</th><th>{t('macro.col.deviations')}</th><th>{t('macro.col.training')}</th><th>{t('macro.col.when')}</th><th /></tr></thead>
+            <tbody>
+              {macros.map((m) => (
+                <tr key={m.id}>
+                  <td>v{m.version} <small className="muted">{m.accepted ? t('macro.accepted') : t('macro.rejected')}</small>
+                    {!current(m, meta) && <div className="warn"><small>{t('match.macro.old')}</small></div>}</td>
+                  <td>{Math.round(m.winrate * 100)}% <small className="muted">({m.games})</small></td>
+                  <td>{n0(m.goldPerMin)} <small className="muted">({n0(m.opponentGoldPerMin)})</small></td>
+                  <td>{m.deviations.toFixed(1).replace('.', ',')}</td>
+                  <td><small>{m.generations} × {m.population} × {m.episodes}{m.parentId ? ` · ← v${macros.find((x) => x.id === m.parentId)?.version ?? '?'}` : ''}</small></td>
+                  <td><small>{m.createdAt?.slice(0, 16).replace('T', ' ')}</small></td>
+                  <td><button className="link" onClick={() => remove(m.id)}>{t('macro.delete')}</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 const loadSetup = () => {
   try {
     return JSON.parse(localStorage.getItem(STORE)) ?? null;
@@ -25,6 +158,8 @@ export default function Match() {
   const [picks, setPicks] = useState(saved?.picks ?? Array(SEATS * 2).fill(''));
   const [limit, setLimit] = useState(saved?.limit ?? 20);
   const [seed, setSeed] = useState(saved?.seed ?? 1);
+  const [macroPick, setMacroPick] = useState(saved?.macros ?? ['script', 'script']);
+  const [macros, setMacros] = useState([]);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
   useTask('match', !!busy, { label: t('tasks.match'), path: '/simulacoes/partida' });
@@ -36,14 +171,16 @@ export default function Match() {
   useEffect(() => {
     api.get('/api/builds').then(setBuilds).catch((e) => setError(e.message));
     api.get('/api/match/meta').then(setMeta).catch((e) => setError(e.message));
+    api.get('/api/match/macros').then(setMacros).catch(() => setMacros([]));
   }, []);
+  const reloadMacros = () => api.get('/api/match/macros').then(setMacros).catch(() => {});
   useEffect(() => {
     try {
-      localStorage.setItem(STORE, JSON.stringify({ picks, limit, seed }));
+      localStorage.setItem(STORE, JSON.stringify({ picks, limit, seed, macros: macroPick }));
     } catch {
       /* session only */
     }
-  }, [picks, limit, seed]);
+  }, [picks, limit, seed, macroPick]);
   useEffect(() => {
     if (!playing || !result) return undefined;
     timer.current = setInterval(() => setSecond((s) => {
@@ -65,7 +202,8 @@ export default function Match() {
     setPlaying(false);
     try {
       const slots = picks.map((id, i) => (id ? { buildId: Number(id), team: i < SEATS ? 0 : 1, brain: 'tactical' } : null)).filter(Boolean);
-      const r = await api.post('/api/match/run', { slots, limit, seed });
+      const known = (m) => (m === 'script' || macros.some((x) => `macro:${x.id}` === m) ? m : 'script');
+      const r = await api.post('/api/match/run', { slots, limit, seed, macroBlue: known(macroPick[0]), macroRed: known(macroPick[1]) });
       setResult(r);
       setSecond(0);
     } catch (e) {
@@ -109,6 +247,14 @@ export default function Match() {
                   </select>
                 );
               })}
+              <label className="inline" style={{ display: 'flex', marginTop: 6 }}>{t('match.macro')}
+                <select value={macroPick[team]} onChange={(e) => setMacroPick(macroPick.map((v, x) => (x === team ? e.target.value : v)))}>
+                  <option value="script">{t('match.macro.script')}</option>
+                  {macros.filter((m) => current(m, meta)).map((m) => (
+                    <option key={m.id} value={`macro:${m.id}`}>{t('match.macro.version', { v: m.version, w: Math.round(m.winrate * 100) })}</option>
+                  ))}
+                </select>
+              </label>
             </div>
           ))}
         </div>
@@ -120,11 +266,13 @@ export default function Match() {
         {error && <p className="error">{error}</p>}
         {result?.left?.map((l) => <p key={l} className="warn">{l}</p>)}
       </section>
+      <MacroPanel picks={picks} builds={builds} meta={meta} macros={macros} reload={reloadMacros} />
       {result && now && (
         <>
           <section className="panel">
             <h3>{result.winner < 0 ? t('match.limitReached', { t: mmss(result.seconds / 60) }) : t('match.winner', { side: t(`report.team${result.winner}`), t: mmss(result.seconds / 60) })}</h3>
             <p className="muted">{t('match.cost', { s: n0(result.runSeconds), fights: n0(result.fightSeconds), n: result.fights.length })}</p>
+            {result.macros?.length === 2 && <p className="muted">{t('match.macros', { blue: result.macros[0], red: result.macros[1] })}</p>}
             <div className="row">
               <button onClick={() => setPlaying((p) => !p)}>{playing ? t('match.pause') : t('match.play')}</button>
               <input type="range" min={0} max={result.timeline.length - 1} value={second} style={{ flex: 1 }} aria-label={t('match.time')}

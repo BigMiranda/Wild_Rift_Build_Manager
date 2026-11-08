@@ -48,6 +48,11 @@ class MacroTrainingTest {
     @Autowired
     PlannerService planner;
 
+    @Autowired
+    com.ornnplanner.arena.MacroTrainingService service;
+    @Autowired
+    org.springframework.jdbc.core.JdbcTemplate jdbc;
+
     private MatchService.Draft draft;
     private final List<Long> ids = new ArrayList<>();
 
@@ -121,5 +126,69 @@ class MacroTrainingTest {
         Network many = training(8).train(MacroTraining.zeros(), listener);
         assertArrayEquals(one.weights(), many.weights());
         assertTrue(Arrays.stream(one.weights()).anyMatch(w -> w != 0), "the weights moved");
+    }
+
+    /** Parte 4: a macro saved with zero weights plays the script's match; one of another schema is refused. */
+    @Test
+    void aSavedMacroPlaysAndAnotherSchemaIsRefused() {
+        com.ornnplanner.arena.MacroPolicyRepository repo = service.repository();
+        com.ornnplanner.arena.MacroPolicyRepository.Record r = new com.ornnplanner.arena.MacroPolicyRepository.Record();
+        r.obsSchema = com.ornnplanner.arena.rift.MacroObservation.SCHEMA;
+        r.actions = com.ornnplanner.arena.rift.MacroActions.SIZE;
+        r.rules = MacroTraining.RULES;
+        r.drafts = List.of(List.copyOf(ids));
+        r.weights = com.ornnplanner.arena.MacroPolicyRepository.Weights.of(MacroTraining.zeros(), com.ornnplanner.arena.rift.NeuralMacro.BASE_BONUS);
+        long id = repo.insert(r).id;
+        MatchModel.Request req = request(5);
+        MatchModel.Result plain = matches.run(req);
+        req.macroBlue = "macro:" + id;
+        MatchModel.Result saved = matches.run(req);
+        assertEquals(plain.winner, saved.winner);
+        assertEquals(plain.seconds, saved.seconds);
+        assertEquals(plain.events.size(), saved.events.size());
+        assertEquals(List.of("Macro treinada v" + repo.find(id).get().version, "Roteiro"), saved.macros);
+        assertEquals(List.copyOf(ids), repo.find(id).get().drafts.get(0));
+        jdbc.update("UPDATE macro_policy SET obs_schema = 0 WHERE id = ?", id);
+        org.springframework.web.server.ResponseStatusException e = org.junit.jupiter.api.Assertions.assertThrows(
+                org.springframework.web.server.ResponseStatusException.class, () -> matches.run(req));
+        assertTrue(e.getReason().contains("outro esquema"), e.getReason());
+        assertTrue(repo.delete(id));
+    }
+
+    private MatchModel.Request request(long seed) {
+        MatchModel.Request req = new MatchModel.Request();
+        req.seed = seed;
+        req.limit = 12;
+        for (int side = 0; side < 2; side++) {
+            for (long id : ids) {
+                MatchModel.Slot s = new MatchModel.Slot();
+                s.buildId = id;
+                s.team = side;
+                req.slots.add(s);
+            }
+        }
+        return req;
+    }
+
+    /** Parte 4: "Treinar a macro" end to end, tiny: the job runs, validates and saves a version. */
+    @Test
+    void theServiceTrainsValidatesAndSaves() throws InterruptedException {
+        com.ornnplanner.arena.MacroTrainingService.TrainRequest req = new com.ornnplanner.arena.MacroTrainingService.TrainRequest();
+        req.drafts = List.of(List.copyOf(ids));
+        req.generations = 1;
+        req.population = 2;
+        req.episodes = 1;
+        req.validationSeeds = 1;
+        req.limit = 6;
+        com.ornnplanner.arena.MacroTrainingService.Job job = service.start(req);
+        long until = System.currentTimeMillis() + 300_000;
+        while (("rodando".equals(job.status) || "validando".equals(job.status)) && System.currentTimeMillis() < until) {
+            Thread.sleep(200);
+        }
+        assertEquals("pronto", job.status, job.message);
+        assertEquals(1, job.progress.size());
+        assertEquals(2, job.result.games);
+        assertTrue(service.repository().list().stream().anyMatch(x -> x.id == job.result.id));
+        service.repository().delete(job.result.id);
     }
 }

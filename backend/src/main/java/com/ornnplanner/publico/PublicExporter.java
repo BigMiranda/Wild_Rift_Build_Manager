@@ -56,7 +56,7 @@ public class PublicExporter {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     /** Tables the public version never reads: dropped. */
-    static final List<String> DROPPED = List.of("arena_dummy", "arena_guideline");
+    static final List<String> DROPPED = List.of("arena_dummy", "arena_guideline", "macro_policy");
     /** Columns no public read touches: dropped (table → columns). */
     static final Map<String, List<String>> DROPPED_COLUMNS = Map.of("build", List.of("include_conditional"));
 
