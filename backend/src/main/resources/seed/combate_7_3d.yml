@@ -169,14 +169,16 @@ ativacao:
 # Efeitos das runas na luta. Valores corpo a corpo; `_nv15`: faixa pelo nível do campeão (1–15).
 # `adaptativo`: Dano Físico, ou Mágico quando o Poder de Habilidade passa do Dano de Ataque adicional.
 #   eletrocutar        `acertos` ataques / habilidades no mesmo Campeão em `janela` s: dano (recarga pelo nível)
-#   colheita           dano num Campeão com menos de `vida_alvo` de Vida (recarga)
+#   colheita           dano num Campeão com menos de `vida_alvo` de Vida (recarga); + `por_alma` por alma: as da partida
+#                      (taxa da build, no minuto da luta) e as de cada acionamento na luta
 #   fortalecimento     `ataques` seguidos no mesmo Campeão: dano e `amplifica` de dano até sair de combate (recarga)
 #   ritmo_fatal        com os acúmulos no máximo (gatilho da runa ativo), ataques causam dano (+ `por_vel_ataque` por
 #                      1% de VdA adicional)
 #   aperto             a cada `a_cada` s em combate o próximo ataque num Campeão causa `vida_max` x sua Vida máxima e
 #                      cura `cura_vida_max` x Vida máxima (o +8 de Vida permanente é do planejador, por minuto)
 #   aery               ataques e habilidades mandam a Aery: dano; ela volta em `retorno` s
-#   cometa             habilidade que causa dano lança o cometa: dano depois de `atraso` s (+ `por_acerto` por acerto)
+#   cometa             habilidade que causa dano lança o cometa: dano depois de `atraso` s (+ `por_acerto` por acerto: os da
+#                      partida, pela taxa da build, e os da luta)
 #   primeiro_ataque    dano nos primeiros `janela` s de combate: `pct` de Dano Verdadeiro a mais por `duracao` s
 #   suserano           ao imobilizar: explosão de dano em `raio` depois de `atraso` s e Lentidão (gatilho dá as defesas)
 #   golpe_desleal      dano em alvo com Lentidão ou imobilizado (recarga)
@@ -189,14 +191,16 @@ ativacao:
 #   dilacerar          ataques: +`pct` em Campeões acima de `vida_alvo_acima`
 #   misericordia       +`pct` em Campeões abaixo de `vida_alvo_abaixo`
 #   chamuscar          habilidade que causa dano queima: dano depois de `atraso` s (recarga)
-#   arcanista          ultimate: +`pct` de dano
+#   arcanista          só a própria ultimate: +`pct` de dano (acertos e dano ao longo do tempo), cura e escudo; passivas
+#                      de itens que a ultimate aciona (Virtude Radiante, Hexoplaca) não
 #   transcendencia     a partir do `nivel_min`: habilidade básica que acerta reduz a própria recarga em `pct` (recarga)
 #   nimbus             depois de um feitiço: +`pct` de Velocidade de Movimento por `duracao` s
 #   revitalizar        curas e escudos em alvos abaixo de `vida_abaixo`: +`pct`
-#   hubris             ao abater: +`dda` de Dano de Ataque por `duracao` s
+#   hubris             ao abater: +`dda` + `por_abate` x abates (os da partida, pela taxa da build, e os da luta, este
+#                      incluído) de Dano de Ataque por `duracao` s
 runas:
   Eletrocutar: [{tipo: eletrocutar, acertos: 3, janela: 3, dano: 60, dano_nv15: 210, dda_bonus: 0.10, pdh: 0.05, recarga: 20, recarga_nv15: 13, dano_tipo: adaptativo}]
-  Colheita Sombria: [{tipo: colheita, vida_alvo: 0.5, dano: 35, dda_bonus: 0.10, pdh: 0.05, recarga: 20, dano_tipo: adaptativo}]
+  Colheita Sombria: [{tipo: colheita, vida_alvo: 0.5, dano: 35, por_alma: 11, dda_bonus: 0.10, pdh: 0.05, recarga: 20, dano_tipo: adaptativo}]
   Fortalecimento: [{tipo: fortalecimento, ataques: 3, dano: 40, dano_nv15: 165, recarga: 4, amplifica: 0.08, dano_tipo: adaptativo}]
   Ritmo Fatal: [{tipo: ritmo_fatal, dano: 9, dano_nv15: 30, por_vel_ataque: 0.005, dano_tipo: adaptativo}]
   Aperto dos Mortos-Vivos: [{tipo: aperto, a_cada: 3, vida_max: 0.03, cura_vida_max: 0.013, dano_tipo: magico}]
@@ -219,7 +223,7 @@ runas:
   Transcendência: [{tipo: transcendencia, nivel_min: 9, pct: 0.08, recarga: 8}]
   Manto de Nimbus: [{tipo: nimbus, pct: 0.25, duracao: 3}]   # 10–40% pela recarga do feitiço: 25% (EST)
   Revitalizar: [{tipo: revitalizar, pct: 0.10, vida_abaixo: 0.4}]
-  Húbris: [{tipo: hubris, dda: 6, duracao: 30}]   # 5 + 1 por abate
+  Húbris: [{tipo: hubris, dda: 5, por_abate: 1, duracao: 30}]
 
 # Quando cada efeito condicional do planejador vale na Arena. Chave: "Item|Efeito" (efeitos_itens), "Item|Passiva"
 # (linhas condicionais da loja), runa ou efeito de campeão. O status que o efeito dá (com a Forja Viva e o resto da
@@ -343,7 +347,6 @@ gatilhos:
   Perseverança: {quando: ao_ser_imobilizado, duracao: 1.5}
   Fonte da Vida: {quando: ao_causar_dano, de: [ataque, habilidade], recarga: 20}
   Coragem do Colosso: {quando: ao_imobilizar, duracao: 3, recarga: 18}
-  "Lenda: Espontaneidade": {quando: estatico, nota: "abates da partida"}
-  "Lenda: Aceleração": {quando: estatico, nota: "abates da partida"}
-  "Lenda: Linhagem": {quando: estatico, nota: "abates da partida"}
+  Húbris: {quando: modelado, nota: "o efeito de combate dá 5 + 1 por abate ao abater, por 30s"}
+  Caça Incansável: {quando: fora_de_combate}
   Foco Absoluto: {quando: vida_acima, vida: 0.65}

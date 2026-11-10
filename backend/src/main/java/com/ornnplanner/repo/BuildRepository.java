@@ -77,6 +77,12 @@ public class BuildRepository {
         public double perMinute;
     }
 
+    /** From a game minute on (until the next step), a rune option's value. */
+    public static class OptionStep {
+        public double start;
+        public int value;
+    }
+
     /** Gold earned at a game minute. */
     public static class GoldEvent {
         public double minute;
@@ -93,6 +99,11 @@ public class BuildRepository {
         public String secondaryRune;
         /** Rune name -> option value (enemies nearby, stacks...). */
         public Map<String, Integer> options = new LinkedHashMap<>();
+        /**
+         * Rune name -> its option by the match's minute (Inabalável: enemies nearby in the lane, the ganks and the team
+         * fights), each step from its start minute until the next; none = the rune's default steps.
+         */
+        public Map<String, List<OptionStep>> optionSteps = new LinkedHashMap<>();
         /** Rune name -> count its conditional effects (default true). */
         public Map<String, Boolean> conditional = new LinkedHashMap<>();
         /**

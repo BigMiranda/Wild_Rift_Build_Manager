@@ -176,6 +176,40 @@ class ItemEffectsTest {
     }
 
     @Test
+    void stackingRunesGrowByMinuteUpToTheirLimit() {
+        RuneCatalog runes = new RuneCatalog(new ClassPathResource("seed/runas_7_3d.yml"),
+                new ClassPathResource("seed/feiticos_7_3d.yml"), new ClassPathResource("seed/precos_status.yml"));
+        // Coleção de Olhos: 1 kill per minute -> 1.5 AD each, up to 8 stacks (12 AD).
+        ItemDef eyes = runes.toItem("Coleção de Olhos", null, -1, List.of(new double[] {0, 1})).orElseThrow();
+        StatLine ad = eyes.stats.stream().filter(l -> l.perMinute != null).findFirst().orElseThrow();
+        assertEquals(7.5, ad.valueAt(1, 5), EPS);
+        assertEquals(12, ad.valueAt(1, 20), EPS);
+        // Lenda: Aceleração: 15 AH over 10 stacks; no rate, no bonus.
+        assertTrue(runes.toItem("Lenda: Aceleração", null, -1).orElseThrow().stats.isEmpty());
+        ItemDef haste = runes.toItem("Lenda: Aceleração", null, -1, List.of(new double[] {0, 0.5})).orElseThrow();
+        assertEquals(15, haste.stats.get(0).valueAt(1, 30), EPS);
+        assertEquals(7.5, haste.stats.get(0).valueAt(1, 10), EPS);
+        // Húbris: 5 + 1 per kill, both conditional (30s after a kill).
+        ItemDef hubris = runes.toItem("Húbris", null, -1, List.of(new double[] {0, 0.2})).orElseThrow();
+        assertTrue(hubris.stats.stream().allMatch(l -> l.conditional));
+        assertEquals(2, hubris.stats.stream().filter(l -> l.perMinute != null).findFirst().orElseThrow().valueAt(1, 10), EPS);
+        // Colheita Sombria: the souls only count in the fights.
+        assertTrue(runes.toItem("Colheita Sombria", null, -1, List.of(new double[] {0, 0.5})).orElseThrow().stats.isEmpty());
+        assertEquals(5, runes.stacksAt("Colheita Sombria", List.of(new double[] {0, 0.5}), 10), EPS);
+        assertEquals(8, runes.stacksAt("Coleção de Olhos", List.of(new double[] {0, 1}), 30), EPS);
+        // Inabalável: 1 enemy nearby in the lane, 2 in the ganks, 3 in the team fights (3% + 2% each).
+        ItemDef unshaken = runes.toItem("Inabalável", null, -1, null, null).orElseThrow();
+        StatLine armor = unshaken.stats.get(0);
+        assertEquals(0.05, armor.ratioAt(1, 2), EPS);
+        assertEquals(0.07, armor.ratioAt(1, 10), EPS);
+        assertEquals(0.09, armor.ratioAt(1, 20), EPS);
+        ItemDef own = runes.toItem("Inabalável", null, -1, null, List.of(new double[] {0, 0}, new double[] {20, 3})).orElseThrow();
+        assertEquals(0.03, own.stats.get(0).ratioAt(1, 10), EPS);
+        assertEquals(0.09, own.stats.get(0).ratioAt(1, 25), EPS);
+        assertEquals(0.07, runes.toItem("Inabalável", 2, -1).orElseThrow().stats.get(0).ratioAt(1, 25), EPS);
+    }
+
+    @Test
     void omnivampRuneAndPricesByFactor() {
         RuneCatalog runes = new RuneCatalog(new ClassPathResource("seed/runas_7_3d.yml"),
                 new ClassPathResource("seed/feiticos_7_3d.yml"), new ClassPathResource("seed/precos_status.yml"));

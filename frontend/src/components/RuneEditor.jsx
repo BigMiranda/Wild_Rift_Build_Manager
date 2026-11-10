@@ -295,14 +295,24 @@ export function EffectOptions({ entries, state, set, matchEnd, icon, title, deta
             <div className="rune-option-head">
               {icon && <img src={icon(r)} alt="" width={22} height={22} className={r.iconClass} />}
               <strong>{r.label ?? r.name}</strong>
-              {r.option && (
+              {r.option && r.option.periods && (
+                <OptionSteps option={r.option} steps={page.optionSteps?.[r.name]}
+                  onChange={(list) => set({ optionSteps: { ...page.optionSteps, [r.name]: list } })} />
+              )}
+              {r.option && !r.option.periods && (
                 <label>
                   {r.option.name}
                   <input type="number" min={r.option.min} max={r.option.max} value={value}
                     onChange={(e) => set({ options: { ...page.options, [r.name]: Math.max(r.option.min, Math.min(r.option.max, Number(e.target.value))) } })} />
                 </label>
               )}
-              {r.rate && <small className="muted">{t('runes.perStackFixed', { per: n0(r.rate.perStack), stat: statLabel(r.rate.stat) })}</small>}
+              {r.rate && (
+                <small className="muted">
+                  {t('runes.perStackFixed', { per: num(r.rate.perStack), stat: rateLabel(r.rate) })}
+                  {r.rate.maxStacks ? ` · ${t('runes.rateMaxStacks', { n: r.rate.maxStacks })}` : ''}
+                  {!r.rate.stat ? ` · ${t('runes.fightOnly')}` : ''}
+                </small>
+              )}
               {r.hasConditional && (
                 <button className={`opt${cond ? ' on' : ''}`} aria-pressed={cond} title={t('bar.condTitle')}
                   onClick={() => set({ conditional: { ...page.conditional, [r.name]: !cond } })}>
@@ -362,6 +372,41 @@ export function EffectOptions({ entries, state, set, matchEnd, icon, title, deta
   );
 }
 
+/** A stat amount with one decimal only when it has one (1.5 de Dano de Ataque, 11 de dano). */
+const num = (v) => (Number.isInteger(v) ? n0(v) : n1(v));
+
+/** What a rune's stacks add: its stat, or (stacks that only count in the fights) what they add there. */
+const rateLabel = (rate) => (rate.stat ? statLabel(rate.stat) : rate.fight);
+
+/**
+ * An option that changes with the match's minute (Inabalável: 1 enemy in the lane, 2 in the ganks, 3 in the team
+ * fights): steps {start, value}, each until the next one; without the build's own, the rune's defaults.
+ */
+function OptionSteps({ option, steps, onChange }) {
+  const list = Array.isArray(steps) && steps.length ? steps : option.periods.map((p) => ({ start: p.start, value: p.value }));
+  const clamp = (v) => Math.max(option.min, Math.min(option.max, Math.round(Number(v) || 0)));
+  return (
+    <span className="rune-periods" title={t('runes.optionByMinute')}>
+      <small>{option.name} {t('runes.optionByMinute')}:</small>
+      {list.map((p, i) => (
+        <span key={i} className="rune-period">
+          <small>{t('runes.periodFrom')}</small>
+          {i === 0
+            ? <span className="period-start">0:00</span>
+            : <MinuteInput value={p.start} placeholder="14:00" aria-label={t('runes.periodFrom')}
+                onChange={(m) => onChange(list.map((x, k) => (k === i ? { ...x, start: m ?? 0 } : x)))} />}
+          <input type="number" min={option.min} max={option.max} value={p.value} aria-label={option.name}
+            onChange={(e) => onChange(list.map((x, k) => (k === i ? { ...x, value: clamp(e.target.value) } : x)))} />
+          {i > 0 && <button className="icon danger" onClick={() => onChange(list.filter((_, k) => k !== i))} aria-label={t('runes.periodRemove')}>✕</button>}
+        </span>
+      ))}
+      <button className="link" onClick={() => onChange([...list, { start: (list[list.length - 1].start ?? 0) + 5, value: clamp(list[list.length - 1].value + 1) }])}>
+        {t('runes.stepAdd')}
+      </button>
+    </span>
+  );
+}
+
 /** Sum of per-minute periods ({start, perMinute}, each until the next start) up to a minute. */
 function accumulated(periods, minute) {
   const list = [...periods].filter((p) => p.perMinute > 0 || p.perMinute === 0).sort((x, y) => x.start - y.start);
@@ -392,23 +437,28 @@ function minuteReaching(periods, amount) {
  */
 function RateEstimate({ rune, periods, matchEnd, onUse }) {
   const [reported, setReported] = useState('');
-  const { stat, perStack, bonusStacks, bonusRatio, report } = rune.rate;
+  const { stat, perStack, bonusStacks, bonusRatio, report, maxStacks } = rune.rate;
+  const label = rateLabel(rune.rate);
   const until = matchEnd > 0 ? matchEnd : 30;
   const marks = [5, 10, 15, 20, 25, 30].filter((m) => m < until);
   const any = periods.some((p) => p.perMinute > 0);
   const reach = bonusStacks ? minuteReaching(periods, bonusStacks) : null;
+  const full = maxStacks ? minuteReaching(periods, maxStacks) : null;
+  // stacks at a minute, within the rune's limit (Coleção de Olhos: 8)
+  const at = (m) => (maxStacks ? Math.min(maxStacks, accumulated(periods, m)) : accumulated(periods, m)) * perStack;
   const fromReport = Number(reported) > 0 && matchEnd > 0 ? Number(reported) / perStack / matchEnd : null;
   return (
     <div className="rune-estimate">
       {any ? (
         <small>
-          {t('runes.rateTotal', { stat: statLabel(stat) })}
-          {marks.map((m) => ` · ${mmss(m)} → ${n0(accumulated(periods, m) * perStack)}`).join('')}
-          {matchEnd > 0 && ` · ${mmss(matchEnd)} → ${n0(accumulated(periods, matchEnd) * perStack)}`}
+          {t('runes.rateTotal', { stat: label })}
+          {marks.map((m) => ` · ${mmss(m)} → ${num(Math.round(at(m) * 10) / 10)}`).join('')}
+          {matchEnd > 0 && ` · ${mmss(matchEnd)} → ${num(Math.round(at(matchEnd) * 10) / 10)}`}
+          {maxStacks && full != null && ` · ${t('runes.rateFull', { n: maxStacks, time: mmss(full) })}`}
           {bonusStacks && reach != null && ` · ${t('runes.rateBonus', { pct: n0(bonusRatio * 100), stat: statLabel(stat), time: mmss(reach), n: bonusStacks })}`}
         </small>
       ) : (
-        <small className="muted">{t('runes.rateHint', { per: n0(perStack), stat: statLabel(stat) })}</small>
+        <small className="muted">{t('runes.rateHint', { per: num(perStack), stat: label })}</small>
       )}
       {report && (
         <small className="rune-convert">

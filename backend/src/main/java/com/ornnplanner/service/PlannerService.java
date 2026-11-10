@@ -282,6 +282,9 @@ public class PlannerService {
             long id = -1;
             for (String name : build.runePage.chosen()) {
                 Integer opt = build.runePage.options == null ? null : build.runePage.options.get(name);
+                if (runes.find(name).map(r -> r.option != null && r.option.periods != null).orElse(false)) {
+                    opt = null;   // an option by the minute (Inabalável): the build's steps or the rune's defaults
+                }
                 List<double[]> periods = new java.util.ArrayList<>();
                 if (build.runePage.rates != null && build.runePage.rates.get(name) != null) {
                     for (com.ornnplanner.repo.BuildRepository.RatePeriod p : build.runePage.rates.get(name)) {
@@ -293,7 +296,14 @@ public class PlannerService {
                         in.extraGold.add(new double[] {g.minute, g.gold});
                     }
                 }
-                runes.toItem(name, opt, id--, periods).ifPresent(item -> {
+                List<double[]> steps = null;
+                if (build.runePage.optionSteps != null && build.runePage.optionSteps.get(name) != null) {
+                    steps = new java.util.ArrayList<>();
+                    for (com.ornnplanner.repo.BuildRepository.OptionStep s : build.runePage.optionSteps.get(name)) {
+                        steps.add(new double[] {s.start, s.value});
+                    }
+                }
+                runes.toItem(name, opt, id--, periods, steps).ifPresent(item -> {
                     in.runes.add(item);
                     in.runeConditional.add(build.runePage.conditional == null
                             || !Boolean.FALSE.equals(build.runePage.conditional.get(name)));

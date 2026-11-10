@@ -52,6 +52,13 @@ public final class Model {
          * (e.g. a rune's health from activations: more in the farming phase, fewer in the team fights).
          */
         public List<double[]> perMinute;
+        /** Most the per-minute periods can add up to (a rune with a stack limit: Coleção de Olhos, 8 stacks); null = no limit. */
+        public Double perMinuteMax;
+        /**
+         * Ratio by game time, in steps {from minute, ratio}, each until the next (e.g. Inabalável: one enemy nearby in the
+         * lane, more in the ganks and the team fights).
+         */
+        public List<double[]> ratioSteps;
         /** Line that only counts from this game minute on (e.g. +3% health once a rune reaches 30 stacks). */
         public Double minMinute;
         /**
@@ -94,7 +101,25 @@ public final class Model {
 
         /** Ratio at a level and game minute: a ratio per stack grows with the stacks gathered (per-minute periods). */
         public double ratioAt(int level, double minute) {
-            return perMinute == null ? ratioAt(level) : ratioAt(level) * accumulated(perMinute, minute);
+            double r = ratioSteps != null && !ratioSteps.isEmpty() ? stepAt(ratioSteps, minute) : ratioAt(level);
+            return perMinute == null ? r : r * stacks(minute);
+        }
+
+        /** What the per-minute periods add up to at a minute, within the line's limit. */
+        public double stacks(double minute) {
+            double total = accumulated(perMinute, minute);
+            return perMinuteMax == null ? total : Math.min(perMinuteMax, total);
+        }
+
+        /** Value of the step a minute falls in (steps {from minute, value}, sorted; before the first: the first). */
+        public static double stepAt(List<double[]> steps, double minute) {
+            double v = steps.get(0)[1];
+            for (double[] s : steps) {
+                if (minute >= s[0] - 1e-9) {
+                    v = s[1];
+                }
+            }
+            return v;
         }
 
         private double perLevel(int level) {
@@ -166,7 +191,7 @@ public final class Model {
         /** Flat value at a level and game minute. */
         public double valueAt(int level, double minute) {
             if (perMinute != null) {
-                return accumulated(perMinute, minute) * (levelValues != null ? perLevel(level) : 1);
+                return stacks(minute) * (levelValues != null ? perLevel(level) : 1);
             }
             if (stepValues != null && !stepValues.isEmpty()) {
                 if (minute < stepStart - 1e-9) {

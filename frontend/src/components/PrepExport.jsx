@@ -14,6 +14,7 @@ export function exportablePage(page) {
     ...page,
     primaryRunes: [...(page.primaryRunes ?? [null, null, null])],
     options: only(page.options),
+    optionSteps: only(page.optionSteps),
     conditional: only(page.conditional),
     rates: only(page.rates),
     gold: only(page.gold),

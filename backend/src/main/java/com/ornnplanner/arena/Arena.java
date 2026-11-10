@@ -292,6 +292,9 @@ public class Arena {
         int attackChain;
         U lastAttackTarget;
         int cometHits;
+        /** Souls Colheita Sombria reaped in this fight, and champions it killed in this fight (Húbris). */
+        int harvestSouls;
+        int hubrisKills;
         String lastCast;
         double nextRegen;
         // structured events (counters only: they never change the fight)
@@ -5337,6 +5340,14 @@ public class Arena {
         if (amount <= 0 || s.dead) {
             return;
         }
+        if (sources.size() == 1) {
+            String k = sources.keySet().iterator().next();
+            double boost = ultBoost(k);
+            if (boost != 1) {
+                amount *= boost;
+                sources = Map.of(k, amount);
+            }
+        }
         amount *= revitalize(s);
         double gw = now < s.gwUntil ? s.gw : 0;
         double total = sources.values().stream().mapToDouble(Double::doubleValue).sum();
@@ -5358,7 +5369,34 @@ public class Arena {
         }
     }
 
+    /**
+     * Axiom Arcanist: the heals and shields of the caster's own ultimate (ledger key "owner|R · Name") are bigger; an
+     * item's passive the ultimate sets off (Virtude Radiante) has its own key and is not.
+     */
+    private double ultBoost(String key) {
+        int bar = key == null ? -1 : key.indexOf('|');
+        if (bar <= 0 || !key.startsWith("R ·", bar + 1)) {
+            return 1;
+        }
+        int owner;
+        try {
+            owner = Integer.parseInt(key.substring(0, bar));
+        } catch (NumberFormatException e) {
+            return 1;
+        }
+        if (owner >= units.size()) {
+            return 1;
+        }
+        for (ItemEffect e : units.get(owner).f.effects) {
+            if ("arcanista".equals(e.kind())) {
+                return 1 + num(e.p.get("pct"), 0.1);
+            }
+        }
+        return 1;
+    }
+
     private void addShield(U s, double amount, String source, double until, String type) {
+        amount *= ultBoost(source);
         amount *= revitalize(s);
         int bar = source.indexOf('|');
         if (recordFrames && bar > 0 && source.substring(0, bar).chars().allMatch(Character::isDigit)) {
@@ -5967,7 +6005,11 @@ public class Arena {
                 fireAll(a, "abate", null);
                 for (ItemEffect fx : a.f.effects) {
                     if ("hubris".equals(fx.kind())) {
-                        a.buffs.put("hubris", new double[] {num(fx.p.get("dda"), 6), now + num(fx.p.get("duracao"), 30)});
+                        // 5 + 1 per champion it killed: the match's kills before the fight and this fight's, this one included
+                        a.hubrisKills++;
+                        double dda = num(fx.p.get("dda"), 5)
+                                + num(fx.p.get("por_abate"), 1) * (num(fx.p.get("acumulos_partida"), 0) + a.hubrisKills);
+                        a.buffs.put("hubris", new double[] {dda, now + num(fx.p.get("duracao"), 30)});
                         led(key(a, fx.item));
                     }
                 }
@@ -6100,7 +6142,9 @@ public class Arena {
                     }
                     break;
                 case "arcanista":
-                    pct = ult && kind == ABILITY ? num(e.p.get("pct"), 0.1) : 0;
+                    // only the ultimate's own damage (its hits and its damage over time), never an item's passive
+                    // that the ultimate sets off (Virtude Radiante, Hexoplaca...)
+                    pct = ult && (kind == ABILITY || kind == DOT) ? num(e.p.get("pct"), 0.1) : 0;
                     break;
                 case "fortalecimento":
                     pct = now < a.buff("fortalecimento") ? num(e.p.get("amplifica"), 0.08) : 0;
@@ -6135,6 +6179,15 @@ public class Arena {
                     break;
                 }
                 case "colheita":
+                    if (hpBefore / Math.max(1, t.maxHp) < num(e.p.get("vida_alvo"), 0.5) && runeReady(a, e.item)) {
+                        runeCooldown(a, e);
+                        proc(a, "runa", e.item);
+                        // each soul reaped (the match's before the fight, and this fight's) adds for good
+                        double souls = num(e.p.get("acumulos_partida"), 0) + a.harvestSouls;
+                        a.harvestSouls++;
+                        deal(a, t, runeDamage(a, e.p) + num(e.p.get("por_alma"), 0) * souls, fxType(a, e.p), e.item, ITEM, 0);
+                    }
+                    break;
                 case "tirano":
                     if (hpBefore / Math.max(1, t.maxHp) < num(e.p.get("vida_alvo"), 0.5) && runeReady(a, e.item)) {
                         runeCooldown(a, e);
@@ -6275,7 +6328,8 @@ public class Arena {
                     if (runeReady(s, e.item)) {
                         runeCooldown(s, e);
                         proc(s, "runa", e.item);
-                        double dmg = runeDamage(s, e.p) + num(e.p.get("por_acerto"), 2) * s.cometHits;
+                        double dmg = runeDamage(s, e.p) + num(e.p.get("por_acerto"), 2)
+                                * (num(e.p.get("acumulos_partida"), 0) + s.cometHits);
                         at(now + num(e.p.get("atraso"), 1), () -> {
                             if (!t.dead && !s.dead) {
                                 s.cometHits++;

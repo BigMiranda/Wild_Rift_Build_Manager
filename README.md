@@ -291,12 +291,22 @@ Implementadas e documentadas em [`TimelineEngine`](backend/src/main/java/com/orn
     de mais farm e outras de mais lutas. O valor de cada ativação é o do jogo. O editor mostra quanto de Vida isso dá
     em vários momentos e quando os 30 acúmulos chegam, e converte a partir do relatório de runas do fim da partida
     ("Aumento de Vida: 410" em 22:00 → taxa média).
+  - **Runas de acúmulo** seguem o mesmo jeito, com o limite do jogo: Coleção de Olhos (+1,5 de Dano de Ataque por
+    abate, até 8), Sentinela Zumbi (+3 por sentinela destruída, até 5), Caça Incansável (10 + 2 de Velocidade de
+    Movimento por abate, até 5, fora de combate), as três Lendas (Espontaneidade 18% de VdA, Aceleração 15 de AH,
+    Linhagem 7% de Vampirismo Universal, estimadas em 10 acúmulos) e Húbris (5 + 1 de Dano de Ataque por abate, por
+    30s depois de um abate). Colheita Sombria (+11 de dano por alma) e Cometa Arcano (+2 de dano por acerto) não dão
+    status: os acúmulos do minuto da luta entram no dano delas na Arena, somados aos da própria luta.
+  - **Inabalável**: o número de campeões inimigos próximos muda com o minuto da partida, em degraus que a build pode
+    mudar (padrão: 1 até 5:00 na rota, 2 até 14:00 nas emboscadas, 3 depois nas lutas em equipe).
+  - **Arcanista do Axioma** vale só para a própria ultimate (dano, também ao longo do tempo, cura e escudo dela): passivas
+    de itens que a ultimate aciona, como a Virtude Radiante, não são amplificadas.
   - **Tempestade Crescente** cresce sozinha com o tempo de jogo (2, 5, 9, 14, 20... de Dano de Ataque a cada 3 min a
     partir de 6 min, sem limite).
   - **Runas que rendem ouro** (Demolir, Primeiro Ataque, Especialista em Botânica): a build informa quanto ouro entrou
     e em que minuto; esse ouro adianta as compras.
-  - Limites que existem no jogo continuam (Coleção de Olhos 8, Sentinela Zumbi 5, Faixa de Fluxo de Mana 300 de Mana,
-    Inabalável até 3 inimigos).
+  - Limites que existem no jogo continuam (Coleção de Olhos 8, Sentinela Zumbi 5, Caça Incansável 5, Faixa de Fluxo de
+    Mana 300 de Mana, Inabalável até 3 inimigos).
 - **Fim da partida** (m:ss, no cabeçalho da build): a linha do tempo e os gráficos vão até ele (sem ele, até um pouco
   depois da última compra).
 - **Passivas adquiridas**: no gráfico, o chip "Passivas" troca as linhas por barras empilhadas (um bloco por passiva

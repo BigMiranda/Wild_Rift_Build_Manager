@@ -32,17 +32,34 @@ public class RuneCatalog {
         public int min;
         public int max;
         public int defaultValue;
+        /**
+         * The option changes with the match's minute (Inabalável: enemies nearby): default steps {start, value}, each
+         * until the next; the build may give its own. Null = one value for the whole match.
+         */
+        public List<Step> periods;
+    }
+
+    /** From a game minute on (until the next step), an option's value. */
+    public static class Step {
+        public double start;
+        public int value;
     }
 
     /**
-     * Rune that scales without limit with the player's actions: the build gives a rate (activations / stacks per
-     * minute), like gold/min and XP/min. Each one is worth {@code perStack} of {@code stat}; {@code bonusRatio} of
-     * {@code bonusRef} is added once {@code bonusStacks} are reached.
+     * Rune that grows with the player's actions over the match: the build gives a rate (activations / stacks per
+     * minute), like gold/min and XP/min. Each one is worth {@code perStack} of {@code stat}, up to {@code maxStacks}
+     * (null = no limit); {@code bonusRatio} of {@code bonusRef} is added once {@code bonusStacks} are reached. Without a
+     * stat the stacks only count in the fights ({@code fight} says what they add there: Colheita Sombria's souls).
      */
     public static class Rate {
         public String name;
         public String stat;
         public double perStack;
+        public Integer maxStacks;
+        /** The stacks' line counts only with the rune's conditional effects on (Húbris: 30s after a kill). */
+        public boolean conditional;
+        /** What each stack adds in the fights, for a rune whose stacks give no stat (e.g. "Dano da Colheita Sombria"). */
+        public String fight;
         /** Name of the matching value in the game's end-of-match rune report (to convert from it). */
         public String report;
         public Integer bonusStacks;
@@ -158,6 +175,16 @@ public class RuneCatalog {
             r.option.min = ((Number) o.get("min")).intValue();
             r.option.max = ((Number) o.get("max")).intValue();
             r.option.defaultValue = ((Number) o.get("padrao")).intValue();
+            List<Map<String, Object>> steps = (List<Map<String, Object>>) o.get("por_tempo");
+            if (steps != null) {
+                r.option.periods = new ArrayList<>();
+                for (Map<String, Object> s : steps) {
+                    Step p = new Step();
+                    p.start = num(s.get("inicio"));
+                    p.value = ((Number) s.get("valor")).intValue();
+                    r.option.periods.add(p);
+                }
+            }
         }
         r.statusRaw = (List<Map<String, Object>>) v.getOrDefault("status", List.of());
         r.effectsRaw = (List<Map<String, Object>>) v.getOrDefault("efeitos", List.of());
@@ -165,9 +192,12 @@ public class RuneCatalog {
         if (rate != null) {
             r.rate = new Rate();
             r.rate.name = str(rate.get("nome"));
-            r.rate.stat = code(str(rate.get("tipo")));
+            r.rate.stat = rate.get("tipo") == null ? null : code(str(rate.get("tipo")));
             r.rate.perStack = num(rate.get("valor"));
             r.rate.report = str(rate.get("relatorio"));
+            r.rate.maxStacks = rate.get("maximo") == null ? null : ((Number) rate.get("maximo")).intValue();
+            r.rate.conditional = Boolean.TRUE.equals(rate.get("condicional"));
+            r.rate.fight = str(rate.get("luta"));
             Map<String, Object> bonus = (Map<String, Object>) rate.get("bonus");
             if (bonus != null) {
                 r.rate.bonusStacks = ((Number) bonus.get("acumulos")).intValue();
@@ -178,7 +208,8 @@ public class RuneCatalog {
         }
         r.extraGold = Boolean.TRUE.equals(v.get("ouro_extra"));
         r.modeled = !r.statusRaw.isEmpty() || !r.effectsRaw.isEmpty() || r.rate != null || r.extraGold;
-        r.hasConditional = r.effectsRaw.stream().anyMatch(e -> Boolean.TRUE.equals(e.get("condicional")));
+        r.hasConditional = r.effectsRaw.stream().anyMatch(e -> Boolean.TRUE.equals(e.get("condicional")))
+                || r.rate != null && r.rate.conditional;
         byName.put(name, r);
         return r;
     }
@@ -205,6 +236,14 @@ public class RuneCatalog {
      * from the minute the stacks are reached.
      */
     public Optional<ItemDef> toItem(String name, Integer option, long id, List<double[]> periods) {
+        return toItem(name, option, id, periods, null);
+    }
+
+    /**
+     * Same, plus the option by the match's minute ({start minute, value}, each until the next) for a rune whose option
+     * changes over the match: the build's steps, else the rune's default ones when no fixed option is given.
+     */
+    public Optional<ItemDef> toItem(String name, Integer option, long id, List<double[]> periods, List<double[]> optionSteps) {
         Rune r = byName.get(name);
         if (r == null) {
             return Optional.empty();
@@ -213,6 +252,7 @@ public class RuneCatalog {
         if (r.option != null) {
             opt = Math.max(r.option.min, Math.min(r.option.max, opt));
         }
+        List<double[]> optSteps = optionSteps(r, option, optionSteps);
         ItemDef item = new ItemDef();
         item.id = id;
         item.name = r.name;
@@ -244,6 +284,12 @@ public class RuneCatalog {
                 }
             } else if (e.get("ratio") != null) {
                 l.ratio = num(e.get("ratio")) + orZero(e.get("ratio_por_opcao")) * opt;
+                if (optSteps != null && e.get("ratio_por_opcao") != null) {
+                    l.ratioSteps = new ArrayList<>();
+                    for (double[] s : optSteps) {
+                        l.ratioSteps.add(new double[] {s[0], num(e.get("ratio")) + num(e.get("ratio_por_opcao")) * s[1]});
+                    }
+                }
                 l.refType = code(str(e.get("ref")));
                 l.refScope = "bonus".equals(e.get("escopo")) ? RefScope.BONUS
                         : "base".equals(e.get("escopo")) ? RefScope.BASE : RefScope.TOTAL;
@@ -266,14 +312,18 @@ public class RuneCatalog {
             }
             stacks.sort(java.util.Comparator.comparingDouble(p -> p[0]));
         }
-        if (r.rate != null && stacks.stream().anyMatch(p -> p[1] > 0)) {
+        if (r.rate != null && r.rate.stat != null && stacks.stream().anyMatch(p -> p[1] > 0)) {
             StatLine l = new StatLine();
             l.type = r.rate.stat;
             l.passive = r.name;
             l.value = 0.0;
+            l.conditional = r.rate.conditional;
             l.perMinute = new ArrayList<>();
             for (double[] p : stacks) {
                 l.perMinute.add(new double[] {p[0], p[1] * r.rate.perStack});
+            }
+            if (r.rate.maxStacks != null) {
+                l.perMinuteMax = r.rate.maxStacks * r.rate.perStack;
             }
             item.stats.add(l);
             Double reached = r.rate.bonusStacks == null ? null : StatLine.minuteReaching(stacks, r.rate.bonusStacks);
@@ -284,6 +334,50 @@ public class RuneCatalog {
             }
         }
         return Optional.of(item);
+    }
+
+    /** The option's steps by minute, sorted: the build's, else (no fixed option given) the rune's defaults; null = fixed. */
+    private static List<double[]> optionSteps(Rune r, Integer option, List<double[]> given) {
+        if (r.option == null) {
+            return null;
+        }
+        List<double[]> out = new ArrayList<>();
+        if (given != null && !given.isEmpty()) {
+            for (double[] s : given) {
+                if (s != null && s.length >= 2 && s[0] >= 0) {
+                    out.add(new double[] {s[0], Math.max(r.option.min, Math.min(r.option.max, Math.round(s[1])))});
+                }
+            }
+        } else if (option == null && r.option.periods != null) {
+            for (Step s : r.option.periods) {
+                out.add(new double[] {s.start, s.value});
+            }
+        }
+        if (out.isEmpty()) {
+            return null;
+        }
+        out.sort(java.util.Comparator.comparingDouble(s -> s[0]));
+        return out;
+    }
+
+    /**
+     * Stacks a rune has gathered at a minute from the build's periods ({start minute, stacks per minute}), within its
+     * limit: what its fight effect reads (Colheita Sombria's souls, Cometa Arcano's hits, Húbris' kills). 0 without a rate.
+     */
+    public double stacksAt(String name, List<double[]> periods, double minute) {
+        Rune r = byName.get(name);
+        if (r == null || r.rate == null || periods == null || periods.isEmpty()) {
+            return 0;
+        }
+        List<double[]> sorted = new ArrayList<>();
+        for (double[] p : periods) {
+            if (p != null && p.length >= 2 && p[0] >= 0 && p[1] >= 0) {
+                sorted.add(new double[] {p[0], p[1]});
+            }
+        }
+        sorted.sort(java.util.Comparator.comparingDouble(p -> p[0]));
+        double total = StatLine.accumulated(sorted, minute);
+        return r.rate.maxStacks == null ? total : Math.min(r.rate.maxStacks, total);
     }
 
     private String code(String shopName) {

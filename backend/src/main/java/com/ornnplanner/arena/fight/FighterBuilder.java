@@ -499,8 +499,13 @@ public class FighterBuilder {
                 f.items.put(c.itemName, c.itemId);
             }
             com.ornnplanner.engine.Model.ItemDef def = c.rune || r.edits.isEmpty() ? null : planner.referenceData().items.get(c.itemId);
+            double stacks = c.rune && !c.champion ? runeStacks(b, c.itemName, r.minute) : 0;
             for (Map<String, Object> e : fx) {
                 if (def == null || !r.off(c.itemId, CombatCatalog.passiveOf(def, e))) {
+                    if (stacks > 0) {   // souls, comet hits, kills gathered in the match before this fight
+                        e = new LinkedHashMap<>(e);
+                        e.put("acumulos_partida", stacks);
+                    }
                     f.effects.add(new ItemEffect(c.itemName, e));
                 }
             }
@@ -537,7 +542,19 @@ public class FighterBuilder {
         return f;
     }
 
-    private static final Set<String> PENETRATION = Set.of("% Armor Penetration", "Armor Penetration", "% Magic Penetration",
+    /** Stacks a rune of the build has gathered by the minute (its stack rate, within its limit). */
+    private double runeStacks(Build b, String rune, double minute) {
+        if (b.runePage == null || b.runePage.rates == null || b.runePage.rates.get(rune) == null) {
+            return 0;
+        }
+        List<double[]> periods = new ArrayList<>();
+        for (BuildRepository.RatePeriod p : b.runePage.rates.get(rune)) {
+            periods.add(new double[] {p.start, p.perMinute});
+        }
+        return runes.stacksAt(rune, periods, minute);
+    }
+
+    private static final Set<String> PENETRATION =Set.of("% Armor Penetration", "Armor Penetration", "% Magic Penetration",
             "Magic Penetration");
 
     private static void penetration(Fighter f, String name, String stat, double v) {

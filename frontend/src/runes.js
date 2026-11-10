@@ -27,6 +27,7 @@ export const emptyRunePage = () => ({
   primaryRunes: [null, null, null],
   secondaryRune: null,
   options: {},
+  optionSteps: {},
   conditional: {},
   rates: {},
   gold: {},

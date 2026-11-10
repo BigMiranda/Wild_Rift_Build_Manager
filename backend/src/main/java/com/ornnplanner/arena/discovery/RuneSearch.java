@@ -210,6 +210,7 @@ public final class RuneSearch {
         c.options = new LinkedHashMap<>(p.options == null ? Map.of() : p.options);
         c.conditional = new LinkedHashMap<>(p.conditional == null ? Map.of() : p.conditional);
         c.rates = new LinkedHashMap<>(p.rates == null ? Map.of() : p.rates);
+        c.optionSteps = new LinkedHashMap<>(p.optionSteps == null ? Map.of() : p.optionSteps);
         return c;
     }
 

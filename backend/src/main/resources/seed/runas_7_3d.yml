@@ -18,8 +18,13 @@
 #   status     status fixos, como nos itens
 #   efeitos    como nos itens; extras: valor_por_opcao / ratio_por_opcao (somados x opcao), nivel_min,
 #              por_tempo {inicio, a_cada, valores} (degraus de tempo de jogo; depois da lista os aumentos seguem crescendo)
-#   por_minuto runa que escala sem limite pela ação do jogador: a build informa a taxa (ativações / acúmulos por
-#              minuto), como ouro/min e XP/min; cada uma vale `valor` de `tipo`; `bonus` entra ao atingir `acumulos`
+#   por_minuto runa que cresce pela ação do jogador ao longo da partida: a build informa a taxa (ativações / acúmulos
+#              por minuto, em períodos), como ouro/min e XP/min; cada uma vale `valor` de `tipo`, até `maximo` acúmulos
+#              (sem ele, sem limite); `bonus` entra ao atingir `acumulos`; `condicional: true`: a linha dos acúmulos
+#              segue o condicional da runa. Sem `tipo`, os acúmulos só valem nas lutas da Arena (`luta` diz o quê:
+#              almas da Colheita Sombria, acertos do Cometa Arcano), lidos no minuto da luta.
+#   opcao.por_tempo  a opção muda com o minuto da partida (degraus {inicio, valor}, cada um até o próximo): o padrão
+#              da runa; a build pode dar os seus
 #   ouro_extra runa que rende ouro: o usuário informa quanto ganhou e em que minutos (adianta as compras)
 # Status de Força Adaptativa foram modelados como Dano de Ataque (o que o Ornn recebe).
 patch: "7.3d"
@@ -46,6 +51,7 @@ fundamentais:
       aumentando permanentemente o dano de Colheita Sombria em 11. Dano da Colheita Sombria: 35 + 11 por alma + 10%
       do Dano de Ataque adicional + 5% do Poder de Habilidade (20s de Tempo de Recarga. Redefine para 1s ao conseguir
       uma eliminação.)
+    por_minuto: {nome: Almas por minuto, valor: 11, luta: Dano da Colheita Sombria}
   Fortalecimento:
     tags: Dano maior contra Campeões
     texto: >-
@@ -131,6 +137,7 @@ fundamentais:
       Causar dano a um Campeão com uma habilidade lançará um cometa onde ele estiver. Quando um cometa atinge um
       Campeão inimigo, o próximo cometa causa mais dano. Dano: (de 15 a 100) + (2 × total de acertos em Campeões
       inimigos) + 10% do Dano de Ataque adicional + 5% do Poder de Habilidade. Tempo de Recarga: 16–8s (nível).
+    por_minuto: {nome: Acertos do cometa por minuto, valor: 2, luta: Dano do Cometa Arcano}
   Ímpeto Gradual:
     tags: Mobilidade, Aceleração de Habilidade
     texto: >-
@@ -212,6 +219,10 @@ runas:
     texto: >-
       Eliminar um Campeão inimigo até 3s depois de causar dano a ele concede (5 + 1 a cada Campeão abatido por você)
       de Força Adaptativa por 30s.
+    # condicional: só nos 30s depois de um abate (na Arena, o efeito de combate dá o bônus ao abater)
+    por_minuto: {nome: Abates por minuto, tipo: Dano de Ataque, valor: 1, condicional: true}
+    efeitos:
+    - {passiva: Húbris, tipo: Dano de Ataque, valor: 5, condicional: true}
   Coleção de Olhos:
     arvore: Dominação
     linha: 3
@@ -219,9 +230,7 @@ runas:
     texto: >-
       Recebe 1,5 de Dano de Ataque ou 3 de Poder de Habilidade ao eliminar um Campeão ou monstro épico, acumulando
       até 8x.
-    opcao: {nome: Acúmulos, min: 0, max: 8, padrao: 8}
-    efeitos:
-    - {passiva: Coleção de Olhos, tipo: Dano de Ataque, valor: 0, valor_por_opcao: 1.5}
+    por_minuto: {nome: Abates por minuto, tipo: Dano de Ataque, valor: 1.5, maximo: 8}
   Caça Incansável:
     arvore: Dominação
     linha: 3
@@ -229,6 +238,9 @@ runas:
     texto: >-
       Recebe 10 de Velocidade de Movimento fora de combate. A cada eliminação de monstro épico ou de Campeão, recebe 2
       de Velocidade de Movimento fora de combate. Acumula até 5x.
+    por_minuto: {nome: Abates por minuto, tipo: Velocidade de Movimento, valor: 2, maximo: 5, condicional: true}
+    efeitos:  # fora de combate
+    - {passiva: Caça Incansável, tipo: Velocidade de Movimento, valor: 10, condicional: true}
   Sentinela Zumbi:
     arvore: Dominação
     linha: 3
@@ -237,9 +249,7 @@ runas:
       Eliminar sentinelas inimigas faz surgir uma Sentinela Zumbi no lugar delas, concedendo visão da área ao redor por
       120s. Além disso, recebe 3 de Dano de Ataque ou 6 de Poder de Habilidade. Máx. de 5 acúmulos (assistências em
       sentinelas inimigas também concedem acúmulos e geram Sentinelas Zumbis).
-    opcao: {nome: Acúmulos, min: 0, max: 5, padrao: 5}
-    efeitos:
-    - {passiva: Sentinela Zumbi, tipo: Dano de Ataque, valor: 0, valor_por_opcao: 3}
+    por_minuto: {nome: Sentinelas destruídas por minuto, tipo: Dano de Ataque, valor: 3, maximo: 5}
 
   # ---------------------------------------------------------------- Precisão
   Brutal:
@@ -289,8 +299,8 @@ runas:
       Velocidade de Ataque adicional.
     status:
     - {tipo: "% Velocidade de Ataque", valor: 3}
-    efeitos:
-    - {passiva: "Lenda: Espontaneidade", tipo: "% Velocidade de Ataque", valor: 18, condicional: true}
+    # EST: 10 acúmulos de Lenda até o máximo (o jogo não mostra quantos; tropas, monstros e abates dão progresso)
+    por_minuto: {nome: Acúmulos de Lenda por minuto, tipo: "% Velocidade de Ataque", valor: 1.8, maximo: 10}
   "Lenda: Aceleração":
     arvore: Precisão
     linha: 3
@@ -299,8 +309,8 @@ runas:
     texto: >-
       No começo da partida, recebe 0 de Aceleração de Habilidade. Abater monstros, Campeões inimigos ou tropas concede
       mais bônus de Aceleração de Habilidade. O limite de bônus é de 15 de Aceleração de Habilidade.
-    efeitos:
-    - {passiva: "Lenda: Aceleração", tipo: Aceleração de Habilidade, valor: 15, condicional: true}
+    # EST: 10 acúmulos de Lenda até o máximo
+    por_minuto: {nome: Acúmulos de Lenda por minuto, tipo: Aceleração de Habilidade, valor: 1.5, maximo: 10}
   "Lenda: Linhagem":
     arvore: Precisão
     linha: 3
@@ -310,8 +320,8 @@ runas:
       Vampirismo Universal adicional.
     status:
     - {tipo: "% Vampirismo Universal", valor: 1}
-    efeitos:
-    - {passiva: "Lenda: Linhagem", tipo: "% Vampirismo Universal", valor: 7, condicional: true}
+    # EST: 10 acúmulos de Lenda até o máximo
+    por_minuto: {nome: Acúmulos de Lenda por minuto, tipo: "% Vampirismo Universal", valor: 0.7, maximo: 10}
 
   # ---------------------------------------------------------------- Determinação
   Demolir:
@@ -358,7 +368,13 @@ runas:
       receberá 20% de Resistência a Lentidão.
     # % da Armadura / RM adicionais, contínuo como a Duplaguarda (amplificado pela Forja Viva). Conferido no jogo
     # (08/10/2026): Soldado v1 com botas de armadura, Duplaguarda + Aurora, 2 inimigos próximos -> 711 / 465.
-    opcao: {nome: Campeões inimigos próximos, min: 0, max: 3, padrao: 2}
+    # Pelo minuto da partida: 1 inimigo na rota, 2 nas emboscadas (gank), 3 nas lutas em equipe; a build muda os degraus.
+    opcao:
+      nome: Campeões inimigos próximos
+      min: 0
+      max: 3
+      padrao: 2
+      por_tempo: [{inicio: 0, valor: 1}, {inicio: 5, valor: 2}, {inicio: 14, valor: 3}]
     efeitos:
     - {passiva: Inabalável, tipo: Armadura, ratio: 0.03, ratio_por_opcao: 0.02, ref: Armadura, escopo: bonus}
     - {passiva: Inabalável, tipo: Resistência Mágica, ratio: 0.03, ratio_por_opcao: 0.02, ref: Resistência Mágica, escopo: bonus}
