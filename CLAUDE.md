@@ -134,15 +134,15 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
 - `repo/` — JdbcTemplate data access. `service/PlannerService` assembles reference data and runs the engine.
 - `api/` — REST controllers under `/api/...` (planner, admin, champions, runes, arena, planner lab, item icons).
 
-**Data lives in YAML seeds, not code** (`backend/src/main/resources/seed/`, patch-suffixed; current patch **7.3d**,
-suffix `_7_3d`): `loja_7_3d.yml` (171 shop items; header documents each field), `precos_status.yml`,
-`efeitos_itens_7_3d.yml`, `campeoes_7_3d.yml`, `runas_7_3d.yml` (+ `runas/` icons), `feiticos_7_3d.yml`,
-`combate_7_3d.yml`, `kits_7_3d.yml`, `mapa_7_3d.yml`, `objetivos_7_3d.yml`, `macro_7_3d.yml`, `efetividade_7_3d.yml`, `classificacao_7_3d.yml`, `ia_automatica_7_3d.yml`, `regras_loja.yml`. `application.properties` and the `@Value` defaults point at
-the current patch; older `_7_3` and `_7_3b` files stay as history. New game data or modeled effects usually mean editing these
+**Data lives in YAML seeds, not code** (`backend/src/main/resources/seed/`, patch-suffixed; current patch **7.3f**,
+suffix `_7_3f` for the seven files the notes touch, `_7_3d` for the rest): `loja_7_3f.yml` (171 shop items; header documents each field), `precos_status.yml`,
+`efeitos_itens_7_3f.yml`, `campeoes_7_3f.yml`, `runas_7_3f.yml` (+ `runas/` icons), `feiticos_7_3f.yml`,
+`combate_7_3f.yml`, `kits_7_3f.yml`, `mapa_7_3d.yml`, `objetivos_7_3d.yml`, `macro_7_3d.yml`, `efetividade_7_3d.yml`, `classificacao_7_3d.yml`, `ia_automatica_7_3d.yml`, `regras_loja.yml`. `application.properties` and the `@Value` defaults point at
+the current patch; older `_7_3`, `_7_3b` and (for those seven) `_7_3d` files stay as history. New game data or modeled effects usually mean editing these
 files plus a test, not Java. `LojaCatalogTest` enforces catalog consistency (components exist and cost less, every
 stat has a price).
 
-**Patch updates**: 7.3 was transcribed from screenshots; 7.3b is 7.3 plus the official 7.3a/7.3b patch notes; 7.3d adds the 7.3c/7.3d notes. Each
+**Patch updates**: 7.3 was transcribed from screenshots; 7.3b is 7.3 plus the official 7.3a/7.3b patch notes; 7.3d adds the 7.3c/7.3d notes; 7.3f adds the 7.3e/7.3f notes. Each
 update from patch notes is logged in `docs/patches/` (one table per category: before → after, base key, status
 aplicar | já estava | divergente | fora do modelo, source link), and `/atualizar-patch <from> <to>`
 (`.claude/commands/atualizar-patch.md`) is the procedure. Lines changed from notes carry `fonte_<patch>: nota de patch`;

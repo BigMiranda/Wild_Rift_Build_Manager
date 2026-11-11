@@ -34,8 +34,10 @@ final class ArenaScenarios {
 
     static {
         try {
-            CATALOG = new CombatCatalog(new ClassPathResource("seed/combate_7_3f.yml"));
-            try (InputStream in = new ClassPathResource("seed/kits_7_3f.yml").getInputStream()) {
+            // -Darena.patch=7_3d: the same scenarios on an older patch's seeds (to compare a patch update)
+            String patch = System.getProperty("arena.patch", "7_3f");
+            CATALOG = new CombatCatalog(new ClassPathResource("seed/combate_" + patch + ".yml"));
+            try (InputStream in = new ClassPathResource("seed/kits_" + patch + ".yml").getInputStream()) {
                 Map<String, Object> root = new Yaml().load(in);
                 @SuppressWarnings("unchecked")
                 Map<String, Object> k = (Map<String, Object>) root.get("campeoes");
