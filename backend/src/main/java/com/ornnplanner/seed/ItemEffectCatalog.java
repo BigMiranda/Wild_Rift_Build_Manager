@@ -76,6 +76,10 @@ public class ItemEffectCatalog {
         if (root.get("evolucao_por_tempo") instanceof Map) {
             ((Map<String, Object>) root.get("evolucao_por_tempo")).forEach((item, v) -> evolutions.put(item, ((Number) v).doubleValue()));
         }
+        if (root.get("ouro_por_posse") instanceof Map) {
+            ((Map<String, Map<String, Object>>) root.get("ouro_por_posse")).forEach((item, v) -> income.put(item,
+                    new double[] {((Number) v.get("ouro")).doubleValue(), ((Number) v.get("a_cada_s")).doubleValue()}));
+        }
         if (root.get("herda_acumulos") instanceof Map) {
             ((Map<String, List<String>>) root.get("herda_acumulos")).forEach((item, v) -> keeps.put(item, new ArrayList<>(v)));
         }
@@ -90,7 +94,7 @@ public class ItemEffectCatalog {
      * item that keeps a component's stacks knows which. Changes the map's entries to copies; the rest stay as they are.
      */
     public void timing(Map<Long, ItemDef> items) {
-        if (evolutions.isEmpty() && keeps.isEmpty()) {
+        if (evolutions.isEmpty() && keeps.isEmpty() && income.isEmpty()) {
             return;
         }
         Map<String, ItemDef> byName = new HashMap<>();
@@ -99,10 +103,15 @@ public class ItemEffectCatalog {
             Double after = evolutions.get(i.name);
             List<String> kept = keeps.get(i.name);
             ItemDef base = after == null || i.group == null || i.group.equals(i.name) ? null : byName.get(i.group);
-            if (base == null && kept == null) {
+            double[] gold = income.get(i.name);
+            if (base == null && kept == null && gold == null) {
                 return i;
             }
             ItemDef c = i.withStats(i.stats);
+            if (gold != null) {
+                c.goldEach = gold[0];
+                c.goldEvery = gold[1];
+            }
             if (base != null) {
                 c.evolveAfter = after;
                 c.evolvedFrom = base;
@@ -118,6 +127,8 @@ public class ItemEffectCatalog {
     private final Map<String, Double> evolutions = new LinkedHashMap<>();
     /** Items that keep the stacks of the components they consume, by name (Rodada 13). */
     private final Map<String, List<String>> keeps = new LinkedHashMap<>();
+    /** Gold earned while held, by name: {gold, seconds} (Rodada 13). */
+    private final Map<String, double[]> income = new LinkedHashMap<>();
 
     /** The passives gathered while held, by "item|passive". */
     public Map<String, Hold> holds() {
@@ -220,6 +231,8 @@ public class ItemEffectCatalog {
         c.evolveAfter = i.evolveAfter;
         c.evolvedFrom = i.evolvedFrom;
         c.stacksFrom = i.stacksFrom;
+        c.goldEach = i.goldEach;
+        c.goldEvery = i.goldEvery;
         return c;
     }
 

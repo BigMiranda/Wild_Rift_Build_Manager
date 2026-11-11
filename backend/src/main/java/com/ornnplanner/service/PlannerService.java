@@ -295,7 +295,7 @@ public class PlannerService {
 
     /** Whether when an item was bought changes what it gives (Rodada 13): stacks by time held or per minute, an evolution by time, kept stacks. */
     public static boolean timed(ItemDef it) {
-        return it != null && (it.evolveAfter != null || it.stacksFrom != null && !it.stacksFrom.isEmpty()
+        return it != null && (it.evolveAfter != null || it.goldEach != null || it.stacksFrom != null && !it.stacksFrom.isEmpty()
                 || it.stats.stream().anyMatch(l -> l.heldEvery != null || l.perMinute != null));
     }
 

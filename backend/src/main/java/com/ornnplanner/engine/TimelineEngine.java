@@ -489,6 +489,14 @@ public class TimelineEngine {
                     continue;
                 }
 
+                if (buy.goldEach != null && buy.goldEvery != null && buy.goldEvery > 0) {
+                    // gold earned while held (Rodada 13, ouro_por_posse: Armadilha de Yordle's takedowns while empowered)
+                    double horizon = Math.max(60, in.matchEnd == null ? 0 : in.matchEnd);
+                    for (double t = step.minute + buy.goldEvery / 60; t <= horizon + 1e-9; t += buy.goldEvery / 60) {
+                        extraGold.add(new double[] {t, buy.goldEach});
+                    }
+                    extraGold.sort(java.util.Comparator.comparingDouble(e -> e[0]));
+                }
                 step.stats = snapshot(in.unit, inventory, step.level, step.minute);
                 StatSnapshot beforeSnap = snapshot(in.unit, before, step.level, step.minute);
                 step.efficiency = efficiency(bought, step, beforeSnap);

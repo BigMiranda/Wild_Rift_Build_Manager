@@ -91,7 +91,7 @@ calculadora, e a forma evoluída de um item de preparação (o item de suporte) 
 | Bastião da Montanha, Foice da Névoa Negra | evoluídos na compra, Conjuração Anímica cheia | base (Escudo Relicário / Foice Espectral) por 7 min (Missão de 750 de ouro); depois +25 Vida / +2 DdA por minuto até 10 |
 | Flechatroz de Yun Tal (Praticar e Matar) | 25% de crítico na compra | 1% a cada 12 s desde a compra (25 ataques a distância por minuto); a opção vira o teto |
 | Grevas Vorazes, Passos Imortais (Conversão) | abates = 0 (só os 5%) | 5% fixos + 0,5% por abate, 1 a cada 2 min desde as Grevas, até 10; a opção vira o teto (padrão 10) |
-| Armadilha de Yordle (Apanhador) | sem mudança | pelo texto transcrito da loja não acumula: é um bônus de 8 s depois de aplicar controle (já modelado na Arena) e 20 de ouro por abate com o bônus |
+| Armadilha de Yordle (Apanhador) | o ouro dos abates com o fortalecimento não entrava | `ouro_por_posse`: 20 de ouro a cada 2 min desde a compra (premissa: 1 participação em abate com o bônus ativo a cada 2 min), no ouro da linha do tempo; o bônus de 8 s segue na Arena |
 
 No motor: `ItemDef.evolveAfter / evolvedFrom` (a contribuição do item mostra o item base enquanto não evolui, e a Arena
 lê o item base, com os efeitos de combate dele), `ItemDef.stacksFrom` (`herda_acumulos`: a compra mais antiga entre o

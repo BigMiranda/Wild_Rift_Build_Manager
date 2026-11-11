@@ -69,6 +69,13 @@ evolucao_por_tempo:
   Bastião da Montanha: 7
   Foice da Névoa Negra: 7
 
+# Ouro ganho com o item no inventário (Rodada 13): `ouro` a cada `a_cada_s` segundos desde a compra (entra no ouro da
+# linha do tempo e adianta as compras seguintes).
+#   Armadilha de Yordle (Apanhador): 20 de ouro por abate de Campeão com o fortalecimento ativo (você ou aliados
+#   próximos); premissa de 1 participação com ele ativo a cada 2 min
+ouro_por_posse:
+  Armadilha de Yordle: {ouro: 20, a_cada_s: 120}
+
 # Itens que guardam os acúmulos do componente que consomem (Rodada 13): a compra mais antiga conta.
 herda_acumulos:
   Manamune: [Lágrima da Deusa]

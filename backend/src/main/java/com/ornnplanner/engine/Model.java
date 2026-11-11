@@ -370,6 +370,9 @@ public final class Model {
         public ItemDef evolvedFrom;
         /** Items whose stacks it keeps when it consumes them (Manamune keeps the Lágrima's charges): the earliest purchase counts. */
         public List<String> stacksFrom = new ArrayList<>();
+        /** Gold earned while held (Rodada 13, {@code ouro_por_posse}): {@code goldEach} every {@code goldEvery} seconds from the purchase. */
+        public Double goldEach;
+        public Double goldEvery;
 
         /** Boots take the single boots slot. */
         public boolean boots() {
@@ -400,6 +403,8 @@ public final class Model {
             d.evolveAfter = evolveAfter;
             d.evolvedFrom = evolvedFrom;
             d.stacksFrom = stacksFrom;
+            d.goldEach = goldEach;
+            d.goldEvery = goldEvery;
             return d;
         }
 

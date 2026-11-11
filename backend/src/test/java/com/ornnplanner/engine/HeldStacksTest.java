@@ -132,6 +132,20 @@ class HeldStacksTest {
         assertEquals(700, at(r, 25).total.get(MAX_MANA), EPS);
     }
 
+    @Test
+    void yordleTrapsGoldBringsTheNextPurchaseForward() {
+        // 100 gold a minute: the trap at 19:00 (2400), the next item (2000) at 39:00 without its gold; with 20 gold every
+        // 2 min from 19:00 it comes almost 2 min earlier
+        ItemDef trap = item(11, "Armadilha de Yordle", null);
+        trap.cost = 2400;
+        ItemDef next = item(12, "Outro", null);
+        next.cost = 2000;
+        Model.TimelineResult r = new TimelineEngine(ref(List.of(trap, next), Map.of())).run(input(List.of(11L, 12L), 100, 45));
+        assertEquals(19, r.steps.get(0).minute, 1e-6);
+        double second = r.steps.get(1).minute;
+        assertTrue(second < 39 - 1.5 && second > 39 - 2.5, "the trap's gold: " + second);
+    }
+
     private static ItemDef item(long id, String name, String stat) {
         ItemDef i = new ItemDef();
         i.id = id;
