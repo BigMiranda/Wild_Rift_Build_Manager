@@ -39,7 +39,7 @@ public final class PublicApi {
     public static final List<Rule> RULES = List.of(
             // catalog and reference data
             get("/api/meta"), get("/api/items"), get("/api/items/*/image"), get("/api/stat-prices"),
-            get("/api/runes"), get("/api/runes/icons/*"), get("/api/spells/icons/*"),
+            get("/api/runes"), get("/api/runes/icons/*"), get("/api/spells/icons/*"), get("/api/champions/icons/*"),
             get("/api/champions"), get("/api/champions/profiles"), get("/api/champions/*"),
             // the exported builds (public folders only) and what was calculated before the export
             get("/api/folders"), get("/api/builds"), get("/api/builds/*"), get("/api/builds/*/timeline"),

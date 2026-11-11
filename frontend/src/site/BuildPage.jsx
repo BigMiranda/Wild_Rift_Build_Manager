@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ChampionAvatar } from '../components/ChampionAvatar.jsx';
 import { api } from '../api.js';
 import ItemIcon from '../components/ItemIcon.jsx';
 import { StatIcon } from '../components/StatIcon.jsx';
@@ -182,8 +183,8 @@ export default function BuildPage({ buildKey, params }) {
       <header className="build-head">
         <span className={`kind kind-${b.kind}`}>{KIND_LABEL[b.kind]}</span>
         <h1 className="site-title">{b.label}</h1>
-        <p className="muted">
-          {b.champion}{b.archetype ? ` · ${archetypeLabel(b.archetypeInfo ?? { key: b.archetype })}` : ''}
+        <p className="muted build-champ">
+          <ChampionAvatar name={b.champion} size={24} /> {b.champion}{b.archetype ? ` · ${archetypeLabel(b.archetypeInfo ?? { key: b.archetype })}` : ''}
           {(b.also ?? []).length ? ` · também ${b.also.join(', ')}` : ''}
         </p>
         <BuildNumbers b={b} />

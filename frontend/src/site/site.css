@@ -41,6 +41,8 @@ a.site-card:hover { border-color: var(--accent); }
   width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 18px;
   background: radial-gradient(circle at 30% 30%, #2b4d74, #10243a); color: var(--accent); border: 1px solid var(--border-strong);
 }
+.site-title-champ { display: flex; align-items: center; gap: 12px; }
+.build-champ { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .build-card header { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
 .build-card footer, .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .build-card-facts { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; color: var(--text-2); margin-top: 6px; }

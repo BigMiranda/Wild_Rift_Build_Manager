@@ -681,6 +681,7 @@ input[aria-invalid="true"] { border-color: var(--error); }
 }
 
 /* ---------------------------------------------------------------- champion reference */
+.champ-avatar.champ-photo { background: #0b1a2a; padding: 0; }
 .champ-panel > summary { cursor: pointer; }
 .champ-panel > summary .muted { margin-left: 6px; }
 .champ-body { display: grid; grid-template-columns: minmax(240px, 300px) 1fr; gap: 16px; margin-top: 10px; }

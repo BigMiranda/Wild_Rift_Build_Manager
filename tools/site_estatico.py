@@ -489,7 +489,7 @@ def main(argv=None):
     ap.add_argument('--saida', default='site-publico', help='pasta do site (os JSONs vão em <saida>/api)')
     ap.add_argument('--pausa', type=float, default=0.0, help='segundos entre leituras')
     ap.add_argument('--campeoes', default='', help='só estes códigos (ORNN,DARIUS); vazio = todos os do site')
-    ap.add_argument('--sem-icones', action='store_true', help='não baixa os ícones de itens, runas e feitiços')
+    ap.add_argument('--sem-icones', action='store_true', help='não baixa os ícones de itens, runas, feitiços e campeões')
     ap.add_argument('--sem-lutas', action='store_true', help='não roda as lutas dos cenários públicos')
     ap.add_argument('--sem-ritmos', action='store_true', help='só o ritmo padrão (sem "atrás" e "à frente")')
     ap.add_argument('--rapido', action='store_true', help='só a linha do tempo e a Efetividade Básica (sem ofensiva e habilidades)')
@@ -607,7 +607,10 @@ def main(argv=None):
         for name in sorted(icons):
             s.binary(f'/api/runes/icons/{urllib.parse.quote(name)}')
             s.binary(f'/api/spells/icons/{urllib.parse.quote(name)}')
-        print(f'Ícones: {len(icons)} de runas e feitiços, mais os dos itens')
+        champs = [c['icon'] for c in (s.read('/api/champions') or []) if c.get('icon')]
+        for f in champs:
+            s.binary(f'/api/champions/icons/{urllib.parse.quote(f)}')
+        print(f'Ícones: {len(icons)} de runas e feitiços, {len(champs)} retratos de campeões, mais os dos itens')
 
     manifest = {
         'format': FORMAT, 'patch': patch, 'generatedAt': time.strftime('%Y-%m-%dT%H:%M:%S'),

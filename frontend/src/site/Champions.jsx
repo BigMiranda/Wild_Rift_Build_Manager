@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ChampionAvatar } from '../components/ChampionAvatar.jsx';
 import ItemIcon from '../components/ItemIcon.jsx';
 import GuideFlow from '../components/GuideFlow.jsx';
 import { archetypeLabel } from '../archetypes.js';
@@ -58,7 +59,7 @@ export function ChampionsPage() {
         {list.map((c) => (
           <li key={c.unitCode}>
             <a className="site-card champ-card" href={siteHref('c', c.unitCode)}>
-              <span className="champ-initial" aria-hidden="true">{c.champion.slice(0, 1)}</span>
+              <ChampionAvatar name={c.champion} size={44} />
               <strong>{c.champion}</strong>
               <small className="muted">{[c.championClass, ...(c.lanes ?? [])].filter(Boolean).join(' · ')}</small>
               <small>{c.builds} build{c.builds === 1 ? '' : 's'}{c.discovered ? ' · Descoberta' : ''}</small>
@@ -162,7 +163,7 @@ export function ChampionPage({ unit }) {
   return (
     <section>
       <p><a href="#/">← Campeões</a></p>
-      <h1 className="site-title">{c.champion}</h1>
+      <h1 className="site-title site-title-champ"><ChampionAvatar name={c.champion} size={48} /> {c.champion}</h1>
       <p className="muted">{[c.championClass, ...(c.lanes ?? [])].filter(Boolean).join(' · ')}
         {c.quality ? ` · ficha ${c.quality}` : ''}{c.budget ? ` · Descoberta ${c.budget === 'completo' ? 'completa' : 'rápida'}` : ''}</p>
       {c.lowConfidence && <p className="warn">A ficha deste campeão é de baixa confiança: leia os números com cuidado.</p>}

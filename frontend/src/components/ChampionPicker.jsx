@@ -11,20 +11,8 @@ export function loadChampions() {
 
 const plain = (s) => String(s ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
-/** Portrait placeholder: initials on a color derived from the name (an `src` image takes its place when there is one). */
-export function ChampionAvatar({ name, src, size = 40 }) {
-  if (src) return <img className="champ-avatar" src={src} alt="" width={size} height={size} />;
-  let h = 0;
-  for (const c of String(name ?? '')) h = (h * 31 + c.charCodeAt(0)) % 360;
-  const words = String(name ?? '?').replace(/[^\p{L}\s]/gu, ' ').trim().split(/\s+/);
-  const initials = (words.length > 1 ? words[0][0] + words[1][0] : words[0].slice(0, 2)).toUpperCase();
-  return (
-    <span className="champ-avatar" aria-hidden="true"
-      style={{ width: size, height: size, fontSize: size * 0.38, background: `hsl(${h} 35% 30%)`, borderColor: `hsl(${h} 45% 50%)` }}>
-      {initials}
-    </span>
-  );
-}
+export { ChampionAvatar } from './ChampionAvatar.jsx';
+import { ChampionAvatar } from './ChampionAvatar.jsx';
 
 /**
  * Unit field of the build: the current champion as a button, opening a searchable grid of every champion (name,

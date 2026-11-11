@@ -86,11 +86,13 @@ public class ChampionCatalog {
         spec = new EffectSpec(statCodes);
         Map<String, Object> root = read(file);
         patch = String.valueOf(root.get("patch"));
+        Map<String, String> icons = icons();
         ((Map<String, Map<String, Object>>) root.get("campeoes")).forEach((name, v) -> {
             Map<String, Object> c = new LinkedHashMap<>();
             c.put("code", code(name));
             c.put("nome", name);
             c.putAll(v);
+            c.put("icon", icons.get(name));
             c.remove("efeitos");
             List<Effect> list = new ArrayList<>();
             Map<String, Map<String, Object>> raw = (Map<String, Map<String, Object>>) v.get("efeitos");
@@ -101,6 +103,23 @@ public class ChampionCatalog {
             effects.put(code(name), list);
             byCode.put(code(name), c);
         });
+    }
+
+    /**
+     * The champions' portraits (the LoL PC square icons, bundled in {@code seed/campeoes} by
+     * {@code tools/campeoes_retratos.py}): champion name -> file; empty when the folder is missing.
+     */
+    static Map<String, String> icons() {
+        org.springframework.core.io.ClassPathResource res = new org.springframework.core.io.ClassPathResource("seed/campeoes/manifest.json");
+        if (!res.exists()) {
+            return Map.of();
+        }
+        try (java.io.InputStream in = res.getInputStream()) {
+            return new com.fasterxml.jackson.databind.ObjectMapper().readValue(in,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() { });
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /** Unit code of a champion name: "Dr. Mundo" -> DR_MUNDO, "Cho'Gath" -> CHOGATH. */
@@ -126,6 +145,7 @@ public class ChampionCatalog {
             m.put("code", code);
             m.put("nome", c.get("nome"));
             m.put("titulo", c.get("titulo"));
+            m.put("icon", c.get("icon"));
             Map<String, Object> status = (Map<String, Object>) c.get("status");
             m.put("recurso", status == null ? null : status.get("recurso"));
             List<String> abilities = new ArrayList<>();

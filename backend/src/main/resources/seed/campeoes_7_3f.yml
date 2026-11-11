@@ -7541,6 +7541,71 @@ campeoes:
           Tempo de Recarga: [75, 65, 55]
           Dano base: [15, 25, 35]
           Cura: [15, 30, 45]
+  Sylas:
+    titulo: O Abjugado
+    classes: [Mago/Explosivo]
+    funcoes: [Mago, Assassino]
+    rotas: [Meio, Barão]
+    alcance_ataque: 175
+    fonte_classes: "wiki LoL:Sylas (Burst, Skirmisher)"
+    # Campeão novo do 7.3f (11/11/2026), sem print nem medida no Treino: ESTIMATIVA.
+    # nv1: WildRiftFire (guia do Sylas, patch 7.3f); a Velocidade de Ataque é a do LoL de PC (0,645; a do guia, 1,00,
+    # parece um valor provisório). nv15 = nv1 + 14 x crescimento do LoL de PC (Vida 122, Mana 70, Armadura 5,2, RM 2,55,
+    # DdA 3; Velocidade de Ataque 3,5% e regenerações pela curva de nível, como nos outros). Habilidades: nomes pt-BR do
+    # LoL de PC (Data Dragon pt_BR), números do LoL de PC (wiki LoL) com as 5 fileiras levadas às 4 do Wild Rift (a 1ª e
+    # a última iguais, as do meio interpoladas). Um print do jogo ou a medida no Treino substitui tudo isto.
+    fonte_7_3f: estimativa (WildRiftFire + LoL de PC)
+    status:
+      recurso: Mana
+      VdM: 350
+      nv1: {DdA: 61, PdH: 0, Vida: 525, Mana: 280, Armadura: 27, RM: 32, VdA: 0.65, AH: 0, RegVida: 9, RegMana: 7}
+      nv15: {DdA: 103, PdH: 0, Vida: 2233, Mana: 1260, Armadura: 100, RM: 68, VdA: 0.92, AH: 0, RegVida: 21, RegMana: 18}
+    passiva:
+      nome: Explosão de Petricita
+      tipos: [Passivo, Mágico]
+      texto: |-
+        Após conjurar uma habilidade, Sylas armazena uma carga de Explosão de Petricita por 4s, acumulando até 3x. Enquanto tiver uma carga, o próximo ataque recebe 125% de Velocidade de Ataque adicional.
+        Seus ataques básicos gastam uma carga e agitam as correntes ao redor dele, causando 79 de Dano Mágico (130%{DdA} + 30%{PdH}) ao alvo e 24 de Dano Mágico (40%{DdA} + 20%{PdH}) aos inimigos próximos.
+    habilidades:
+      - nome: Correntes-Chicote
+        tipos: [Mágico, Lentidão]
+        recarga: 10
+        texto: |-
+          Sylas chicoteia com suas correntes, que se intersectam no local-alvo, causando 40 de Dano Mágico (40 + 40%{PdH}) e 15% de Lentidão por 1,5s.
+          Após 0,6s, há uma explosão de energia mágica no ponto da intersecção, causando 60 de Dano Mágico (60 + 80%{PdH}).
+        niveis:
+          Tempo de Recarga: [10, 8.5, 7.5, 6]
+          Custo: [55, 55, 55, 55]
+          Primeiro Dano: [40, 67, 93, 120]
+          Segundo Dano: [60, 133, 207, 280]
+          Lentidão: [15%, 22%, 28%, 35%]
+      - nome: Regicida
+        tipos: [Mágico, Mobilidade, Cura]
+        recarga: 12
+        texto: |-
+          Sylas avança em um inimigo com uma força mágica, causando 75 de Dano Mágico (75 + 60%{PdH}).
+          Contra Campeões inimigos, cura-se em 20 (20 + 30%{PdH}), até o dobro com base na Vida perdida.
+        niveis:
+          Tempo de Recarga: [12, 10, 8, 6]
+          Custo: [50, 63, 77, 90]
+          Dano base: [75, 122, 168, 215]
+          Cura: [20, 47, 73, 100]
+      - nome: Evasão / Abdução
+        tipos: [Mágico, Mobilidade, Atordoamento]
+        recarga: 13
+        texto: |-
+          Sylas avança por uma curta distância. Em até 3,5s, pode reconjurar a habilidade para arremessar suas correntes, causando 80 de Dano Mágico (80 + 80%{PdH}) ao primeiro inimigo atingido e atordoando-o por 0,5s; Sylas então se arrasta até ele.
+        niveis:
+          Tempo de Recarga: [13, 11.5, 10.5, 9]
+          Custo: [65, 65, 65, 65]
+          Dano base: [80, 147, 213, 280]
+      - nome: Usurpar
+        tipos: [Fortalecimento]
+        recarga: 80
+        texto: |-
+          Sylas rouba a habilidade ultimate do Campeão inimigo alvo e pode conjurá-la sem custo, com a escala da classificação de Usurpar e dos próprios atributos.
+        niveis:
+          Tempo de Recarga: [80, 55, 30]
   Syndra:
     titulo: A Soberana Sombria
     classes: [Mago/Explosivo]

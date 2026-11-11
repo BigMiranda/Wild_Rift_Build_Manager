@@ -40,6 +40,12 @@ public class RuneController {
         return icon("seed/runas/", file, request);
     }
 
+    /** The champions' portraits (LoL PC square icons, {@code tools/campeoes_retratos.py}). */
+    @GetMapping("/api/champions/icons/{file}")
+    public ResponseEntity<Resource> championIcon(@PathVariable String file, WebRequest request) throws IOException {
+        return icon("seed/campeoes/", file, request);
+    }
+
     @GetMapping("/api/spells/icons/{file}")
     public ResponseEntity<Resource> spellIcon(@PathVariable String file, WebRequest request) throws IOException {
         return icon("seed/feiticos/", file, request);

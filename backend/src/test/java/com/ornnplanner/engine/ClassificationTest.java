@@ -70,7 +70,7 @@ class ClassificationTest {
     @Test
     void everyChampionHasItsClassesRolesAndLanes() {
         List<ChampionProfiles.Profile> all = profiles.all();
-        assertEquals(142, all.size());
+        assertEquals(143, all.size());   // 7.3f: + Sylas
         for (ChampionProfiles.Profile p : all) {
             assertFalse(p.classes.isEmpty(), p.name);
             assertTrue(CLASSES.containsAll(p.mainClasses), p.name + ": " + p.mainClasses);
