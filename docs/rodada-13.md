@@ -133,3 +133,21 @@ orçamento completo.
 
 Rodar a campanha de novo (os resultados guardados são de antes) e regerar o site (`python tools/publicar_site.py`).
 Os resultados guardados continuam legíveis: sem `section`, o site usa o tipo; sem `runesFrom`, deduz.
+
+## Campanha mais rápida: kits medidos ao mesmo tempo
+
+A campanha usava pouco a CPU: as lutas de um kit já rodavam em todos os núcleos, mas cada lote é pequeno (poucos
+cenários, as referências em cache), e os kits eram medidos um de cada vez. Agora `Funnel.parallel` (metade dos núcleos)
+kits são medidos ao mesmo tempo nas rápidas, na bateria e na confirmação, e a busca de runas mede de uma vez as páginas
+que a próxima coordenada vai testar (`RuneSearch.prefetch`) e depois anda na mesma ordem de antes. O resultado não muda:
+cada kit é medido sozinho e de forma determinística, e cada leitura vai para o seu próprio lugar.
+
+`EffectTestService.evaluate` passou a guardar as leituras e as gravações do próprio lote: o cache de lutas é um LRU, e
+outro lote rodando ao mesmo tempo podia tirar dele uma leitura entre o plano e a leitura. A ordem pela calculadora
+mede de uma vez as ordens de cada camada que o orçamento restante alcança (`BuildSearch.Oracle.prefetch`); cada medida só
+conta quando a busca a lê, então o orçamento e a resposta são os de antes.
+
+Medido na Descoberta rápida do Ornn (Big Carry v1): 372 s em sequência, 237 s em paralelo (-36%), com o mesmo resultado
+(ranking, descobertas, nichos, padrão, suporte, notas) e as mesmas 544 medidas de ordem.
+
+`DiscoveryReportTest` aceita `-Ddiscovery.parallel=1` (e `-Ddiscovery.suffix`) para comparar com a versão sequencial.

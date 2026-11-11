@@ -63,6 +63,8 @@ public final class RuneSearch {
         public int measured;
         public int passes;
         public List<String> changes = new ArrayList<>();
+        /** The pages the walk has read (a page measured ahead counts once the walk reads it). */
+        final java.util.Set<String> counted = new java.util.HashSet<>();
     }
 
     private RuneSearch() {
@@ -108,6 +110,21 @@ public final class RuneSearch {
             o.passes++;
             // the keystone, then the primary tree (its rows reset to the first of each, the secondary moved if it
             // clashes), each page made from the best so far
+            List<BuildRepository.RunePage> ahead = new ArrayList<>();
+            for (String k : s.keystones) {
+                BuildRepository.RunePage p = copy(best);
+                p.keystone = k;
+                ahead.add(p);
+            }
+            for (String t : s.trees.keySet()) {
+                if (!t.equals(best.primary)) {
+                    BuildRepository.RunePage p = copy(best);
+                    p.primary = t;
+                    p.primaryRunes = new ArrayList<>();
+                    ahead.add(complete(p, s));
+                }
+            }
+            prefetch(ahead, score, cache, stopped);
             for (String k : s.keystones) {
                 BuildRepository.RunePage p = copy(best);
                 p.keystone = k;
@@ -138,6 +155,13 @@ public final class RuneSearch {
             // each row of the primary tree, then the secondary rune, with the tree the coordinate above left
             int rowIndex = 0;
             for (Map.Entry<Integer, List<String>> row : s.trees.get(best.primary).entrySet()) {
+                List<BuildRepository.RunePage> rowPages = new ArrayList<>();
+                for (String rune : row.getValue()) {
+                    BuildRepository.RunePage p = copy(best);
+                    p.primaryRunes.set(rowIndex, rune);
+                    rowPages.add(p);
+                }
+                prefetch(rowPages, score, cache, stopped);
                 for (String rune : row.getValue()) {
                     BuildRepository.RunePage p = copy(best);
                     p.primaryRunes.set(rowIndex, rune);
@@ -151,6 +175,14 @@ public final class RuneSearch {
                 }
                 rowIndex++;
             }
+            List<BuildRepository.RunePage> second = new ArrayList<>();
+            for (String rune : s.others(best.primary)) {
+                BuildRepository.RunePage p = copy(best);
+                p.secondaryRune = rune;
+                p.secondary = s.treeOf(rune);
+                second.add(p);
+            }
+            prefetch(second, score, cache, stopped);
             for (String rune : s.others(best.primary)) {
                 BuildRepository.RunePage p = copy(best);
                 p.secondaryRune = rune;
@@ -169,13 +201,50 @@ public final class RuneSearch {
         return o;
     }
 
+    private static String key(BuildRepository.RunePage p) {
+        return p.keystone + "|" + p.primary + "|" + p.primaryRunes + "|" + p.secondaryRune;
+    }
+
     private static double measure(BuildRepository.RunePage p, ToDoubleFunction<BuildRepository.RunePage> score,
                                   Map<String, Double> cache, Outcome o) {
-        String key = p.keystone + "|" + p.primary + "|" + p.primaryRunes + "|" + p.secondaryRune;
+        String key = key(p);
+        Double ahead = cache.get(key);
+        if (ahead != null && !o.counted.contains(key)) {
+            o.counted.add(key);
+            o.measured++;
+        }
         return cache.computeIfAbsent(key, k -> {
+            o.counted.add(key);
             o.measured++;
             return score.applyAsDouble(p);
         });
+    }
+
+    /**
+     * The pages the next coordinate will try, measured at the same time ({@link Funnel#parallel}) into the cache. The walk
+     * then reads them in its own order, so the search takes the same steps as one page at a time; the score must be safe
+     * to call from several threads.
+     */
+    private static void prefetch(List<BuildRepository.RunePage> pages, ToDoubleFunction<BuildRepository.RunePage> score,
+                                 Map<String, Double> cache, java.util.function.BooleanSupplier stopped) {
+        Map<String, BuildRepository.RunePage> todo = new LinkedHashMap<>();
+        for (BuildRepository.RunePage p : pages) {
+            String key = key(p);
+            if (!cache.containsKey(key)) {
+                todo.putIfAbsent(key, p);
+            }
+        }
+        if (todo.size() < 2 || Funnel.parallel <= 1) {
+            return;
+        }
+        Map<String, Double> got = new java.util.concurrent.ConcurrentHashMap<>();
+        Funnel.each(stopped, new ArrayList<>(todo.entrySet()), e -> got.put(e.getKey(), score.applyAsDouble(e.getValue())));
+        for (String key : todo.keySet()) {
+            Double v = got.get(key);
+            if (v != null) {
+                cache.put(key, v);
+            }
+        }
     }
 
     private static String describe(BuildRepository.RunePage a, BuildRepository.RunePage b) {

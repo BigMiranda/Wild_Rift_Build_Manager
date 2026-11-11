@@ -1076,25 +1076,37 @@ public class DiscoveryService {
 
         @Override
         public double quick(Funnel.Kit k) {
-            return quicks.computeIfAbsent(k.key(), x -> {
-                long t0 = System.nanoTime();
-                double v = s.scorer.score(build(k), QUICK_MINUTE, BuildScore.Options.quick()).total;
+            // not computeIfAbsent: kits are measured at the same time (Funnel.parallel), and a long computation inside
+            // it would hold other keys of its bin
+            Double known = quicks.get(k.key());
+            if (known != null) {
+                return known;
+            }
+            long t0 = System.nanoTime();
+            double v = s.scorer.score(build(k), QUICK_MINUTE, BuildScore.Options.quick()).total;
+            synchronized (this) {
                 quickSeconds += (System.nanoTime() - t0) / 1e9;
                 quickCount++;
-                return v;
-            });
+            }
+            Double prev = quicks.putIfAbsent(k.key(), v);
+            return prev != null ? prev : v;
         }
 
         @Override
         public Funnel.Eval full(Funnel.Kit k) {
             kits.putIfAbsent(k.key(), k);
-            return fulls.computeIfAbsent(k.key(), x -> {
-                long t0 = System.nanoTime();
-                Funnel.Eval e = eval(build(k), null);
+            Funnel.Eval known = fulls.get(k.key());
+            if (known != null) {
+                return known;
+            }
+            long t0 = System.nanoTime();
+            Funnel.Eval e = eval(build(k), null);
+            synchronized (this) {
                 fullSeconds += (System.nanoTime() - t0) / 1e9;
                 fullCount++;
-                return e;
-            });
+            }
+            Funnel.Eval prev = fulls.putIfAbsent(k.key(), e);
+            return prev != null ? prev : e;
         }
 
         @Override

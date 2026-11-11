@@ -370,9 +370,12 @@ public class EffectTestService {
         double refMinute = combat.levelStart(combatant(req, build));
         String mode = readMode(req.readMode);
         double[][] offsets = offsets(mode, req.starts);
-        record(build, req, at, buildKey, mode);
+        Map<String, List<Action>> recorded = record(build, req, at, buildKey, mode);
         List<Outcome> out = new ArrayList<>();
         Map<String, Fight> todo = new LinkedHashMap<>();
+        // this batch's readings: the shared cache is an LRU that other batches (kits measured at the same time) may
+        // evict between the plan and the read
+        Map<String, Measures> got = new java.util.HashMap<>();
         List<List<List<String>>> keys = new ArrayList<>();   // per job: the build's fight keys, the reference's
         for (Job job : req.jobs) {
             Outcome o = new Outcome();
@@ -388,12 +391,12 @@ public class EffectTestService {
                 List<String> mine = new ArrayList<>();
                 if (EffectModel.FIXED.equals(mode)) {
                     mine.add(bk);
-                    plan(todo, bk, () -> replay(slotFor(build, req.minute, v), test, recordings.get(buildKey + "|" + tk)));
+                    plan(todo, got, bk, () -> replay(slotFor(build, req.minute, v), test, recorded.get(buildKey + "|" + tk)));
                 } else {
                     for (int k = 0; k < offsets.length; k++) {
                         double[] at0 = offsets[k];
                         mine.add(bk + "|" + k);
-                        plan(todo, bk + "|" + k, () -> fight(slotFor(build, req.minute, v), test, at0));
+                        plan(todo, got, bk + "|" + k, () -> fight(slotFor(build, req.minute, v), test, at0));
                     }
                 }
                 if ("candidato".equals(v.kind)) {
@@ -406,7 +409,7 @@ public class EffectTestService {
                         double[] at0 = offsets[k];
                         String rk = hash(write(rb)) + "@" + (own ? refMinute : req.minute) + "|" + tk + "|ref:" + (own ? "proprio" : "build") + "|" + k;
                         refKeys.add(rk);
-                        plan(todo, rk, () -> fight(own ? noItems(build, refMinute) : slot(rb, req.minute), test, at0));
+                        plan(todo, got, rk, () -> fight(own ? noItems(build, refMinute) : slot(rb, req.minute), test, at0));
                     }
                 }
                 keys.add(List.of(mine, refKeys));
@@ -415,22 +418,22 @@ public class EffectTestService {
                 keys.add(null);
             }
         }
-        run(todo);
+        got.putAll(run(todo));
         for (int i = 0; i < out.size(); i++) {
             if (keys.get(i) == null) {
                 continue;
             }
             Outcome o = out.get(i);
-            o.build = mean(measuresOf(keys.get(i).get(0)));
-            o.reference = mean(measuresOf(keys.get(i).get(1)));
+            o.build = mean(measuresOf(got, keys.get(i).get(0)));
+            o.reference = mean(measuresOf(got, keys.get(i).get(1)));
             setIndex(o, "proprio".equals(ref.kind == null ? "proprio" : ref.kind));
         }
         return out;
     }
 
-    private List<Measures> measuresOf(List<String> keys) {
+    private static List<Measures> measuresOf(Map<String, Measures> got, List<String> keys) {
         List<Measures> out = new ArrayList<>();
-        keys.forEach(k -> out.add(results.get(k)));
+        keys.forEach(k -> out.add(got.get(k)));
         return out;
     }
 
@@ -458,16 +461,20 @@ public class EffectTestService {
     }
 
     /** The decisions of the build as it is in each scenario of a batch (fixed behavior), the ones not recorded yet in parallel. */
-    private void record(BuildRepository.Build build, Request req, double at, String buildKey, String mode) {
+    private Map<String, List<Action>> record(BuildRepository.Build build, Request req, double at, String buildKey, String mode) {
+        Map<String, List<Action>> mine = new java.util.HashMap<>();
         if (!EffectModel.FIXED.equals(mode)) {
-            return;
+            return mine;
         }
         Map<String, Fight> todo = new LinkedHashMap<>();
         for (Job job : req.jobs) {
             try {
                 Test test = scaled(testOf(job), at);
                 String key = buildKey + "|" + hash(write(test));
-                if (!recordings.containsKey(key) && !todo.containsKey(key)) {
+                List<Action> known = recordings.get(key);
+                if (known != null) {
+                    mine.put(key, known);
+                } else if (!todo.containsKey(key)) {
                     todo.put(key, fight(slot(build, req.minute), test));
                 }
             } catch (ResponseStatusException e) {
@@ -483,7 +490,9 @@ public class EffectTestService {
         }
         for (int i = 0; i < keys.size(); i++) {
             recordings.put(keys.get(i), done.get(i));
+            mine.put(keys.get(i), done.get(i));
         }
+        return mine;
     }
 
     /**
@@ -572,13 +581,19 @@ public class EffectTestService {
         Fight make();
     }
 
-    private void plan(Map<String, Fight> todo, String key, FightMaker maker) {
-        if (!results.containsKey(key) && !todo.containsKey(key)) {
+    private void plan(Map<String, Fight> todo, Map<String, Measures> got, String key, FightMaker maker) {
+        if (got.containsKey(key) || todo.containsKey(key)) {
+            return;
+        }
+        Measures known = results.get(key);
+        if (known != null) {
+            got.put(key, known);
+        } else {
             todo.put(key, maker.make());
         }
     }
 
-    private void run(Map<String, Fight> todo) {
+    private Map<String, Measures> run(Map<String, Fight> todo) {
         List<String> keys = new ArrayList<>(todo.keySet());
         List<Callable<Measures>> runs = new ArrayList<>();
         for (String k : keys) {
@@ -586,9 +601,12 @@ public class EffectTestService {
             runs.add(() -> measure(arena.runInputs(f.inputs, f.actions, f.duration), f));
         }
         List<Measures> done = ArenaService.parallel(runs);
+        Map<String, Measures> out = new java.util.HashMap<>();
         for (int i = 0; i < keys.size(); i++) {
             results.put(keys.get(i), done.get(i));
+            out.put(keys.get(i), done.get(i));
         }
+        return out;
     }
 
     private Fight fight(ArenaModel.Slot buildSlot, Test test) {

@@ -32,6 +32,14 @@ public final class BuildSearch {
 
         /** The budget ran out or someone pressed stop: what is known so far is the answer. */
         boolean stopped();
+
+        /**
+         * The orders the search is about to measure, in its order: an oracle may measure ahead, at the same time, the
+         * ones the budget will reach, as long as each measure is counted when the search reads it (the same answer and
+         * count as one at a time).
+         */
+        default void prefetch(List<List<Long>> orders, double[] minutes) {
+        }
     }
 
     /** An order and its score. */
@@ -288,21 +296,26 @@ public final class BuildSearch {
         Set<List<Long>> seen = new HashSet<>();
         for (int depth = 0; depth < sp.maxDepth() && !frontier.isEmpty(); depth++) {
             List<Ranked> next = new ArrayList<>();
+            // the layer's orders first (the shop's rules cost no measure), so the oracle can measure them ahead
+            List<List<Long>> layer = new ArrayList<>();
             for (List<Long> prefix : frontier) {
                 for (long id : next(sp, prefix)) {
-                    if (o.stopped()) {
-                        break;
-                    }
                     List<Long> order = new ArrayList<>(prefix);
                     order.add(id);
-                    if (!seen.add(order) || !o.allowed(order)) {
-                        continue;
+                    if (seen.add(order) && o.allowed(order)) {
+                        layer.add(order);
                     }
-                    Ranked r = measure(o, order, minutes);
-                    next.add(r);
-                    if (complete(sp, order)) {
-                        pool.add(r);
-                    }
+                }
+            }
+            o.prefetch(layer, minutes);
+            for (List<Long> order : layer) {
+                if (o.stopped()) {
+                    break;
+                }
+                Ranked r = measure(o, order, minutes);
+                next.add(r);
+                if (complete(sp, order)) {
+                    pool.add(r);
                 }
             }
             next.sort(Comparator.comparingDouble((Ranked r) -> -r.score));

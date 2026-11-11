@@ -89,6 +89,58 @@ public final class Funnel {
         }
     }
 
+    /**
+     * Kits measured at the same time (each kit's fights already run on all cores, but a kit's batch is small, so one kit
+     * at a time leaves most cores idle). Every kit's reading is deterministic on its own and written to its own entry, so
+     * the result does not depend on it.
+     */
+    public static int parallel = Math.max(1, Runtime.getRuntime().availableProcessors() / 2);
+
+    /** Runs {@code fn} on each element, {@link #parallel} at a time, until the evaluator stops; returns when all are done. */
+    static <T> void each(Evaluator ev, List<T> list, java.util.function.Consumer<T> fn) {
+        each(ev::stopped, list, fn);
+    }
+
+    /** {@link #each(Evaluator, List, java.util.function.Consumer)} with any stop check. */
+    public static <T> void each(java.util.function.BooleanSupplier stopped, List<T> list, java.util.function.Consumer<T> fn) {
+        int threads = Math.min(parallel, list.size());
+        if (threads <= 1) {
+            for (T t : list) {
+                if (stopped.getAsBoolean()) {
+                    break;
+                }
+                fn.accept(t);
+            }
+            return;
+        }
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(threads, r -> {
+            Thread t = new Thread(r, "descoberta-kits");
+            t.setDaemon(true);
+            return t;
+        });
+        try {
+            List<java.util.concurrent.Callable<Void>> runs = new ArrayList<>();
+            for (T t : list) {
+                runs.add(() -> {
+                    if (!stopped.getAsBoolean()) {
+                        fn.accept(t);
+                    }
+                    return null;
+                });
+            }
+            for (java.util.concurrent.Future<Void> f : pool.invokeAll(runs)) {
+                f.get();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        } catch (java.util.concurrent.ExecutionException e) {
+            throw e.getCause() instanceof RuntimeException ? (RuntimeException) e.getCause() : new IllegalStateException(e.getCause());
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
     public static class Config {
         public int length = 5;
         public int population = 12;
@@ -249,12 +301,13 @@ public final class Funnel {
                 }
             }
             // quick fights: the worse half is cut (successive halving), then the full battery on the best
-            for (int i = 0; i < toQuick.size() && !ev.stopped(); i++) {
-                Entry e = toQuick.get(i);
+            java.util.concurrent.atomic.AtomicInteger quickDone = new java.util.concurrent.atomic.AtomicInteger();
+            int quickTotal = toQuick.size();
+            each(ev, toQuick, e -> {
                 e.quick = ev.quick(e.kit);
-                res.quickRuns++;
-                ev.progress("rapidas", i + 1, toQuick.size());
-            }
+                ev.progress("rapidas", quickDone.incrementAndGet(), quickTotal);
+            });
+            res.quickRuns += (int) toQuick.stream().filter(e -> e.quick != null).count();
             toQuick.removeIf(e -> e.quick == null);
             toQuick.sort(Comparator.comparingDouble((Entry e) -> -e.quick).thenComparing(e -> e.kit.key()));
             List<Entry> half = new ArrayList<>(toQuick.subList(0, (toQuick.size() + 1) / 2));
@@ -309,15 +362,12 @@ public final class Funnel {
         List<Entry> niches = new ArrayList<>(res.niches.values());
         niches.sort(Comparator.comparingDouble((Entry e) -> -e.score()).thenComparing(e -> e.kit.key()));
         toConfirm.addAll(niches.subList(0, Math.min(c.confirm, niches.size())));
-        int n = 0;
-        for (Entry e : toConfirm) {
-            if (ev.stopped()) {
-                break;
-            }
+        java.util.concurrent.atomic.AtomicInteger n = new java.util.concurrent.atomic.AtomicInteger();
+        each(ev, new ArrayList<>(toConfirm), e -> {
             e.confirmed = ev.confirm(e.kit);
-            res.confirmRuns++;
-            ev.progress("confirmacao", ++n, toConfirm.size());
-        }
+            ev.progress("confirmacao", n.incrementAndGet(), toConfirm.size());
+        });
+        res.confirmRuns += (int) toConfirm.stream().filter(e -> e.confirmed != null).count();
         res.stopped = ev.stopped();
         return res;
     }
@@ -332,14 +382,18 @@ public final class Funnel {
     }
 
     private static void full(Evaluator ev, List<Entry> list, Result res) {
-        for (int i = 0; i < list.size() && !ev.stopped(); i++) {
-            Entry e = list.get(i);
+        List<Entry> todo = new ArrayList<>();
+        for (Entry e : list) {
             if (e.full == null) {
-                e.full = ev.full(e.kit);
-                res.fullRuns++;
+                todo.add(e);
             }
-            ev.progress("bateria", i + 1, list.size());
         }
+        java.util.concurrent.atomic.AtomicInteger done = new java.util.concurrent.atomic.AtomicInteger(list.size() - todo.size());
+        each(ev, todo, e -> {
+            e.full = ev.full(e.kit);
+            ev.progress("bateria", done.incrementAndGet(), list.size());
+        });
+        res.fullRuns += (int) todo.stream().filter(e -> e.full != null).count();
     }
 
     /** MAP-Elites: each niche keeps its best kit. */

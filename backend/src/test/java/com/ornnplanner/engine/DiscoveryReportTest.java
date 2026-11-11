@@ -41,6 +41,10 @@ class DiscoveryReportTest {
     @Test
     void report() throws IOException {
         String budget = System.getProperty("discovery.budget", DiscoveryModel.QUICK);
+        // kits measured at the same time (Funnel.parallel): 1 = one at a time, to compare with the parallel run
+        if (System.getProperty("discovery.parallel") != null) {
+            com.ornnplanner.arena.discovery.Funnel.parallel = Integer.parseInt(System.getProperty("discovery.parallel"));
+        }
         ObjectMapper json = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
         for (String name : System.getProperty("discovery.builds", "Big Carry v1").split(",")) {
             BuildRepository.Build b = builds.findBuildSummaries().stream().filter(x -> x.name.equals(name.trim())).findFirst().orElseThrow();
@@ -49,7 +53,8 @@ class DiscoveryReportTest {
             r.budget = budget;
             DiscoveryModel.Estimate est = discovery.estimate(r);
             DiscoveryModel.Result res = discovery.run(r, null);
-            Files.writeString(Paths.get("target/discovery-" + name.trim().replace(' ', '_') + "-" + budget + ".json"), json.writeValueAsString(res));
+            Files.writeString(Paths.get("target/discovery-" + name.trim().replace(' ', '_') + "-" + budget
+                    + System.getProperty("discovery.suffix", "") + ".json"), json.writeValueAsString(res));
             System.out.printf("DISCOVERY %s (%s, %s, quality %s): %.0f s (estimated %.0f s); %d quick, %d full, %d confirm, %d order; surrogate r = %s%n",
                     name, res.champion, res.championClass, res.quality, res.seconds, est.seconds, res.quickRuns, res.fullRuns,
                     res.confirmRuns, res.orderMeasures, res.surrogateCorrelation);

@@ -571,8 +571,8 @@ public class CalculatorService {
         final BuildRepository.Build base;
         final Double gold;
         final int team;
-        final Map<String, Model.TimelineResult> timelines = new HashMap<>();
-        final Map<String, Arena.Input> inputs = new HashMap<>();
+        final Map<String, Model.TimelineResult> timelines = new java.util.concurrent.ConcurrentHashMap<>();
+        final Map<String, Arena.Input> inputs = new java.util.concurrent.ConcurrentHashMap<>();
         final Set<Long> stacking;
         final Set<Long> support = planner.supportItems();
 
@@ -751,19 +751,68 @@ public class CalculatorService {
             }
         }
 
+        /** Measures taken ahead (prefetch), not counted until the search reads them. */
+        final Map<String, Double> ahead = new HashMap<>();
+
         @Override
         public double score(List<Long> order, double minute) {
             // the order itself (not its inventory sorted by id): what was bought when matters to the items gathered
             // while held, and the cache key holds their purchase minutes
-            return scores.computeIfAbsent(side.key(order, minute), k -> {
-                counted();
-                if ("arena".equals(r.target)) {
-                    return arenaScore(order, minute);
+            String key = side.key(order, minute);
+            Double v = scores.get(key);
+            if (v != null) {
+                return v;
+            }
+            counted();
+            v = ahead.remove(key);
+            if (v == null) {
+                v = raw(order, minute);
+            }
+            scores.put(key, v);
+            return v;
+        }
+
+        /**
+         * The orders the budget will reach, measured at the same time ({@code Funnel.parallel}): as the search would,
+         * order by order while the count is under the limit, every minute of an order once it starts.
+         */
+        @Override
+        public void prefetch(List<List<Long>> orders, double[] minutes) {
+            if (com.ornnplanner.arena.discovery.Funnel.parallel <= 1 || "arena".equals(r.target)) {
+                return;
+            }
+            Map<String, Object[]> todo = new java.util.LinkedHashMap<>();
+            long n = measures;
+            for (List<Long> order : orders) {
+                if (n >= limit) {
+                    break;
                 }
-                // the class score (part 1): a tank is not rewarded for damage items, a marksman is
-                return "relatorio".equals(r.measure) ? reportScore(order, minute)
-                        : scorer.score(side.order(order), minute).total;
-            });
+                for (double m : minutes) {
+                    String key = side.key(order, m);
+                    if (!scores.containsKey(key) && !ahead.containsKey(key) && !todo.containsKey(key)) {
+                        todo.put(key, new Object[] {order, m});
+                        n++;
+                    }
+                }
+            }
+            if (todo.size() < 2) {
+                return;
+            }
+            Map<String, Double> got = new java.util.concurrent.ConcurrentHashMap<>();
+            @SuppressWarnings("unchecked")
+            java.util.function.Consumer<Map.Entry<String, Object[]>> fn = e ->
+                    got.put(e.getKey(), raw((List<Long>) e.getValue()[0], (Double) e.getValue()[1]));
+            com.ornnplanner.arena.discovery.Funnel.each(() -> job != null && job.stop, new ArrayList<>(todo.entrySet()), fn);
+            ahead.putAll(got);
+        }
+
+        private double raw(List<Long> order, double minute) {
+            if ("arena".equals(r.target)) {
+                return arenaScore(order, minute);
+            }
+            // the class score (part 1): a tank is not rewarded for damage items, a marksman is
+            return "relatorio".equals(r.measure) ? reportScore(order, minute)
+                    : scorer.score(side.order(order), minute).total;
         }
 
         private double arenaScore(List<Long> order, double minute) {
