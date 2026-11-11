@@ -34,7 +34,7 @@ class HeldStacksTest {
 
     @BeforeAll
     static void load() {
-        effects = new ItemEffectCatalog(new ClassPathResource("seed/efeitos_itens_7_3d.yml"),
+        effects = new ItemEffectCatalog(new ClassPathResource("seed/efeitos_itens_7_3f.yml"),
                 new ClassPathResource("seed/precos_status.yml"));
     }
 

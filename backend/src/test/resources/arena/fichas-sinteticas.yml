@@ -1,4 +1,4 @@
-# Uma ficha sintética por mecânica: é o formato que a Etapa 7 vai preencher (documentado no cabeçalho de kits_7_3d.yml).
+# Uma ficha sintética por mecânica: é o formato que a Etapa 7 vai preencher (documentado no cabeçalho de kits_7_3f.yml).
 # Nenhuma é de campeão real. Cada `habilidades."1"` é a mecânica em teste; o MecanicasTest liga cada uma a um lutador.
 base: &base
   raio: 80

@@ -46,7 +46,7 @@ public class CombatCatalog {
         return first;
     }
 
-    public CombatCatalog(@Value("${planner.seed.combat:classpath:seed/combate_7_3d.yml}") Resource file) {
+    public CombatCatalog(@Value("${planner.seed.combat:classpath:seed/combate_7_3f.yml}") Resource file) {
         try (InputStream in = file.getInputStream()) {
             Map<String, Object> root = new Yaml().load(in);
             items.putAll((Map<String, List<Map<String, Object>>>) root.get("itens"));

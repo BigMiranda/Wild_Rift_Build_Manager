@@ -75,7 +75,7 @@ public class ArenaService {
     public ArenaService(FighterBuilder combat, CombatCatalog catalog, BuildRepository builds, RuneCatalog runes,
                         JdbcTemplate jdbc, PolicyRepository policies, ComboRepository combos, AutoBrain auto,
                         com.ornnplanner.service.PlannerService planner,
-                        @Value("${planner.seed.kits:classpath:seed/kits_7_3d.yml}") Resource kitsFile,
+                        @Value("${planner.seed.kits:classpath:seed/kits_7_3f.yml}") Resource kitsFile,
                         @Value("${planner.seed.rift:classpath:seed/mapa_7_3d.yml}") Resource riftFile,
                         @Value("${planner.seed.objectives:classpath:seed/objetivos_7_3d.yml}") Resource rulesFile) {
         this.combat = combat;

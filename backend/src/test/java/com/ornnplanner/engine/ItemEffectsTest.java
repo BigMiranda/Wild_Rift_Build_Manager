@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Modeled item effects (efeitos_itens_7_3d.yml): effective stats with their own switch, options and stack rates. */
+/** Modeled item effects (efeitos_itens_7_3f.yml): effective stats with their own switch, options and stack rates. */
 class ItemEffectsTest {
 
     private static final double EPS = 1e-6;
@@ -33,7 +33,7 @@ class ItemEffectsTest {
 
     @BeforeAll
     static void load() {
-        effects = new ItemEffectCatalog(new ClassPathResource("seed/efeitos_itens_7_3d.yml"),
+        effects = new ItemEffectCatalog(new ClassPathResource("seed/efeitos_itens_7_3f.yml"),
                 new ClassPathResource("seed/precos_status.yml"));
     }
 
@@ -178,8 +178,8 @@ class ItemEffectsTest {
 
     @Test
     void stackingRunesGrowByMinuteUpToTheirLimit() {
-        RuneCatalog runes = new RuneCatalog(new ClassPathResource("seed/runas_7_3d.yml"),
-                new ClassPathResource("seed/feiticos_7_3d.yml"), new ClassPathResource("seed/precos_status.yml"));
+        RuneCatalog runes = new RuneCatalog(new ClassPathResource("seed/runas_7_3f.yml"),
+                new ClassPathResource("seed/feiticos_7_3f.yml"), new ClassPathResource("seed/precos_status.yml"));
         // Coleção de Olhos: 1 kill per minute -> 1.5 AD each, up to 8 stacks (12 AD).
         ItemDef eyes = runes.toItem("Coleção de Olhos", null, -1, List.of(new double[] {0, 1})).orElseThrow();
         StatLine ad = eyes.stats.stream().filter(l -> l.perMinute != null).findFirst().orElseThrow();
@@ -212,8 +212,8 @@ class ItemEffectsTest {
 
     @Test
     void omnivampRuneAndPricesByFactor() {
-        RuneCatalog runes = new RuneCatalog(new ClassPathResource("seed/runas_7_3d.yml"),
-                new ClassPathResource("seed/feiticos_7_3d.yml"), new ClassPathResource("seed/precos_status.yml"));
+        RuneCatalog runes = new RuneCatalog(new ClassPathResource("seed/runas_7_3f.yml"),
+                new ClassPathResource("seed/feiticos_7_3f.yml"), new ClassPathResource("seed/precos_status.yml"));
         ItemDef linhagem = runes.toItem("Lenda: Linhagem", null, -1).orElseThrow();
         assertTrue(linhagem.stats.stream().anyMatch(l -> "% Omnivamp".equals(l.type) && l.value == 1));
 

@@ -40,7 +40,7 @@ public class ItemEffectCatalog {
     }
 
     @SuppressWarnings("unchecked")
-    public ItemEffectCatalog(@Value("${planner.seed.itemEffects:classpath:seed/efeitos_itens_7_3d.yml}") Resource file,
+    public ItemEffectCatalog(@Value("${planner.seed.itemEffects:classpath:seed/efeitos_itens_7_3f.yml}") Resource file,
                              @Value("${planner.seed.prices}") Resource pricesFile) {
         Map<String, String> statCodes = new HashMap<>();
         Map<String, Map<String, Object>> prices = read(pricesFile);

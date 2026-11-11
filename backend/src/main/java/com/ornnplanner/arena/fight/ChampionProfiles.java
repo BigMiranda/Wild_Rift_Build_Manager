@@ -85,7 +85,7 @@ public class ChampionProfiles {
     @SuppressWarnings("unchecked")
     public ChampionProfiles(ChampionCatalog champions,
                             @Value("${planner.seed.classification:classpath:seed/classificacao_7_3d.yml}") Resource file,
-                            @Value("${planner.seed.kits:classpath:seed/kits_7_3d.yml}") Resource kitsFile) {
+                            @Value("${planner.seed.kits:classpath:seed/kits_7_3f.yml}") Resource kitsFile) {
         Map<String, Object> kits;
         try (InputStream in = file.getInputStream(); InputStream k = kitsFile.getInputStream()) {
             rules = new Yaml().load(in);

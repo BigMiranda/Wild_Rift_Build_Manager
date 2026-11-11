@@ -21,7 +21,7 @@ class AbilityParserTest {
 
     @BeforeAll
     static void load() {
-        champions = new ChampionCatalog(new ClassPathResource("seed/campeoes_7_3d.yml"),
+        champions = new ChampionCatalog(new ClassPathResource("seed/campeoes_7_3f.yml"),
                 new ClassPathResource("seed/precos_status.yml"));
     }
 

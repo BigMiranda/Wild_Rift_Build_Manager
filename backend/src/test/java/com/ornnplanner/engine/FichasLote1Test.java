@@ -95,7 +95,7 @@ class FichasLote1Test {
     private static final Map<String, Object> TEXTS;
 
     static {
-        try (InputStream in = new ClassPathResource("seed/campeoes_7_3d.yml").getInputStream()) {
+        try (InputStream in = new ClassPathResource("seed/campeoes_7_3f.yml").getInputStream()) {
             Map<String, Object> root = new Yaml().load(in);
             @SuppressWarnings("unchecked")
             Map<String, Object> c = (Map<String, Object>) root.getOrDefault("campeoes", root);
