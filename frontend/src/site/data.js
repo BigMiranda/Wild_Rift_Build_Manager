@@ -37,6 +37,7 @@ export const sectionOf = (b) => b?.section ?? (b?.kind === 'nicho' || b?.kind ==
 /** Where a build's rune page came from (Rodada 13), as the page says it. */
 export const RUNES_FROM = {
   busca: 'runas buscadas para esta build',
+  salva: 'runas da build salva (a build está como foi salva)',
   padrao: 'runas da padrão robusta (não buscadas para esta build)',
   publica: 'runas da build pública (não buscadas para esta build)',
 };

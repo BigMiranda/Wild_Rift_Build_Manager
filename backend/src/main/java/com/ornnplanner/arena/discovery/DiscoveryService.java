@@ -239,6 +239,7 @@ public class DiscoveryService {
                 DiscoveryModel.KitView kv = ev.view(k, null, "salva");
                 kv.label = b.name;
                 kv.keystone = b.runePage == null ? null : b.runePage.keystone;
+                kv.buildId = b.id;
                 res.known.add(kv);
             }
         }
@@ -308,6 +309,7 @@ public class DiscoveryService {
         novelty(r, ev, res, job);
         res.support = bestSupport(ev);
         publish(r, ev, res, budget, job);
+        known(res, ev);
         res.seconds = (System.nanoTime() - t0) / 1e9;
         if (ev.fullCount > 0) {
             secondsPerFull = ev.fullSeconds / ev.fullCount;
@@ -412,6 +414,9 @@ public class DiscoveryService {
             cr.boots = new ArrayList<>();
             if (k.boots != null) {
                 cr.boots.add(k.boots);
+                // the kit's own boots are required: with only the allowed list, an order ending on the tier 2 boots
+                // (their component) is whole for the calculator and was dropped here as "cut" (Rodada 13)
+                cr.required.add(k.boots);
                 Model.ItemDef bd = ev.items.get(k.boots);
                 if (bd != null) {
                     bd.components.forEach(c -> cr.boots.add(c.itemId));
@@ -429,9 +434,124 @@ public class DiscoveryService {
                 v.componentFirst = ans.componentFirst;
             } else {
                 v.orderCut = true;
-                res.notes.add("Ordem de " + String.join(", ", v.names) + ": o orçamento da ordem acabou antes de uma ordem "
-                        + "completa; fica a ordem da triagem (o item que mais vale primeiro).");
+                List<Long> start = ans.best == null ? List.of() : ans.best.order;
+                List<Long> merged = completed(start, ev.order(k));
+                if (!start.isEmpty() && whole(merged, k)) {
+                    v.order = merged;
+                    v.orderPrefix = start.size();
+                    res.notes.add("Ordem de " + String.join(", ", v.names) + ": o orçamento da ordem acabou antes de uma ordem "
+                            + "completa; ficam as " + start.size() + " primeiras compras da calculadora e, depois delas, a ordem da triagem.");
+                } else {
+                    res.notes.add("Ordem de " + String.join(", ", v.names) + ": o orçamento da ordem acabou antes de uma ordem "
+                            + "completa; fica a ordem da triagem (o item que mais vale primeiro).");
+                }
             }
+        }
+    }
+
+    /** The calculator's start, then the screening's order without what the start already bought. */
+    static List<Long> completed(List<Long> start, List<Long> screening) {
+        List<Long> out = new ArrayList<>(start);
+        for (Long id : screening) {
+            if (!out.contains(id)) {
+                out.add(id);
+            }
+        }
+        return out;
+    }
+
+    /** A kit's build with its own rune page and purchase order (a published kit after finish). */
+    static BuildRepository.Build finished(Evaluator ev, DiscoveryModel.KitView v) {
+        BuildRepository.Build b = ev.build(new Funnel.Kit(v.items, v.boots));
+        if (v.runePage != null) {
+            b.runePage = v.runePage;
+        }
+        if (v.order != null && !v.order.isEmpty()) {
+            b.steps = new ArrayList<>();
+            for (long id : v.order) {
+                b.steps.add(new BuildRepository.Step(id, true));
+            }
+        }
+        return b;
+    }
+
+    /**
+     * Rodada 13: a published kit measured again with the runes and the order it got, so its score is the one it plays
+     * with (the search measured it with the base build's page and the screening's order).
+     */
+    void remeasure(DiscoveryModel.KitView v, Evaluator ev) {
+        if (ev.stopped()) {
+            return;
+        }
+        Funnel.Eval e = ev.eval(finished(ev, v), null);
+        v.finalScore = e.score;
+        v.score = e.score;   // what is published is the score it plays with
+    }
+
+    /** Rodada 13: a saved build measured as it is saved (its runes, its order, its gold and XP pace). */
+    void asSaved(DiscoveryModel.KitView k, Evaluator ev) {
+        BuildRepository.Build b = builds.findBuild(k.buildId).orElse(null);
+        if (b == null) {
+            return;
+        }
+        BuildRepository.Build c = copy(b, BuildRepository.Build.class);
+        c.matchEnd = null;
+        Funnel.Eval e = ev.eval(c, null);
+        k.finalScore = e.score;
+        k.runePage = b.runePage;
+        k.runesFrom = "salva";
+        k.goldPerMin = b.goldPerMin;
+        k.xpPerMin = b.xpPerMin;
+        k.order = new ArrayList<>();
+        for (BuildRepository.Step st : b.steps) {
+            if (st.itemId != null) {
+                k.order.add(st.itemId);
+            }
+        }
+        k.orderSearched = true;
+    }
+
+    /**
+     * Rodada 13, the known builds first: what is published must beat the best saved build as it is saved (its runes and
+     * order), compared with the published kits' scores after their runes and order. A discovery that falls behind is
+     * dropped to the notes; when a saved build beats the standard one, it becomes the standard (the site's best).
+     */
+    void known(DiscoveryModel.Result res, Evaluator ev) {
+        DiscoveryModel.KitView best = null;
+        for (DiscoveryModel.KitView k : res.known) {
+            if (k.finalScore != null && ev.supports(new Funnel.Kit(k.items, k.boots)) == 0
+                    && (best == null || k.finalScore > best.finalScore)) {
+                best = k;
+            }
+        }
+        if (best == null || ev.stopped()) {
+            return;
+        }
+        final DiscoveryModel.KitView top = best;
+        res.discoveries.removeIf(f -> {
+            if (f.kit.finalScore == null || f.kit.finalScore + 1e-9 >= top.finalScore) {
+                return false;
+            }
+            res.notes.add(String.format(java.util.Locale.ROOT, "Descoberta retirada: com as runas e a ordem, %s fica em %.1f, abaixo de %s "
+                    + "como está salva (%.1f).", String.join(", ", f.kit.names), f.kit.finalScore, top.label, top.finalScore));
+            return true;
+        });
+        DiscoveryModel.KitView st = res.standard;
+        if (st != null && st.finalScore != null && top.finalScore > st.finalScore + 1e-9) {
+            res.notes.add(String.format(java.util.Locale.ROOT, "A build salva %s, como está (%.1f), supera a padrão encontrada com as runas e "
+                    + "a ordem dela (%.1f): ela fica como a padrão.", top.label, top.finalScore, st.finalScore));
+            top.score = top.finalScore;
+            res.standard = top;
+        }
+        // the discoveries' text against the saved build as it is
+        for (DiscoveryModel.Finding f : res.discoveries) {
+            if (f.kit.finalScore == null || f.text == null) {
+                continue;
+            }
+            int cut = f.text.indexOf("). ");
+            f.text = String.format(java.util.Locale.ROOT, "Nota %.1f, com as runas e a ordem dela, contra %.1f de %s como está salva. ",
+                    f.kit.finalScore, top.finalScore, top.label) + (cut < 0 ? f.text : f.text.substring(cut + 3));
+            f.against = top.label;
         }
     }
 
@@ -473,6 +593,7 @@ public class DiscoveryService {
                 continue;
             }
             finish(r, ev, v, b, res, shape, job, i, todo.size());
+            remeasure(v, ev);
             done.putIfAbsent(v.items + "|" + v.boots, v);
         }
         BuildRepository.RunePage page = res.standard == null || !"busca".equals(res.standard.runesFrom) ? null : res.standard.runePage;
@@ -568,6 +689,10 @@ public class DiscoveryService {
             stage(job, "conhecidas", ++n, res.known.size());
             if (bestKnown == null || k.score > bestKnown.score) {
                 bestKnown = k;
+            }
+            // Rodada 13: and as it is saved (its own runes, order and pace), the reference of what gets published
+            if (k.buildId != null) {
+                asSaved(k, ev);
             }
         }
         if (bestKnown == null) {

@@ -63,7 +63,7 @@ public final class DiscoveryModel {
                 b.search.fullPerGeneration = 8;
                 b.search.confirm = 4;
                 b.search.synergyPairs = 20;
-                b.orderBudget = 800;
+                b.orderBudget = 2000;
             } else {
                 b.shortlist = 24;
                 b.jokers = 4;
@@ -127,9 +127,20 @@ public final class DiscoveryModel {
         /** The pace it was measured with when not the base build's (a support build: Rodada 13). */
         public Double goldPerMin;
         public Double xpPerMin;
-        /** The order was searched by the calculator; cut = its budget ran out first and the screening's order stayed. */
+        /**
+         * The order was searched by the calculator; cut = its budget ran out before a whole order. A cut order keeps the
+         * calculator's best start ({@code orderPrefix} purchases) and the screening's order after it (Rodada 13).
+         */
         public boolean orderSearched;
         public boolean orderCut;
+        public int orderPrefix;
+        /**
+         * Rodada 13: the score with the kit's own runes and order (a saved build as it is saved; a published kit after its
+         * runes and order were searched). The comparisons with the known builds that decide what is published use it.
+         */
+        public Double finalScore;
+        /** The saved build a known view is (null for a meta build or a found kit). */
+        public Long buildId;
         /** A known build's name (a saved build, or a meta build with its source). */
         public String label;
         public String keystone;

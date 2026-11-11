@@ -151,3 +151,34 @@ Medido na Descoberta rápida do Ornn (Big Carry v1): 372 s em sequência, 237 s 
 (ranking, descobertas, nichos, padrão, suporte, notas) e as mesmas 544 medidas de ordem.
 
 `DiscoveryReportTest` aceita `-Ddiscovery.parallel=1` (e `-Ddiscovery.suffix`) para comparar com a versão sequencial.
+
+## As builds conhecidas primeiro, de verdade (depois da campanha do Ornn no 7.3f)
+
+A primeira campanha do Ornn no 7.3f publicou como "melhor" uma build de nota 73,7 "contra 72,1 de Soldado v0 (a melhor
+conhecida)", enquanto as builds salvas, medidas como estão (com a página de runas e a ordem delas), chegavam a 74,7
+(Big Carry v6 · #2). Duas causas:
+
+- a Descoberta media as builds conhecidas como conjunto (as runas da build base e a ordem da triagem), não como foram
+  salvas;
+- as candidatas eram comparadas e publicadas com a nota da busca, de antes das runas e da ordem buscadas para elas.
+
+Agora (`DiscoveryService.known`):
+
+- cada build salva conhecida é medida também como está (`asSaved`: runas, ordem e ritmo dela; `finalScore`);
+- a padrão, a de suporte e as descobertas são medidas de novo depois de receberem runas e ordem (`remeasure`), e essa é
+  a nota publicada;
+- uma descoberta que fica abaixo da melhor build salva (como está) é retirada, com uma nota; o texto das que ficam
+  compara com a build salva;
+- se uma build salva supera a padrão encontrada, ela vira a padrão (o site mostra a build como foi salva,
+  `runesFrom: salva`).
+
+A filtragem da novidade continua comparando conjunto com conjunto (as duas medidas com as mesmas runas): é só o
+primeiro corte.
+
+**Ordem "cortada".** 4 das 6 primeiras do Ornn ficaram sem a ordem da calculadora, com a nota "o orçamento da ordem
+acabou". Não era o orçamento (o mesmo kit: 321 medidas de 1600, `truncated` falso; `OrderCutReportTest` reproduz): a
+Descoberta passava a bota do kit e os componentes dela como botas aceitas, e a calculadora dava por completa uma ordem
+que terminava nas Botas Galvanizadas (nível 2), sem a Mobilização Blindada; a Descoberta exige a bota do kit e jogava a
+ordem fora. Agora a bota do kit vai em `required` (a ordem fecha nela). O orçamento do completo sobe para 2000 como
+folga, e, quando ainda acabar antes de uma ordem inteira, ficam as primeiras compras da calculadora (`orderPrefix`) e,
+depois delas, a ordem da triagem, em vez de só a da triagem.
