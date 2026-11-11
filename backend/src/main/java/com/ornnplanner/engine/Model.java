@@ -87,8 +87,86 @@ public final class Model {
          * whenever present, whatever the purchase's conditional choice (lines of an effect turned off are not added).
          */
         public boolean switched;
+        /**
+         * Stacks gathered while the item is held (Rodada 13; {@code acumulo_por_posse} of the item effects file): one
+         * every {@code heldEvery} seconds from the purchase, at most {@code heldMax}; the line is its full value x
+         * stacks / max, or all of it from {@code heldFrom} stacks on. Null = not by the time held.
+         */
+        public Double heldEvery;
+        public Double heldMax;
+        public Double heldFrom;
 
         public StatLine() {
+        }
+
+        /** The share of the line's value after {@code heldMinutes} with the item (1 when not by the time held). */
+        public double heldFraction(double heldMinutes) {
+            if (heldEvery == null || heldMax == null || heldMax <= 0) {
+                return 1;
+            }
+            double stacks = Math.min(heldMax, Math.floor(Math.max(0, heldMinutes) * 60 / heldEvery + 1e-9));
+            if (heldFrom != null) {
+                return stacks >= heldFrom - 1e-9 ? 1 : 0;
+            }
+            return stacks / heldMax;
+        }
+
+        /**
+         * The line with its per-minute stacks gathered only from {@code start} on (an item's stacks start at its purchase,
+         * Rodada 13: Coração de Aço bought at 13:00 had the strikes since 0:00); the line itself when nothing changes.
+         */
+        public StatLine from(double start) {
+            if (perMinute == null || perMinute.isEmpty() || start <= 1e-9) {
+                return this;
+            }
+            List<double[]> clipped = new ArrayList<>();
+            clipped.add(new double[] {0, 0});
+            double rate = 0;
+            for (double[] p : perMinute) {
+                if (p[0] <= start + 1e-9) {
+                    rate = p[1];
+                }
+            }
+            clipped.add(new double[] {start, rate});
+            for (double[] p : perMinute) {
+                if (p[0] > start + 1e-9) {
+                    clipped.add(p);
+                }
+            }
+            StatLine c = copy();
+            c.perMinute = clipped;
+            return c;
+        }
+
+        /** A copy of the line (the lists are shared: they are never changed after loading). */
+        public StatLine copy() {
+            StatLine c = new StatLine();
+            c.type = type;
+            c.value = value;
+            c.valueMax = valueMax;
+            c.conditional = conditional;
+            c.passive = passive;
+            c.ratio = ratio;
+            c.ref = ref;
+            c.refType = refType;
+            c.refScope = refScope;
+            c.minLevel = minLevel;
+            c.perMinute = perMinute;
+            c.perMinuteMax = perMinuteMax;
+            c.ratioSteps = ratioSteps;
+            c.minMinute = minMinute;
+            c.stepStart = stepStart;
+            c.stepEvery = stepEvery;
+            c.stepValues = stepValues;
+            c.levelValues = levelValues;
+            c.levelRatios = levelRatios;
+            c.refPre = refPre;
+            c.refOutsideItems = refOutsideItems;
+            c.switched = switched;
+            c.heldEvery = heldEvery;
+            c.heldMax = heldMax;
+            c.heldFrom = heldFrom;
+            return c;
         }
 
         /** Ratio at a level: per-level ratios when given, else the fixed ratio. */
@@ -283,6 +361,15 @@ public final class Model {
         public List<ComponentRef> components = new ArrayList<>();
         /** Groups of which only one item can be held (Lâmina Arcana, Lágrima da Deusa, % penetration...). */
         public List<String> exclusiveGroups = new ArrayList<>();
+        /**
+         * An evolved form reached with time (Rodada 13, {@code evolucao_por_tempo}): bought as a step, it is held as
+         * {@link #evolvedFrom} (its base item) for this many minutes, then as itself; its lines gathered while held count
+         * from the evolution. Null = it is itself from the purchase.
+         */
+        public Double evolveAfter;
+        public ItemDef evolvedFrom;
+        /** Items whose stacks it keeps when it consumes them (Manamune keeps the Lágrima's charges): the earliest purchase counts. */
+        public List<String> stacksFrom = new ArrayList<>();
 
         /** Boots take the single boots slot. */
         public boolean boots() {
@@ -310,6 +397,9 @@ public final class Model {
             d.stats = new ArrayList<>(lines);
             d.components = components;
             d.exclusiveGroups = exclusiveGroups;
+            d.evolveAfter = evolveAfter;
+            d.evolvedFrom = evolvedFrom;
+            d.stacksFrom = stacksFrom;
             return d;
         }
 
@@ -428,6 +518,11 @@ public final class Model {
         public boolean bootSwapGivesBack = true;
         /** When the shop sells each item (upgraded boots from 10:00...): purchases wait for it. */
         public ShopRuleCheck shopRules = ShopRuleCheck.NONE;
+        /**
+         * Game minute each item (by id) was bought, instead of its purchase step's (a hypothetical inventory held as
+         * given: the lines by time held count from the real purchase). Null or absent = the purchase step's minute.
+         */
+        public java.util.Map<Long, Double> acquiredAt;
     }
 
     /**
@@ -520,6 +615,10 @@ public final class Model {
     public static class ItemContribution {
         /** Timeline position of the purchase (see TimelineStep.index). */
         public int purchaseIndex;
+        /** Game minute its stacks count from (its purchase, or a kept component's: Rodada 13). */
+        public double acquired;
+        /** Still its base item at this minute (an evolution by time not reached yet: Rodada 13). */
+        public boolean unevolved;
         /** Build purchase it belongs to, and whether it is a component the engine assumed bought. */
         public int buildIndex;
         /** Number of the build's item purchase (1, 2...), as shown to the user. */

@@ -18,12 +18,27 @@ export const URLS = {
 };
 
 /** Kinds of build, in the order the champion's page lists them. */
-export const KINDS = ['padrao', 'nicho', 'descoberta', 'publica'];
+export const KINDS = ['padrao', 'suporte', 'melhor', 'publica', 'nicho', 'descoberta'];
 export const KIND_LABEL = {
   padrao: 'Padrão robusta',
+  suporte: 'Melhor de suporte',
+  melhor: 'Melhor do ranking',
   nicho: 'Melhor do nicho',
   descoberta: 'Descoberta',
   publica: 'Build pública',
+};
+
+/**
+ * Where a build is listed (Rodada 13): the best builds, or the "Novidade" section (niches' best and discoveries).
+ * Files written before the section existed fall back by their kind.
+ */
+export const sectionOf = (b) => b?.section ?? (b?.kind === 'nicho' || b?.kind === 'descoberta' ? 'novidade' : 'melhores');
+
+/** Where a build's rune page came from (Rodada 13), as the page says it. */
+export const RUNES_FROM = {
+  busca: 'runas buscadas para esta build',
+  padrao: 'runas da padrão robusta (não buscadas para esta build)',
+  publica: 'runas da build pública (não buscadas para esta build)',
 };
 
 /** The reads of the site, each one fetched once (the catalog is cached by the browser too). */

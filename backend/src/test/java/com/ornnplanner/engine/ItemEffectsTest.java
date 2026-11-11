@@ -155,10 +155,11 @@ class ItemEffectsTest {
     void heartsteelGrowsWithItsStackRate() {
         ItemDef heartsteel = item(8, "Coração de Aço", StatLine.flat(MAX_HEALTH, 700));
         assertEquals(1700, totals(List.of(heartsteel), Map.of(), Map.of(), Map.of(), 1).get(MAX_HEALTH), EPS);
-        // 2 strikes per minute from 0:00: 10 stacks at 5:00 -> +210 flat, then +5.25% of the total.
+        // 2 strikes per minute from the purchase (an instant after 0:00, Rodada 13): ~10 stacks at 5:00 -> +210 flat,
+        // then +5.25% of the total
         Map<String, Double> t = totals(List.of(heartsteel), Map.of(), Map.of(),
                 Map.of(ItemEffectCatalog.key("Coração de Aço", "Consumo Colossal"), List.of(new double[] {0, 2})), 5);
-        assertEquals((1700 + 210) * 1.0525, t.get(MAX_HEALTH), EPS);
+        assertEquals((1700 + 210) * 1.0525, t.get(MAX_HEALTH), 0.1);
     }
 
     @Test

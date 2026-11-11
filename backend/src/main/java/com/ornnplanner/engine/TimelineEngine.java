@@ -38,7 +38,8 @@ import static com.ornnplanner.engine.GoldPricing.fmt;
  * <ol>
  *   <li>Flat stats of every owned item are summed ("itemFlat"). Ranges shown by the shop as "X–Y (by level)" are
  *       interpolated linearly between level 1 and 15. Conditional effects (stacks, in combat, low health) only count
- *       when the build enables them.</li>
+ *       when the build enables them. Lines gathered while held (Bastão das Eras' Veterano: a stack every 35s) count
+ *       the stacks since the item's purchase ({@link StatLine#heldFraction}), not the full value at once.</li>
  *   <li>Unit base stats at the current level: {@code base + growth * (level - 1)}.</li>
  *   <li><b>Conversions</b> (a line "ratio x ref_type" whose target stat differs from ref_type, e.g. Mana -> Health,
  *       bonus Health -> AD) read the <i>final</i> value of their source stat, so stats are resolved in dependency
@@ -94,6 +95,8 @@ public class TimelineEngine {
         final int number;
         final boolean implied;
         final boolean conditional;
+        /** Game minute it was bought (the lines by time held count from it). */
+        double acquired;
 
         Owned(ItemDef item, int purchaseIndex, int buildIndex, int number, boolean implied, boolean conditional) {
             this.item = item;
@@ -102,6 +105,51 @@ public class TimelineEngine {
             this.number = number;
             this.implied = implied;
             this.conditional = conditional;
+        }
+
+        /** The item's lines before and after its evolution by time, with their stacks from the purchase (lazily). */
+        private List<StatLine> before;
+        private List<StatLine> after;
+
+        /** When the item became what it is now (its evolution by time, else its purchase). */
+        double since() {
+            return acquired + (item.evolveAfter == null || item.evolvedFrom == null ? 0 : item.evolveAfter);
+        }
+
+        /** Whether at {@code minute} it is still its base item (an evolution by time not reached yet). */
+        boolean unevolved(double minute) {
+            return item.evolveAfter != null && item.evolvedFrom != null && minute < since() - 1e-9;
+        }
+
+        /**
+         * The lines that count at {@code minute}: the base item's before an evolution by time, else the item's; per-minute
+         * stacks gathered from the purchase (runes and champion effects: from 0:00, they are held from the start).
+         */
+        List<StatLine> stats(double minute) {
+            if (unevolved(minute)) {
+                if (before == null) {
+                    before = clipped(item.evolvedFrom.stats, acquired);
+                }
+                return before;
+            }
+            if (after == null) {
+                after = clipped(item.stats, since());
+            }
+            return after;
+        }
+
+        private static List<StatLine> clipped(List<StatLine> lines, double start) {
+            List<StatLine> out = new ArrayList<>(lines.size());
+            for (StatLine l : lines) {
+                out.add(l.from(start));
+            }
+            return out;
+        }
+
+        /** A flat line's value now: by level and minute, times the stacks gathered since the purchase. */
+        double flat(StatLine l, int level, double minute) {
+            double v = l.valueAt(level, minute);
+            return l.heldEvery == null ? v : v * l.heldFraction(minute - since());
         }
 
         /** Whether a line of this item counts: unconditional lines always, conditional ones only when enabled. */
@@ -397,6 +445,13 @@ public class TimelineEngine {
                 step.level = levelForXp(step.xp);
 
                 Owned bought = new Owned(buy, pos, position, i + 1, implied, cond);
+                bought.acquired = in.acquiredAt != null && in.acquiredAt.get(buy.id) != null ? in.acquiredAt.get(buy.id) : step.minute;
+                for (Owned c : consumed) {
+                    // the stacks of a component it keeps (Lágrima's charges into Manamune, Grevas Vorazes into Passos Imortais)
+                    if (buy.stacksFrom != null && buy.stacksFrom.contains(c.item.name) && (in.acquiredAt == null || in.acquiredAt.get(buy.id) == null)) {
+                        bought.acquired = Math.min(bought.acquired, c.acquired);
+                    }
+                }
                 inventory.add(bought);
                 inventoryAfterStep.add(new ArrayList<>(inventory));
                 for (Owned o : inventory) {
@@ -721,9 +776,9 @@ public class TimelineEngine {
 
         // Step 1: flat stats of every owned item (level ranges interpolated, conditional ones only when enabled).
         for (Owned o : inventory) {
-            for (StatLine l : o.item.stats) {
+            for (StatLine l : o.stats(minute)) {
                 if (countsAsFlat(o, l, level, minute)) {
-                    s.itemFlat.merge(l.type, l.valueAt(level, minute), Double::sum);
+                    s.itemFlat.merge(l.type, o.flat(l, level, minute), Double::sum);
                 }
             }
         }
@@ -802,7 +857,7 @@ public class TimelineEngine {
         void run() {
             s.forgePct = forgePct;
             for (Owned o : inventory) {
-                for (StatLine l : o.item.stats) {
+                for (StatLine l : o.stats(minute)) {
                     if (l.hasRatio() && !l.marker() && o.counts(l) && (l.minMinute == null || minute >= l.minMinute - 1e-9)) {
                         lines.add(new RatioLine(o, l, lines.size()));
                     }
@@ -866,9 +921,9 @@ public class TimelineEngine {
             double preOutsideItems = 0;
             for (Owned o : inventory) {
                 if (o.purchaseIndex < 0) {
-                    for (StatLine l : o.item.stats) {
+                    for (StatLine l : o.stats(minute)) {
                         if (l.type.equals(stat) && countsAsFlat(o, l, level, minute)) {
-                            preOutsideItems += l.valueAt(level, minute);
+                            preOutsideItems += o.flat(l, level, minute);
                         }
                     }
                 }
@@ -1044,9 +1099,9 @@ public class TimelineEngine {
                 if (outside && o.purchaseIndex >= 0) {
                     continue;
                 }
-                for (StatLine l : o.item.stats) {
+                for (StatLine l : o.stats(minute)) {
                     if (l.type.equals(stat) && countsAsFlat(o, l, level, minute)) {
-                        add(out, FLAT_KEY + o.purchaseIndex, l.valueAt(level, minute));
+                        add(out, FLAT_KEY + o.purchaseIndex, o.flat(l, level, minute));
                     }
                 }
             }
@@ -1260,6 +1315,8 @@ public class TimelineEngine {
         x.itemId = c.itemId;
         x.itemName = c.itemName;
         x.conditionalIncluded = c.conditionalIncluded;
+        x.acquired = c.acquired;
+        x.unevolved = c.unevolved;
         x.flat.putAll(c.flat);
         x.passives.putAll(c.passives);
         x.passiveParts.addAll(c.passiveParts);
@@ -1361,17 +1418,21 @@ public class TimelineEngine {
         c.rune = o.purchaseIndex < 0;
         c.champion = CHAMPION_SECTION.equals(o.item.section);
         c.implied = o.implied;
-        c.itemId = o.item.id;
-        c.itemName = o.item.name;
+        c.acquired = o.acquired;
+        c.unevolved = o.unevolved(minute);
+        // before its evolution by time it is its base item (Manamune, not yet Muramana): the arena reads it as that
+        ItemDef held = c.unevolved ? o.item.evolvedFrom : o.item;
+        c.itemId = held.id;
+        c.itemName = held.name;
         c.conditionalIncluded = o.conditional;
-        for (StatLine l : o.item.stats) {
+        for (StatLine l : o.stats(minute)) {
             if (!l.countsAsFlat() || !o.counts(l)) {
                 continue;
             }
             if (l.passive != null) {
-                c.passiveParts.add(part(l.passive, l.type, l.valueAt(level, minute), l.conditional));
+                c.passiveParts.add(part(l.passive, l.type, o.flat(l, level, minute), l.conditional));
             } else {
-                c.flat.merge(l.type, l.valueAt(level, minute), Double::sum);
+                c.flat.merge(l.type, o.flat(l, level, minute), Double::sum);
             }
         }
         c.passiveParts.addAll(ratioParts);

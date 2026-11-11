@@ -104,13 +104,17 @@ class BuildDeltaTest {
         q.build = b;
         q.slot = 1;
         q.candidates = List.of(ids.get("Aproximação Invernal"), ids.get("Fimbulwinter"));
+        b.matchEnd = 30.0;
+        q.minute = 30.0;   // after the evolution (Rodada 13: it comes with time); the series goes on to the match's end
         QuickCompareService.Result r = quick.compare(q);
         Card base = card(r, "Aproximação Invernal");
         Card evolved = card(r, "Fimbulwinter");
         assertEquals("base", base.form);
         assertEquals("evoluido", evolved.form);
         assertEquals(ids.get("Fimbulwinter"), base.otherFormId);
-        assertNull(evolved.evolvesAt, "the engine does not estimate the evolution: evolved from the purchase");
+        // Rodada 13: the evolution comes with time (evolucao_por_tempo): until then the card holds the base form
+        assertNotNull(evolved.evolvesAt, "Fimbulwinter evolves some minutes after the purchase");
+        assertTrue(evolved.evolvesAt > evolved.readyAt);
         Model.ItemDef def = planner.referenceData().items.get(ids.get("Fimbulwinter"));
         int checked = 0;
         for (Model.StatLine l : def.stats) {
@@ -121,6 +125,7 @@ class BuildDeltaTest {
             }
         }
         assertTrue(checked > 0);
+        assertTrue(evolved.evolvesAt <= 30, "evolved by the minute read");
         assertTrue(!base.statsAtMinute.equals(evolved.statsAtMinute), "the two forms add different stats");
     }
 

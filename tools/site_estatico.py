@@ -161,13 +161,26 @@ def kit_key(k):
     return (tuple(k.get('order') or k.get('items') or []), k.get('boots'))
 
 
-def kit_build(unit, kit, base, pace):
-    """Um kit da Descoberta como build: o campeão, as runas do kit (ou as da base pública), a ordem de compra."""
+def kit_runes(kit, standard=None, base=None):
+    """A página de runas de um kit e de onde ela veio (Rodada 13): a buscada para ele ('busca'), a da padrão robusta
+    ('padrao'), a da build pública ('publica') ou nenhuma."""
+    if kit.get('runePage'):
+        return kit['runePage'], kit.get('runesFrom') or 'busca'
+    if (standard or {}).get('runePage'):
+        return standard['runePage'], 'padrao'
+    if (base or {}).get('runePage'):
+        return base['runePage'], 'publica'
+    return None, None
+
+
+def kit_build(unit, kit, base, pace, standard=None):
+    """Um kit da Descoberta como build: o campeão, as runas do kit (ou as da padrão, ou as da base pública), a ordem de
+    compra."""
     steps = [{'itemId': i, 'includeConditional': True} for i in (kit.get('order') or kit.get('items') or [])]
     if kit.get('boots') and all(s['itemId'] != kit['boots'] for s in steps):
         steps.insert(min(1, len(steps)), {'itemId': kit['boots'], 'includeConditional': True})
     b = {'unitCode': unit, 'name': None, 'goldPerMin': pace, 'xpPerMin': pace, 'steps': steps,
-         'runePage': kit.get('runePage') or (base or {}).get('runePage'), 'spells': (base or {}).get('spells'),
+         'runePage': kit_runes(kit, standard, base)[0], 'spells': (base or {}).get('spells'),
          'championSetup': (base or {}).get('championSetup'), 'folderId': 0}
     return b
 
@@ -296,7 +309,10 @@ class Calculator:
             print(f'    arquétipo: {e.code}')
         last_effect = at[f'{minutes[-1]:g}']['effect'] if minutes else []
         entry['index'] = weighted(self.basic, last_effect)
-        entry['grade'] = grade_of(entry['index'], next((o.get('grades') for o in last_effect if o.get('grades')), None))
+        grades = next((o.get('grades') for o in last_effect if o.get('grades')), None)
+        entry['grade'] = grade_of(entry['index'], grades)
+        # the class score that ranked the build (points, the index's scale): its grade by the same table (Rodada 13)
+        entry['scoreGrade'] = grade_of(entry.get('score'), grades)
         offense_last = at[f'{minutes[-1]:g}'].get('offense') if minutes else None
         entry['offenseIndex'] = weighted(self.offense, offense_last) if offense_last else None
         self.seconds += time.time() - t0
@@ -340,20 +356,30 @@ def summary(entry):
     tl = (entry.get('timelines') or {}).get('padrao') or {}
     names = {st.get('itemId'): st.get('itemName') for st in tl.get('steps') or []}
     items = [s['itemId'] for s in b.get('steps', []) if s.get('itemId')]
-    return {k: entry.get(k) for k in ('key', 'kind', 'label', 'name', 'archetype', 'archetypeInfo', 'niche', 'score', 'mean', 'p20',
-                                      'novelty', 'beatsKnown', 'index', 'grade', 'offenseIndex', 'text')} | {
+    return {k: entry.get(k) for k in ('key', 'kind', 'section', 'label', 'name', 'archetype', 'archetypeInfo', 'niche', 'score',
+                                      'mean', 'p20', 'novelty', 'beatsKnown', 'closestKnown', 'index', 'grade', 'scoreGrade',
+                                      'offenseIndex', 'text', 'runesFrom', 'orderCut')} | {
         'items': items, 'itemNames': [names.get(i) for i in items],
         'keystone': (b.get('runePage') or {}).get('keystone'),
         'lastMinute': (tl.get('steps') or [{}])[-1].get('minute') if tl.get('steps') else None,
     }
 
 
+#: How many of the ranking's best go to the site besides the standard build (Rodada 13).
+MELHORES = 3
+#: Where each kind is shown: the best builds (the default) or the "Novidade" section (niches' best, discoveries).
+SECAO = {'padrao': 'melhores', 'suporte': 'melhores', 'melhor': 'melhores', 'publica': 'melhores', 'nicho': 'novidade',
+         'descoberta': 'novidade'}
+
+
 def champion_builds(unit, latest, public, pace):
-    """As builds de um campeão: a padrão robusta, a melhor de cada nicho, as descobertas e as públicas."""
+    """As builds de um campeão: a padrão robusta, as melhores do ranking, a melhor de cada nicho, as descobertas e as
+    públicas. Cada uma diz a seção (melhores | novidade) e de onde vieram as runas."""
     out = []
     seen = {}
     base = public[0] if public else None
     d = (latest or {}).get('discovery') or {}
+    standard = d.get('standard') or {}
 
     def add(kind, label, kit, extra=None):
         k = kit_key(kit)
@@ -362,16 +388,22 @@ def champion_builds(unit, latest, public, pace):
         if k in seen:   # the same kit as another one: one build, both labels
             seen[k]['also'].append(label)
             return
-        e = {'kind': kind, 'label': label, 'also': [], 'archetype': kit.get('archetype'), 'niche': kit.get('niche'),
-             'score': kit.get('score'), 'mean': kit.get('mean'), 'p20': kit.get('p20'), 'novelty': kit.get('novelty'),
-             'beatsKnown': kit.get('beatsKnown'), 'closestKnown': kit.get('closestKnown'),
-             'build': kit_build(unit, kit, base, pace), 'pace': (pace, pace)}
+        e = {'kind': kind, 'section': SECAO[kind], 'label': label, 'also': [], 'archetype': kit.get('archetype'),
+             'niche': kit.get('niche'), 'score': kit.get('score'), 'mean': kit.get('mean'), 'p20': kit.get('p20'),
+             'novelty': kit.get('novelty'), 'beatsKnown': kit.get('beatsKnown'), 'closestKnown': kit.get('closestKnown'),
+             'runesFrom': kit_runes(kit, standard, base)[1], 'orderCut': kit.get('orderCut'),
+             'build': kit_build(unit, kit, base, kit.get('goldPerMin') or pace, standard),
+             'pace': (kit.get('goldPerMin') or pace, kit.get('xpPerMin') or pace)}
         e.update(extra or {})
         seen[k] = e
         out.append(e)
 
     if d.get('standard'):
         add('padrao', 'Padrão robusta', d['standard'])
+    if d.get('support'):   # Rodada 13: ranked apart, it plays with the support pace
+        add('suporte', 'Melhor de suporte', d['support'])
+    for i, kit in enumerate((d.get('ranked') or [])[:MELHORES]):
+        add('melhor', f'Melhor {i + 1}', kit)
     for niche, kit in (d.get('niches') or {}).items():
         add('nicho', f'Melhor em {niche}', kit)
     for i, f in enumerate(d.get('discoveries') or []):
@@ -379,7 +411,8 @@ def champion_builds(unit, latest, public, pace):
             {'text': f.get('text'), 'against': f.get('against'), 'wins': f.get('wins'), 'losses': f.get('losses'),
              'swaps': f.get('swaps'), 'synergy': f.get('synergy'), 'confirmed': f.get('confirmed')})
     for b in public:
-        e = {'kind': 'publica', 'label': b.get('name'), 'name': b.get('name'), 'also': [], 'buildId': b.get('id'),
+        e = {'kind': 'publica', 'section': 'melhores', 'label': b.get('name'), 'name': b.get('name'), 'also': [],
+             'buildId': b.get('id'),
              'build': b, 'pace': (b.get('goldPerMin') or pace, b.get('xpPerMin') or pace)}
         out.append(e)
     keys = set()
@@ -531,6 +564,7 @@ def main(argv=None):
             'championClass': d.get('championClass') or ((profiles.get(unit) or {}).get('mainClasses') or [None])[0],
             'lanes': (profiles.get(unit) or {}).get('lanes') or [],
             'quality': d.get('quality'), 'lowConfidence': d.get('lowConfidence'), 'budget': d.get('budget'),
+            'objective': d.get('objective') or 'novidade',
             'builds': [summary(e) | {'also': e.get('also')} for e in entries],
             'matchups': (latest or {}).get('matchups') or [],
             'synergies': d.get('synergies') or [], 'known': d.get('known') or [], 'notes': d.get('notes') or [],

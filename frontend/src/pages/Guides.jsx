@@ -8,6 +8,7 @@ import { buildTiles } from '../shopModel.js';
 import ShopBrowser from '../components/ShopBrowser.jsx';
 import ItemIcon from '../components/ItemIcon.jsx';
 import Help from '../components/Help.jsx';
+import GuideFlow from '../components/GuideFlow.jsx';
 
 const COND_TYPES = ['inimigos_dano', 'inimigos_classe', 'inimigos_arquetipo', 'adversario_rota', 'ouro', 'minuto', 'item_adversario'];
 const CLASSES = ['Tanque', 'Lutador', 'Assassino', 'Atirador', 'Mago', 'Controlador'];
@@ -240,6 +241,12 @@ export default function Guides() {
               <button className="link" onClick={() => setOpen([])}>{t('guide.root')}{open.length === 0 ? ` · ${t('guide.openBranch')}` : ''}</button>
               <NodeList nodes={guide.nodes} path={[]} open={open} setOpen={setOpen} onTree={PUBLIC ? () => {} : setTree} tree={guide.nodes} itemsById={itemsById} />
             </div>
+            {guide.nodes.length > 0 && (
+              <details open>
+                <summary><b>{t('guide.flow')}</b></summary>
+                <GuideFlow nodes={guide.nodes} itemName={(id) => itemsById.get(id)?.name ?? `item ${id}`} />
+              </details>
+            )}
             {!PUBLIC && (
             <>
             <div className="row">

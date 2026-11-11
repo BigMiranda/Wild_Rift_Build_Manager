@@ -17,7 +17,7 @@ const STORE = 'ornn-planner-discovery';
 const AXES = ['arquetipo', 'dano', 'durabilidade', 'passivas'];
 
 const initial = () => {
-  const def = { buildId: '', budget: 'rapido', runes: true, order: true, seedsFromSaved: true, axes: ['arquetipo', 'dano', 'durabilidade'], archetype: '', seed: 1 };
+  const def = { buildId: '', budget: 'rapido', objective: 'melhores', runes: true, order: true, seedsFromSaved: true, axes: ['arquetipo', 'dano', 'durabilidade'], archetype: '', seed: 1 };
   try {
     return { ...def, ...JSON.parse(localStorage.getItem(STORE) ?? '{}') };
   } catch {
@@ -178,6 +178,12 @@ export default function Discovery() {
               <option value="completo">{t('disc.budget.completo')}</option>
             </select>
           </label>
+          <label className="field">{t('disc.objective')} <Help text={t('disc.objectiveHelp')} />
+            <select value={form.objective} onChange={(e) => set({ objective: e.target.value })}>
+              <option value="melhores">{t('disc.objective.melhores')}</option>
+              <option value="novidade">{t('disc.objective.novidade')}</option>
+            </select>
+          </label>
           <label className="field">{t('disc.archetype')}
             <select value={form.archetype} onChange={(e) => set({ archetype: e.target.value })}>
               <option value="">{t('disc.free')}</option>
@@ -243,6 +249,18 @@ export default function Discovery() {
                 </p>
                 {r.standard.runePage && <p className="small">{t('calc.runePage')}: <b>{r.standard.runePage.keystone}</b> · {[...(r.standard.runePage.primaryRunes ?? []), r.standard.runePage.secondaryRune].filter(Boolean).join(' · ')}</p>}
                 {actions(r.standard, 'standard', t('disc.standard'))}
+              </div>
+            )}
+            {r.support && (
+              <div className="disc-standard">
+                <h4>{t('disc.support')} <Help text={t('disc.supportHelp')} /></h4>
+                <KitIcons kit={r.support} size={30} />
+                <p>
+                  <b>{num(r.support.score)}</b> · {t('score.mean')} {num(r.support.mean)} · P20 {num(r.support.p20)}
+                  {r.support.goldPerMin != null && ` · ${n0(r.support.goldPerMin)} ${t('disc.goldMin')}`}
+                </p>
+                {r.support.runePage && <p className="small">{t('calc.runePage')}: <b>{r.support.runePage.keystone}</b></p>}
+                {actions(r.support, 'support', t('disc.support'))}
               </div>
             )}
           </section>

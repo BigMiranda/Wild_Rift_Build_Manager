@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import ItemIcon from '../components/ItemIcon.jsx';
+import GuideFlow from '../components/GuideFlow.jsx';
 import { archetypeLabel } from '../archetypes.js';
 import { t } from '../i18n.js';
 import { mmss, n0, n1 } from '../format.js';
-import { filterBuilds, filterChampions, filterOptions, KIND_LABEL, KINDS } from './data.js';
+import { filterBuilds, filterChampions, filterOptions, KIND_LABEL, KINDS, RUNES_FROM, sectionOf } from './data.js';
 import { siteHref, useSite } from './StaticApp.jsx';
 
 const GRADE = (g) => (g ? t(`efx.grade.${g}`) : '');
@@ -69,7 +70,36 @@ export function ChampionsPage() {
   );
 }
 
-/** A build in a list: name, kind, archetype, items in order, the effectiveness. */
+const SCORE_HELP = 'Nota da build: a nota por classe (defensiva, ofensiva e utilidade pesadas pela classe do campeão), '
+  + 'robusta nos minutos 10, 15, 20 e no fim. É a que ordenou as builds da Descoberta.';
+
+/**
+ * The numbers of a build: the class score that ranked it (when the Discovery measured it) first, then the defensive
+ * effectiveness at the last item and the offensive one (Rodada 13: before, only the defensive index was shown, and a
+ * build ranked low could look better than the standard).
+ */
+export function BuildNumbers({ b, grades }) {
+  return (
+    <div className="build-card-facts">
+      {b.score != null && (
+        <span title={SCORE_HELP}>Nota <IndexBadge value={b.score} label={SCORE_HELP} grade={b.scoreGrade ?? gradeOf(b.score, grades)} /></span>
+      )}
+      <span className={b.score != null ? 'muted' : ''} title="Efetividade defensiva no último item (relatório Básico)">
+        Defensiva <IndexBadge value={b.index} label="Efetividade defensiva no último item" grade={b.grade ?? gradeOf(b.index, grades)} />
+      </span>
+      {b.offenseIndex != null && <span className="muted" title="Efetividade ofensiva no último item">Ofensiva {n0(b.offenseIndex)}</span>}
+    </div>
+  );
+}
+
+/** The keystone and where the page came from. */
+export function Keystone({ b }) {
+  if (!b.keystone) return b.kind === 'publica' ? null : <span className="muted" title="Sem página de runas">Sem runas</span>;
+  const from = RUNES_FROM[b.runesFrom];
+  return <span title={from}>{b.keystone}{b.runesFrom && b.runesFrom !== 'busca' ? ' *' : ''}</span>;
+}
+
+/** A build in a list: name, kind, archetype, items in order, the score and the effectiveness. */
 export function BuildCard({ b, grades }) {
   const { compare, toggleCompare } = useSite();
   const on = compare.includes(b.key);
@@ -85,13 +115,11 @@ export function BuildCard({ b, grades }) {
       </div>
       <div className="build-card-facts">
         {b.archetype && <span>{archetypeLabel(b.archetypeInfo ?? { key: b.archetype })}</span>}
-        {b.keystone && <span>{b.keystone}</span>}
+        <Keystone b={b} />
         {b.lastMinute != null && <span>Último item {mmss(b.lastMinute)}</span>}
       </div>
-      <div className="build-card-facts">
-        <IndexBadge value={b.index} label="Efetividade defensiva no último item" grade={b.grade ?? gradeOf(b.index, grades)} />
-        {b.offenseIndex != null && <span className="muted" title="Efetividade ofensiva no último item">Ofensiva {n0(b.offenseIndex)}</span>}
-      </div>
+      <BuildNumbers b={b} grades={grades} />
+      {b.orderCut && <p className="small muted">Ordem da triagem: a busca da ordem não terminou a tempo.</p>}
       {b.text && <p className="small">{b.text}</p>}
       <footer>
         <a className="btn primary" href={siteHref('b', b.key)}>Abrir</a>
@@ -101,30 +129,9 @@ export function BuildCard({ b, grades }) {
   );
 }
 
-/** A guide's tree, as nested lists: "if … then … otherwise …", each decision an item or a rune page. */
+/** A guide's tree as a flowchart (Rodada 13: it was nested lists). */
 export function GuideTree({ nodes, items }) {
-  if (!nodes?.length) return null;
-  return (
-    <ul className="guide-tree">
-      {nodes.map((n, i) => (
-        <li key={n.id ?? i}>
-          {n.kind === 'condicao' ? (
-            <>
-              <span>Se <strong>{String(n.cond?.type ?? '').replace(/_/g, ' ')}</strong>{n.cond?.value != null ? ` ${n.cond.value}` : ''}:</span>
-              <GuideTree nodes={n.then} items={items} />
-              {n.otherwise?.length > 0 && <><span>Senão:</span><GuideTree nodes={n.otherwise} items={items} /></>}
-            </>
-          ) : (
-            <span className="guide-decision">
-              {n.itemId != null && <ItemIcon id={n.itemId} size={22} />}
-              {n.itemId != null ? items?.[n.itemId] ?? `item ${n.itemId}` : n.runePage?.keystone ?? n.decision}
-              {n.note && <small className="muted"> — {n.note}</small>}
-            </span>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
+  return <GuideFlow nodes={nodes} itemName={(id) => items?.[id] ?? `item ${id}`} />;
 }
 
 /** Um campeão: as builds (descobertas, públicas), filtros, as matchups da campanha e as guias. */
@@ -147,6 +154,8 @@ export function ChampionPage({ unit }) {
   if (error) return <p className="error">{error}</p>;
   if (!c) return <p className="muted">Carregando…</p>;
   const builds = filterBuilds(c.builds, f);
+  const best = builds.filter((b) => sectionOf(b) === 'melhores');
+  const novel = builds.filter((b) => sectionOf(b) === 'novidade');
   const kinds = KINDS.filter((k) => c.builds.some((b) => b.kind === k));
   const archetypes = [...new Set(c.builds.map((b) => b.archetype).filter(Boolean))];
   const itemNames = Object.fromEntries(c.builds.flatMap((b) => (b.items ?? []).map((id, i) => [id, b.itemNames?.[i]])));
@@ -162,9 +171,24 @@ export function ChampionPage({ unit }) {
         <Select label="Arquétipo" value={f.archetype} onChange={(v) => setF({ ...f, archetype: v })} options={archetypes} render={archName} />
       </div>
       <div className="site-list">
-        {builds.map((b) => <BuildCard key={b.key} b={b} grades={grades} />)}
-        {builds.length === 0 && <p className="muted">Nenhuma build com esses filtros.</p>}
+        {best.map((b) => <BuildCard key={b.key} b={b} grades={grades} />)}
+        {best.length === 0 && <p className="muted">Nenhuma build com esses filtros.</p>}
       </div>
+      {best.some((b) => b.runesFrom && b.runesFrom !== 'busca') && (
+        <p className="small muted">* Runas não buscadas para aquela build: são as da padrão robusta ou as da build pública.</p>
+      )}
+      {novel.length > 0 && (
+        <details className="site-section" open={c.objective === 'novidade'}>
+          <summary><strong>Novidade</strong> <span className="muted">({novel.length}: melhor de cada nicho e descobertas)</span></summary>
+          <p className="small muted">
+            Builds diferentes das conhecidas: a melhor de cada estilo (nicho), mesmo quando o estilo não combina com o campeão,
+            e as descobertas (nota maior que a da melhor build conhecida, com itens diferentes). Não são as recomendadas.
+          </p>
+          <div className="site-list">
+            {novel.map((b) => <BuildCard key={b.key} b={b} grades={grades} />)}
+          </div>
+        </details>
+      )}
       {c.matchups?.length > 0 && <Matchups list={c.matchups} />}
       {(c.guides?.length > 0 || c.suggestedGuide?.nodes?.length > 0) && (
         <section className="site-section">

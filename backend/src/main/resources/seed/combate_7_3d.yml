@@ -290,7 +290,7 @@ gatilhos:
   Hemodrenário|Corte Sedento: {quando: modelado, nota: "o ativo cura na luta"}
   Catalisador das Eras|Eternidade: {quando: ao_conjurar, por_acionamento: true}
   Bastão das Eras|Eternidade: {quando: ao_conjurar, por_acionamento: true}
-  Bastão das Eras|Veterano: {quando: estatico, nota: "tempo de partida"}
+  Bastão das Eras|Veterano: {quando: estatico, nota: "acúmulos desde a compra (acumulo_por_posse em efeitos_itens)"}
   Capuz do Espectro|Visitação Espectral: {quando: ao_sofrer_dano, duracao: 10}
   Aurora e Crepúsculo|Lâmina Arcana: {quando: modelado, nota: "a Lâmina Arcana cura na luta"}
   Criptoflora|Vida na Morte: {quando: abate, recarga: 60}
@@ -330,7 +330,7 @@ gatilhos:
   Sapatos Enfeitiçados|Equilíbrio: {quando: estatico, nota: "só para Campeões sem Mana"}
   Manto da Aurora|Emissário da Aurora: {quando: ao_ser_imobilizado, ou_imobilizar: true, duracao: 3, recarga: 3, dano: {dano: 40, vida_bonus: 0.025, dano_tipo: magico, raio: 400}}
   Força da Natureza|Absorção: {quando: combate, acertos_sofridos: 4}
-  Ladrão de Almas de Mejai|Temor: {quando: estatico, nota: "acúmulos da partida"}
+  Ladrão de Almas de Mejai|Temor: {quando: estatico, nota: "acúmulos desde a compra (acumulo_por_posse em efeitos_itens)"}
   # ------------------------------------------------------------- runas
   Ritmo Fatal: {quando: combate, acertos: 6}
   Conquistador: {quando: combate, acertos: 6}

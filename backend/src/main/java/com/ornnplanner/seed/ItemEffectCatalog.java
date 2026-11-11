@@ -28,6 +28,16 @@ public class ItemEffectCatalog {
 
     private final Map<String, List<Effect>> byItem = new LinkedHashMap<>();
     private final EffectSpec spec;
+    /** Stacks gathered while held (Rodada 13), by "item|passive": seconds per stack, most stacks, thresholds by stat. */
+    private final Map<String, Hold> holds = new LinkedHashMap<>();
+
+    /** A passive whose stacks come with the time the item is held ({@code acumulo_por_posse}). */
+    public static final class Hold {
+        public double every;
+        public double max;
+        /** Stat code -> stacks from which the line counts whole (e.g. Mejai's movement speed from 10 stacks). */
+        public Map<String, Double> from = new LinkedHashMap<>();
+    }
 
     @SuppressWarnings("unchecked")
     public ItemEffectCatalog(@Value("${planner.seed.itemEffects:classpath:seed/efeitos_itens_7_3d.yml}") Resource file,
@@ -50,6 +60,94 @@ public class ItemEffectCatalog {
             });
             byItem.put(item, list);
         });
+        Object raw = root.get("acumulo_por_posse");
+        if (raw instanceof Map) {
+            ((Map<String, Map<String, Object>>) raw).forEach((key, v) -> {
+                Hold h = new Hold();
+                h.every = ((Number) v.get("a_cada_s")).doubleValue();
+                h.max = ((Number) v.get("max")).doubleValue();
+                if (v.get("inteiro_a_partir") instanceof Map) {
+                    ((Map<String, Object>) v.get("inteiro_a_partir")).forEach((stat, n) ->
+                            h.from.put(spec.stat(stat), ((Number) n).doubleValue()));
+                }
+                holds.put(key, h);
+            });
+        }
+        if (root.get("evolucao_por_tempo") instanceof Map) {
+            ((Map<String, Object>) root.get("evolucao_por_tempo")).forEach((item, v) -> evolutions.put(item, ((Number) v).doubleValue()));
+        }
+        if (root.get("herda_acumulos") instanceof Map) {
+            ((Map<String, List<String>>) root.get("herda_acumulos")).forEach((item, v) -> keeps.put(item, new ArrayList<>(v)));
+        }
+    }
+
+    public Map<String, Double> evolutions() {
+        return evolutions;
+    }
+
+    /**
+     * The items with their timing (Rodada 13): an evolved form reached with time knows its base item and the minutes, an
+     * item that keeps a component's stacks knows which. Changes the map's entries to copies; the rest stay as they are.
+     */
+    public void timing(Map<Long, ItemDef> items) {
+        if (evolutions.isEmpty() && keeps.isEmpty()) {
+            return;
+        }
+        Map<String, ItemDef> byName = new HashMap<>();
+        items.values().forEach(i -> byName.putIfAbsent(i.name, i));
+        items.replaceAll((id, i) -> {
+            Double after = evolutions.get(i.name);
+            List<String> kept = keeps.get(i.name);
+            ItemDef base = after == null || i.group == null || i.group.equals(i.name) ? null : byName.get(i.group);
+            if (base == null && kept == null) {
+                return i;
+            }
+            ItemDef c = i.withStats(i.stats);
+            if (base != null) {
+                c.evolveAfter = after;
+                c.evolvedFrom = base;
+            }
+            if (kept != null) {
+                c.stacksFrom = kept;
+            }
+            return c;
+        });
+    }
+
+    /** Evolved forms reached with time, by name: minutes after the purchase (Rodada 13). */
+    private final Map<String, Double> evolutions = new LinkedHashMap<>();
+    /** Items that keep the stacks of the components they consume, by name (Rodada 13). */
+    private final Map<String, List<String>> keeps = new LinkedHashMap<>();
+
+    /** The passives gathered while held, by "item|passive". */
+    public Map<String, Hold> holds() {
+        return holds;
+    }
+
+    /** The item with its lines gathered while held marked (a copy), or the item itself when it has none. */
+    ItemDef held(ItemDef item) {
+        boolean any = false;
+        for (StatLine l : item.stats) {
+            any |= l.passive != null && holds.containsKey(key(item.name, l.passive));
+        }
+        if (!any) {
+            return item;
+        }
+        ItemDef copy = copy(item);
+        copy.stats = new ArrayList<>();
+        for (StatLine l : item.stats) {
+            Hold h = l.passive == null ? null : holds.get(key(item.name, l.passive));
+            if (h == null) {
+                copy.stats.add(l);
+                continue;
+            }
+            StatLine c = l.copy();
+            c.heldEvery = h.every;
+            c.heldMax = h.max;
+            c.heldFrom = h.from.get(l.type);
+            copy.stats.add(c);
+        }
+        return copy;
     }
 
     /** Modeled effects of every item, by item name. */
@@ -72,6 +170,7 @@ public class ItemEffectCatalog {
      */
     public ItemDef apply(ItemDef item, Map<String, Integer> options, Map<String, Boolean> conditional,
                          Map<String, List<double[]>> rates) {
+        item = held(item);
         List<Effect> effects = effects(item.name);
         if (effects.isEmpty()) {
             return item;
@@ -118,6 +217,9 @@ public class ItemEffectCatalog {
         c.stats = new ArrayList<>(i.stats);
         c.components = new ArrayList<ComponentRef>(i.components);
         c.exclusiveGroups = i.exclusiveGroups;
+        c.evolveAfter = i.evolveAfter;
+        c.evolvedFrom = i.evolvedFrom;
+        c.stacksFrom = i.stacksFrom;
         return c;
     }
 

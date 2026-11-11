@@ -7,8 +7,8 @@ import { statLabel } from '../i18n.js';
 import { mmss, n0, n1, SHEET_STATS, statOf, statValue } from '../format.js';
 import { findRune, findSpell, runeIcon, spellIcon } from '../runes.js';
 import { buildLink } from '../shareLink.js';
-import { atOf, KIND_LABEL, purchases, weightedOf } from './data.js';
-import { IndexBadge, Matchups } from './Champions.jsx';
+import { atOf, KIND_LABEL, purchases, RUNES_FROM, weightedOf } from './data.js';
+import { BuildNumbers, IndexBadge, Matchups } from './Champions.jsx';
 import { siteHref, useSite } from './StaticApp.jsx';
 
 const PACES = [['padrao', 'Padrão'], ['atras', 'Atrás'], ['frente', 'À frente']];
@@ -186,10 +186,13 @@ export default function BuildPage({ buildKey, params }) {
           {b.champion}{b.archetype ? ` · ${archetypeLabel(b.archetypeInfo ?? { key: b.archetype })}` : ''}
           {(b.also ?? []).length ? ` · também ${b.also.join(', ')}` : ''}
         </p>
-        <div className="build-card-facts">
-          <IndexBadge value={b.index} grade={b.grade} label="Efetividade defensiva no último item" />
-          {b.offenseIndex != null && <span className="muted">Ofensiva {n0(b.offenseIndex)}</span>}
-        </div>
+        <BuildNumbers b={b} />
+        {b.kind !== 'publica' && (
+          <p className="small muted">
+            {b.build?.runePage?.keystone ? `${b.build.runePage.keystone}: ${RUNES_FROM[b.runesFrom] ?? 'runas da build base'}` : 'Sem página de runas.'}
+            {b.orderCut ? ' · Ordem da triagem: a busca da ordem não terminou a tempo.' : ''}
+          </p>
+        )}
         <div className="actions">
           <button type="button" className={on ? 'on' : 'primary'} onClick={() => toggleCompare(b.key)}>{on ? '✓ Comparando' : 'Comparar'}</button>
           <ShareTools build={keep} onMessage={setMessage} />
@@ -201,8 +204,9 @@ export default function BuildPage({ buildKey, params }) {
         <section className="site-section">
           <h2>Por que é uma descoberta</h2>
           <p>{b.text}</p>
-          {b.wins?.length > 0 && <p className="small">Ganha em: {b.wins.join(', ')}</p>}
-          {b.losses?.length > 0 && <p className="small">Perde em: {b.losses.join(', ')}</p>}
+          {/* the text already says where it wins and loses (Rodada 13); older files only had the lists */}
+          {!/Ganha em|ganha em/.test(b.text) && b.wins?.length > 0 && <p className="small">Ganha em: {b.wins.join(', ')}</p>}
+          {!/Perde em|perde em/.test(b.text) && b.losses?.length > 0 && <p className="small">Perde em: {b.losses.join(', ')}</p>}
         </section>
       )}
 

@@ -173,6 +173,12 @@ public final class EffectSpec {
         if (f.rate != null) {
             s.perMinute = periods;   // a ratio line grows with the stacks too (e.g. Coração de Aço)
         }
+        if (l.get("acumulo_por_posse") instanceof Map) {
+            // stacks gathered while held (Rodada 13): Yun Tal's critical strike, Grevas Vorazes' takedowns
+            Map<String, Object> h = (Map<String, Object>) l.get("acumulo_por_posse");
+            s.heldEvery = num(h.get("a_cada_s"));
+            s.heldMax = num(h.get("max"));
+        }
         return s;
     }
 

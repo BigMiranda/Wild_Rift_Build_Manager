@@ -74,4 +74,12 @@ versatilidade:
 # dos itens e da bota até a conhecida mais próxima, mais `fundamental` quando a runa fundamental difere. Uma "descoberta"
 # tem nota >= a da melhor conhecida, novidade >= `limiar` e se mantém na confirmação (largadas que a busca não viu),
 # com a tolerância abaixo da conhecida confirmada do mesmo jeito.
-novidade: {limiar: 0.4, fundamental: 0.15, tolerancia_confirmacao: 1.0}
+# Rodada 13: com o objetivo "melhores" (o padrão da Descoberta), as descobertas vêm só do ranking e só quando o campeão
+# tem ao menos `minimo_conhecidas` builds conhecidas medidas (com uma só, quase tudo é "novo"); o objetivo "novidade"
+# considera também o melhor de cada nicho, sem mínimo, como antes. A novidade nunca entra na nota.
+novidade: {limiar: 0.4, fundamental: 0.15, tolerancia_confirmacao: 1.0, minimo_conhecidas: 2}
+
+# Rodada 13: builds de suporte (com o item de suporte, sempre o primeiro). Só para campeões com a rota Suporte ou com uma
+# build de suporte salva ou meta; ganham menos ouro (o item dá o ouro das tropas ao aliado): o ritmo é a média das builds
+# de suporte salvas do campeão, senão o da build base vezes estas partes. A melhor fica à parte ("Melhor de suporte").
+suporte: {ouro: 0.86, xp: 0.9}

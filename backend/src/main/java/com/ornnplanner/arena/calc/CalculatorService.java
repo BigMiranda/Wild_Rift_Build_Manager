@@ -210,7 +210,7 @@ public class CalculatorService {
             out.addAll(r.candidates);
         } else {
             for (PlannerService.ItemView i : planner.itemViews()) {
-                boolean upgraded = "aprimorado".equals(i.section) && !i.boots();
+                boolean upgraded = ("aprimorado".equals(i.section) || "evolucao".equals(i.section)) && !i.boots();
                 boolean category = r.categories.isEmpty() || i.tabs.stream().anyMatch(r.categories::contains);
                 boolean tank = !r.tanksOnly || i.tabs.contains("Defesa");
                 if (upgraded && category && tank) {
@@ -461,7 +461,7 @@ public class CalculatorService {
         com.ornnplanner.arena.discovery.RuneSearch.Outcome o = com.ornnplanner.arena.discovery.RuneSearch.search(side.base.runePage, shape, page -> {
             List<Double> points = new ArrayList<>();
             for (double m : at) {
-                BuildRepository.Build b = side.order(new ArrayList<>(side.held(order, m)));
+                BuildRepository.Build b = side.order(order);
                 b.runePage = page;
                 scorer.score(b, m).readings.forEach(x -> points.add(x.points));
             }
@@ -573,8 +573,11 @@ public class CalculatorService {
         final int team;
         final Map<String, Model.TimelineResult> timelines = new HashMap<>();
         final Map<String, Arena.Input> inputs = new HashMap<>();
+        final Set<Long> stacking;
+        final Set<Long> support = planner.supportItems();
 
         Side(BuildRepository.Build base, Double gold, int team) {
+            this.stacking = planner.timedItems(base);
             this.base = base;
             this.gold = gold;
             this.team = team;
@@ -616,12 +619,39 @@ public class CalculatorService {
             return new TreeSet<>(inv);
         }
 
-        Arena.Input input(List<Long> order, double minute) {
+        /**
+         * What a measure of the order at a minute is cached by: the inventory then, plus when each item gathered while
+         * held was bought (Rodada 13: the same items bought later have fewer stacks).
+         */
+        String key(List<Long> order, double minute) {
             Set<Long> held = held(order, minute);
-            return inputs.computeIfAbsent(held + "@" + minute, k -> {
+            StringBuilder sb = new StringBuilder(held.toString()).append('@').append(minute);
+            for (long id : held) {
+                if (stacking.contains(id)) {
+                    // when its stacks started (a kept component's purchase included), as the timeline holds it then
+                    Model.MinutePoint at = null;
+                    for (Model.MinutePoint p : timeline(order).series) {
+                        if (p.minute <= minute + 1e-9) {
+                            at = p;
+                        }
+                    }
+                    if (at != null) {
+                        for (Model.ItemContribution c : at.contributions) {
+                            if (!c.rune && c.itemId == id) {
+                                sb.append('|').append(id).append(':').append(Math.round(c.acquired * 100));
+                            }
+                        }
+                    }
+                }
+            }
+            return sb.toString();
+        }
+
+        Arena.Input input(List<Long> order, double minute) {
+            return inputs.computeIfAbsent(key(order, minute), k -> {
                 ArenaModel.Slot me = new ArenaModel.Slot();
                 me.team = team;
-                me.build = order(new ArrayList<>(held));
+                me.build = order(order);
                 me.minute = minute;
                 me.brain = "tactical";
                 ArenaModel.Slot other = new ArenaModel.Slot();
@@ -656,6 +686,19 @@ public class CalculatorService {
 
         @Override
         public boolean allowed(List<Long> order) {
+            // a support item is the first purchase, and only one (Rodada 13)
+            int support = 0;
+            for (int i = 0; i < order.size(); i++) {
+                if (side.support.contains(order.get(i))) {
+                    support++;
+                    if (i > 0 || support > 1) {
+                        return false;
+                    }
+                }
+            }
+            if (!order.isEmpty() && !side.support.contains(order.get(0)) && r.required.stream().anyMatch(side.support::contains)) {
+                return false;   // a required support item can only come first: any other start is a dead branch
+            }
             Model.TimelineResult t = side.timeline(order);
             int bought = 0;
             for (Model.TimelineStep s : t.steps) {
@@ -710,25 +753,26 @@ public class CalculatorService {
 
         @Override
         public double score(List<Long> order, double minute) {
-            Set<Long> held = side.held(order, minute);
-            return scores.computeIfAbsent(held + "@" + minute, k -> {
+            // the order itself (not its inventory sorted by id): what was bought when matters to the items gathered
+            // while held, and the cache key holds their purchase minutes
+            return scores.computeIfAbsent(side.key(order, minute), k -> {
                 counted();
                 if ("arena".equals(r.target)) {
-                    return arenaScore(held, minute);
+                    return arenaScore(order, minute);
                 }
                 // the class score (part 1): a tank is not rewarded for damage items, a marksman is
-                return "relatorio".equals(r.measure) ? reportScore(held, minute)
-                        : scorer.score(side.order(new ArrayList<>(held)), minute).total;
+                return "relatorio".equals(r.measure) ? reportScore(order, minute)
+                        : scorer.score(side.order(order), minute).total;
             });
         }
 
-        private double arenaScore(Set<Long> held, double minute) {
-            return effect.savedScenario(r.scenarioId, side.order(new ArrayList<>(held)), minute, null).durability;
+        private double arenaScore(List<Long> order, double minute) {
+            return effect.savedScenario(r.scenarioId, side.order(order), minute, null).durability;
         }
 
-        private double reportScore(Set<Long> held, double minute) {
+        private double reportScore(List<Long> order, double minute) {
             EffectModel.Request req = new EffectModel.Request();
-            req.build = side.order(new ArrayList<>(held));
+            req.build = side.order(order);
             req.minute = minute;
             for (EffectModel.Entry e : entries) {
                 EffectModel.Job job = new EffectModel.Job();
@@ -771,7 +815,7 @@ public class CalculatorService {
 
         /** Above 0 our side won: the difference in the share of health left. */
         double duel(List<Long> ours, List<Long> others, double minute) {
-            String key = side.held(ours, minute) + "x" + theirs.held(others, minute) + "@" + minute;
+            String key = side.key(ours, minute) + "x" + theirs.key(others, minute);
             return scores.computeIfAbsent(key, k -> {
                 counted();
                 Arena.Input a = side.input(ours, minute).copy();

@@ -14,6 +14,9 @@ public final class DiscoveryModel {
 
     public static final String QUICK = "rapido";
     public static final String COMPLETE = "completo";
+    /** The objective (Rodada 13): the best builds (the niches and the discoveries are the "novidade" part) | novelty. */
+    public static final String BEST = "melhores";
+    public static final String NOVELTY = "novidade";
 
     /** What a discovery asks: the build that gives champion, runes, spells and gold; the budget; the search's knobs. */
     public static class Request {
@@ -21,6 +24,11 @@ public final class DiscoveryModel {
         public BuildRepository.Build build;
         /** rapido (minutes) | completo (hours, a campaign). */
         public String budget = QUICK;
+        /**
+         * melhores: discoveries only from the ranking, and only with enough known builds to measure novelty against |
+         * novidade: from the ranking and the niches' best, as before Rodada 13.
+         */
+        public String objective = BEST;
         public long seed = 1;
         /** The niches' axes: arquetipo | dano | durabilidade | passivas. */
         public List<String> axes = new ArrayList<>(List.of("arquetipo", "dano", "durabilidade"));
@@ -44,7 +52,7 @@ public final class DiscoveryModel {
         public int perGroup = 2;
         public int jokers = 6;
         public Funnel.Config search = new Funnel.Config();
-        public int orderBudget = 120;
+        public int orderBudget = 240;
 
         public static Budget of(String name) {
             Budget b = new Budget();
@@ -55,7 +63,7 @@ public final class DiscoveryModel {
                 b.search.fullPerGeneration = 8;
                 b.search.confirm = 4;
                 b.search.synergyPairs = 20;
-                b.orderBudget = 400;
+                b.orderBudget = 800;
             } else {
                 b.shortlist = 24;
                 b.jokers = 4;
@@ -65,7 +73,7 @@ public final class DiscoveryModel {
                 b.search.fullPerGeneration = 4;
                 b.search.confirm = 2;
                 b.search.synergyPairs = 6;
-                b.orderBudget = 60;
+                b.orderBudget = 240;
             }
             return b;
         }
@@ -111,6 +119,17 @@ public final class DiscoveryModel {
         public List<Map<String, Object>> importance = new ArrayList<>();
         public List<Map<String, Object>> componentFirst = new ArrayList<>();
         public List<String> runeChanges = new ArrayList<>();
+        /**
+         * Where the rune page came from (Rodada 13): busca (searched for this kit) | padrao (the standard build's, not
+         * searched for this kit) | null (the base build's, as the kit was measured).
+         */
+        public String runesFrom;
+        /** The pace it was measured with when not the base build's (a support build: Rodada 13). */
+        public Double goldPerMin;
+        public Double xpPerMin;
+        /** The order was searched by the calculator; cut = its budget ran out first and the screening's order stayed. */
+        public boolean orderSearched;
+        public boolean orderCut;
         /** A known build's name (a saved build, or a meta build with its source). */
         public String label;
         public String keystone;
@@ -147,9 +166,12 @@ public final class DiscoveryModel {
         public String quality;
         public boolean lowConfidence;
         public String budget;
+        public String objective;
         public List<Map<String, Object>> shortlist = new ArrayList<>();
         /** The robust default build: the best mean whose P20 is acceptable. */
         public KitView standard;
+        /** The best support build (Rodada 13), ranked apart: it plays with the support pace. Null = none. */
+        public KitView support;
         public List<KitView> ranked = new ArrayList<>();
         public Map<String, KitView> niches = new LinkedHashMap<>();
         public List<SynergyView> synergies = new ArrayList<>();

@@ -51,6 +51,26 @@ class Builds(unittest.TestCase):
         # the boots come in when the order does not have them
         self.assertIn(9, [s['itemId'] for s in out[0]['build']['steps']])
 
+    def test_melhores_do_ranking_secoes_e_runas(self):
+        page = {'keystone': 'Ímpeto Gradual'}
+        std = {'order': [1, 2, 3], 'runePage': page, 'runesFrom': 'busca'}
+        latest = {'discovery': {'standard': std, 'ranked': [dict(std), {'order': [4, 5]}, {'order': [6, 7]}, {'order': [8]}],
+                                'niches': {'x': {'order': [9, 10]}}, 'support': {'order': [11, 4]}}}
+        out = se.champion_builds('ORNN', latest, [], 700)
+        self.assertEqual([(e['kind'], e['section']) for e in out],
+                         [('padrao', 'melhores'), ('suporte', 'melhores'), ('melhor', 'melhores'), ('melhor', 'melhores'),
+                          ('nicho', 'novidade')])
+        self.assertEqual(out[1]['label'], 'Melhor de suporte')
+        self.assertEqual(out[0]['also'], ['Melhor 1'])
+        # only the first three of the ranking; the ones without their own runes take the standard's
+        self.assertNotIn([8], [[st['itemId'] for st in e['build']['steps']] for e in out])
+        self.assertEqual(out[2]['runesFrom'], 'padrao')
+        self.assertEqual(out[2]['build']['runePage'], page)
+        self.assertEqual(out[0]['runesFrom'], 'busca')
+        # no standard page and no public build: no runes, and it says so
+        alone = se.champion_builds('ORNN', {'discovery': {'niches': {'x': {'order': [9]}}}}, [], 700)
+        self.assertIsNone(alone[0]['runesFrom'])
+
 
 class Manifesto(unittest.TestCase):
     def write(self, root, url, value):

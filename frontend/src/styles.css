@@ -1459,3 +1459,32 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .site-steps { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
 .site-step > div { margin: 2px 0 0 24px; }
 .site-step code { font-size: 12px; }
+
+/* Rodada 13: the guide as a decision-tree flowchart (components/GuideFlow.jsx) */
+.guide-flow { display: flex; flex-direction: column; align-items: center; gap: 0; overflow-x: auto; padding: 6px 4px 10px; }
+.gf-col { display: flex; flex-direction: column; align-items: center; }
+.gf-step { display: flex; flex-direction: column; align-items: center; position: relative; padding-top: 14px; }
+.gf-step::before { content: ''; position: absolute; top: 0; left: 50%; height: 14px; border-left: 2px solid var(--border-strong); }
+.gf-box {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--border-strong);
+  border-radius: 6px; background: var(--surface, #0f1d2c); white-space: nowrap; font-size: 13px;
+}
+.gf-box small { font-size: 11px; }
+.gf-runes { border-style: dashed; }
+.gf-start { padding: 3px 12px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); font-size: 12px; }
+.gf-end { margin-top: 14px; position: relative; }
+.gf-end::before { content: ''; position: absolute; top: -14px; left: 50%; height: 14px; border-left: 2px solid var(--border-strong); }
+.gf-cond { display: flex; flex-direction: column; align-items: center; }
+.gf-diamond {
+  padding: 8px 18px; font-size: 13px; text-align: center; max-width: 280px; background: rgba(200, 170, 110, .12);
+  border: 1px solid var(--accent); clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0 50%);
+}
+.gf-branches { display: flex; gap: 18px; align-items: flex-start; position: relative; padding-top: 14px; }
+.gf-branches::before { content: ''; position: absolute; top: 0; left: 50%; height: 14px; border-left: 2px solid var(--border-strong); }
+.gf-branch { display: flex; flex-direction: column; align-items: center; position: relative; padding-top: 6px; border-top: 2px solid var(--border-strong); min-width: 90px; }
+.gf-branch:first-child { border-top-left-radius: 8px; }
+.gf-branch:last-child { border-top-right-radius: 8px; }
+.gf-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.gf-label.yes { color: #6fcf97; }
+.gf-label.no { color: #eb8a7a; }
+.gf-empty { color: var(--muted); padding-top: 10px; }

@@ -65,6 +65,48 @@ public class PlannerService {
      * The reference data, read once per change of the catalog. Items are shared (nothing writes to an ItemDef: item
      * effects make a copy); the maps are each caller's own, since a run may add to them.
      */
+    /**
+     * The items whose purchase minute changes what they give (Rodada 13: stacks by time held or per minute, an evolution
+     * by time), with the build's item choices.
+     */
+    public java.util.Set<Long> timedItems(Build build) {
+        ReferenceData ref = referenceData();
+        applyItemEffects(build, ref);
+        java.util.Set<Long> out = new java.util.TreeSet<>();
+        ref.items.values().forEach(i -> {
+            if (timed(i)) {
+                out.add(i.id);
+            }
+        });
+        return out;
+    }
+
+    /**
+     * The support items (Rodada 13): the starting items of the shop (preparacao: Escudo Relicário, Foice Espectral) and
+     * their evolved forms. One per build, bought first, and only in a support build.
+     */
+    public java.util.Set<Long> supportItems() {
+        Map<Long, ItemDef> items = referenceData().items;
+        java.util.Set<String> starters = new java.util.HashSet<>();
+        items.values().forEach(i -> {
+            if ("preparacao".equals(i.section)) {
+                starters.add(i.name);
+            }
+        });
+        java.util.Set<Long> out = new java.util.TreeSet<>();
+        items.values().forEach(i -> {
+            if ("preparacao".equals(i.section) || "evolucao".equals(i.section) && i.group != null && starters.contains(i.group)) {
+                out.add(i.id);
+            }
+        });
+        return out;
+    }
+
+    /** Minutes after the purchase an evolved form is reached (Rodada 13), null when it is itself from the purchase. */
+    public Double evolveAfter(String name) {
+        return itemEffects.evolutions().get(name);
+    }
+
     public ReferenceData referenceData() {
         long at = catalog.generation() + reference.generation();
         ReferenceData c = cachedRef;
@@ -236,6 +278,7 @@ public class PlannerService {
         in.assumeSmallItems = false;
         in.goldPerMin = 1e9;
         in.shopRules = com.ornnplanner.engine.ShopRuleCheck.NONE;   // a hypothetical inventory: held as given
+        in.acquiredAt = acquiredAt(build, items, t, ref);
         double from = ref.xpTable.getOrDefault(level, 0.0);
         Double to = ref.xpTable.get(level + 1);
         in.xpPerMin = (to == null ? from + 1 : (from + to) / 2) / t;
@@ -248,6 +291,46 @@ public class PlannerService {
             }
         }
         return best;
+    }
+
+    /** Whether when an item was bought changes what it gives (Rodada 13): stacks by time held or per minute, an evolution by time, kept stacks. */
+    public static boolean timed(ItemDef it) {
+        return it != null && (it.evolveAfter != null || it.stacksFrom != null && !it.stacksFrom.isEmpty()
+                || it.stats.stream().anyMatch(l -> l.heldEvery != null || l.perMinute != null));
+    }
+
+    /**
+     * When each held item whose purchase minute matters (Rodada 13) was bought, as the build's own timeline holds it at
+     * {@code minute} (a kept component's purchase included), else {@code minute} (an item put in now has no stacks yet).
+     * Null when none matters.
+     */
+    private Map<Long, Double> acquiredAt(Build build, List<Long> items, double minute, ReferenceData ref) {
+        Map<Long, Double> out = null;
+        for (Long id : items) {
+            if (timed(ref.items.get(id))) {
+                if (out == null) {
+                    out = new java.util.HashMap<>();
+                }
+                out.put(id, minute);
+            }
+        }
+        if (out == null || build.steps == null || build.steps.isEmpty() || build.goldPerMin <= 0) {
+            return out;
+        }
+        com.ornnplanner.engine.Model.MinutePoint at = null;
+        for (com.ornnplanner.engine.Model.MinutePoint p : calculate(build).series) {
+            if (p.minute <= minute + 1e-9) {
+                at = p;
+            }
+        }
+        if (at != null) {
+            for (com.ornnplanner.engine.Model.ItemContribution c : at.contributions) {
+                if (!c.rune && out.containsKey(c.itemId)) {
+                    out.put(c.itemId, c.acquired);
+                }
+            }
+        }
+        return out;
     }
 
     /** Engine input of a build: unit, gold / XP, purchases and moments, runes and champion effects. */
@@ -320,6 +403,7 @@ public class PlannerService {
                 : new com.ornnplanner.repo.BuildRepository.ItemSetup();
         Map<String, List<double[]>> rates = periods(setup.rates);
         ref.items.replaceAll((id, item) -> itemEffects.apply(item, setup.options, setup.conditional, rates));
+        itemEffects.timing(ref.items);
     }
 
     private static Map<String, List<double[]>> periods(Map<String, List<com.ornnplanner.repo.BuildRepository.RatePeriod>> raw) {

@@ -188,6 +188,10 @@ public class QuickCompareService {
                 Card c = card(s, items.get(s.itemId), out.minute);
                 c.reference = current != null && current == s.itemId;
                 forms(c, items);
+                Double after = "evoluido".equals(c.form) ? planner.evolveAfter(items.get(s.itemId).name) : null;
+                if (after != null && c.readyAt != null) {
+                    c.evolvesAt = c.readyAt + after;   // Rodada 13: evolucao_por_tempo (until then it is its base item)
+                }
                 c.delta = deltas.compare(before, s.result, out.minute,
                         BuildDeltaService.Change.item(req.slot, s.itemId, req.atMinute), build);
                 c.delta.ignored = c.ignored;

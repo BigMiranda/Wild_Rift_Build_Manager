@@ -11,7 +11,7 @@ const duration = (s) => (s >= 3600 ? `${n1(s / 3600)} h` : mmss(s / 60));
 /** Admin › Campanhas: the build discovery for a list of champions or all of them, in a resumable queue. */
 export default function Campaigns() {
   const [champions, setChampions] = useState([]);
-  const [form, setForm] = useState({ name: '', all: false, units: [], budget: 'rapido', runes: true, order: true, skipLowConfidence: true, saved: true, matchups: true, priority: 0 });
+  const [form, setForm] = useState({ name: '', all: false, units: [], budget: 'completo', objective: 'melhores', runes: true, order: true, skipLowConfidence: true, saved: true, matchups: true, priority: 0 });
   const [estimate, setEstimate] = useState(null);
   const [state, setState] = useState(null);
   const [open, setOpen] = useState(null);
@@ -30,7 +30,7 @@ export default function Campaigns() {
   }, []);
   const request = () => ({
     name: form.name, all: form.all, units: form.units, skipLowConfidence: form.skipLowConfidence, saved: form.saved, matchups: form.matchups,
-    priority: Number(form.priority) || 0, discovery: { budget: form.budget, runes: form.runes, order: form.order },
+    priority: Number(form.priority) || 0, discovery: { budget: form.budget, objective: form.objective, runes: form.runes, order: form.order },
   });
   useEffect(() => {
     if (!form.all && form.units.length === 0) {
@@ -72,6 +72,12 @@ export default function Campaigns() {
             <select value={form.budget} onChange={(e) => set({ budget: e.target.value })}>
               <option value="rapido">{t('disc.budget.rapido')}</option>
               <option value="completo">{t('disc.budget.completo')}</option>
+            </select>
+          </label>
+          <label className="field">{t('disc.objective')} <Help text={t('disc.objectiveHelp')} />
+            <select value={form.objective} onChange={(e) => set({ objective: e.target.value })}>
+              <option value="melhores">{t('disc.objective.melhores')}</option>
+              <option value="novidade">{t('disc.objective.novidade')}</option>
             </select>
           </label>
           <label className="check"><input type="checkbox" checked={form.saved} onChange={(e) => set({ saved: e.target.checked })} />{t('camp.saved')}</label>

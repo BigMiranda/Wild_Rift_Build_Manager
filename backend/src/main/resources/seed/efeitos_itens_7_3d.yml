@@ -15,7 +15,10 @@
 #   opcao        valor escolhido na build (ativações por luta, acúmulos...); valor_por_opcao / ratio_por_opcao x opção
 #                (valor_por_opcao_nv15: o valor por ponto no nível 15)
 #   por_minuto   cresce sem limite (acúmulos permanentes): a build informa a taxa por minuto, em períodos; cada
-#                acúmulo vale as linhas (ratio também: x acúmulos)
+#                acúmulo vale as linhas (ratio também: x acúmulos); num item, os acúmulos contam desde a compra
+#                (os períodos antes dela não valem; Rodada 13)
+#   acumulo_por_posse  numa linha: {a_cada_s, max}, a linha vale o valor x acúmulos / max, 1 acúmulo a cada a_cada_s
+#                segundos com o item (Rodada 13; ver a seção de mesmo nome abaixo)
 #   linhas       tipo (nome do status), valor (+ valor_nv15: faixa pelo nível) ou ratio + ref + escopo (total / bonus
 #                / base); ref_fora_dos_itens: o ratio lê só a parte do status que não vem de itens (runas e campeão)
 #   nota         premissa da estimativa
@@ -33,6 +36,51 @@
 # Efeitos que dependem do inimigo (dano, redução de resistência, Feridas Dolorosas, corte de escudo, redução de dano
 # sofrido) ficam para o simulador de confronto.
 patch: "7.3d"
+
+# Acúmulos ganhos com o item no inventário (Rodada 13), por "item|passiva" das linhas de `efeitos` de loja_7_3d.yml: a
+# linha vale o valor cheio x acúmulos / max, com 1 acúmulo a cada `a_cada_s` segundos desde a compra (antes, o valor
+# cheio valia já no minuto da compra: um Bastão das Eras comprado aos 18 min chegava com os 10 acúmulos).
+#   inteiro_a_partir  status que vale inteiro a partir de N acúmulos (e nada antes)
+# A escolha "condicional" da compra continua valendo: desligada, a passiva não conta.
+# As linhas de efeito deste arquivo (abaixo, em `itens`) levam o mesmo `acumulo_por_posse` na própria linha.
+acumulo_por_posse:
+  Bastão das Eras|Veterano: {a_cada_s: 35, max: 10}
+  # premissa: 1 acúmulo de Glória por minuto (um abate ou assistência a cada ~2 min, menos as mortes); 30 = 150 de PdH
+  Ladrão de Almas de Mejai|Temor: {a_cada_s: 60, max: 30, inteiro_a_partir: {"% Velocidade de Movimento": 10}}
+  # Carga de Mana (14 de Mana por uso, até 3 a cada 10s): premissa de metade do ritmo máximo, 1 carga a cada 7s;
+  # 50 cargas = 700 de Mana em ~6 min, contados desde a Lágrima (herda_acumulos)
+  Manamune|Carga de Mana: {a_cada_s: 7, max: 50}
+  Cajado do Arcanjo|Carga de Mana: {a_cada_s: 7, max: 50}
+  Aproximação Invernal|Carga de Mana: {a_cada_s: 7, max: 50}
+  Tiara Sussurrante|Carga de Mana: {a_cada_s: 7, max: 50}
+  # Conjuração Anímica: a cada 60s, +25 de Vida e +2 de DdA (ou 4 de PdH), até 10 vezes, desde a evolução
+  Bastião da Montanha|Conjuração Anímica: {a_cada_s: 60, max: 10}
+  Foice da Névoa Negra|Conjuração Anímica: {a_cada_s: 60, max: 10}
+
+# Formas evoluídas que chegam com o tempo (Rodada 13), em minutos depois da compra (ou da compra do componente herdado):
+# compradas como passo da build, valem como o item base até lá, e as linhas acumuladas delas contam a partir da evolução.
+#   Lágrima: as 700 de Mana da Carga de Mana (50 cargas a cada 7s, acima)
+#   suporte: a Missão de 750 de ouro com o item (Tributo: até 2 orbes de 65 por minuto, mais a parte das tropas)
+evolucao_por_tempo:
+  Muramana: 6
+  Abraço de Seraph: 6
+  Fimbulwinter: 6
+  Diadema de Canções: 6
+  Bastião da Montanha: 7
+  Foice da Névoa Negra: 7
+
+# Itens que guardam os acúmulos do componente que consomem (Rodada 13): a compra mais antiga conta.
+herda_acumulos:
+  Manamune: [Lágrima da Deusa]
+  Muramana: [Lágrima da Deusa]
+  Cajado do Arcanjo: [Lágrima da Deusa]
+  Abraço de Seraph: [Lágrima da Deusa]
+  Aproximação Invernal: [Lágrima da Deusa]
+  Fimbulwinter: [Lágrima da Deusa]
+  Tiara Sussurrante: [Lágrima da Deusa]
+  Diadema de Canções: [Lágrima da Deusa]
+  Passos Imortais: [Grevas Vorazes]
+
 itens:
   # ------------------------------------------------------------------ Aceleração da ultimate / básica
   Convergência de Zeke:
@@ -95,6 +143,7 @@ itens:
     Consumo Colossal:
       passiva: Consumo Colossal
       por_minuto: "Golpes carregados por minuto"
+      # Rodada 13: os golpes contam desde a compra do item (antes, desde 0:00 com a taxa da build)
       nota: "cada golpe dá 15% do dano (140 + 3,5% da Vida máxima) em Vida máxima: 21 + 0,525% da Vida atual por golpe"
       linhas:
       - {tipo: Vida Máxima, valor: 21}
@@ -371,15 +420,21 @@ itens:
   Grevas Vorazes:
     Conversão:
       passiva: Conversão
-      opcao: {nome: Abates de Campeões (até 10), min: 0, max: 10, padrao: 0}
+      # Rodada 13: os abates chegam com o tempo (premissa: 1 abate ou assistência a cada 2 min com a bota, desde as Grevas);
+      # a opção é o teto (padrão 10 = +5%)
+      opcao: {nome: Abates de Campeões no máximo (até 10), min: 0, max: 10, padrao: 10}
       linhas:
-      - {tipo: "% Vampirismo Universal", valor: 5, valor_por_opcao: 0.5}
+      - {tipo: "% Vampirismo Universal", valor: 5}
+      - {tipo: "% Vampirismo Universal", valor: 0, valor_por_opcao: 0.5, acumulo_por_posse: {a_cada_s: 120, max: 10}}
   Passos Imortais:
     Conversão:
       passiva: Conversão
-      opcao: {nome: Abates de Campeões (até 10), min: 0, max: 10, padrao: 0}
+      # Rodada 13: os abates chegam com o tempo (premissa: 1 abate ou assistência a cada 2 min com a bota, desde as Grevas);
+      # a opção é o teto (padrão 10 = +5%)
+      opcao: {nome: Abates de Campeões no máximo (até 10), min: 0, max: 10, padrao: 10}
       linhas:
-      - {tipo: "% Vampirismo Universal", valor: 5, valor_por_opcao: 0.5}
+      - {tipo: "% Vampirismo Universal", valor: 5}
+      - {tipo: "% Vampirismo Universal", valor: 0, valor_por_opcao: 0.5, acumulo_por_posse: {a_cada_s: 120, max: 10}}
     Agora e Sempre:
       passiva: Agora e Sempre
       condicional: true
@@ -532,10 +587,12 @@ itens:
   Flechatroz de Yun Tal:
     Praticar e Matar:
       passiva: Praticar e Matar
-      opcao: {nome: "% de Crítico acumulado (até 25)", min: 0, max: 25, padrao: 25}
+      opcao: {nome: "% de Crítico no máximo (até 25)", min: 0, max: 25, padrao: 25}
+      # Rodada 13: cresce com os ataques desde a compra; premissa de 1% a cada 12s (25% em 5 min: a distância,
+      # 0,2% por ataque = 25 ataques por minuto entre tropas e lutas). A opção é o teto.
       nota: "0,4% por ataque (corpo a corpo) ou 0,2% (a distância), permanente"
       linhas:
-      - {tipo: "% Taxa de Crítico", valor: 0, valor_por_opcao: 1}
+      - {tipo: "% Taxa de Crítico", valor: 0, valor_por_opcao: 1, acumulo_por_posse: {a_cada_s: 12, max: 25}}
     Agitação:
       passiva: Agitação
       condicional: true

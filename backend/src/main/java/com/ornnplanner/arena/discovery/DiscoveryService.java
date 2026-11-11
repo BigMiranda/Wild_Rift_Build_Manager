@@ -156,6 +156,11 @@ public class DiscoveryService {
         }
     }
 
+    /** A finished item's section: upgraded, or an evolved form (Rodada 13: the support items were left out). */
+    static boolean finished(String section) {
+        return "aprimorado".equals(section) || "evolucao".equals(section);
+    }
+
     /** The patch of the game data (what the stored results are kept by). */
     public String patch() {
         return runes.catalog().patch;
@@ -250,6 +255,28 @@ public class DiscoveryService {
             kv.keystone = m.keystone;
             res.known.add(kv);
         }
+        // a champion that plays support also starts from support versions of its seeds: each support item's evolved
+        // form first, with the first four items of the first two other seeds (Rodada 13)
+        if (ev.supportOk) {
+            List<Funnel.Kit> others = new ArrayList<>();
+            seeds.stream().filter(k -> ev.supports(k) == 0).limit(2).forEach(others::add);
+            for (long sup : ev.support) {
+                Model.ItemDef d = ev.items.get(sup);
+                if (d == null || !"evolucao".equals(d.section) || r.forbidden.contains(sup)) {
+                    continue;
+                }
+                for (Funnel.Kit o : others) {
+                    List<Long> its = new ArrayList<>();
+                    its.add(sup);
+                    o.items.stream().limit(4).forEach(its::add);
+                    Funnel.Kit k = new Funnel.Kit(its, o.boots);
+                    if (ev.allowed(k)) {
+                        seeds.add(k);
+                    }
+                }
+            }
+            ev.support.stream().filter(i -> ev.screen.containsKey(i) && !shortlist.contains(i)).forEach(shortlist::add);
+        }
         // stages 2 to 4: the genetic search, quick fights, full battery, confirmation
         Funnel.Result fr = Funnel.search(ev, shortlist, ev.boots, seeds, budget.search);
         res.quickRuns = fr.quickRuns;
@@ -277,7 +304,10 @@ public class DiscoveryService {
             }
         }
         afterSearch(r, ev, fr, res, budget, shortlist, job);
+        res.objective = DiscoveryModel.NOVELTY.equals(r.objective) ? DiscoveryModel.NOVELTY : DiscoveryModel.BEST;
         novelty(r, ev, res, job);
+        res.support = bestSupport(ev);
+        publish(r, ev, res, budget, job);
         res.seconds = (System.nanoTime() - t0) / 1e9;
         if (ev.fullCount > 0) {
             secondsPerFull = ev.fullSeconds / ev.fullCount;
@@ -302,55 +332,10 @@ public class DiscoveryService {
         RuneSearch.Shape shape = RuneSearch.Shape.of(runes.catalog());
         BuildRepository.RunePage bestPage = null;
         for (int i = 0; i < finalists && !ev.stopped(); i++) {
-            Funnel.Kit k = fr.ranked.get(i).kit;
             DiscoveryModel.KitView v = res.ranked.get(i);
-            BuildRepository.Build b0 = ev.build(k);
-            if (r.runes) {
-                stage(job, "runas", i, finalists);
-                double meanWeight = scorer.versatilityWeight("runas");
-                RuneSearch.Outcome o = RuneSearch.search(b0.runePage, shape, page -> {
-                    BuildRepository.Build bp = copy(b0, BuildRepository.Build.class);
-                    bp.runePage = page;
-                    List<Double> points = new ArrayList<>();
-                    scorer.score(bp, QUICK_MINUTE, BuildScore.Options.single()).readings.forEach(x -> points.add(x.points));
-                    return RuneSearch.versatility(points, meanWeight)[0];
-                }, 2, ev::stopped);
-                v.runePage = o.page;
-                v.runeChanges = o.changes;
-                b0.runePage = o.page;
-                if (i == 0) {
-                    bestPage = o.page;
-                }
-                res.notes.add(String.format(java.util.Locale.ROOT, "Runas de %s: %d páginas medidas, %.1f → %.1f%s", String.join(", ", v.names),
-                        o.measured, o.start, o.score, o.changes.isEmpty() ? " (a página da build já era a melhor)" : " (" + String.join("; ", o.changes) + ")"));
-            }
-            if (r.order) {
-                stage(job, "ordem", i, finalists);
-                com.ornnplanner.arena.calc.CalculatorService.Request cr = new com.ornnplanner.arena.calc.CalculatorService.Request();
-                cr.build = b0;
-                cr.candidates = new ArrayList<>(k.items);
-                cr.required = new ArrayList<>(k.items);
-                cr.length = k.items.size();
-                cr.budget = b.orderBudget;
-                cr.beam = 3;
-                cr.boots = new ArrayList<>();
-                if (k.boots != null) {
-                    cr.boots.add(k.boots);
-                    Model.ItemDef bd = ev.items.get(k.boots);
-                    if (bd != null) {
-                        bd.components.forEach(c -> cr.boots.add(c.itemId));
-                    }
-                } else {
-                    cr.noBoots = true;
-                }
-                com.ornnplanner.arena.calc.CalculatorService.Answer ans = calc.compute(cr, null);
-                res.orderMeasures += (int) ans.evaluations;
-                res.prunedByStart += ans.prunedByStart;
-                if (ans.best != null) {
-                    v.order = ans.best.order;
-                    v.importance = ans.importance;
-                    v.componentFirst = ans.componentFirst;
-                }
+            finish(r, ev, v, b, res, shape, job, i, finalists);
+            if (i == 0 && "busca".equals(v.runesFrom)) {
+                bestPage = v.runePage;
             }
         }
         // items again with the best page: a rune may change which item is worth most
@@ -378,11 +363,144 @@ public class DiscoveryService {
                 if (changed) {
                     DiscoveryModel.KitView nv = ev2.view(top.kit, top, "runas");
                     nv.runePage = bestPage;
+                    nv.runesFrom = "busca";
                     res.ranked.add(0, nv);
                     res.standard = standard(res.ranked);
                 }
             }
         }
+    }
+
+    /**
+     * The runes and the purchase order of one kit (part 4), unless already done: the runes coordinate by coordinate at
+     * the quick minute, then the calculator's order with them. A cut order (the budget ran out before a whole one) is
+     * not kept: the screening's order stays and a note says so (Rodada 13; before, a build of two items reached the site).
+     */
+    void finish(DiscoveryModel.Request r, Evaluator ev, DiscoveryModel.KitView v, DiscoveryModel.Budget b, DiscoveryModel.Result res,
+                RuneSearch.Shape shape, DiscoveryModel.Job job, int i, int n) {
+        Funnel.Kit k = new Funnel.Kit(v.items, v.boots);
+        BuildRepository.Build b0 = ev.build(k);
+        if (v.runePage != null) {
+            b0.runePage = v.runePage;
+        }
+        if (r.runes && !"busca".equals(v.runesFrom) && !ev.stopped()) {
+            stage(job, "runas", i, n);
+            double meanWeight = scorer.versatilityWeight("runas");
+            RuneSearch.Outcome o = RuneSearch.search(b0.runePage, shape, page -> {
+                BuildRepository.Build bp = copy(b0, BuildRepository.Build.class);
+                bp.runePage = page;
+                List<Double> points = new ArrayList<>();
+                scorer.score(bp, QUICK_MINUTE, BuildScore.Options.single()).readings.forEach(x -> points.add(x.points));
+                return RuneSearch.versatility(points, meanWeight)[0];
+            }, 2, ev::stopped);
+            v.runePage = o.page;
+            v.runeChanges = o.changes;
+            v.runesFrom = "busca";
+            b0.runePage = o.page;
+            res.notes.add(String.format(java.util.Locale.ROOT, "Runas de %s: %d páginas medidas, %.1f → %.1f%s", String.join(", ", v.names),
+                    o.measured, o.start, o.score, o.changes.isEmpty() ? " (a página da build já era a melhor)" : " (" + String.join("; ", o.changes) + ")"));
+        }
+        if (r.order && !v.orderSearched && !ev.stopped()) {
+            stage(job, "ordem", i, n);
+            com.ornnplanner.arena.calc.CalculatorService.Request cr = new com.ornnplanner.arena.calc.CalculatorService.Request();
+            cr.build = b0;
+            cr.candidates = new ArrayList<>(k.items);
+            cr.required = new ArrayList<>(k.items);
+            cr.length = k.items.size();
+            cr.budget = b.orderBudget;
+            cr.beam = 3;
+            cr.boots = new ArrayList<>();
+            if (k.boots != null) {
+                cr.boots.add(k.boots);
+                Model.ItemDef bd = ev.items.get(k.boots);
+                if (bd != null) {
+                    bd.components.forEach(c -> cr.boots.add(c.itemId));
+                }
+            } else {
+                cr.noBoots = true;
+            }
+            com.ornnplanner.arena.calc.CalculatorService.Answer ans = calc.compute(cr, null);
+            res.orderMeasures += (int) ans.evaluations;
+            res.prunedByStart += ans.prunedByStart;
+            v.orderSearched = true;
+            if (ans.best != null && whole(ans.best.order, k)) {
+                v.order = ans.best.order;
+                v.importance = ans.importance;
+                v.componentFirst = ans.componentFirst;
+            } else {
+                v.orderCut = true;
+                res.notes.add("Ordem de " + String.join(", ", v.names) + ": o orçamento da ordem acabou antes de uma ordem "
+                        + "completa; fica a ordem da triagem (o item que mais vale primeiro).");
+            }
+        }
+    }
+
+    /** Whether an order buys every item of the kit and its boots. */
+    static boolean whole(List<Long> order, Funnel.Kit k) {
+        return order != null && order.containsAll(k.items) && (k.boots == null || order.contains(k.boots));
+    }
+
+    /**
+     * What goes out (Rodada 13): the standard build and every discovery get their own runes and order; every other kit
+     * shown takes them from a finished kit with the same items, else the standard's page (marked "padrao").
+     */
+    void publish(DiscoveryModel.Request r, Evaluator ev, DiscoveryModel.Result res, DiscoveryModel.Budget b, DiscoveryModel.Job job) {
+        if (res.ranked.isEmpty()) {
+            return;
+        }
+        RuneSearch.Shape shape = RuneSearch.Shape.of(runes.catalog());
+        List<DiscoveryModel.KitView> todo = new ArrayList<>();
+        if (res.standard != null) {
+            todo.add(res.standard);
+        }
+        if (res.support != null) {
+            todo.add(res.support);
+        }
+        res.discoveries.forEach(f -> todo.add(f.kit));
+        List<DiscoveryModel.KitView> all = new ArrayList<>(res.ranked);
+        all.addAll(res.niches.values());
+        Map<String, DiscoveryModel.KitView> done = new LinkedHashMap<>();
+        for (DiscoveryModel.KitView v : all) {
+            if ("busca".equals(v.runesFrom) && v.orderSearched) {
+                done.putIfAbsent(v.items + "|" + v.boots, v);
+            }
+        }
+        for (int i = 0; i < todo.size() && !ev.stopped(); i++) {
+            DiscoveryModel.KitView v = todo.get(i);
+            DiscoveryModel.KitView same = done.get(v.items + "|" + v.boots);
+            if (same != null && same != v) {
+                inherit(v, same);
+                continue;
+            }
+            finish(r, ev, v, b, res, shape, job, i, todo.size());
+            done.putIfAbsent(v.items + "|" + v.boots, v);
+        }
+        BuildRepository.RunePage page = res.standard == null || !"busca".equals(res.standard.runesFrom) ? null : res.standard.runePage;
+        all.addAll(todo);
+        for (DiscoveryModel.KitView v : all) {
+            if ("busca".equals(v.runesFrom)) {
+                continue;
+            }
+            DiscoveryModel.KitView same = done.get(v.items + "|" + v.boots);
+            if (same != null && same != v) {
+                inherit(v, same);
+            } else if (page != null) {
+                v.runePage = page;
+                v.runesFrom = "padrao";
+            }
+        }
+    }
+
+    /** A kit's runes and order taken from a finished kit with the same items. */
+    private static void inherit(DiscoveryModel.KitView v, DiscoveryModel.KitView from) {
+        v.runePage = from.runePage;
+        v.runeChanges = from.runeChanges;
+        v.runesFrom = from.runesFrom;
+        v.order = from.order;
+        v.importance = from.importance;
+        v.componentFirst = from.componentFirst;
+        v.orderSearched = from.orderSearched;
+        v.orderCut = from.orderCut;
     }
 
     // ------------------------------------------------------------------ part 5: novelty against the meta
@@ -478,11 +596,21 @@ public class DiscoveryService {
             }
             v.beatsKnown = total == 0 ? null : 100.0 * wins / total;
         }
+        // Rodada 13: aiming at the best builds, the niches' best are shown apart (not discoveries), and with fewer known
+        // builds than the YAML's minimum every kit is "new": no discovery is highlighted
+        boolean best = !DiscoveryModel.NOVELTY.equals(r.objective);
+        int minKnown = cfg.get("minimo_conhecidas") instanceof Number ? ((Number) cfg.get("minimo_conhecidas")).intValue() : 2;
+        if (best && n < minKnown) {
+            res.notes.add(String.format(java.util.Locale.ROOT, "Só %d build(s) conhecida(s) do campeão (mínimo %d): a novidade não diz "
+                    + "muito, nenhuma descoberta destacada. Com o objetivo \"novidade\" elas aparecem mesmo assim.", n, minKnown));
+            return;
+        }
+        List<DiscoveryModel.KitView> candidates = best ? new ArrayList<>(res.ranked) : views;
         // the discoveries, confirmed on starts the search did not see against the best known confirmed the same way
         Funnel.Eval knownConfirmed = ev.confirm(new Funnel.Kit(bestKnown.items, bestKnown.boots));
         bestKnown.confirmed = knownConfirmed.score;
         java.util.Set<String> seen = new java.util.HashSet<>();
-        for (DiscoveryModel.KitView v : views) {
+        for (DiscoveryModel.KitView v : candidates) {
             String key = v.items + "|" + v.boots;
             if (!seen.add(key) || v.novelty == null || v.novelty < threshold || v.score + 1e-9 < bestKnown.score || ev.stopped()) {
                 continue;
@@ -548,7 +676,17 @@ public class DiscoveryService {
             out.add(known.boots == null ? "sem bota" : ev.name(known.boots));
             in.add(ev.name(v.boots));
         }
-        if (!out.isEmpty() || !in.isEmpty()) {
+        List<String> kept = new ArrayList<>();
+        for (long i : v.items) {
+            if (known.items.contains(i)) {
+                kept.add(ev.name(i));
+            }
+        }
+        if (in.size() > 3) {
+            // most of it changed: a list of swaps says nothing, what stays and what comes in does (Rodada 13)
+            f.swaps.add("outro conjunto: " + (kept.isEmpty() ? "nenhum item em comum" : "mantém " + String.join(", ", kept))
+                    + "; entram " + String.join(", ", in));
+        } else if (!out.isEmpty() || !in.isEmpty()) {
             f.swaps.add("troca " + (out.isEmpty() ? "nada" : String.join(" + ", out)) + " por " + (in.isEmpty() ? "nada" : String.join(" + ", in)));
         }
         String ka = v.runePage != null ? v.runePage.keystone : null;
@@ -562,16 +700,20 @@ public class DiscoveryService {
             }
         }
         StringBuilder sb = new StringBuilder();
-        sb.append(f.swaps.isEmpty() ? "mesmos itens" : String.join(", ", f.swaps));
-        sb.append(String.format(java.util.Locale.ROOT, ": %.1f contra %.1f de %s", v.score, known.score, known.label));
+        sb.append(String.format(java.util.Locale.ROOT, "Nota %.1f contra %.1f de %s (a melhor conhecida). ", v.score, known.score, known.label));
+        sb.append(f.swaps.isEmpty() ? "Mesmos itens" : Character.toUpperCase(String.join("; ", f.swaps).charAt(0)) + String.join("; ", f.swaps).substring(1));
+        sb.append('.');
         if (!f.wins.isEmpty()) {
-            sb.append("; ganha em ").append(String.join(", ", f.wins));
+            sb.append(" Ganha em ").append(String.join(", ", f.wins)).append('.');
         }
         if (!f.losses.isEmpty()) {
-            sb.append("; perde em ").append(String.join(", ", f.losses));
+            sb.append(" Perde em ").append(String.join(", ", f.losses)).append('.');
         }
         if (f.synergy != null) {
-            sb.append("; ").append(f.synergy);
+            sb.append(' ').append(Character.toUpperCase(f.synergy.charAt(0))).append(f.synergy.substring(1)).append('.');
+        }
+        if (!f.wins.isEmpty() || !f.losses.isEmpty()) {
+            sb.append(" (pontos por cenário, na média dos minutos da nota.)");
         }
         f.text = sb.toString();
         return f;
@@ -627,6 +769,74 @@ public class DiscoveryService {
         return best == null ? ranked.get(0) : best;
     }
 
+    /** Whether a champion plays support (Rodada 13): a support lane, or a saved or meta build of it with a support item. */
+    boolean supportCapable(BuildRepository.Build base, java.util.Set<Long> support) {
+        ChampionProfiles.Profile p = profiles.of(scorer.championOf(base));
+        if (p != null && p.lanes.contains("Suporte")) {
+            return true;
+        }
+        for (BuildRepository.Build b : known(base)) {
+            if (b.steps.stream().anyMatch(st -> st.itemId != null && support.contains(st.itemId))) {
+                return true;
+            }
+        }
+        return repo.metaBuilds(base.unitCode).stream().anyMatch(m -> m.items.stream().anyMatch(support::contains));
+    }
+
+    /**
+     * A support build's gold and XP per minute (Rodada 13): the mean of the champion's saved support builds, else the
+     * base build's times the YAML's {@code suporte} shares.
+     */
+    @SuppressWarnings("unchecked")
+    double[] supportPace(BuildRepository.Build base, java.util.Set<Long> support) {
+        double g = 0;
+        double x = 0;
+        int n = 0;
+        for (BuildRepository.Build b : known(base)) {
+            if (b.steps.stream().anyMatch(st -> st.itemId != null && support.contains(st.itemId))) {
+                g += b.goldPerMin;
+                x += b.xpPerMin;
+                n++;
+            }
+        }
+        if (n > 0) {
+            return new double[] {g / n, x / n};
+        }
+        Map<String, Object> cfg = (Map<String, Object>) scorer.rules().getOrDefault("suporte", Map.of());
+        double fg = cfg.get("ouro") instanceof Number ? ((Number) cfg.get("ouro")).doubleValue() : 0.86;
+        double fx = cfg.get("xp") instanceof Number ? ((Number) cfg.get("xp")).doubleValue() : 0.9;
+        return new double[] {base.goldPerMin * fg, base.xpPerMin * fx};
+    }
+
+    /**
+     * The best support build (Rodada 13): ranked apart, since it plays with less gold. Among every kit the full battery
+     * measured with a support item, the best score; null when the champion does not play support or none was measured.
+     */
+    DiscoveryModel.KitView bestSupport(Evaluator ev) {
+        if (!ev.supportOk) {
+            return null;
+        }
+        Funnel.Kit best = null;
+        double score = Double.NEGATIVE_INFINITY;
+        for (Map.Entry<String, Funnel.Kit> e : new java.util.TreeMap<>(ev.kits).entrySet()) {
+            Funnel.Eval f = ev.fulls.get(e.getKey());
+            if (f != null && ev.supports(e.getValue()) == 1 && f.score > score) {
+                score = f.score;
+                best = e.getValue();
+            }
+        }
+        if (best == null) {
+            return null;
+        }
+        Funnel.Entry entry = new Funnel.Entry();
+        entry.kit = best;
+        entry.full = ev.fulls.get(best.key());
+        DiscoveryModel.KitView v = ev.view(best, entry, "suporte");
+        v.goldPerMin = ev.supportPace[0];
+        v.xpPerMin = ev.supportPace[1];
+        return v;
+    }
+
     /** The champion's other saved builds (known builds: seeds and the novelty's references). */
     List<BuildRepository.Build> known(BuildRepository.Build base) {
         List<BuildRepository.Build> out = new ArrayList<>();
@@ -666,6 +876,12 @@ public class DiscoveryService {
         final Map<Long, Double> screen = new LinkedHashMap<>();
         final Map<String, Boolean> allowed = new ConcurrentHashMap<>();
         final Map<String, Funnel.Eval> fulls = new ConcurrentHashMap<>();
+        /** The kits measured by the full battery, by key (the best support build is picked among them). */
+        final Map<String, Funnel.Kit> kits = new ConcurrentHashMap<>();
+        /** The support items (Rodada 13), whether this champion plays support, and the support build's pace. */
+        final Set<Long> support;
+        final boolean supportOk;
+        final double[] supportPace;
         final Map<String, Double> quicks = new ConcurrentHashMap<>();
         /** "part|key" -> the scenario's name, as the score's readings gave them. */
         final Map<String, String> names = new ConcurrentHashMap<>();
@@ -680,6 +896,9 @@ public class DiscoveryService {
             this.r = r;
             this.job = job;
             this.items = s.planner.referenceData().items;
+            this.support = s.planner.supportItems();
+            this.supportOk = s.supportCapable(base, support);
+            this.supportPace = s.supportPace(base, support);
             for (PlannerService.ItemView i : s.planner.itemViews()) {
                 if (i.boots() && ("tier_medio".equals(i.section) || "aprimorado".equals(i.section)) && !r.forbidden.contains(i.id)) {
                     boots.add(i.id);
@@ -709,7 +928,8 @@ public class DiscoveryService {
             List<PlannerService.ItemView> views = s.planner.itemViews();
             int n = 0;
             for (PlannerService.ItemView i : views) {
-                if (!"aprimorado".equals(i.section) || i.boots() || r.forbidden.contains(i.id)) {
+                // finished items: the upgraded ones and the evolved forms (Bastião da Montanha, Fimbulwinter: Rodada 13)
+                if (!finished(i.section) || i.boots() || r.forbidden.contains(i.id)) {
                     continue;
                 }
                 BuildDeltaService.Delta d = s.deltas.delta(empty, BuildDeltaService.Change.item(null, i.id, null), QUICK_MINUTE);
@@ -744,6 +964,11 @@ public class DiscoveryService {
             b.id = null;
             b.name = base.name + " · descoberta";
             b.matchEnd = null;
+            if (supports(k) > 0) {
+                // a support build earns less (the support item gives the minions' gold away): its own pace
+                b.goldPerMin = supportPace[0];
+                b.xpPerMin = supportPace[1];
+            }
             b.steps = new ArrayList<>();
             for (long id : order(k)) {
                 b.steps.add(new BuildRepository.Step(id, true));
@@ -757,7 +982,9 @@ public class DiscoveryService {
          */
         List<Long> order(Funnel.Kit k) {
             List<Long> its = new ArrayList<>(k.items);
-            its.sort(Comparator.comparingDouble((Long i) -> -screen.getOrDefault(i, 0.0)).thenComparing(i -> i));
+            // a starter's evolved form (the support item) is bought first, then by worth
+            its.sort(Comparator.comparing((Long i) -> !starter(i)).thenComparingDouble((Long i) -> -screen.getOrDefault(i, 0.0))
+                    .thenComparing(i -> i));
             List<Long> out = new ArrayList<>();
             Long tier2 = null;
             Long tier3 = null;
@@ -793,6 +1020,16 @@ public class DiscoveryService {
             return out;
         }
 
+        /** An evolved form of a starting item (preparacao: the support item's Bastião da Montanha...): bought first. */
+        boolean starter(long id) {
+            return support.contains(id);
+        }
+
+        /** How many support items a kit has. */
+        int supports(Funnel.Kit k) {
+            return (int) k.items.stream().filter(support::contains).count();
+        }
+
         /** A saved build's kit: its finished items (at most five) and its final boots. */
         Funnel.Kit kitOf(BuildRepository.Build b) {
             List<Long> its = new ArrayList<>();
@@ -807,7 +1044,7 @@ public class DiscoveryService {
                 }
                 if (d.boots()) {
                     bt = d.id;
-                } else if ("aprimorado".equals(d.section) && !its.contains(d.id) && its.size() < 5) {
+                } else if (d.finished() && !its.contains(d.id) && its.size() < 5) {
                     its.add(d.id);
                 }
             }
@@ -816,6 +1053,11 @@ public class DiscoveryService {
 
         @Override
         public boolean allowed(Funnel.Kit k) {
+            // one support item at most, and only for a champion that plays support (Rodada 13)
+            int sup = supports(k);
+            if (sup > 1 || sup == 1 && !supportOk) {
+                return false;
+            }
             if (!k.items.containsAll(r.required.stream().filter(i -> !boots.contains(i)).collect(java.util.stream.Collectors.toList()))) {
                 return false;
             }
@@ -845,6 +1087,7 @@ public class DiscoveryService {
 
         @Override
         public Funnel.Eval full(Funnel.Kit k) {
+            kits.putIfAbsent(k.key(), k);
             return fulls.computeIfAbsent(k.key(), x -> {
                 long t0 = System.nanoTime();
                 Funnel.Eval e = eval(build(k), null);
