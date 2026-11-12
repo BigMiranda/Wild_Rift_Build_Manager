@@ -245,6 +245,9 @@ public class MatchService {
         Live world = new Live(d);
         com.ornnplanner.arena.rift.MacroPolicy policy = blue == red ? blue : new com.ornnplanner.arena.rift.SeatMacro(blue, red);
         Match m = new Match(arena.riftMap(), arena.riftRules(), macro, world, policy, seed, roles, d.teams());
+        List<String> styles = new ArrayList<>();
+        slots.forEach(s -> styles.add(s.style));
+        m.styles(styles);
         for (int i = 0; i < slots.size(); i++) {
             MatchModel.Player p = new MatchModel.Player();
             p.seat = i;
@@ -278,6 +281,34 @@ public class MatchService {
         r.runSeconds = (System.nanoTime() - start) / 1e9;
         r.fightSeconds = world.fightNanos / 1e9;
         return r;
+    }
+
+    /**
+     * Rodada 14: a draft of builds that need not be saved (the campaign's kits), each with its champion, team, role and
+     * lane style; no guide. The champions must be playable (sheet A or B).
+     */
+    public Draft draftOf(List<BuildRepository.Build> chosen, List<String> names, List<Integer> teams, List<String> roles, List<String> styles) {
+        List<MatchModel.Slot> slots = new ArrayList<>();
+        for (int i = 0; i < chosen.size(); i++) {
+            MatchModel.Slot s = new MatchModel.Slot();
+            s.buildId = chosen.get(i).id == null ? 0 : chosen.get(i).id;
+            s.team = teams.get(i);
+            s.role = roles.get(i);
+            s.style = styles.get(i);
+            slots.add(s);
+        }
+        return new Draft(slots, new ArrayList<>(chosen), new ArrayList<>(roles), new ArrayList<>(names), new ArrayList<>());
+    }
+
+    /** The match role of a champion's first lane (barao | selva | meio | dupla | suporte), "barao" when it has none. */
+    public String roleOf(String champion) {
+        List<String> lanes = laneNames(champion);
+        for (Map.Entry<String, String> e : new java.util.TreeMap<>(LANE_OF).entrySet()) {
+            if (!lanes.isEmpty() && lanes.get(0).equals(e.getValue())) {
+                return e.getKey();
+            }
+        }
+        return "barao";
     }
 
     /** Asked roles first; the others by the champion's lanes, then whatever is free on the side. */
@@ -343,8 +374,8 @@ public class MatchService {
         private Slot slot(int seat, int done, int level, double minute) {
             Slot s = new Slot();
             s.team = slots.get(seat).team;
-            if (slots.get(seat).guideId != null) {
-                s.build = chosen.get(seat);   // the guide's order, not the saved one
+            if (slots.get(seat).guideId != null || slots.get(seat).buildId <= 0) {
+                s.build = chosen.get(seat);   // the guide's order, not the saved one; or a build not saved (Rodada 14)
             } else {
                 s.buildId = slots.get(seat).buildId;
             }

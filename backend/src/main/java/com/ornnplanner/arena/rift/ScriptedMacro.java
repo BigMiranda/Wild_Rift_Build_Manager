@@ -104,6 +104,11 @@ public final class ScriptedMacro implements MacroPolicy {
         if (threat != null) {
             return new Intent(Goal.DEFEND, (double) threat[0], (double) threat[1], (String) threat[2]);
         }
+        // Rodada 14: the lane styles that leave the lane (roaming, ganks) and step back from a gank seen (vision)
+        Intent styled = styled(m, me, group);
+        if (styled != null) {
+            return styled;
+        }
         boolean roams = "selva".equals(me.role) || "meio".equals(me.role) || m.seconds() >= group;
         if (objective != null && roams && m.seconds() >= num("objetivo_depois_de", 5) * 60) {
             return new Intent(Goal.OBJECTIVE, objective[0], objective[1], objective[2] > 0 ? "barao" : "dragao");
@@ -121,5 +126,42 @@ public final class ScriptedMacro implements MacroPolicy {
         String lane = Match.laneOf(me.role);
         double[] spot = m.laneSpot(me.team, lane);
         return new Intent(Goal.LANE, spot[0], spot[1], lane);
+    }
+
+    /**
+     * Rodada 14, before the grouping: a gank seen coming (a side with wards) sends the laner back to its own side of the
+     * lane; a roaming style leaves its lane for another one in its windows; a ganking jungler goes for the weakest enemy
+     * laner in its windows. Null = none of these now (the default style never returns one).
+     */
+    private Intent styled(Match m, Match.Seat me, double group) {
+        if (m.seconds() >= group) {
+            return null;
+        }
+        if (m.gankSeen(me)) {
+            String lane = Match.laneOf(me.role);
+            double[] home = m.laneSpot(me.team, lane);
+            double[] fountain = m.fountain(me.team);
+            double back = 0.35;
+            return new Intent(Goal.RETREAT, home[0] + (fountain[0] - home[0]) * back, home[1] + (fountain[1] - home[1]) * back, lane);
+        }
+        double every = m.styleNum(me, "a_cada_s", 0);
+        double from = m.styleNum(me, "desde_s", 180);
+        double length = m.styleNum(me, "duracao_s", 30);
+        if (every <= 0 || m.seconds() < from) {
+            return null;
+        }
+        double into = (m.seconds() - from) % every;
+        if (into >= length) {
+            return null;
+        }
+        int window = (int) ((m.seconds() - from) / every);
+        if ("selva".equals(me.role)) {
+            Match.Seat target = m.weakestLaner(me.team, m.styleNum(me, "vida_abaixo", 0.7));
+            return target == null ? null : new Intent(Goal.LANE, target.x, target.y, Match.laneOf(target.role));
+        }
+        String home = Match.laneOf(me.role);
+        String to = "meio".equals(home) ? (window % 2 == 0 ? "barao" : "dragao") : "meio";
+        double[] spot = m.laneSpot(me.team, to);
+        return new Intent(Goal.LANE, spot[0], spot[1], to);
     }
 }

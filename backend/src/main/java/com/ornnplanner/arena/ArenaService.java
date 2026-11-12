@@ -327,7 +327,7 @@ public class ArenaService {
     }
 
     /** Runs fights on all cores; results in the order given (each fight is deterministic on its own). */
-    static <T> List<T> parallel(List<java.util.concurrent.Callable<T>> runs) {
+    public static <T> List<T> parallel(List<java.util.concurrent.Callable<T>> runs) {
         if (runs.isEmpty()) {
             return List.of();
         }

@@ -225,6 +225,13 @@ public class BuildScore {
         BuildArchetypes.Archetype a = archetypes.of(build, minute);
         s.archetype = a == null ? null : a.key;
         s.weights = weights(s.championClass, s.archetype);
+        Map<String, Object> supportRules = supportRules(s.champion, s.championClass, s.archetype);
+        if (supportRules != null) {
+            // Rodada 14: a support is worth what it does for the carry
+            s.weights.put(UTILITY, s.weights.get(UTILITY) + num(supportRules.get("peso_utilidade"), 0));
+            double sum = s.weights.values().stream().mapToDouble(Double::doubleValue).sum();
+            s.weights.replaceAll((k, v) -> v / Math.max(1e-9, sum));
+        }
         Map<String, Object> read = (Map<String, Object>) rules.getOrDefault("leitura", Map.of());
         if (s.weights.get(DEFENSIVE) > 0 || s.weights.get(UTILITY) > 0 || floor(s.championClass) > Double.NEGATIVE_INFINITY) {
             defensive(build, minute, o != null && o.defensiveMode != null ? o.defensiveMode
@@ -256,6 +263,9 @@ public class BuildScore {
                 r.weight = targets.get(i).weight;
                 s.readings.add(r);
             }
+        }
+        if (supportRules != null && s.weights.get(UTILITY) > 0) {
+            support(build, minute, supportRules, o == null ? null : o.starts, s);
         }
         if (s.weights.get(DUELS) > 0 && (o == null || o.limit == 0)) {
             duels(build, minute, s);
@@ -312,6 +322,84 @@ public class BuildScore {
             r.points = usum / un;
             s.readings.add(r);
         }
+    }
+
+    /**
+     * Rodada 14: the support rules (nota_builds' {@code utilidade.suporte}) when this champion plays support: its class,
+     * one of its lanes or the build's archetype is in them; null otherwise.
+     */
+    @SuppressWarnings("unchecked")
+    Map<String, Object> supportRules(String champion, String championClass, String archetype) {
+        Map<String, Object> util = (Map<String, Object>) rules.getOrDefault("utilidade", Map.of());
+        Map<String, Object> sup = (Map<String, Object>) util.get("suporte");
+        if (sup == null) {
+            return null;
+        }
+        List<Object> classes = (List<Object>) sup.getOrDefault("classes", List.of());
+        List<Object> lanes = (List<Object>) sup.getOrDefault("rotas", List.of());
+        List<Object> kinds = (List<Object>) sup.getOrDefault("arquetipos", List.of());
+        com.ornnplanner.arena.fight.ChampionProfiles.Profile p = profiles.of(champion);
+        boolean lane = p != null && p.lanes.stream().anyMatch(lanes::contains);
+        return classes.contains(championClass) || lane || archetype != null && kinds.contains(archetype) ? sup : null;
+    }
+
+    /**
+     * Rodada 14: the support report (the build next to an allied carry the attackers go after), each scenario a utility
+     * reading: the carry's time alive, its damage, the control and the enemy damage cut, against the reference.
+     */
+    @SuppressWarnings("unchecked")
+    private void support(BuildRepository.Build build, double minute, Map<String, Object> sup, Integer starts, Score s) {
+        EffectModel.Report rep = effect.report(String.valueOf(sup.getOrDefault("relatorio", "suporte")));
+        Map<String, Object> w = (Map<String, Object>) sup.getOrDefault("pesos", Map.of());
+        Map<String, Object> util = (Map<String, Object>) rules.getOrDefault("utilidade", Map.of());
+        double ccFactor = num(util.get("controle_por_10s"), 25);
+        EffectModel.Request req = new EffectModel.Request();
+        req.build = build;
+        req.minute = minute;
+        req.readMode = EffectModel.AS_PLAYED;
+        req.starts = starts;
+        for (EffectModel.Entry e : rep.tests) {
+            EffectModel.Job j = new EffectModel.Job();
+            j.testKey = e.key;
+            req.jobs.add(j);
+        }
+        List<EffectModel.Outcome> out = effect.evaluate(req);
+        Map<String, EffectModel.Test> tests = effect.presets();
+        for (int i = 0; i < out.size(); i++) {
+            EffectModel.Outcome o = out.get(i);
+            if (o.build == null || o.reference == null) {
+                continue;
+            }
+            EffectModel.Test t = tests.get(rep.tests.get(i).key);
+            double duration = t == null ? 60 : t.duration;
+            Reading r = new Reading();
+            r.part = UTILITY;
+            r.key = "suporte|" + rep.tests.get(i).key;
+            r.name = o.testName;
+            r.points = supportPoints(o.build, o.reference, duration, ccFactor, w);
+            r.weight = rep.tests.get(i).weight;
+            s.readings.add(r);
+        }
+    }
+
+    /** One support reading: the weighted sum of its parts, each -100..100 against the reference. */
+    public static double supportPoints(EffectModel.Measures b, EffectModel.Measures ref, double duration, double ccFactor, Map<String, Object> w) {
+        double aliveB = b.alliesAlive == null ? 0 : b.alliesAlive;
+        double aliveR = ref.alliesAlive == null ? 0 : ref.alliesAlive;
+        double alive = clamp(100 * (aliveB - aliveR) / Math.max(1, duration - aliveR));
+        double rateB = b.allyDealt / Math.max(1e-6, b.fightLength);
+        double rateR = ref.allyDealt / Math.max(1e-6, ref.fightLength);
+        double damage = clamp(100 * (rateB - rateR) / Math.max(1, rateR));
+        double cc = clamp(b.fightLength > 0 ? b.controlApplied / b.fightLength * 10 * ccFactor : 0);
+        double enemyB = b.enemyDealt / Math.max(1e-6, b.fightLength);
+        double enemyR = ref.enemyDealt / Math.max(1e-6, ref.fightLength);
+        double cut = clamp(100 * (enemyR - enemyB) / Math.max(1, enemyR));
+        return num(w.get("carry_vivo"), 0.35) * alive + num(w.get("carry_dano"), 0.25) * damage
+                + num(w.get("controle"), 0.2) * cc + num(w.get("dano_cortado"), 0.2) * cut;
+    }
+
+    private static double clamp(double v) {
+        return Math.max(-100, Math.min(100, v));
     }
 
     private static <T> List<T> limited(List<T> l, Options o) {

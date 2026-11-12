@@ -28,7 +28,7 @@ classes:
   Atirador:     {ofensiva: 1.00, piso: 20}
   Mago:         {ofensiva: 1.00, piso: 20}
   Assassino:    {ofensiva: 1.00, piso: 10}
-  Controlador:  {defensiva: 0.40, utilidade: 0.40, ofensiva: 0.20}
+  Controlador:  {defensiva: 0.30, utilidade: 0.55, ofensiva: 0.15}   # Rodada 14: era 0.40 / 0.40 / 0.20
   Especialista: {defensiva: 0.50, ofensiva: 0.50}
 piso_peso: 1.0
 
@@ -39,11 +39,29 @@ arquetipos:
   critico:         {ofensiva: 0.15, defensiva: -0.15}
   letalidade:      {ofensiva: 0.15, defensiva: -0.15}
   mago_explosivo:  {ofensiva: 0.10, defensiva: -0.10}
-  suporte:         {utilidade: 0.20, ofensiva: -0.20}
+  suporte:         {utilidade: 0.30, ofensiva: -0.20, defensiva: -0.10}   # Rodada 14: era utilidade +0.20, ofensiva -0.20
 
 utilidade:
   controle_por_10s: 25   # 4 s de controle a cada 10 s de luta = 100 pontos
   absorvido: 1.0         # 1 ponto por % do dano do time absorvido
+  # Rodada 14: o que um suporte faz pelo carry, no relatório `suporte` de efetividade_7_3d.yml (a build ao lado de um
+  # atirador aliado, com os inimigos indo atrás dele). Só para quem joga de suporte: classe em `classes`, rota em
+  # `rotas` ou arquétipo da build em `arquetipos`. Cada parte vai de -100 a 100 contra a referência (o mesmo campeão
+  # sem itens), e a leitura é a soma pelos pesos:
+  #   carry_vivo     o tempo a mais que o carry vive, sobre o tempo que faltava para o fim da luta na referência
+  #   carry_dano     o dano por segundo a mais do carry (ele vivo e sem ser controlado dá mais dano)
+  #   controle       os segundos de controle a cada 10 s de luta (lentidão conta), x `controle_por_10s`
+  #   dano_cortado   o dano por segundo a menos que os inimigos causaram (escudos e curas não entram aqui: entram no
+  #                  carry vivo)
+  # `peso_utilidade` soma-se ao peso da utilidade da classe (e a nota se renormaliza): o suporte vale pelo carry.
+  # Visão, previsibilidade e o momento de gastar recursos não cabem numa luta: ficam com a partida (estilos de rota).
+  suporte:
+    relatorio: suporte
+    classes: [Controlador]
+    rotas: [Suporte]
+    arquetipos: [suporte]
+    pesos: {carry_vivo: 0.35, carry_dano: 0.25, controle: 0.2, dano_cortado: 0.2}
+    peso_utilidade: 0.25
 
 duelos:
   peso: 0

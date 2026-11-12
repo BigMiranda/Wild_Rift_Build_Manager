@@ -1,6 +1,9 @@
 import ItemIcon from './ItemIcon.jsx';
 import { t } from '../i18n.js';
 
+/** "Assassino,Escaramuçador" as "Assassino ou Escaramuçador". */
+const subclasses = (v) => String(v || '—').split(',').map((x) => x.trim()).filter(Boolean).join(` ${t('guide.or')} `);
+
 /** A condition in words: "3+ inimigos com dano alto (mágico)?", "minuto a partir dos 14?"... */
 export function conditionText(c, itemName = (id) => `item ${id}`) {
   if (!c) return '?';
@@ -14,6 +17,8 @@ export function conditionText(c, itemName = (id) => `item ${id}`) {
     case 'ouro': return `${c.value === 'atras' ? t('guide.behind') : t('guide.ahead')}?`;
     case 'minuto': return `${t('guide.cond.minuto')} ${c.op === '<' ? t('guide.before') : t('guide.from')} ${c.number ?? 10}?`;
     case 'item_adversario': return `${t('guide.cond.item_adversario')} ${c.itemId ? itemName(c.itemId) : '—'}?`;
+    case 'inimigos_subclasse': return `${many}${t('guide.cond.inimigos_subclasse')} ${subclasses(c.value)}?`;
+    case 'adversario_subclasse': return `${t('guide.cond.adversario_subclasse')}: ${subclasses(c.value)}?`;
     default: return `${String(c.type ?? '').replace(/_/g, ' ')}${c.value != null ? ` ${c.value}` : ''}?`;
   }
 }
@@ -21,6 +26,9 @@ export function conditionText(c, itemName = (id) => `item ${id}`) {
 function Decision({ n, itemName }) {
   if (n.decision === 'runas' || (n.itemId == null && n.runePage)) {
     return <div className="gf-box gf-runes">{t('guide.runes')}: <b>{n.runePage?.keystone ?? '—'}</b></div>;
+  }
+  if (n.decision === 'estilo') {
+    return <div className="gf-box gf-style"><small className="muted">{t('guide.dec.estilo')}</small> <span>{n.note}</span></div>;
   }
   return (
     <div className="gf-box">
@@ -43,6 +51,7 @@ function Column({ nodes, itemName }) {
             <div className="gf-cond">
               <div className="gf-diamond" title={n.frequency != null ? `${Math.round(n.frequency * 100)}% das partidas` : undefined}>
                 {conditionText(n.cond, itemName)}
+                {n.note && <small className="muted gf-note">{n.note}</small>}
               </div>
               <div className="gf-branches">
                 <div className="gf-branch"><span className="gf-label yes">{t('guide.then').replace(/→/, '').trim()}</span><Column nodes={n.then} itemName={itemName} /></div>

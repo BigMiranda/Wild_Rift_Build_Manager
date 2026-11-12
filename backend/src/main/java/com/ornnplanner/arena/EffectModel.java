@@ -35,6 +35,8 @@ public final class EffectModel {
         public List<Long> items = new ArrayList<>();
         /** Its ability pulses; null = the role's pattern. */
         public List<ArenaModel.Pulse> pulses;
+        /** Rodada 14, an attacker: the ally (index among the scenario's allies) it goes after; null = the nearest. */
+        public Integer focusAlly;
 
         public Bot copy() {
             Bot b = new Bot();
@@ -47,6 +49,7 @@ public final class EffectModel {
             b.attackSpeed = attackSpeed;
             b.moveSpeed = moveSpeed;
             b.attackRange = attackRange;
+            b.focusAlly = focusAlly;
             b.stats = new LinkedHashMap<>(stats == null ? Map.of() : stats);
             b.items = new ArrayList<>(items == null ? List.of() : items);
             if (pulses != null) {
@@ -74,8 +77,14 @@ public final class EffectModel {
         public String key;
         public String name;
         public String note;
-        /** 1x1 | equipe */
+        /** 1x1 | equipe | ameaca (Rodada 14) */
         public String group = "1x1";
+        /**
+         * Rodada 14, group "ameaca": the champion subclasses the attackers stand for, and how many of them an enemy team
+         * needs for the automatic guide to use the build that does best here.
+         */
+        public List<String> threat = new ArrayList<>();
+        public Integer threatCount;
         public List<Bot> attackers = new ArrayList<>();
         public List<Bot> allies = new ArrayList<>();
         public double duration = 60;
@@ -185,6 +194,9 @@ public final class EffectModel {
         public boolean died;
         /** Damage after mitigation, minus the healing and shields it got, per second of the fight (below 0: it sustains). */
         public double netRate;
+        /** Rodada 14: damage the attackers dealt (to anyone), and the allies dealt, over the fight. */
+        public double enemyDealt;
+        public double allyDealt;
         /** The same in % of its max health per second (100 / time to die when it died). */
         public double healthRate;
         /** What it heals beyond what it takes, per second (0 unless it sustains). */

@@ -113,6 +113,12 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   on `MatchService.Draft`s (a match's draft played many times, deterministic across threads) and saved in table
   `macro_policy` (`MacroTrainingService`); plan and log in `docs/proposta-macro-treinada.md`. `MacroTraining.RULES` goes
   up when a match rule change makes saved macros stale.
+- Rodada 14 (`docs/rodada-14.md`): `ChampionProfiles.Profile.subclasses` (the wiki's, else the nearest subclass centre by
+  the profile); effectiveness groups `ameaca` (threat ragdolls per subclass, pulses with `controle`) and `suporte`
+  (attackers with `alvo_aliado` dive an allied carry; `BuildScore.support` for Controlador / Suporte lane / support
+  archetype); lane styles per match seat (`estilos_rota` in macro_<patch>.yml, default identical to before); campaign
+  steps `ameacas` and `estilos`; `GuideService.suggest` branches on the lane rival's subclass (style) and the enemy
+  subclasses (build).
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.

@@ -1507,3 +1507,6 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .note-icon img { border-radius: 4px; }
 .note-chip { display: inline-block; padding: 0 6px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); font-size: 0.85em; }
 .note-arrow { opacity: 0.7; }
+.gf-diamond .gf-note { display: block; font-weight: 400; margin-top: 2px; }
+.best-style { background: rgba(127, 224, 143, 0.12); font-weight: 600; }
+.threat-row { line-height: 1.8; }

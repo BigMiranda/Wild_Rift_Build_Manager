@@ -36,7 +36,7 @@ public class CampaignService {
 
     private static final Logger log = LoggerFactory.getLogger(CampaignService.class);
     private static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    public static final List<String> STEPS = List.of("salvas", "descoberta", "matchups", "fim");
+    public static final List<String> STEPS = List.of("salvas", "descoberta", "matchups", "ameacas", "estilos", "fim");
 
     /** What a campaign asks. */
     public static class Request {
@@ -57,7 +57,34 @@ public class CampaignService {
         public List<Map<String, Object>> saved = new ArrayList<>();
         public DiscoveryModel.Result discovery;
         public List<Map<String, Object>> matchups = new ArrayList<>();
+        /**
+         * Rodada 14: the best kit against each threat scenario (efetividade_<patch>.yml, group "ameaca"): the guide's
+         * team fight branches.
+         */
+        public List<Threat> threats = new ArrayList<>();
+        /** Rodada 14: the lane styles against each lane rival (1v1 matches to 10 min): the guide's lane phase. */
+        public List<LaneStyles> styles = new ArrayList<>();
         public boolean syntheticBase;
+    }
+
+    /** The standard kit's lane against one rival, in each lane style: the lead at 10 min (gold + XP in gold). */
+    public static class LaneStyles {
+        public String rival;
+        public String build;
+        public List<String> subclasses = new ArrayList<>();
+        public Map<String, Double> leads = new LinkedHashMap<>();
+        public String best;
+    }
+
+    /** One threat scenario: the standard's score there and the kit that did best (null = the standard itself). */
+    public static class Threat {
+        public String scenario;
+        public String name;
+        public List<String> subclasses = new ArrayList<>();
+        public Integer count;
+        public double standardScore;
+        public DiscoveryModel.KitView best;
+        public Double bestScore;
     }
 
     public static class Estimate {
@@ -85,6 +112,8 @@ public class CampaignService {
     private final ChampionProfiles profiles;
     private final BuildScore scorer;
     private final ArenaService arena;
+    private final com.ornnplanner.arena.EffectTestService effect;
+    private final com.ornnplanner.arena.MatchService match;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.ornnplanner.publico.PublicMode publicMode;
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
@@ -99,7 +128,11 @@ public class CampaignService {
     private volatile String interrupt;
 
     public CampaignService(DiscoveryRepository repo, DiscoveryService discovery, BuildRepository builds, ChampionCatalog champions,
-                           ChampionProfiles profiles, BuildScore scorer, ArenaService arena) {
+                           ChampionProfiles profiles, BuildScore scorer, ArenaService arena,
+                           com.ornnplanner.arena.EffectTestService effect,
+                           @org.springframework.context.annotation.Lazy com.ornnplanner.arena.MatchService match) {
+        this.effect = effect;
+        this.match = match;
         this.repo = repo;
         this.discovery = discovery;
         this.builds = builds;
@@ -338,6 +371,10 @@ public class CampaignService {
                     }
                 } else if ("matchups".equals(row.step) && r.matchups && res.discovery != null && res.discovery.standard != null) {
                     res.matchups = matchups(base, res.discovery.standard);
+                } else if ("ameacas".equals(row.step) && res.discovery != null && res.discovery.standard != null) {
+                    res.threats = threats(base, res.discovery);
+                } else if ("estilos".equals(row.step) && r.matchups && res.discovery != null && res.discovery.standard != null) {
+                    res.styles = laneStyles(base, res.discovery.standard);
                 }
                 row.result = write(res);
                 row.seconds += (System.nanoTime() - t0) / 1e9;
@@ -449,6 +486,183 @@ public class CampaignService {
             out.add(m);
         }
         return out;
+    }
+
+    /** Kits measured against the threats: the standard and the next best of the ranking. */
+    static final int THREAT_KITS = 6;
+    /** The minute the threats are read at: the team fights. */
+    static final double THREAT_MINUTE = 20;
+
+    /**
+     * Rodada 14: the standard and the best kits of the ranking against every threat scenario (efetividade's group
+     * "ameaca"), at the team fights' minute: for each one, the kit that does best. The guide branches on them.
+     */
+    List<Threat> threats(BuildRepository.Build base, DiscoveryModel.Result d) {
+        List<com.ornnplanner.arena.EffectModel.Test> tests = new ArrayList<>();
+        effect.presets().forEach((k, t) -> {
+            if ("ameaca".equals(t.group)) {
+                tests.add(t);
+            }
+        });
+        List<DiscoveryModel.KitView> kits = new ArrayList<>();
+        kits.add(d.standard);
+        for (DiscoveryModel.KitView k : d.ranked) {
+            if (kits.size() >= THREAT_KITS) {
+                break;
+            }
+            if (kits.stream().noneMatch(x -> x.items.equals(k.items) && java.util.Objects.equals(x.boots, k.boots))) {
+                kits.add(k);
+            }
+        }
+        double[][] scores = new double[kits.size()][tests.size()];
+        for (int i = 0; i < kits.size() && interrupt == null; i++) {
+            com.ornnplanner.arena.EffectModel.Request req = new com.ornnplanner.arena.EffectModel.Request();
+            req.build = kitBuild(base, kits.get(i), d.standard);
+            req.minute = THREAT_MINUTE;
+            for (com.ornnplanner.arena.EffectModel.Test t : tests) {
+                com.ornnplanner.arena.EffectModel.Job j = new com.ornnplanner.arena.EffectModel.Job();
+                j.testKey = t.key;
+                j.tag = t.key;
+                req.jobs.add(j);
+            }
+            List<com.ornnplanner.arena.EffectModel.Outcome> out = effect.evaluate(req);
+            for (int k = 0; k < tests.size(); k++) {
+                Double v = out.get(k).index;
+                scores[i][k] = v == null ? Double.NEGATIVE_INFINITY : v;
+            }
+        }
+        List<Threat> list = new ArrayList<>();
+        for (int k = 0; k < tests.size(); k++) {
+            com.ornnplanner.arena.EffectModel.Test t = tests.get(k);
+            Threat th = new Threat();
+            th.scenario = t.key;
+            th.name = t.name;
+            th.subclasses = new ArrayList<>(t.threat);
+            th.count = t.threatCount;
+            th.standardScore = scores[0][k];
+            int best = 0;
+            for (int i = 1; i < kits.size(); i++) {
+                if (scores[i][k] > scores[best][k]) {
+                    best = i;
+                }
+            }
+            if (best > 0) {
+                th.best = kits.get(best);
+                th.bestScore = scores[best][k];
+            }
+            list.add(th);
+        }
+        return list;
+    }
+
+    /** Lane rivals a champion's styles are measured against, at most. */
+    static final int STYLE_RIVALS = 8;
+    /** Seeds per style and rival. */
+    static final int STYLE_SEEDS = 3;
+    /** Minutes of each lane match. */
+    static final double STYLE_MINUTES = 10;
+
+    /**
+     * Rodada 14: the standard kit in its lane, 1v1 against each lane rival (a saved build of a playable champion sharing
+     * a lane), in each lane style of {@code estilos_avaliados} (macro_<patch>.yml) while the rival plays the default: the
+     * lead at 10 minutes, gold plus experience at {@code dois_tempos.ouro_por_xp}. The styles that leave the lane
+     * (roaming, ganks, vision) need the other lanes and are not measured here.
+     */
+    @SuppressWarnings("unchecked")
+    List<LaneStyles> laneStyles(BuildRepository.Build base, DiscoveryModel.KitView standard) {
+        List<LaneStyles> out = new ArrayList<>();
+        BuildRepository.Build mine = kitBuild(base, standard, standard);
+        String me = scorer.championOf(mine);
+        ChampionProfiles.Profile p = profiles.of(me);
+        if (p == null || !match.playable(me)) {
+            return out;
+        }
+        Map<String, Object> macro = match.macroParams();
+        List<String> styles = new ArrayList<>();
+        ((List<Object>) macro.getOrDefault("estilos_avaliados", List.of("padrao"))).forEach(o -> styles.add(String.valueOf(o)));
+        double xpGold = com.ornnplanner.arena.rift.RiftRules.value(((Map<String, Object>) macro.getOrDefault("dois_tempos", Map.of())).get("ouro_por_xp"), 0.6);
+        String role = match.roleOf(me);
+        List<BuildRepository.Build> rivals = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (BuildRepository.Build s : builds.findBuildSummaries()) {
+            String other = scorer.championOf(s);
+            ChampionProfiles.Profile q = profiles.of(other);
+            if (q == null || other.equals(me) || !match.playable(other) || q.lanes.stream().noneMatch(p.lanes::contains)
+                    || !seen.add(other) || rivals.size() >= STYLE_RIVALS) {
+                continue;
+            }
+            builds.findBuild(s.id).ifPresent(rivals::add);
+        }
+        // the champions with no saved build play their last campaign's standard (Rodada 14: most lane rivals have none)
+        for (Map<String, Object> c : champions.summaries()) {
+            String unit = String.valueOf(c.get("code"));
+            String other = String.valueOf(c.get("name") != null ? c.get("name") : c.get("nome"));
+            ChampionProfiles.Profile q = profiles.of(other);
+            if (q == null || other.equals(me) || seen.contains(other) || !match.playable(other)
+                    || q.lanes.stream().noneMatch(p.lanes::contains) || rivals.size() >= STYLE_RIVALS) {
+                continue;
+            }
+            ChampionResult prior = latest(unit);
+            if (prior == null || prior.discovery == null || prior.discovery.standard == null) {
+                continue;
+            }
+            BuildRepository.Build b = kitBuild(base(unit, new ChampionResult()), prior.discovery.standard, prior.discovery.standard);
+            b.name = "padrão da campanha";
+            seen.add(other);
+            rivals.add(b);
+        }
+        com.ornnplanner.arena.rift.MacroPolicy script = match.scripted();
+        for (BuildRepository.Build rival : rivals) {
+            if (interrupt != null) {
+                break;
+            }
+            LaneStyles ls = new LaneStyles();
+            ls.rival = scorer.championOf(rival);
+            ls.build = rival.name;
+            ls.subclasses = new ArrayList<>(profiles.subclassesOf(ls.rival));
+            for (String style : styles) {
+                List<java.util.concurrent.Callable<Double>> runs = new ArrayList<>();
+                com.ornnplanner.arena.MatchService.Draft d = match.draftOf(List.of(mine, rival), List.of(me, ls.rival),
+                        List.of(0, 1), List.of(role, role), java.util.Arrays.asList(style, null));
+                for (int seed = 1; seed <= STYLE_SEEDS; seed++) {
+                    final long sd = seed;
+                    runs.add(() -> {
+                        com.ornnplanner.arena.rift.MatchModel.Result r = match.run(d, sd, STYLE_MINUTES, script, script);
+                        com.ornnplanner.arena.rift.MatchModel.Player a = r.players.get(0);
+                        com.ornnplanner.arena.rift.MatchModel.Player b = r.players.get(1);
+                        return (a.goldEarned - b.goldEarned) + xpGold * (a.xp - b.xp);
+                    });
+                }
+                double sum = 0;
+                for (Double v : com.ornnplanner.arena.ArenaService.parallel(runs)) {
+                    sum += v;
+                }
+                ls.leads.put(style, Math.round(sum / runs.size() * 10) / 10.0);
+            }
+            ls.best = ls.leads.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
+            out.add(ls);
+        }
+        return out;
+    }
+
+    /** A kit as a build of the champion: the base (runes, spells, pace) with the kit's order and runes. */
+    static BuildRepository.Build kitBuild(BuildRepository.Build base, DiscoveryModel.KitView k, DiscoveryModel.KitView standard) {
+        BuildRepository.Build b = DiscoveryService.copy(base, BuildRepository.Build.class);
+        b.id = null;
+        b.steps = new ArrayList<>();
+        List<Long> order = k.order != null && !k.order.isEmpty() ? k.order : new ArrayList<>(k.items);
+        if ((k.order == null || k.order.isEmpty()) && k.boots != null) {
+            order.add(k.boots);
+        }
+        for (long id : order) {
+            b.steps.add(new BuildRepository.Step(id, true));
+        }
+        if (k.runePage != null) {
+            b.runePage = k.runePage;
+        } else if (standard != null && standard.runePage != null) {
+            b.runePage = standard.runePage;
+        }
+        return b;
     }
 
     double duel(BuildRepository.Build a, BuildRepository.Build b, double minute) {

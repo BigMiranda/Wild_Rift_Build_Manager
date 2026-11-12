@@ -23,6 +23,11 @@ public final class MatchModel {
         public String brain = "tactical";
         /** A guide (Rodada 9, part 7): the purchases follow it, read at the draft against this match, instead of the build's order. */
         public Long guideId;
+        /**
+         * Rodada 14: how it plays the lane phase, a key of {@code estilos_rota} in macro_&lt;patch&gt;.yml (null = padrao):
+         * trocas_curtas, trocas_longas, recuado, pressao, roaming, ganks, visao.
+         */
+        public String style;
     }
 
     public static class Request {

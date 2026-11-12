@@ -39,7 +39,8 @@ public final class Guide {
      * inimigos_arquetipo (value: an archetype key; count), inimigos_classe (value: a class; count),
      * inimigos_dano (value: magico | fisico; count: enemies whose damage is mostly that), adversario_rota (value: a
      * class or a champion), ouro (value: frente | atras), minuto (op: >= | <; number), item_adversario (itemId: an
-     * enemy finished it).
+     * enemy finished it); Rodada 14: inimigos_subclasse (value: subclasses separated by commas, any of them; count:
+     * enemies with one of them), adversario_subclasse (value: the same, for the lane opponent).
      */
     public static class Condition {
         public String type;
@@ -55,6 +56,8 @@ public final class Guide {
         public String champion;
         public String championClass;
         public String archetype;
+        /** Rodada 14: its subclasses (the wiki's, or the nearest by its profile: ChampionProfiles). */
+        public List<String> subclasses = new ArrayList<>();
         /** fisico | magico | misto */
         public String damage;
         public List<Long> items = new ArrayList<>();
@@ -92,9 +95,26 @@ public final class Guide {
             }
             case "item_adversario":
                 return c.itemId != null && ctx.enemies.stream().anyMatch(e -> e.items.contains(c.itemId));
+            case "inimigos_subclasse":
+                return ctx.enemies.stream().filter(e -> anyOf(e.subclasses, c.value)).count() >= need;
+            case "adversario_subclasse":
+                return ctx.laneOpponent != null && anyOf(ctx.laneOpponent.subclasses, c.value);
             default:
                 return false;
         }
+    }
+
+    /** Whether one of a champion's subclasses is in a list separated by commas. */
+    static boolean anyOf(List<String> subclasses, String list) {
+        if (subclasses == null || list == null) {
+            return false;
+        }
+        for (String want : list.split(",")) {
+            if (subclasses.stream().anyMatch(s -> eq(s, want))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean eq(String a, String b) {
@@ -191,6 +211,10 @@ public final class Guide {
                 return ("<".equals(c.op) ? "antes dos " : "a partir dos ") + (c.number == null ? 0 : c.number.intValue()) + " min";
             case "item_adversario":
                 return "o adversário fechou o item " + c.itemId;
+            case "inimigos_subclasse":
+                return n + "inimigos " + String.join(" ou ", c.value == null ? new String[0] : c.value.split(","));
+            case "adversario_subclasse":
+                return "adversário de rota " + String.join(" ou ", c.value == null ? new String[0] : c.value.split(","));
             default:
                 return c.type;
         }

@@ -563,6 +563,7 @@ public class EffectTestService {
             s.dummy = dummy(bot, team == 1);
             s.x = x;
             s.y = y;
+            s.target = focusIndex(test, bot);
             sc.fighters.add(s);
         });
         return sc;
@@ -626,11 +627,24 @@ public class EffectTestService {
             Arena.Input in = botInput(bot, team).copy();
             in.x = team == 1 ? x + offset[0] : x;
             in.y = team == 1 ? y + offset[1] : y;
+            in.target = focusIndex(test, bot);
             f.inputs.add(in);
         });
         f.attackers = test.attackers.size();
         f.allies = test.allies == null ? 0 : test.allies.size();
         return f;
+    }
+
+    /**
+     * The fighter an attacker goes after (Rodada 14: the support scenarios' attackers dive the carry): its index among
+     * the fight's fighters (the build 0, the attackers, then the allies); null = the nearest.
+     */
+    static Integer focusIndex(Test test, Bot b) {
+        int allies = test.allies == null ? 0 : test.allies.size();
+        if (b.focusAlly == null || b.focusAlly < 0 || b.focusAlly >= allies || !test.attackers.contains(b)) {
+            return null;
+        }
+        return 1 + test.attackers.size() + b.focusAlly;
     }
 
     private interface Placer {
@@ -1101,6 +1115,10 @@ public class EffectTestService {
         for (int k = 0; k < attackers; k++) {
             m.enemyHealed += r.fighters.get(1 + k).healed;
             m.enemyHealCut += r.fighters.get(1 + k).healLost;
+            m.enemyDealt += r.fighters.get(1 + k).dealt;
+        }
+        for (int k = 0; k < allies; k++) {
+            m.allyDealt += r.fighters.get(1 + attackers + k).dealt;
         }
         m.controlApplied = me.events.getOrDefault("controle_causado", 0.0);
         m.netRate = (me.taken - me.healed - me.healOver - me.shieldAbsorbed) / elapsed;
@@ -1170,6 +1188,8 @@ public class EffectTestService {
             out.returnedHits += m.returnedHits / n;
             out.enemyHealed += m.enemyHealed / n;
             out.enemyHealCut += m.enemyHealCut / n;
+            out.enemyDealt += m.enemyDealt / n;
+            out.allyDealt += m.allyDealt / n;
             out.controlApplied += m.controlApplied / n;
             out.fightLength += m.fightLength / n;
             out.maxHealth += m.maxHealth / n;
@@ -1192,6 +1212,8 @@ public class EffectTestService {
         t.name = String.valueOf(m.getOrDefault("nome", key));
         t.note = m.get("nota") == null ? null : String.valueOf(m.get("nota"));
         t.group = String.valueOf(m.getOrDefault("grupo", "1x1"));
+        ((List<Object>) m.getOrDefault("ameaca", List.of())).forEach(o -> t.threat.add(String.valueOf(o)));
+        t.threatCount = m.get("quantos") instanceof Number ? ((Number) m.get("quantos")).intValue() : null;
         t.duration = num(m.get("duracao"), 60);
         t.scalesWithMinute = Boolean.TRUE.equals(m.get("escala_com_minuto"));
         for (Object o : (List<Object>) m.getOrDefault("atacantes", List.of())) {
@@ -1226,6 +1248,7 @@ public class EffectTestService {
         if (m.containsKey("pulsos")) {
             b.pulses = pulses((List<Object>) m.get("pulsos"));
         }
+        b.focusAlly = m.get("alvo_aliado") instanceof Number ? ((Number) m.get("alvo_aliado")).intValue() : null;
         return b;
     }
 
@@ -1244,6 +1267,11 @@ public class EffectTestService {
             p.every = num(m.get("a_cada"), 6);
             p.range = num(m.get("alcance"), 600);
             p.duration = num(m.get("duracao"), 2.5);
+            p.control = m.get("controle") == null ? null : String.valueOf(m.get("controle"));
+            p.slow = num(m.get("lentidao"), 0.3);
+            if ("controle".equals(p.kind) && p.control == null) {
+                p.control = "atordoamento";
+            }
             out.add(p);
         }
         return out;

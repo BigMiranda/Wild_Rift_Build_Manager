@@ -84,9 +84,12 @@ public class GuideService {
     private final CalculatorService calc;
     private final DiscoveryService discovery;
     private final EffectTestService effect;
+    private final com.ornnplanner.arena.fight.ChampionProfiles profiles;
 
     public GuideService(DiscoveryRepository repo, BuildRepository builds, PlannerService planner, BuildScore scorer,
-                        BuildArchetypes archetypes, CalculatorService calc, DiscoveryService discovery, EffectTestService effect) {
+                        BuildArchetypes archetypes, CalculatorService calc, DiscoveryService discovery, EffectTestService effect,
+                        com.ornnplanner.arena.fight.ChampionProfiles profiles) {
+        this.profiles = profiles;
         this.repo = repo;
         this.builds = builds;
         this.planner = planner;
@@ -152,6 +155,7 @@ public class GuideService {
         Guide.Enemy e = new Guide.Enemy();
         e.champion = scorer.championOf(b);
         e.championClass = scorer.classOf(b);
+        e.subclasses = new ArrayList<>(profiles.subclassesOf(e.champion));
         BuildArchetypes.Archetype a = archetypes.of(b, null);
         e.archetype = a == null ? null : a.key;
         Map<Long, Model.ItemDef> items = planner.referenceData().items;
@@ -333,6 +337,8 @@ public class GuideService {
             return v;
         }
         DiscoveryModel.Result res = null;
+        List<com.ornnplanner.arena.discovery.CampaignService.Threat> threats = new ArrayList<>();
+        List<com.ornnplanner.arena.discovery.CampaignService.LaneStyles> lanes = new ArrayList<>();
         if (s.discoveryJobId != null) {
             res = discovery.job(s.discoveryJobId).result;
         } else if (s.latest && s.unitCode != null) {
@@ -341,6 +347,14 @@ public class GuideService {
                 try {
                     Map<String, Object> m = JSON.readValue(row.result, new TypeReference<Map<String, Object>>() { });
                     res = JSON.convertValue(m.get("discovery"), DiscoveryModel.Result.class);
+                    if (m.get("styles") != null) {
+                        lanes = JSON.convertValue(m.get("styles"),
+                                new TypeReference<List<com.ornnplanner.arena.discovery.CampaignService.LaneStyles>>() { });
+                    }
+                    if (m.get("threats") != null) {
+                        threats = JSON.convertValue(m.get("threats"),
+                                new TypeReference<List<com.ornnplanner.arena.discovery.CampaignService.Threat>>() { });
+                    }
                 } catch (Exception e) {
                     res = null;
                 }
@@ -369,8 +383,112 @@ public class GuideService {
         p.then = kitDecisions(bestPhysical == null ? res.standard : bestPhysical);
         p.otherwise = kitDecisions(res.standard);
         m.otherwise.add(p);
-        v.nodes.add(m);
+        // Rodada 14: first the enemy team's threats (by subclass), the biggest gain over the standard first; the damage
+        // type branches stay as the last ones
+        laneChain(lanes, v.nodes);
+        List<Guide.Node> chain = v.nodes;
+        for (com.ornnplanner.arena.discovery.CampaignService.Threat t : threatBranches(threats)) {
+            Guide.Node c = condition("inimigos_subclasse", String.join(",", t.subclasses), t.count);
+            c.note = String.format(java.util.Locale.ROOT, "%s: %.1f com esta build, %.1f com a padrão", t.name, t.bestScore, t.standardScore);
+            c.then = kitDecisions(t.best);
+            chain.add(c);
+            chain = c.otherwise;
+        }
+        chain.add(m);
         return v;
+    }
+
+    /** The lane styles in words (pt-BR, as the guides are shown). */
+    static final Map<String, String> STYLE_NAMES = Map.of(
+            "padrao", "Padrão: trocar quando der e farmar",
+            "trocas_curtas", "Trocas curtas: entrar, soltar o dano e sair",
+            "trocas_longas", "Trocas longas: ficar na troca até o fim",
+            "recuado", "Farmar recuado e esperar as lutas em equipe",
+            "pressao", "Pressão constante: afastar o adversário da onda e negar XP e ouro");
+
+    /**
+     * Rodada 14: the lane phase, before the purchases: the lane style that led most at 10 minutes against each rival
+     * subclass (the campaign's 1v1 lane matches), a branch only where it differs from the best style overall, which ends
+     * the chain. The purchases follow it (a condition's branch goes on with the next nodes).
+     */
+    static void laneChain(List<com.ornnplanner.arena.discovery.CampaignService.LaneStyles> lanes, List<Guide.Node> into) {
+        if (lanes == null || lanes.isEmpty()) {
+            return;
+        }
+        Map<String, double[]> overall = new java.util.TreeMap<>();
+        Map<String, Map<String, double[]>> bySub = new java.util.TreeMap<>();
+        Map<String, List<String>> rivals = new java.util.TreeMap<>();
+        for (com.ornnplanner.arena.discovery.CampaignService.LaneStyles l : lanes) {
+            l.leads.forEach((st, v) -> {
+                double[] a = overall.computeIfAbsent(st, k -> new double[2]);
+                a[0] += v;
+                a[1]++;
+            });
+            for (String sub : l.subclasses) {
+                rivals.computeIfAbsent(sub, k -> new ArrayList<>()).add(l.rival);
+                l.leads.forEach((st, v) -> {
+                    double[] a = bySub.computeIfAbsent(sub, k -> new java.util.TreeMap<>()).computeIfAbsent(st, k -> new double[2]);
+                    a[0] += v;
+                    a[1]++;
+                });
+            }
+        }
+        String best = bestStyle(overall);
+        List<Guide.Node> chain = into;
+        List<String> subs = new ArrayList<>(bySub.keySet());
+        subs.sort((a, b) -> rivals.get(b).size() != rivals.get(a).size() ? rivals.get(b).size() - rivals.get(a).size() : a.compareTo(b));
+        for (String sub : subs) {
+            String mine = bestStyle(bySub.get(sub));
+            if (mine == null || mine.equals(best)) {
+                continue;
+            }
+            Guide.Node c = condition("adversario_subclasse", sub, null);
+            c.note = "fase de rotas";
+            c.then.add(styleNode(mine, bySub.get(sub).get(mine), rivals.get(sub)));
+            chain.add(c);
+            chain = c.otherwise;
+        }
+        if (best != null) {
+            chain.add(styleNode(best, overall.get(best), null));
+        }
+    }
+
+    private static String bestStyle(Map<String, double[]> leads) {
+        String best = null;
+        double top = Double.NEGATIVE_INFINITY;
+        for (Map.Entry<String, double[]> e : leads.entrySet()) {
+            double mean = e.getValue()[0] / Math.max(1, e.getValue()[1]);
+            if (mean > top) {
+                top = mean;
+                best = e.getKey();
+            }
+        }
+        return best;
+    }
+
+    private static Guide.Node styleNode(String style, double[] lead, List<String> rivals) {
+        Guide.Node n = new Guide.Node();
+        n.decision = "estilo";
+        double mean = lead == null ? 0 : lead[0] / Math.max(1, lead[1]);
+        n.note = STYLE_NAMES.getOrDefault(style, style) + String.format(java.util.Locale.ROOT, " (%s%.0f de ouro aos 10 min%s)",
+                mean >= 0 ? "+" : "", mean, rivals == null ? ", na média dos rivais" : ": " + String.join(", ", rivals));
+        return n;
+    }
+
+    /** A threat branch is worth it when another kit beats the standard there by at least this (effectiveness points). */
+    static final double THREAT_GAIN = 3;
+
+    /** The threats where another kit beats the standard by {@link #THREAT_GAIN}, the biggest gain first. */
+    static List<com.ornnplanner.arena.discovery.CampaignService.Threat> threatBranches(
+            List<com.ornnplanner.arena.discovery.CampaignService.Threat> threats) {
+        List<com.ornnplanner.arena.discovery.CampaignService.Threat> out = new ArrayList<>();
+        for (com.ornnplanner.arena.discovery.CampaignService.Threat t : threats) {
+            if (t.best != null && t.bestScore != null && t.bestScore - t.standardScore >= THREAT_GAIN && !t.subclasses.isEmpty()) {
+                out.add(t);
+            }
+        }
+        out.sort((a, b) -> Double.compare(b.bestScore - b.standardScore, a.bestScore - a.standardScore));
+        return out;
     }
 
     private String patch() {

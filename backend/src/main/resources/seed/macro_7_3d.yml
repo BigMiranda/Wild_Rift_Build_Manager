@@ -57,6 +57,30 @@ frutomel_ate: 3000         # até onde vai buscar o Frutomel
 teleporte_s: 3.5           # feiticos_7_3d.yml
 teleporte_recarga: 150     # feiticos_7_3d.yml
 teleporte_estruturas_ate: 360   # só até estruturas nos 6 primeiros minutos (feiticos_7_3d.yml)
+# Rodada 14: estilos de jogo na fase de rotas, um por assento (MatchModel.Slot.style; sem estilo = padrao, como antes).
+# Os números são premissas (EST) a calibrar pelas partidas; nenhum cita campeão:
+#   causa / sofre     multiplicam o dano da troca que o assento causa ao adversário de rota e o que ele sofre
+#   ultimos_golpes    multiplica a chance dele de levar o último golpe da tropa (recuado perde alguns)
+#   negar             parte da XP e do ouro das tropas que o adversário de rota perde quando este assento está à
+#                     frente em Vida por mais de `negar_margem` (ele fica na borda do raio de XP e perde últimos golpes)
+#   a_cada_s, desde_s, duracao_s   janelas em que o assento sai da rota: roaming (meio vai ao barão e ao dragão
+#                     alternados; os outros, ao meio) e ganks (a selva vai ao rota inimigo com menos Vida, abaixo de
+#                     `vida_abaixo`)
+#   visao_raio        com este assento vivo, o time tem sentinelas: um rota vê um gank chegando a esta distância e recua
+negar_margem: 0.1
+estilos_rota:
+  padrao: {}
+  trocas_curtas: {causa: 0.8, sofre: 0.55}
+  trocas_longas: {causa: 1.25, sofre: 1.2}
+  recuado: {causa: 0.15, sofre: 0.25, ultimos_golpes: 0.85}
+  pressao: {causa: 1.0, sofre: 0.95, negar: 0.35}
+  roaming: {a_cada_s: 100, desde_s: 180, duracao_s: 35, ultimos_golpes: 0.9}
+  ganks: {a_cada_s: 75, desde_s: 150, duracao_s: 30, vida_abaixo: 0.7}
+  visao: {visao_raio: 1800, causa: 0.9}
+# Os estilos que a campanha mede por rival (partidas 1x1 na rota até os 10 min): os que saem da rota (roaming, ganks,
+# visão) precisam das outras rotas e ficam para as partidas inteiras.
+estilos_avaliados: [padrao, trocas_curtas, trocas_longas, recuado, pressao]
+
 # Treino da macro (proposta-macro-treinada.md, Parte 3, arena/MacroTraining): a nota de cada partida para o lado da macro
 # treinada. Pesos meus (EST); o treino só usa a ordem das notas, então importa o que pesa mais, não a escala.
 treino_macro:

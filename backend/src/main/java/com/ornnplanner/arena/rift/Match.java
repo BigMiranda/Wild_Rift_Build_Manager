@@ -102,6 +102,8 @@ public final class Match {
         int pathAt;
         double pathX = -1;
         double pathY = -1;
+        /** Rodada 14: its lane style (a key of {@code estilos_rota}); "padrao" plays as before. */
+        public String style = "padrao";
         public int kills;
         public int deaths;
         public int minions;
@@ -277,6 +279,86 @@ public final class Match {
 
     private double param(String key, double def) {
         return RiftRules.value(macro.get(key), def);
+    }
+
+    /** Rodada 14: the seats' lane styles, in seat order (null or missing = padrao). */
+    public void styles(List<String> styles) {
+        for (int i = 0; i < seats.size() && i < styles.size(); i++) {
+            seats.get(i).style = styles.get(i) == null ? "padrao" : styles.get(i);
+        }
+    }
+
+    /** A number of a seat's lane style ({@code estilos_rota.<style>.<key>}), the default when the style does not set it. */
+    @SuppressWarnings("unchecked")
+    public double styleNum(Seat s, String key, double def) {
+        Object all = macro.get("estilos_rota");
+        if (!(all instanceof Map) || s.style == null) {
+            return def;
+        }
+        Object st = ((Map<String, Object>) all).get(s.style);
+        return st instanceof Map ? RiftRules.value(((Map<String, Object>) st).get(key), def) : def;
+    }
+
+    /**
+     * Rodada 14, "pressao": the share of a minion's experience and gold a seat keeps when a lane enemy pressing it is
+     * ahead in health (it stands back, at the edge of the experience radius, and loses last hits). 1 = nothing denied.
+     */
+    double denied(Seat s) {
+        double margin = param("negar_margem", 0.1);
+        double reach = param("luta_distancia", 900) * 1.5;
+        double cut = 0;
+        for (Seat p : seats) {
+            if (p.team == s.team || p.dead || !laneOf(p.role).equals(laneOf(s.role)) || "selva".equals(p.role)
+                    || p.hp <= s.hp + margin || Math.hypot(p.x - s.x, p.y - s.y) > reach) {
+                continue;
+            }
+            cut = Math.max(cut, styleNum(p, "negar", 0));
+        }
+        return 1 - cut;
+    }
+
+    /**
+     * Rodada 14, "visao": an enemy that is not of its lane (a jungler, a roamer) within the vision radius of a side
+     * with wards (a seat of style "visao" alive): the laner sees the gank coming and steps back. Without wards, nothing
+     * (the fight decides, as before).
+     */
+    public boolean gankSeen(Seat me) {
+        double radius = 0;
+        for (Seat a : seats) {
+            if (a.team == me.team && !a.dead) {
+                radius = Math.max(radius, styleNum(a, "visao_raio", 0));
+            }
+        }
+        if (radius <= 0 || "selva".equals(me.role)) {
+            return false;
+        }
+        String lane = laneOf(me.role);
+        for (Seat e : seats) {
+            if (e.team != me.team && !e.dead && ("selva".equals(e.role) || !laneOf(e.role).equals(lane))
+                    && Math.hypot(e.x - me.x, e.y - me.y) <= radius) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** A side's fountain. */
+    public double[] fountain(int team) {
+        return team == 0 ? map.fountainBlue : map.fountainRed;
+    }
+
+    /** Rodada 14: the enemy laner of a lane with the lowest health share (a gank's target), or null. */
+    public Seat weakestLaner(int team, double below) {
+        Seat best = null;
+        for (Seat e : seats) {
+            if (e.team == team || e.dead || "selva".equals(e.role) || e.hpFraction() >= below || atBase(e)) {
+                continue;
+            }
+            if (best == null || e.hpFraction() < best.hpFraction()) {
+                best = e;
+            }
+        }
+        return best;
     }
 
     public double seconds() {
@@ -758,7 +840,7 @@ public final class Match {
                         || Math.hypot(e.x - s.x, e.y - s.y) > reach || !map.clear(s.x, s.y, e.x, e.y)) {
                     continue;
                 }
-                worst = Math.max(worst, rate * dps(e) / mine * e.hp);
+                worst = Math.max(worst, rate * dps(e) / mine * e.hp * styleNum(e, "causa", 1) * styleNum(s, "sofre", 1));
             }
             if (worst > 0) {
                 s.trading = true;
@@ -798,7 +880,7 @@ public final class Match {
             return;
         }
         for (Seat s : near) {
-            s.xp += RiftRules.value(m.get("xp"), 30) / near.size();
+            s.xp += RiftRules.value(m.get("xp"), 30) / near.size() * denied(s);
         }
         Seat best = null;
         for (Seat s : near) {
@@ -806,7 +888,7 @@ public final class Match {
                 best = s;
             }
         }
-        double share = lastHitShare(best);
+        double share = lastHitShare(best) * denied(best) * styleNum(best, "ultimos_golpes", 1);
         if (rng.nextDouble() < share) {
             best.gold += RiftRules.value(m.get("ouro"), 40);
             best.minions++;

@@ -83,8 +83,14 @@ public final class ArenaModel {
         public double ap;
         public double every = 6;
         public double range = 600;
-        /** Seconds a shield lasts. */
+        /** Seconds a shield lasts, or a control. */
         public double duration = 2.5;
+        /**
+         * Rodada 14: the control it lands on the target with the hit (null = none): atordoamento | arremesso | lentidao,
+         * for {@link #duration} s; a slow cuts {@link #slow} (0..1) of the move speed. Kind "controle" lands it with no damage.
+         */
+        public String control;
+        public double slow = 0.3;
 
         public Pulse copy() {
             Pulse p = new Pulse();
@@ -97,6 +103,8 @@ public final class ArenaModel {
             p.every = every;
             p.range = range;
             p.duration = duration;
+            p.control = control;
+            p.slow = slow;
             return p;
         }
     }

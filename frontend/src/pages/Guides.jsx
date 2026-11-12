@@ -10,7 +10,7 @@ import ItemIcon from '../components/ItemIcon.jsx';
 import Help from '../components/Help.jsx';
 import GuideFlow from '../components/GuideFlow.jsx';
 
-const COND_TYPES = ['inimigos_dano', 'inimigos_classe', 'inimigos_arquetipo', 'adversario_rota', 'ouro', 'minuto', 'item_adversario'];
+const COND_TYPES = ['inimigos_dano', 'inimigos_classe', 'inimigos_subclasse', 'inimigos_arquetipo', 'adversario_rota', 'adversario_subclasse', 'ouro', 'minuto', 'item_adversario'];
 const CLASSES = ['Tanque', 'Lutador', 'Assassino', 'Atirador', 'Mago', 'Controlador'];
 const ARCHETYPES = ['tanque', 'lutador', 'critico', 'ao_acertar', 'letalidade', 'mago_continuo', 'mago_explosivo', 'suporte', 'hibrido'];
 
@@ -59,7 +59,7 @@ function ConditionEditor({ node, onChange, itemsById }) {
       <select value={c.type} onChange={(e) => set({ type: e.target.value, value: e.target.value === 'inimigos_dano' ? 'magico' : e.target.value === 'ouro' ? 'frente' : '' })}>
         {COND_TYPES.map((x) => <option key={x} value={x}>{t(`guide.cond.${x}`)}</option>)}
       </select>
-      {['inimigos_dano', 'inimigos_classe', 'inimigos_arquetipo'].includes(c.type) && (
+      {['inimigos_dano', 'inimigos_classe', 'inimigos_subclasse', 'inimigos_arquetipo'].includes(c.type) && (
         <input type="number" min={1} max={5} value={c.count ?? 1} style={{ width: 44 }} onChange={(e) => set({ count: Number(e.target.value) || 1 })} title={t('guide.count')} />
       )}
       {c.type === 'inimigos_dano' && (
@@ -69,6 +69,9 @@ function ConditionEditor({ node, onChange, itemsById }) {
       )}
       {c.type === 'inimigos_classe' && <select value={c.value ?? ''} onChange={(e) => set({ value: e.target.value })}>{['', ...CLASSES].map((x) => <option key={x} value={x}>{x || '—'}</option>)}</select>}
       {c.type === 'inimigos_arquetipo' && <select value={c.value ?? ''} onChange={(e) => set({ value: e.target.value })}>{['', ...ARCHETYPES].map((x) => <option key={x} value={x}>{x || '—'}</option>)}</select>}
+      {['inimigos_subclasse', 'adversario_subclasse'].includes(c.type) && (
+        <input value={c.value ?? ''} placeholder={t('guide.subclassHint')} onChange={(e) => set({ value: e.target.value })} style={{ width: 200 }} />
+      )}
       {c.type === 'adversario_rota' && <input value={c.value ?? ''} placeholder={t('guide.laneHint')} onChange={(e) => set({ value: e.target.value })} style={{ width: 140 }} />}
       {c.type === 'ouro' && (
         <select value={c.value} onChange={(e) => set({ value: e.target.value })}>

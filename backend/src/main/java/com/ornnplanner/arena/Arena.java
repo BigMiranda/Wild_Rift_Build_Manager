@@ -7148,14 +7148,17 @@ public class Arena {
             }
             double amount = p.base + p.ad * u.stat(Stats.ATTACK_DAMAGE) + p.ap * u.stat(Stats.ABILITY_POWER);
             String src = p.name == null ? "Habilidade" : p.name;
-            if ("dano".equals(p.kind)) {
+            if ("dano".equals(p.kind) || "controle".equals(p.kind)) {
                 U t = target(u);
                 if (t == null || t.dead || dist(u.x, u.y, t.x, t.y) > p.range + u.radius() + t.radius()) {
                     continue;
                 }
                 fireAll(u, "ao_conjurar", null);
-                deal(u, t, amount, p.type == null ? "magico" : p.type, src, ABILITY, 0);
-                onAbilityItems(u, t);
+                if (amount > 0) {
+                    deal(u, t, amount, p.type == null ? "magico" : p.type, src, ABILITY, 0);
+                    onAbilityItems(u, t);
+                }
+                pulseControl(u, t, p);
             } else {
                 U best = null;
                 for (U a : units) {
@@ -7176,6 +7179,26 @@ public class Arena {
                 }
             }
             u.pulseAt[k] = now + Math.max(0.5, p.every);
+        }
+    }
+
+    /** The control a ragdoll's pulse lands (Rodada 14: the threat ragdolls, an engage tank's stun, a catcher's root). */
+    private void pulseControl(U u, U t, ArenaModel.Pulse p) {
+        if (p.control == null || t.dead) {
+            return;
+        }
+        switch (p.control) {
+            case "atordoamento":
+                stun(t, p.duration, u);
+                break;
+            case "arremesso":
+                airborne(t, p.duration, u);
+                break;
+            case "lentidao":
+                t.slows.add(new double[] {p.slow, now + p.duration});
+                break;
+            default:
+                break;
         }
     }
 

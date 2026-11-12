@@ -133,6 +133,7 @@ function TestEditor({ test, onChange, items, meta, readOnly }) {
             <select value={test.group} onChange={(e) => set({ group: e.target.value })}>
               <option value="1x1">{t('efx.group.1x1')}</option>
               <option value="equipe">{t('efx.group.equipe')}</option>
+              <option value="ameaca">{t('efx.group.ameaca')}</option>
             </select>
           </label>
           <label className="inline" title={t('efx.scalesTitle')}>

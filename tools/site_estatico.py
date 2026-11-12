@@ -372,6 +372,15 @@ SECAO = {'padrao': 'melhores', 'suporte': 'melhores', 'melhor': 'melhores', 'pub
          'descoberta': 'novidade'}
 
 
+def threat_summary(t):
+    """A threat of the campaign (Rodada 14) without the whole kit: its items in order, the scores."""
+    best = t.get('best') or {}
+    order = best.get('order') or (best.get('items') or []) + ([best['boots']] if best.get('boots') else [])
+    return {'scenario': t.get('scenario'), 'name': t.get('name'), 'subclasses': t.get('subclasses') or [],
+            'count': t.get('count'), 'standardScore': t.get('standardScore'), 'bestScore': t.get('bestScore'),
+            'bestItems': order if best else None, 'bestNames': best.get('names') if best else None}
+
+
 def champion_builds(unit, latest, public, pace):
     """As builds de um campeão: a padrão robusta, as melhores do ranking, a melhor de cada nicho, as descobertas e as
     públicas. Cada uma diz a seção (melhores | novidade) e de onde vieram as runas."""
@@ -567,6 +576,10 @@ def main(argv=None):
             'objective': d.get('objective') or 'novidade',
             'builds': [summary(e) | {'also': e.get('also')} for e in entries],
             'matchups': (latest or {}).get('matchups') or [],
+            # Rodada 14: the champion's subclasses, the lane styles against each rival and the best kit per threat
+            'subclasses': (profiles.get(unit) or {}).get('subclasses') or [],
+            'styles': (latest or {}).get('styles') or [],
+            'threats': [threat_summary(t) for t in (latest or {}).get('threats') or []],
             'synergies': d.get('synergies') or [], 'known': d.get('known') or [], 'notes': d.get('notes') or [],
             'guides': guides, 'suggestedGuide': suggested,
         }

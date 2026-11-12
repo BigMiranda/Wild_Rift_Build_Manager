@@ -171,6 +171,7 @@ export function ChampionPage({ unit }) {
       <p><a href="#/">← Campeões</a></p>
       <h1 className="site-title site-title-champ"><ChampionAvatar name={c.champion} size={48} /> {c.champion}</h1>
       <p className="muted">{[c.championClass, ...(c.lanes ?? [])].filter(Boolean).join(' · ')}
+        {c.subclasses?.length ? ` · ${c.subclasses.join(', ')}` : ''}
         {c.quality ? ` · ficha ${c.quality}` : ''}{c.budget ? ` · Descoberta ${c.budget === 'completo' ? 'completa' : 'rápida'}` : ''}</p>
       {c.lowConfidence && <p className="warn">A ficha deste campeão é de baixa confiança: leia os números com cuidado.</p>}
       <div className="site-filters">
@@ -197,6 +198,8 @@ export function ChampionPage({ unit }) {
         </details>
       )}
       {c.matchups?.length > 0 && <Matchups list={c.matchups} />}
+      {c.styles?.length > 0 && <LaneStyles list={c.styles} />}
+      {c.threats?.length > 0 && <Threats list={c.threats} />}
       {(c.guides?.length > 0 || c.suggestedGuide?.nodes?.length > 0) && (
         <section className="site-section">
           <h2>Guias</h2>
@@ -264,6 +267,101 @@ const pairItem = (s, i) => (
 
 /** "A + B: 73.0 juntos, 70.5 e 67.7 sozinhos, 60.7 sem os dois" without the names (the icons show them). */
 const pairText = (t) => String(t ?? '').replace(/^.*?: /, '');
+
+/** The lane styles in words (the campaign's keys, macro_<patch>.yml). */
+export const STYLE_LABEL = {
+  padrao: 'Padrão',
+  trocas_curtas: 'Trocas curtas',
+  trocas_longas: 'Trocas longas',
+  recuado: 'Farmar recuado',
+  pressao: 'Pressão constante',
+};
+const STYLE_HELP = {
+  padrao: 'trocar quando der e farmar',
+  trocas_curtas: 'entrar, soltar o dano e sair antes da resposta',
+  trocas_longas: 'ficar na troca até o fim',
+  recuado: 'farmar de longe e esperar as lutas em equipe',
+  pressao: 'afastar o adversário da onda até a borda do raio de XP, para negar XP e ouro',
+};
+
+/**
+ * Rodada 14: the lane phase against each rival, from the campaign's 1v1 lane matches to 10 minutes: the lead (gold plus
+ * experience in gold) in each style, the best one marked.
+ */
+export function LaneStyles({ list }) {
+  const styles = Object.keys(list[0]?.leads ?? {});
+  return (
+    <section className="site-section">
+      <h2>Fase de rotas</h2>
+      <p className="muted small">
+        A build padrão na rota contra cada rival, até os 10 minutos, jogando de cada jeito (o rival joga o padrão): a vantagem
+        em ouro, com a XP convertida em ouro. Passe o mouse no nome do estilo para ver o que ele faz. Roaming, ganks e visão
+        precisam das outras rotas e não entram nesta conta.
+      </p>
+      <div className="table-wrap">
+        <table className="data">
+          <thead>
+            <tr><th>Rival</th>{styles.map((st) => <th key={st} title={STYLE_HELP[st]}>{STYLE_LABEL[st] ?? st}</th>)}</tr>
+          </thead>
+          <tbody>
+            {list.map((l, i) => (
+              <tr key={i}>
+                <td><ChampionAvatar name={l.rival} size={22} /> {l.rival}<br /><small className="muted">{(l.subclasses ?? []).join(', ')}</small></td>
+                {styles.map((st) => {
+                  const v = l.leads[st];
+                  return (
+                    <td key={st} className={st === l.best ? 'best-style' : ''}>
+                      <span className={v >= 0 ? 'delta-up' : 'delta-down'}>{v >= 0 ? '+' : '−'}{n0(Math.abs(v))}</span>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Rodada 14: against each kind of enemy team (the threat scenarios: assassins, colossi, engage tanks...), the build of
+ * the ranking that held best at minute 20, when it beats the standard.
+ */
+export function Threats({ list }) {
+  return (
+    <section className="site-section">
+      <h2>Contra cada tipo de time</h2>
+      <p className="muted small">
+        Times inimigos que imitam cada subclasse de campeão, aos 20 minutos: a efetividade da build padrão e a da build que
+        melhor se saiu ali entre as mais bem colocadas. O guia sugerido usa as que ganham da padrão por 3 pontos ou mais.
+      </p>
+      <ul className="note-list">
+        {list.map((t, i) => {
+          const gain = t.bestScore != null ? t.bestScore - t.standardScore : 0;
+          return (
+            <li key={i} className="threat-row">
+              <strong>{t.name}</strong>{' '}
+              <small className="muted">({t.count > 1 ? `${t.count}+ ` : ''}{(t.subclasses ?? []).join(' ou ')})</small>
+              <div>
+                padrão {n1(t.standardScore)}
+                {t.bestItems?.length > 0 && gain > 0 ? (
+                  <>
+                    {' · '}melhor <b>{n1(t.bestScore)}</b>{' '}
+                    <span className={gain >= 3 ? 'delta-up' : 'muted'}>(+{n1(gain)})</span>{' '}
+                    <span className="note-items">
+                      {t.bestItems.map((id, k) => <span key={k} className="note-icon" title={t.bestNames?.[k] ?? ''}><ItemIcon id={id} size={24} /></span>)}
+                    </span>
+                  </>
+                ) : <span className="muted"> · a padrão já é a melhor</span>}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
 
 /** As matchups da campanha: a build padrão contra cada rival, a vida que sobra (minha − dele) aos 10, 15 e 20. */
 export function Matchups({ list }) {
