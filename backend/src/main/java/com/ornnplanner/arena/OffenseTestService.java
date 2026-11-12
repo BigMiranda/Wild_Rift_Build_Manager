@@ -381,6 +381,9 @@ public class OffenseTestService {
         double[][] at = starts(mode, req.starts);
         double refMinute = effect.referenceMinute(build, req.minute);
         Map<String, List<Arena.Input>> todo = new LinkedHashMap<>();
+        // this batch's measures, kept apart from the shared cache: another batch running at the same time can push
+        // an entry out of it between the check and the mean
+        Map<String, Measures> got = new java.util.HashMap<>();
         Map<String, Double> lengths = new LinkedHashMap<>();
         List<Outcome> out = new ArrayList<>();
         List<List<List<String>>> keys = new ArrayList<>();
@@ -401,12 +404,12 @@ public class OffenseTestService {
                     long seed = k + 1;
                     String bk = buildKey + "|" + EffectTestService.write(v) + "|" + tk + "|" + k + "|" + mode;
                     mine.add(bk);
-                    if (!results.containsKey(bk) && !todo.containsKey(bk)) {
+                    if (!cached(bk, got) && !todo.containsKey(bk)) {
                         todo.put(bk, inputs(effect.fighter(build, req.minute, v, BRAIN), t, p, seed));
                     }
                     String rk = EffectTestService.hash(EffectTestService.write(build)) + "@ref" + refMinute + "|" + tk + "|" + k + "|" + mode;
                     ref.add(rk);
-                    if (!results.containsKey(rk) && !todo.containsKey(rk)) {
+                    if (!cached(rk, got) && !todo.containsKey(rk)) {
                         todo.put(rk, inputs(effect.referenceFighter(build, req.minute, BRAIN), t, p, seed));
                     }
                 }
@@ -416,14 +419,14 @@ public class OffenseTestService {
                 keys.add(null);
             }
         }
-        run(todo);
+        got.putAll(run(todo));
         for (int i = 0; i < out.size(); i++) {
             if (keys.get(i) == null) {
                 continue;
             }
             Outcome o = out.get(i);
-            o.build = mean(keys.get(i).get(0));
-            o.reference = mean(keys.get(i).get(1));
+            o.build = mean(keys.get(i).get(0), got);
+            o.reference = mean(keys.get(i).get(1), got);
             setIndex(o);
         }
         return out;
@@ -439,7 +442,16 @@ public class OffenseTestService {
         return List.of(me, target);
     }
 
-    private void run(Map<String, List<Arena.Input>> todo) {
+    /** Whether the cache has {@code k}; a hit is copied into the batch's own {@code got}. */
+    private boolean cached(String k, Map<String, Measures> got) {
+        Measures m = results.get(k);
+        if (m != null) {
+            got.put(k, m);
+        }
+        return m != null;
+    }
+
+    private Map<String, Measures> run(Map<String, List<Arena.Input>> todo) {
         List<String> ks = new ArrayList<>(todo.keySet());
         List<Callable<Measures>> runs = new ArrayList<>();
         for (String k : ks) {
@@ -447,9 +459,12 @@ public class OffenseTestService {
             runs.add(() -> measure(arena.runInputs(in, duration)));
         }
         List<Measures> done = ArenaService.parallel(runs);
+        Map<String, Measures> out = new java.util.HashMap<>();
         for (int i = 0; i < ks.size(); i++) {
             results.put(ks.get(i), done.get(i));
+            out.put(ks.get(i), done.get(i));
         }
+        return out;
     }
 
     /** The build's numbers (fighter 0) against the target (fighter 1). */
@@ -483,9 +498,9 @@ public class OffenseTestService {
     }
 
     /** The mean of the starts' measures (killed: when most starts killed). */
-    private Measures mean(List<String> ks) {
+    private Measures mean(List<String> ks, Map<String, Measures> got) {
         List<Measures> list = new ArrayList<>();
-        ks.forEach(k -> list.add(results.get(k)));
+        ks.forEach(k -> list.add(got.get(k)));
         if (list.size() == 1) {
             return list.get(0);
         }
