@@ -28,6 +28,7 @@ import Ranking from './pages/Ranking.jsx';
 import Effectiveness from './pages/Effectiveness.jsx';
 import Community from './pages/Community.jsx';
 import { PUBLIC } from './publicMode.js';
+import { unzoom } from './zoom.js';
 import { decodeBuild } from './shareLink.js';
 
 /** Interface scale (Rodada 8, parte 6): normal | grande | live, remembered in the browser. */
@@ -154,6 +155,24 @@ function Shell({ meta, items, reload, error, settingsBox }) {
     setVisited((v) => (v.has(active) ? v : new Set([...v, active])));
   }, [active]);
   useRouteSync(route);
+  // The sticky top's height and the window's, as style measures (unzoomed), for panels that stick below the top. A
+  // callback ref: the top is mounted again when the app reloads its data, and the observer must follow the new one.
+  const topWatch = useRef(null);
+  const top = useCallback((el) => {
+    topWatch.current?.();
+    topWatch.current = null;
+    if (!el) return;
+    const root = document.documentElement.style;
+    const measure = () => {
+      root.setProperty('--top-h', `${unzoom(el.getBoundingClientRect().height)}px`);
+      root.setProperty('--view-h', `${unzoom(window.innerHeight)}px`);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('resize', measure);
+    topWatch.current = () => { ro.disconnect(); window.removeEventListener('resize', measure); };
+  }, []);
 
   const pane = (key, render) => (visited.has(key) ? (
     <div key={key} className="pane" hidden={key !== active}>{render()}</div>
@@ -163,7 +182,7 @@ function Shell({ meta, items, reload, error, settingsBox }) {
 
   return (
     <ItemReaderContext.Provider value={readItem}>
-      <div className="app-top">
+      <div className="app-top" ref={top}>
       <header className="app-header">
         <h1>{t('app.title')}</h1>
         <nav className="super-tabs" aria-label={t('nav.super')}>

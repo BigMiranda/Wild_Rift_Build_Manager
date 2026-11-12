@@ -1324,6 +1324,8 @@ td .arch-tag { display: inline; margin-left: 4px; }
 .task-row progress { grid-column: 1 / -1; width: 100%; }
 
 .builds-page { display: grid; grid-template-columns: minmax(260px, 380px) minmax(0, 1fr); gap: 14px; align-items: start; }
+/* the preview follows the scroll: it sticks below the top (its height measured in App.jsx) and scrolls inside when taller */
+.builds-preview { position: sticky; top: calc(var(--top-h, 0px) + 10px); max-height: calc(var(--view-h, 100vh) - var(--top-h, 0px) - 20px); overflow-y: auto; }
 @media (max-width: 760px) { .builds-page { grid-template-columns: 1fr; } }
 .preview-items { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
 .preview-item { display: inline-flex; flex-direction: column; align-items: center; font-size: 11px; color: var(--muted); }
@@ -1421,6 +1423,7 @@ html[data-scale="live"] .item-icon { min-width: 26px; min-height: 26px; }
   /* drawn marks are not touch rows: the chart's lanes, the slots and the small toggles keep their size */
   .lane-item, .lane-level, .inv-slot, .buildbar-opts .opt, .champ-plan-cell, .tile-icon, .chip-item .icon { min-height: 0; }
   .builds-page { grid-template-columns: 1fr; }
+  .builds-preview { position: static; max-height: none; overflow: visible; }
   .grid-2 { grid-template-columns: 1fr; }
   .recharts-responsive-container { max-height: 70vh; }
 }
