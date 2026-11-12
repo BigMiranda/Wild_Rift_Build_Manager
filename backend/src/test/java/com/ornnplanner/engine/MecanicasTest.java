@@ -189,6 +189,18 @@ class MecanicasTest {
     }
 
     @Test
+    void healthRegenUsesTheTotalOnce() {
+        // the total already has the items' % (base x (1 + %)): 100 per 5s with 250% must heal 20 per second, not 70
+        List<Arena.Input> in = pair("enraizar", 2000);
+        Arena.Input b = in.get(1);
+        b.startHealth = 0.5;
+        b.f.total.put(Stats.HEALTH_REGEN, 100.0);
+        b.f.total.put(Stats.PCT_HEALTH_REGEN, 250.0);
+        Result r = fight(in, 10);
+        assertEquals(200, r.fighters.get(1).healed, 15);
+    }
+
+    @Test
     void cleanseFollowsTheTable() {
         List<Arena.Input> root = pair("enraizar", 900);
         root.get(1).f.spells.add("Purificar");

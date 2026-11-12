@@ -6924,7 +6924,7 @@ public class Arena {
         return false;
     }
 
-    /** Health regeneration (per 5s, with the % of the items and of triggers on). */
+    /** Health regeneration (per 5s: the total, which has the % of the items and of the triggers on). */
     private void regen(U u) {
         if (u.oceanStacks > 0 && now >= u.nextOcean - 1e-9 && !u.dead) {
             Map<String, Object> e = rules == null ? null : rules.map("objetivos", "dragao", "elementos", "oceano");
@@ -6941,7 +6941,9 @@ public class Arena {
             return;
         }
         u.nextRegen = now + 0.5;
-        double per5 = u.stat(Stats.HEALTH_REGEN) * (1 + u.stat(Stats.PCT_HEALTH_REGEN) / 100);
+        // the planner's total already has the items' % (base x (1 + %), TimelineEngine.snapshot), and a conditional %
+        // (Visitação Espectral) reaches it through the trigger's delta of that total: multiplying here again counted it twice
+        double per5 = u.stat(Stats.HEALTH_REGEN);
         if (per5 > 0 && u.hp < u.maxHp && now >= u.stasisUntil) {
             heal(u, per5 / 10, Map.of(key(u, "Regeneração de Vida"), per5 / 10));
         }
