@@ -1081,7 +1081,10 @@ public class EffectTestService {
     static Measures measure(ArenaModel.Result r, int index, int attackers, int allies, double duration) {
         ArenaModel.FighterStats me = r.fighters.get(index);
         Measures m = new Measures();
-        double elapsed = Math.max(1e-6, r.duration);
+        // Guardian Angel's stasis is time out of the fight: it holds no damage then (before Rodada 14 its 4s counted as
+        // time alive, and the item led the Discovery's screening for most fighters)
+        double out = me.outOfFight == null ? 0 : me.outOfFight;
+        double elapsed = Math.max(1e-6, r.duration - out);
         m.fightLength = r.duration;
         m.maxHealth = me.maxHealth;
         m.rawTaken = me.rawTaken;
@@ -1105,9 +1108,10 @@ public class EffectTestService {
         // The fight stops when the build dies: the team readings cover the time it was in the fight.
         if (me.deathTime != null) {
             m.died = true;
-            m.timeToDeath = me.deathTime;
-            m.durability = me.deathTime;
-            m.healthRate = 100 / Math.max(1e-6, me.deathTime);
+            double alive = Math.max(1e-6, me.deathTime - out);
+            m.timeToDeath = alive;
+            m.durability = alive;
+            m.healthRate = 100 / alive;
             m.effectiveHealth = me.rawTaken;
         } else {
             double cap = ESTIMATE_CAP * duration;

@@ -185,6 +185,8 @@ public class Arena {
         double stunUntil = -1;
         double airUntil = -1;
         double stasisUntil = -1;
+        /** When Guardian Angel's stasis ends (-1 = no revive). */
+        double reviveUntil = -1;
         double invisibleUntil = -1;
         /**
          * Displacement immunity of a channel (Ornn's Bellows Breath): pulls, pushes and knock-ups are void until then,
@@ -1089,6 +1091,9 @@ public class Arena {
         }
         result.duration = Math.min(now, duration);
         for (U u : units) {
+            if (u.r.outOfFight != null && u.reviveUntil > result.duration) {
+                u.r.outOfFight -= u.reviveUntil - result.duration;   // the fight ended in the stasis
+            }
             closeCasts(u);
             if (u.combo != null) {
                 endCombo(u, "aborted", u.combo.target.dead ? "alvo morreu" : "fim da luta");
@@ -6027,6 +6032,9 @@ public class Arena {
             double stasis = num(x.s.get("estase"), 4);
             t.hp = 1e-6;
             t.stasisUntil = now + stasis;
+            // out of the fight until it comes back (cut at the fight's end, see run)
+            t.r.outOfFight = (t.r.outOfFight == null ? 0 : t.r.outOfFight) + stasis;
+            t.reviveUntil = now + stasis;
             t.dash = null;
             t.forced = null;
             String src = key(t, x.d.source);

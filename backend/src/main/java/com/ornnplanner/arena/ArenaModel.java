@@ -576,6 +576,12 @@ public final class ArenaModel {
         /** Healing that found the health already full: what it could still have taken. */
         public double healOver;
         public Double deathTime;
+        /**
+         * Seconds out of the fight in Guardian Angel's stasis (null = it never revived): the readings of how long it
+         * lasted leave them out, since in that time it holds no damage for anyone (Rodada 14).
+         */
+        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+        public Double outOfFight;
         /** Where it ended the fight. */
         public double endX;
         public double endY;
