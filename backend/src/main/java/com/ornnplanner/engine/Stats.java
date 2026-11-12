@@ -29,6 +29,33 @@ public final class Stats {
     /** Unit stat (base/growth only): mana regen per 5 seconds. Items modify it through {@link #PCT_MANA_REGEN}. */
     public static final String MANA_REGEN = "Mana Regen";
 
+    /** % of crowd control time cut. Sources stack multiplicatively (see {@link #combine}). */
+    public static final String TENACITY = "% Tenacity";
+
+    /**
+     * Two amounts of one stat together. Every stat adds up, except Tenacity: each source cuts what is left, so
+     * 10% + 30% = 37%, + 20% = 50%, + 20% = 60% (measured in the game's shop).
+     */
+    public static double combine(String stat, double a, double b) {
+        if (TENACITY.equals(stat)) {
+            return 100 - (100 - a) * (100 - b) / 100;
+        }
+        return a + b;
+    }
+
+    /** The inverse of {@link #combine}: a total without one of its parts. */
+    public static double remove(String stat, double total, double part) {
+        if (TENACITY.equals(stat)) {
+            return part >= 100 ? total : 100 - (100 - total) / ((100 - part) / 100);
+        }
+        return total - part;
+    }
+
+    /** {@code m.merge} with {@link #combine}. */
+    public static void merge(java.util.Map<String, Double> m, String stat, double v) {
+        m.merge(stat, v, (a, b) -> combine(stat, a, b));
+    }
+
     /** Marker used by the reference data for "this item has conditional stats"; carries no value. */
     public static final String UNSTABLE_MARKER = "Unstable Passives' Stats";
 

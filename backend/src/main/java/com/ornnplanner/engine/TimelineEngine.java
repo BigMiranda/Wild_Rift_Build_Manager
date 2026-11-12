@@ -786,7 +786,7 @@ public class TimelineEngine {
         for (Owned o : inventory) {
             for (StatLine l : o.stats(minute)) {
                 if (countsAsFlat(o, l, level, minute)) {
-                    s.itemFlat.merge(l.type, o.flat(l, level, minute), Double::sum);
+                    Stats.merge(s.itemFlat, l.type, o.flat(l, level, minute));
                 }
             }
         }
@@ -800,7 +800,7 @@ public class TimelineEngine {
         keys.addAll(s.itemFlat.keySet());
         keys.addAll(s.itemPassives.keySet());
         for (String k : keys) {
-            double v = s.base.getOrDefault(k, 0.0) + bonusOf(s, k);
+            double v = Stats.combine(k, s.base.getOrDefault(k, 0.0), bonusOf(s, k));
             s.total.put(k, v);
         }
         // Regen: items give % of base regen.
@@ -878,7 +878,7 @@ public class TimelineEngine {
                     d.staticFallback = true;
                     d.value = r.line.value != null ? r.line.value : (r.line.ref != null ? r.line.ratioAt(level, minute) * r.line.ref : 0);
                     d.formula = "valor estático da referência = " + fmt(d.value) + " " + r.line.type;
-                    s.itemPassives.merge(r.line.type, d.value, Double::sum);
+                    Stats.merge(s.itemPassives, r.line.type, d.value);
                 }
             }
             Set<String> stats = new LinkedHashSet<>(s.base.keySet());
@@ -971,7 +971,7 @@ public class TimelineEngine {
                         add(preOutsideComp, lineKey(r), d.value);
                     }
                     share(r, d.value, refComp);
-                    s.itemPassives.merge(stat, d.value, Double::sum);
+                    Stats.merge(s.itemPassives, stat, d.value);
                 }
             }
             // Multipliers (target = ref_type), fitted to in-game values (Ornn level 15, Duplaguarda de Amaranto and
@@ -1020,7 +1020,7 @@ public class TimelineEngine {
                     share(r, d.value, outsideComp);
                     add(multComp, lineKey(r), d.value);
                     totalGains += d.value;
-                    s.itemPassives.merge(stat, d.value, Double::sum);
+                    Stats.merge(s.itemPassives, stat, d.value);
                     continue;
                 }
                 d.refItems = totalBeforeBuffs - base;
@@ -1032,7 +1032,7 @@ public class TimelineEngine {
                 share(r, d.value, beforeBuffsComp);
                 add(multComp, lineKey(r), d.value);
                 totalGains += d.value;
-                s.itemPassives.merge(stat, d.value, Double::sum);
+                Stats.merge(s.itemPassives, stat, d.value);
             }
             double bonusGains = 0;
             Map<String, Double> bonusRefComp = new LinkedHashMap<>(preComp);
@@ -1053,7 +1053,7 @@ public class TimelineEngine {
                 share(r, d.value, bonusRefComp);
                 add(bonusComp, lineKey(r), d.value);
                 bonusGains += d.value;
-                s.itemPassives.merge(stat, d.value, Double::sum);
+                Stats.merge(s.itemPassives, stat, d.value);
             }
             double baseGains = 0;
             for (RatioLine r : multiplierLines(stat, RefScope.BASE)) {
@@ -1068,7 +1068,7 @@ public class TimelineEngine {
                 share(r, d.value, baseComp);
                 add(multComp, lineKey(r), d.value);
                 baseGains += d.value;
-                s.itemPassives.merge(stat, d.value, Double::sum);
+                Stats.merge(s.itemPassives, stat, d.value);
             }
             double gains = bonusGains;   // the only gains the Forge amplifies
             double multipliers = totalGains + bonusGains + baseGains;
@@ -1440,12 +1440,12 @@ public class TimelineEngine {
             if (l.passive != null) {
                 c.passiveParts.add(part(l.passive, l.type, o.flat(l, level, minute), l.conditional));
             } else {
-                c.flat.merge(l.type, o.flat(l, level, minute), Double::sum);
+                Stats.merge(c.flat, l.type, o.flat(l, level, minute));
             }
         }
         c.passiveParts.addAll(ratioParts);
         for (Model.PassivePart p : c.passiveParts) {
-            c.passives.merge(p.stat, p.amount, Double::sum);
+            Stats.merge(c.passives, p.stat, p.amount);
             c.passiveGold += p.gold;
         }
         c.flat.forEach((k, v) -> c.flatGold += goldValue(k, v));
@@ -1453,7 +1453,8 @@ public class TimelineEngine {
     }
 
     private static double bonusOf(StatSnapshot s, String stat) {
-        return s.itemFlat.getOrDefault(stat, 0.0) + s.itemPassives.getOrDefault(stat, 0.0) + s.forge.getOrDefault(stat, 0.0);
+        return Stats.combine(stat, Stats.combine(stat, s.itemFlat.getOrDefault(stat, 0.0), s.itemPassives.getOrDefault(stat, 0.0)),
+                s.forge.getOrDefault(stat, 0.0));
     }
 
     private double goldValue(String stat, double amount) {

@@ -500,27 +500,27 @@ public class Arena {
             if (in.dummy != null && in.dummy.growTo != null && (Stats.ARMOR.equals(s) || Stats.MAGIC_RESIST.equals(s))) {
                 double from = Stats.ARMOR.equals(s) ? in.dummy.armor : in.dummy.magicResist;
                 double share = combatSince < 0 ? 0 : Math.min(1, (now - combatSince) / Math.max(0.1, in.dummy.growSeconds));
-                v += (in.dummy.growTo - from) * share;
+                v = Stats.combine(s, v, (in.dummy.growTo - from) * share);
             }
             for (int i = 0; i < delayOn.length; i++) {
                 if (!delayOn[i]) {
-                    v -= f.delays.get(i).amounts.getOrDefault(s, 0.0);
+                    v = Stats.remove(s, v, f.delays.get(i).amounts.getOrDefault(s, 0.0));
                 }
             }
             for (Map.Entry<String, Double> e : formUntil.entrySet()) {
                 if (now < e.getValue()) {
-                    v += in.forms.getOrDefault(e.getKey(), Map.of()).getOrDefault(s, 0.0);
+                    v = Stats.combine(s, v, in.forms.getOrDefault(e.getKey(), Map.of()).getOrDefault(s, 0.0));
                 }
             }
             for (T t : trigs) {
                 if (t.on()) {
-                    v += t.d.delta.getOrDefault(s, 0.0) * t.factor;
+                    v = Stats.combine(s, v, t.d.delta.getOrDefault(s, 0.0) * t.factor);
                 }
             }
             if (!statMods.isEmpty()) {
                 for (Object[] m : statMods) {
                     if (s.equals(m[0]) && now < (double) m[2]) {
-                        v += (double) m[1];
+                        v = Stats.combine(s, v, (double) m[1]);
                     }
                 }
             }
@@ -528,17 +528,17 @@ public class Arena {
                 Map<String, Object> form = map(map(kit("formas")).get(kitForm));
                 Map<String, Object> status = form == null ? null : map(form.get("status"));
                 if (status != null) {
-                    v += num(status.get(s), 0);
+                    v = Stats.combine(s, v, num(status.get(s), 0));
                 }
             }
             if (Stats.ATTACK_DAMAGE.equals(s)) {
-                v += buff("dda") + buff("hubris");
+                v = Stats.combine(s, v, buff("dda") + buff("hubris"));
             }
             if ("% Attack Speed".equals(s)) {
-                v += buff("vel_ataque") * 100;
+                v = Stats.combine(s, v, buff("vel_ataque") * 100);
             }
             if ("% Omnivamp".equals(s)) {
-                v += buff("vampirismo") * 100;
+                v = Stats.combine(s, v, buff("vampirismo") * 100);
             }
             return v;
         }

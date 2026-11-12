@@ -4,6 +4,7 @@ import com.ornnplanner.engine.Model.ItemContribution;
 import com.ornnplanner.engine.Model.MinutePoint;
 import com.ornnplanner.engine.Model.PassivePart;
 import com.ornnplanner.engine.Model.TimelineResult;
+import com.ornnplanner.engine.Stats;
 import com.ornnplanner.repo.BuildRepository;
 import com.ornnplanner.repo.BuildRepository.Build;
 import com.ornnplanner.seed.ChampionCatalog;
@@ -188,7 +189,7 @@ public class FighterBuilder {
             }
             MinutePoint p1 = planner.snapshot(variant(r.build, all, t, formsOff), r.items, r.level, r.minute, r.extra, r.edits);
             p1.total.forEach((stat, v) -> {
-                double d = v - p0.total.getOrDefault(stat, 0.0);
+                double d = Stats.remove(stat, v, p0.total.getOrDefault(stat, 0.0));   // the part that, combined, gives v
                 if (Math.abs(d) > 1e-9) {
                     t.delta.put(stat, d);
                 }
@@ -377,7 +378,7 @@ public class FighterBuilder {
                     r.minute, r.extra, r.edits).total;
             Map<String, Double> delta = new LinkedHashMap<>();
             on.forEach((k, v) -> {
-                double d = v - off.getOrDefault(k, 0.0);
+                double d = Stats.remove(k, v, off.getOrDefault(k, 0.0));
                 if (Math.abs(d) > 1e-9) {
                     delta.put(k, d);
                 }
