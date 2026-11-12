@@ -99,7 +99,7 @@ export default function StaticApp() {
   // the rune names and icons, for the pages that show a rune page (a small file, read once)
   const [runesReady, setRunesReady] = useState(false);
   useEffect(() => {
-    if (['b', 'comparar', 'montar'].includes(route.page) && !runesReady) {
+    if (['b', 'c', 'comparar', 'montar'].includes(route.page) && !runesReady) {
       store.runes().then((r) => { setRuneCatalog(r); setRunesReady(true); }).catch(() => {});
     }
   }, [route.page, runesReady, store]);

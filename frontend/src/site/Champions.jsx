@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChampionAvatar } from '../components/ChampionAvatar.jsx';
 import ItemIcon from '../components/ItemIcon.jsx';
 import GuideFlow from '../components/GuideFlow.jsx';
+import DiscoveryNotes from '../components/DiscoveryNotes.jsx';
 import { archetypeLabel } from '../archetypes.js';
 import { t } from '../i18n.js';
 import { mmss, n0, n1 } from '../format.js';
@@ -137,7 +138,8 @@ export function GuideTree({ nodes, items }) {
 
 /** Um campeão: as builds (descobertas, públicas), filtros, as matchups da campanha e as guias. */
 export function ChampionPage({ unit }) {
-  const { store } = useSite();
+  const { store, runesReady } = useSite();
+  const [items, setItems] = useState(null);
   const [c, setC] = useState(null);
   const [error, setError] = useState(null);
   const [f, setF] = useState({ kind: '', archetype: '' });
@@ -151,6 +153,10 @@ export function ChampionPage({ unit }) {
   useEffect(() => {
     // the grades of the basic report (small): the same scale the full app shows
     store.basic().then((r) => setGrades(r?.grades ?? null)).catch(() => {});
+  }, [store]);
+  useEffect(() => {
+    // the shop's names and ids, for the Discovery's notes (item names become icons)
+    store.items().then((x) => setItems(Array.isArray(x) ? x : x?.items ?? [])).catch(() => {});
   }, [store]);
   if (error) return <p className="error">{error}</p>;
   if (!c) return <p className="muted">Carregando…</p>;
@@ -208,15 +214,56 @@ export function ChampionPage({ unit }) {
           )}
         </section>
       )}
-      {c.notes?.length > 0 && (
+      {(c.notes?.length > 0 || c.synergies?.length > 0) && (
         <details className="site-section">
-          <summary>Notas da Descoberta</summary>
-          <ul className="small">{c.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
+          <summary><strong>Como a Descoberta chegou nessas builds</strong></summary>
+          {c.synergies?.length > 0 && <Synergies list={c.synergies} />}
+          <DiscoveryNotes key={runesReady ? 'r' : 'n'} notes={c.notes} items={items} />
         </details>
       )}
     </section>
   );
 }
+
+/**
+ * The pairs of items of the best kit: what the pair adds beyond each item alone. Negative (the usual) means the two
+ * cover the same need, so the second one is worth less next to the first.
+ */
+function Synergies({ list }) {
+  // the strongest effects first; the rest folded (Ornn's best kit has 21 pairs)
+  const sorted = [...list].sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+  const top = sorted.slice(0, 6);
+  const rest = sorted.slice(6);
+  return (
+    <section className="disc-notes">
+      <h4>Pares de itens</h4>
+      <p className="small muted">
+        No conjunto mais bem colocado, quanto cada par de itens soma além do que cada um soma sozinho. Negativo: os dois
+        cobrem a mesma necessidade e o segundo vale menos ao lado do primeiro. Positivo: um potencializa o outro.
+      </p>
+      <ul className="note-list">{top.map(pairItem)}</ul>
+      {rest.length > 0 && (
+        <details>
+          <summary className="small muted">Os outros {rest.length} pares</summary>
+          <ul className="note-list">{rest.map(pairItem)}</ul>
+        </details>
+      )}
+    </section>
+  );
+}
+
+const pairItem = (s, i) => (
+  <li key={i} className="note-pair">
+    <span className="note-icon" title={s.nameA}><ItemIcon id={s.a} size={26} /></span>
+    <span className="note-arrow">+</span>
+    <span className="note-icon" title={s.nameB}><ItemIcon id={s.b} size={26} /></span>
+    <b className={s.value >= 0 ? 'delta-up' : 'delta-down'}>{s.value >= 0 ? '+' : '−'}{n1(Math.abs(s.value))}</b>
+    <small className="muted">{pairText(s.explain)}</small>
+  </li>
+);
+
+/** "A + B: 73.0 juntos, 70.5 e 67.7 sozinhos, 60.7 sem os dois" without the names (the icons show them). */
+const pairText = (t) => String(t ?? '').replace(/^.*?: /, '');
 
 /** As matchups da campanha: a build padrão contra cada rival, a vida que sobra (minha − dele) aos 10, 15 e 20. */
 export function Matchups({ list }) {

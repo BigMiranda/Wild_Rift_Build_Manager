@@ -12,6 +12,7 @@ import Help from '../components/Help.jsx';
 import WholeDelta from '../components/WholeDelta.jsx';
 import { BuildLink } from '../components/BuildPreview.jsx';
 import MetaBuilds from '../components/MetaBuilds.jsx';
+import DiscoveryNotes from '../components/DiscoveryNotes.jsx';
 
 const STORE = 'ornn-planner-discovery';
 const AXES = ['arquetipo', 'dano', 'durabilidade', 'passivas'];
@@ -40,7 +41,7 @@ const num = (v) => (v == null ? '—' : n1(v));
 
 /** Simulações › Descoberta: the funnel over items, runes and order, the niches, the discoveries and the synergies. */
 export default function Discovery() {
-  const { openDraft } = useBuild();
+  const { openDraft, items, runesReady } = useBuild();
   const [form, setForm] = useState(initial);
   const [builds, setBuilds] = useState([]);
   const [estimate, setEstimate] = useState(null);
@@ -376,7 +377,7 @@ export default function Discovery() {
                 ))}
               </tbody>
             </table>
-            {r.notes?.length > 0 && <ul className="small muted">{r.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>}
+            {r.notes?.length > 0 && <DiscoveryNotes key={runesReady ? 'r' : 'n'} notes={r.notes} items={items} />}
           </section>
         </>
       )}

@@ -1492,3 +1492,18 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .gf-label.yes { color: #6fcf97; }
 .gf-label.no { color: #eb8a7a; }
 .gf-empty { color: var(--muted); padding-top: 10px; }
+
+/* the Discovery notes with icons (components/DiscoveryNotes.jsx): names only as hover captions */
+.disc-notes { margin-top: 10px; }
+.disc-notes h4 { margin: 12px 0 4px; }
+.disc-notes .note-card { border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+.note-swaps { list-style: none; padding: 0; margin: 0 0 6px; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.note-swaps li, .note-pair { display: flex; align-items: center; gap: 6px; }
+.note-kits, .note-list { list-style: none; padding: 0; margin: 4px 0 0; display: grid; gap: 6px; }
+.note-kits li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.note-list li { line-height: 1.9; }
+.note-items { display: inline-flex; gap: 2px; vertical-align: middle; }
+.note-icon { display: inline-flex; vertical-align: middle; cursor: help; }
+.note-icon img { border-radius: 4px; }
+.note-chip { display: inline-block; padding: 0 6px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); font-size: 0.85em; }
+.note-arrow { opacity: 0.7; }

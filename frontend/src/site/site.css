@@ -124,3 +124,4 @@ button.link { background: none; border: none; color: var(--muted); padding: 0; t
 @media (min-width: 1000px) {
   .site-main { padding: 18px 24px; }
 }
+
