@@ -45,6 +45,12 @@ classes_proximas:
   Mago: [Controlador]
   Controlador: [Mago]
 
+# Rodada 14: a subclasse (o tipo de ameaça numa luta, mais fino que a classe): a da wiki quando há (Colosso, Vanguarda,
+# Artilharia...; "Atirador" para atiradores); senão a subclasse cujo centro (a média do perfil, em desvios, dos campeões
+# que a wiki põe nela) está mais perto do perfil do campeão. Só subclasses com ao menos `minimo_campeoes` campeões têm centro.
+subclasses:
+  minimo_campeoes: 3
+
 # Arquétipo de uma build num minuto. A conta é pelo ouro dos status dos itens, por família (a parte de cada uma no ouro de
 # todos os status), mais os tipos de efeito de combate_7_3d.yml. A primeira regra que passa é o arquétipo.
 familias:

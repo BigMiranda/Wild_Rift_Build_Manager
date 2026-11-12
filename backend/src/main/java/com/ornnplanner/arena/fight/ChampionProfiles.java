@@ -59,6 +59,15 @@ public class ChampionProfiles {
         public String suggested;
         public Map<String, Double> scores = new LinkedHashMap<>();
         public boolean divergent;
+        /**
+         * Rodada 14: what kind of threat it is in a fight, finer than the class: the wiki's subclasses ("Colosso",
+         * "Artilharia"...), "Atirador" for a marksman, and for a champion the wiki gives none (Especialista, a class with
+         * no subclass) the subclass whose champions' profile is nearest ({@link #subclassSource} "perfil").
+         */
+        public List<String> subclasses = new ArrayList<>();
+        public String subclassSource;
+        /** The distance of its profile to each subclass's centre (z units), nearest first. */
+        public Map<String, Double> subclassDistance = new LinkedHashMap<>();
 
         /** The numbers the class weights read. */
         Map<String, Double> vector() {
@@ -111,6 +120,12 @@ public class ChampionProfiles {
         return champion == null ? null : byName.get(champion.toLowerCase());
     }
 
+    /** The subclasses of a champion (see {@link Profile#subclasses}); empty for an unknown one (a ragdoll). */
+    public List<String> subclassesOf(String champion) {
+        Profile p = of(champion);
+        return p == null ? List.of() : p.subclasses;
+    }
+
     /** The main classes of a champion: the official ones, or the suggested one when it has no source. */
     public List<String> classesOf(String champion) {
         Profile p = of(champion);
@@ -134,6 +149,13 @@ public class ChampionProfiles {
                 p.mainClasses.add(main);
             }
         }
+        for (String full : p.classes) {
+            String sub = full.contains("/") ? full.substring(full.indexOf('/') + 1) : "Atirador".equals(full) ? full : null;
+            if (sub != null && !p.subclasses.contains(sub)) {
+                p.subclasses.add(sub);
+            }
+        }
+        p.subclassSource = p.subclasses.isEmpty() ? null : "wiki";
         ((List<Object>) c.getOrDefault("funcoes", List.of())).forEach(o -> p.roles.add(String.valueOf(o)));
         ((List<Object>) c.getOrDefault("rotas", List.of())).forEach(o -> p.lanes.add(String.valueOf(o)));
         p.source = c.get("fonte_classes") == null ? null : String.valueOf(c.get("fonte_classes"));
@@ -288,6 +310,59 @@ public class ChampionProfiles {
             List<String> near = close.getOrDefault(p.suggested, List.of());
             p.divergent = !official.isEmpty() && !official.contains(p.suggested) && official.stream().noneMatch(near::contains)
                     && best - bestOfficial > margin;
+        }
+        subclasses(stats);
+    }
+
+    /** The subclasses of every champion (see {@link Profile#subclasses}): the nearest centre for those the wiki gives none. */
+    private void subclasses(Map<String, double[]> stats) {
+        // each subclass's centre, in z units, over the champions the wiki gives it
+        Map<String, Map<String, Double>> sums = new java.util.TreeMap<>();
+        Map<String, Integer> counts = new java.util.TreeMap<>();
+        Map<Profile, Map<String, Double>> z = new LinkedHashMap<>();
+        for (Profile p : byName.values()) {
+            Map<String, Double> v = new LinkedHashMap<>();
+            p.vector().forEach((k, x) -> {
+                double[] s = stats.get(k);
+                double mean = s[1] / s[0];
+                double sd = Math.sqrt(Math.max(1e-9, s[2] / s[0] - mean * mean));
+                v.put(k, (x - mean) / sd);
+            });
+            z.put(p, v);
+            if ("wiki".equals(p.subclassSource)) {
+                for (String sub : p.subclasses) {
+                    counts.merge(sub, 1, Integer::sum);
+                    Map<String, Double> sum = sums.computeIfAbsent(sub, k -> new LinkedHashMap<>());
+                    v.forEach((k, x) -> sum.merge(k, x / p.subclasses.size(), Double::sum));
+                }
+            }
+        }
+        int least = (int) num(((Map<String, Object>) rules.getOrDefault("subclasses", Map.of())).get("minimo_campeoes"), 3);
+        Map<String, Map<String, Double>> centres = new LinkedHashMap<>();
+        sums.forEach((sub, sum) -> {
+            if (counts.get(sub) >= least) {
+                Map<String, Double> c = new LinkedHashMap<>();
+                sum.forEach((k, x) -> c.put(k, x / counts.get(sub)));
+                centres.put(sub, c);
+            }
+        });
+        for (Profile p : byName.values()) {
+            Map<String, Double> v = z.get(p);
+            List<Map.Entry<String, Double>> d = new ArrayList<>();
+            centres.forEach((sub, c) -> {
+                double sq = 0;
+                for (Map.Entry<String, Double> e : c.entrySet()) {
+                    double diff = v.get(e.getKey()) - e.getValue();
+                    sq += diff * diff;
+                }
+                d.add(Map.entry(sub, Math.sqrt(sq)));
+            });
+            d.sort(Map.Entry.comparingByValue());
+            d.forEach(e -> p.subclassDistance.put(e.getKey(), Math.round(e.getValue() * 100) / 100.0));
+            if (p.subclasses.isEmpty() && !d.isEmpty()) {
+                p.subclasses.add(d.get(0).getKey());
+                p.subclassSource = "perfil";
+            }
         }
     }
 

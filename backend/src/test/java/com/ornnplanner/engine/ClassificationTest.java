@@ -99,6 +99,27 @@ class ClassificationTest {
         assertEquals(List.of("Mago"), profiles.classesOf("Norra"), "a Wild Rift champion, from its WR page");
     }
 
+    /**
+     * Rodada 14: every champion has a subclass: the wiki's, "Atirador" for a marksman, or the nearest subclass's by the
+     * profile when the wiki gives none.
+     */
+    @Test
+    void everyChampionHasASubclass() {
+        StringBuilder derived = new StringBuilder();
+        for (ChampionProfiles.Profile p : profiles.all()) {
+            assertFalse(p.subclasses.isEmpty(), p.name);
+            assertNotNull(p.subclassSource, p.name);
+            if ("perfil".equals(p.subclassSource)) {
+                derived.append(p.name).append(" ").append(p.classes).append(" -> ").append(p.subclassDistance).append(System.lineSeparator());
+            }
+        }
+        System.out.println("subclasses pelo perfil: " + System.lineSeparator() + derived);
+        assertEquals(List.of("Colosso"), profiles.subclassesOf("Aatrox"));
+        assertEquals(List.of("Atirador"), profiles.subclassesOf("Caitlyn"));
+        assertEquals("wiki", profiles.of("Ornn").subclassSource);
+        assertTrue(profiles.subclassesOf("nobody").isEmpty());
+    }
+
     /** By thresholds of stats and kinds of effects. */
     /** The sheets of the first batch: the profile reads them, and matches the official class or says it does not. */
     @Test
