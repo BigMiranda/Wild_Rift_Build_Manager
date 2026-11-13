@@ -1144,11 +1144,11 @@ tr.report-total td { border-top: 1px solid var(--border-strong); }
 .eff-pulses td, .eff-pulses th { text-align: left; }
 .eff-pulses input, .eff-pulses select { max-width: 130px; }
 .eff-table td:first-child, .eff-table th:first-child { text-align: left; }
-.eff-bar { display: inline-flex; align-items: center; gap: 6px; min-width: 140px; }
+.eff-bar { display: inline-flex; align-items: center; gap: 6px; min-width: 190px; }
 .eff-bar > span { display: inline-block; height: 10px; border-radius: 3px; max-width: 100px; flex: 0 0 auto; }
 .eff-bar > span.up { background: #6fcf97; }
 .eff-bar > span.down { background: #e07070; }
-.eff-bar strong { min-width: 36px; text-align: right; }
+.eff-bar strong { min-width: 36px; text-align: right; white-space: nowrap; flex: 0 0 auto; }
 .eff-weak { color: var(--text-2); }
 .eff-sweeps { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 10px; }
 .eff-sweep h5 { margin: 0 0 4px; }
@@ -1513,3 +1513,4 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 
 /* Rodada 15: the scenario's description under its name */
 .eff-table .test-note { display: block; font-size: 11px; line-height: 1.3; max-width: 340px; white-space: normal; }
+.eff-table td.race-cell { padding-left: 18px; white-space: nowrap; }
