@@ -111,8 +111,8 @@ function Sheet({ point }) {
 /** Rodada 15: the lifebar race of a fight, 50 = even; the champion with no items after the slash. */
 function Race({ o }) {
   const m = o?.build;
-  if (m?.race == null) return null;
-  const title = `Corrida das barras de vida: tirou ${n0(100 * m.enemyLost)}% da barra inimiga e perdeu ${n0(100 * m.teamLost)}% da sua`
+  if (m?.race == null || !o.mortal) return null;
+  const title = `Corrida das barras de vida: no fim, a barra inimiga tinha perdido ${n0(100 * m.enemyLost)}% e a sua ${n0(100 * m.teamLost)}%`
     + (o.reference?.race != null ? `; sem itens: ${n0(o.reference.race)}` : '');
   return (
     <span className={`race-badge ${m.race >= 50 ? 'up' : 'down'}`} title={title}>
@@ -267,16 +267,16 @@ export default function BuildPage({ buildKey, params }) {
         <Sheet point={at.point} />
         <h3>Efetividade defensiva</h3>
         <p className="muted small">Quanto da taxa de dano líquido da referência (o campeão sem itens) a build cancela, nos cenários
-          do relatório básico. Nesses testes os atacantes não morrem: a luta dura até a build morrer, e o número mede quanto ela
-          aguenta. A "corrida" ao lado projeta, na mesma luta, quem zeraria a barra do outro primeiro (50 = empate), contando o
-          dano que a build causa, o que devolve e a cura que corta.</p>
+          do relatório básico. Nesses testes os atacantes não morrem e não podem ser alvejados: a luta dura até a build morrer, e o
+          número mede só quanto ela aguenta.</p>
         <Outcomes list={at.effect} name="testName" weights={basic?.tests} />
         {at.race !== undefined && (
           <>
             <h3>Corrida das barras de vida</h3>
             <p className="muted small">Lutas em que os inimigos morrem de verdade, com a Vida e o dano de um campeão daquela fase:
-              a luta acaba quando a barra de um dos lados zera. 50 = os dois lados caem no mesmo ritmo, 100 = a build vence sem
-              perder Vida. Depois da barra, o mesmo campeão sem itens.</p>
+              a luta acaba quando a barra de um dos lados zera. Quem segura a Vida no fim, mesmo perto de zero (sustain), não zera.
+              50 = os dois lados zeram ao mesmo tempo, 100 = eles zeram e a build não. Dano, dano devolvido, cura cortada e
+              abates contam. Depois da barra, o mesmo campeão sem itens.</p>
             <Outcomes list={at.race} name="testName" race />
           </>
         )}

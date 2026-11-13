@@ -386,6 +386,7 @@ public class EffectTestService {
                 Test test = scaled(testOf(job), at);
                 o.testName = test.name;
                 o.testNote = test.note;
+                o.mortal = test.mortal;
                 Variant v = job.variant == null ? new Variant() : job.variant;
                 String tk = hash(write(test));
                 String bk = buildKey + "|" + tk + "|" + write(v) + "|" + mode;
@@ -623,12 +624,14 @@ public class EffectTestService {
         Arena.Input me = buildInput(buildSlot).copy();
         me.x = BUILD_X;
         me.y = 0;
+        me.healthTrail = true;
         f.inputs.add(me);
         placeBots(test, (team, bot, x, y) -> {
             Arena.Input in = botInput(bot, team, test.mortal).copy();
             in.x = team == 1 ? x + offset[0] : x;
             in.y = team == 1 ? y + offset[1] : y;
             in.target = focusIndex(test, bot);
+            in.healthTrail = true;
             f.inputs.add(in);
         });
         f.attackers = test.attackers.size();
@@ -679,7 +682,10 @@ public class EffectTestService {
         return dummy(b, false);
     }
 
-    /** {@code attacker}: it never dies (the fight lasts until the build dies). */
+    /**
+     * {@code attacker}: it never dies (the fight lasts until the build dies) and no one can target it (Rodada 15: the test
+     * measures only how much the build takes; before, the build fed on an endless lifebar).
+     */
     ArenaModel.Dummy dummy(Bot b, boolean attacker) {
         ArenaModel.Dummy d = new ArenaModel.Dummy();
         Role r = role(b);
@@ -697,6 +703,7 @@ public class EffectTestService {
         d.items = new ArrayList<>(b.items == null ? List.of() : b.items);
         d.spells = new ArrayList<>();
         d.immortal = attacker;
+        d.untargetable = attacker;
         d.pulses = new ArrayList<>();
         for (ArenaModel.Pulse p : b.pulses != null ? b.pulses : r.pulses) {
             d.pulses.add(p.copy());
@@ -1015,7 +1022,11 @@ public class EffectTestService {
         }
         double f = Math.max(scaleMin, Math.min(scaleMax, minute / scaleFullMinute));
         Test c = read(write(t), Test.class);
-        for (Bot b : c.attackers) {
+        List<Bot> grown = new ArrayList<>(c.attackers);
+        if (c.mortal && c.allies != null) {
+            grown.addAll(c.allies);   // Rodada 15: in a mortal fight both sides are champions of that minute
+        }
+        for (Bot b : grown) {
             b.health = Math.max(1, b.health * f);
             b.attackDamage *= f;
             b.stats.computeIfPresent(Stats.ABILITY_POWER, (k, v) -> v * f);
@@ -1155,40 +1166,106 @@ public class EffectTestService {
     }
 
     /**
-     * Rodada 15, the lifebar race: the game is about the enemy lifebar going to zero before yours, for tanks too. From
-     * the same fight: the share of the enemies' lifebar the build's side took and the share of its own side's it lost.
-     * Damage the build reflects and healing its Grievous Wounds cut take enemy lifebar; kills count whole.
+     * Rodada 15, the lifebar race: the game is about the enemy lifebar going to zero before yours, for tanks too. Each
+     * side's time to zero: when it died (the build, or the last attacker), else its health at the end over the pace it was
+     * losing it in the fight's last seconds ({@link #trend}). A side that holds its health there (sustain, even near
+     * zero) never goes to zero: the win of sustain, whatever health it kept. The race is 100 x mine / (mine + theirs):
+     * 50 = both go at the same time, 100 = it never goes to zero and they do. Damage, reflected damage, healing cut and
+     * kills shorten theirs. With attackers no one can target (the durability tests) theirs never ends: no race there.
      */
     static void race(Measures m, ArenaModel.Result r, int index, int attackers, int allies) {
-        double enemyMax = 0;
-        double enemyLost = 0;
+        List<ArenaModel.FighterStats> them = new ArrayList<>();
         for (int k = 0; k < attackers; k++) {
-            ArenaModel.FighterStats e = r.fighters.get(1 + k);
-            enemyMax += e.maxHealth;
-            // immortal attackers (the durability scenarios) can lose more than one lifebar: the projection of the race
-            enemyLost += e.deathTime != null ? e.maxHealth : Math.max(0, e.taken - e.shieldAbsorbed - e.healed);
+            them.add(r.fighters.get(1 + k));
         }
-        double teamMax = 0;
-        double teamLost = 0;
-        List<ArenaModel.FighterStats> side = new ArrayList<>();
-        side.add(r.fighters.get(index));
+        List<ArenaModel.FighterStats> us = new ArrayList<>();
+        us.add(r.fighters.get(index));
         for (int k = 0; k < allies; k++) {
-            side.add(r.fighters.get(1 + attackers + k));
+            us.add(r.fighters.get(1 + attackers + k));
         }
-        for (ArenaModel.FighterStats f : side) {
-            teamMax += f.maxHealth;
-            teamLost += f.deathTime != null ? f.maxHealth
-                    : Math.min(f.maxHealth, Math.max(0, f.taken - f.shieldAbsorbed - f.healed));
-        }
-        m.enemyLost = enemyMax > 0 ? enemyLost / enemyMax : 0;
-        m.teamLost = teamMax > 0 ? teamLost / teamMax : 0;
-        m.race = raceOf(m.enemyLost, m.teamLost);
+        m.enemyLost = lost(them);
+        m.teamLost = lost(us);
+        ArenaModel.FighterStats me = us.get(0);
+        double mine = me.deathTime != null ? me.deathTime : timeToZero(us, r.duration);
+        boolean allDead = !them.isEmpty() && them.stream().allMatch(f -> f.deathTime != null);
+        double theirs = allDead ? them.stream().mapToDouble(f -> f.deathTime).max().orElse(r.duration) : timeToZero(them, r.duration);
+        m.raceMine = Double.isInfinite(mine) ? null : mine;
+        m.raceEnemy = Double.isInfinite(theirs) ? null : theirs;
+        m.race = raceOf(mine, theirs);
     }
 
-    /** 100 x enemy / (enemy + mine), mine at least 1% of a lifebar; 50 when nothing happened. */
-    public static double raceOf(double enemyLost, double teamLost) {
-        double mine = Math.max(0.01, teamLost);
-        return enemyLost <= 0 && teamLost <= 0 ? 50 : 100 * enemyLost / (enemyLost + mine);
+    /** The share of a side's lifebar gone at the end (a dead one whole). */
+    private static double lost(List<ArenaModel.FighterStats> side) {
+        double max = 0;
+        double gone = 0;
+        for (ArenaModel.FighterStats f : side) {
+            max += f.maxHealth;
+            gone += f.deathTime != null ? f.maxHealth : Math.max(0, f.maxHealth - Math.max(0, f.health));
+        }
+        return max > 0 ? gone / max : 0;
+    }
+
+    /** Seconds a side alive at the end would take to go to zero at its late pace ({@link #trend}); infinite if it holds. */
+    static double timeToZero(List<ArenaModel.FighterStats> side, double end) {
+        double max = 0;
+        double now = 0;
+        for (ArenaModel.FighterStats f : side) {
+            max += f.maxHealth;
+            now += f.deathTime != null ? 0 : Math.max(0, f.health);
+        }
+        if (now <= 0) {
+            return end;
+        }
+        double rate = trend(side, end, max, now);
+        return rate <= 0.001 * max ? Double.POSITIVE_INFINITY : end + now / rate;
+    }
+
+    /**
+     * Health a side loses per second at the end of the fight: the mean of its health in the first half of the last
+     * window (a third of the fight, 4 to 15 s) minus the mean in the second half, over half the window. Means, so health
+     * swinging up and down (sustain near zero) reads as holding. Without the per-second trail, the whole fight's pace.
+     */
+    static double trend(List<ArenaModel.FighterStats> side, double end, double max, double now) {
+        int n = Integer.MAX_VALUE;
+        for (ArenaModel.FighterStats f : side) {
+            n = Math.min(n, f.healthTrail == null ? 0 : f.healthTrail.size());
+        }
+        int window = (int) Math.round(Math.min(15, Math.max(4, end / 3)));
+        if (n < 4 || n < window) {
+            return (max - now) / Math.max(1e-6, end);
+        }
+        int half = window / 2;
+        double first = 0;
+        double second = 0;
+        for (int k = n - window; k < n - window + half; k++) {
+            first += sideAt(side, k);
+        }
+        for (int k = n - half; k < n; k++) {
+            second += sideAt(side, k);
+        }
+        return (first / half - second / half) / Math.max(1, window - half);
+    }
+
+    private static double sideAt(List<ArenaModel.FighterStats> side, int k) {
+        double h = 0;
+        for (ArenaModel.FighterStats f : side) {
+            h += f.healthTrail.get(k);
+        }
+        return h;
+    }
+
+    /** 100 x mine / (mine + theirs), with infinite times (a side that holds): both = 50, mine = 100, theirs = 0. */
+    public static double raceOf(double mine, double theirs) {
+        if (Double.isInfinite(mine) && Double.isInfinite(theirs)) {
+            return 50;
+        }
+        if (Double.isInfinite(mine)) {
+            return 100;
+        }
+        if (Double.isInfinite(theirs)) {
+            return 0;
+        }
+        return mine + theirs <= 0 ? 50 : 100 * mine / (mine + theirs);
     }
 
     /** The mean of the reference's measures (a folder's builds); one is itself. */
@@ -1235,6 +1312,10 @@ public class EffectTestService {
             out.enemyLost += m.enemyLost / n;
             out.teamLost += m.teamLost / n;
             out.race += m.race / n;
+            out.raceMine = out.raceMine == null && ok.get(0) != m || m.raceMine == null ? null
+                    : (out.raceMine == null ? 0 : out.raceMine) + m.raceMine / n;
+            out.raceEnemy = out.raceEnemy == null && ok.get(0) != m || m.raceEnemy == null ? null
+                    : (out.raceEnemy == null ? 0 : out.raceEnemy) + m.raceEnemy / n;
             out.died |= m.died;
             if (m.absorbedShare != null) {
                 out.absorbedShare = (out.absorbedShare == null ? 0 : out.absorbedShare) + m.absorbedShare / n;
@@ -1312,6 +1393,8 @@ public class EffectTestService {
             p.duration = num(m.get("duracao"), 2.5);
             p.control = m.get("controle") == null ? null : String.valueOf(m.get("controle"));
             p.slow = num(m.get("lentidao"), 0.3);
+            p.missingHealth = num(m.get("vida_perdida_alvo"), 0);
+            p.executeBelow = num(m.get("executa_abaixo"), 0);
             if ("controle".equals(p.kind) && p.control == null) {
                 p.control = "atordoamento";
             }

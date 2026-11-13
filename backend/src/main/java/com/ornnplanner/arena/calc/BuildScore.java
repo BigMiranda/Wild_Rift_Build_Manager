@@ -267,7 +267,7 @@ public class BuildScore {
                 s.readings.add(r);
             }
         }
-        if (s.weights.get(RACE) > 0) {
+        if (s.weights.get(RACE) > 0 || s.weights.get(UTILITY) > 0) {
             race(build, minute, o == null ? null : o.starts, o == null ? 0 : o.limit, s);
         }
         if (supportRules != null && s.weights.get(UTILITY) > 0) {
@@ -297,11 +297,6 @@ public class BuildScore {
             req.jobs.add(j);
         }
         List<EffectModel.Outcome> out = effect.evaluate(req);
-        Map<String, Object> util = (Map<String, Object>) rules.getOrDefault("utilidade", Map.of());
-        double ccFactor = num(util.get("controle_por_10s"), 25);
-        double absorbed = num(util.get("absorvido"), 1);
-        double usum = 0;
-        int un = 0;
         for (int i = 0; i < out.size(); i++) {
             EffectModel.Outcome o = out.get(i);
             if (o.index == null) {
@@ -314,29 +309,6 @@ public class BuildScore {
             r.index = o.index;
             r.points = o.index;
             r.weight = rep.tests.get(i).weight;
-            s.readings.add(r);
-            if (o.reference != null) {
-                // Rodada 15: the same fight as a race (projected: these attackers never die)
-                Reading rr = new Reading();
-                rr.part = RACE;
-                rr.key = "corrida|" + rep.tests.get(i).key;
-                rr.name = o.testName;
-                rr.index = o.build.race;
-                rr.points = racePoints(o.build.race, o.reference.race);
-                rr.weight = rep.tests.get(i).weight * projectedWeight();
-                s.readings.add(rr);
-            }
-            double cc = o.build.fightLength > 0 ? o.build.controlApplied / o.build.fightLength * 10 * ccFactor : 0;
-            double u = Math.min(100, cc + (o.build.absorbedShare == null ? 0 : o.build.absorbedShare * absorbed));
-            usum += u;
-            un++;
-        }
-        if (un > 0) {
-            Reading r = new Reading();
-            r.part = UTILITY;
-            r.key = "utilidade";
-            r.name = "Utilidade";
-            r.points = usum / un;
             s.readings.add(r);
         }
     }
@@ -417,7 +389,7 @@ public class BuildScore {
 
     /**
      * Rodada 15: the race report (efetividade's {@code corrida}: attackers that die, so killing ends their damage), each
-     * scenario a race reading against the reference.
+     * scenario a race reading against the reference, and the utility reading from the same fights.
      */
     @SuppressWarnings("unchecked")
     private void race(BuildRepository.Build build, double minute, Integer starts, int limit, Score s) {
@@ -437,11 +409,21 @@ public class BuildScore {
             req.jobs.add(j);
         }
         List<EffectModel.Outcome> out = effect.evaluate(req);
+        Map<String, Object> util = (Map<String, Object>) rules.getOrDefault("utilidade", Map.of());
+        double ccFactor = num(util.get("controle_por_10s"), 25);
+        double absorbed = num(util.get("absorvido"), 1);
+        double usum = 0;
+        int un = 0;
         for (int i = 0; i < out.size(); i++) {
             EffectModel.Outcome o = out.get(i);
             if (o.build == null || o.reference == null) {
                 continue;
             }
+            // the utility: control applied and the team's damage absorbed (Rodada 15: from these fights, where the
+            // attackers can be targeted; the durability tests' attackers no one can control)
+            double cc = o.build.fightLength > 0 ? o.build.controlApplied / o.build.fightLength * 10 * ccFactor : 0;
+            usum += Math.min(100, cc + (o.build.absorbedShare == null ? 0 : o.build.absorbedShare * absorbed));
+            un++;
             Reading r = new Reading();
             r.part = RACE;
             r.key = "corrida|" + rep.tests.get(i).key;
@@ -451,13 +433,14 @@ public class BuildScore {
             r.weight = rep.tests.get(i).weight;
             s.readings.add(r);
         }
-    }
-
-    /** The weight of a race read from a durability fight (immortal attackers, a projection) next to a real one (1). */
-    @SuppressWarnings("unchecked")
-    private double projectedWeight() {
-        Map<String, Object> cfg = (Map<String, Object>) rules.getOrDefault("corrida", Map.of());
-        return num(cfg.get("peso_projetada"), 0.5);
+        if (un > 0) {
+            Reading r = new Reading();
+            r.part = UTILITY;
+            r.key = "utilidade";
+            r.name = "Utilidade";
+            r.points = usum / un;
+            s.readings.add(r);
+        }
     }
 
     /**

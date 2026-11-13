@@ -25,7 +25,16 @@
 #               e cura vão ao aliado com menos Vida (proporcional) no alcance, ele mesmo incluído.
 #
 # Por cenário: nome, grupo (1x1 | equipe | ameaca | suporte | corrida), atacantes, aliados, duracao (s), nota (o que
-# acontece no teste, mostrada nas telas e no site), escala_com_minuto, mortais (Rodada 15: os atacantes morrem).
+# acontece no teste, mostrada nas telas e no site), escala_com_minuto, mortais.
+#
+# Rodada 15, dois tipos de teste:
+#   - sem `mortais` (os 1x1 do Básico e o "5 contra 1"): os atacantes não morrem e NINGUÉM pode alvejá-los (ataques,
+#     habilidades, controles, efeitos ao acertar). Medem só quanto a build aguenta. Antes, a build se alimentava deles
+#     como de uma barra sem fim (roubo de vida, cura pela Vida máxima do alvo como a do Ruptor Divino);
+#   - com `mortais: true` (luta de equipe, ameaças, suporte e corrida): os dois lados morrem e crescem com o minuto
+#     (aliados também). A Vida dos atacantes é a de um campeão do minuto 25 (`escala_com_minuto`). Medem a corrida das
+#     barras de vida.
+#   Pulsos de finalização: `vida_perdida_alvo` (dano extra pela parte da Vida que falta ao alvo) e `executa_abaixo`.
 #
 # O que muda com o minuto testado: só a build (itens, nível, status). O atacante tem os status fixos do preset, em
 # qualquer minuto, e por isso builds em minutos diferentes se comparam. Com `escala_com_minuto: true` (desligado nos
@@ -206,18 +215,20 @@ cenarios:
   luta_de_equipe:
     nome: Luta de equipe genérica
     grupo: equipe
+    mortais: true
+    escala_com_minuto: true
     duracao: 120
     nota: 'Os mesmos cinco do "5 contra 1", agora com quatro aliados ao lado da build (suporte, atirador, mago e lutador). Mede quanto dano ela segura pelo time e quanto tempo os aliados ficam vivos.'
     atacantes:
-    - {nome: Atirador, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 300, velocidade_ataque: 1.5,
+    - {nome: Atirador, funcao: atirador, vida: 3300, armadura: 50, rm: 50, dda: 300, velocidade_ataque: 1.5,
        status: {"% Critical Rate": 50}}
-    - {nome: Mago, funcao: mago, vida: 6000, armadura: 50, rm: 50, dda: 60, velocidade_ataque: 0.7,
+    - {nome: Mago, funcao: mago, vida: 3300, armadura: 50, rm: 50, dda: 60, velocidade_ataque: 0.7,
        status: {Ability Power: 600, "% Magic Penetration": 20}}
-    - {nome: Lutador, funcao: lutador, vida: 6000, armadura: 60, rm: 60, dda: 210, velocidade_ataque: 1.2,
+    - {nome: Lutador, funcao: lutador, vida: 3300, armadura: 60, rm: 60, dda: 210, velocidade_ataque: 1.2,
        status: {"% Armor Penetration": 20}, itens: [Hemodrenário]}
-    - {nome: Assassino, funcao: assassino, vida: 6000, armadura: 50, rm: 50, dda: 280, velocidade_ataque: 1.2,
+    - {nome: Assassino, funcao: assassino, vida: 3300, armadura: 50, rm: 50, dda: 280, velocidade_ataque: 1.2,
        status: {Armor Penetration: 18}}
-    - {nome: Tanque, funcao: tanque, vida: 8000, armadura: 120, rm: 80, dda: 100, velocidade_ataque: 0.7,
+    - {nome: Tanque, funcao: tanque, vida: 4400, armadura: 120, rm: 80, dda: 100, velocidade_ataque: 0.7,
        status: {Ability Power: 100}}
     aliados:
     - {nome: Suporte de proteção, funcao: suporte, vida: 4000, armadura: 60, rm: 60, dda: 50, velocidade_ataque: 0.7,
@@ -236,139 +247,159 @@ cenarios:
   assassinos_proximidade:
     nome: Assassinos de proximidade
     grupo: ameaca
+    mortais: true
+    escala_com_minuto: true
     ameaca: [Assassino, Escaramuçador]
     quantos: 2
     duracao: 120
     nota: Dois assassinos que chegam perto e explodem (letalidade), com uma lentidão no avanço. Armadura e Vida logo de início seguram a explosão.
     atacantes:
-    - {nome: Assassino de explosão, funcao: assassino, vida: 6000, armadura: 50, rm: 50, dda: 250, velocidade_ataque: 1.1,
+    - {nome: Assassino de explosão, funcao: assassino, vida: 3300, armadura: 50, rm: 50, dda: 250, velocidade_ataque: 1.1,
        status: {Armor Penetration: 25},
        pulsos: [{nome: Explosão de assassino, tipo: dano, dano_tipo: fisico, base: 320, dda: 1.2, a_cada: 7, alcance: 400,
                  controle: lentidao, lentidao: 0.4, duracao: 1.5}]}
-    - {nome: Escaramuçador, funcao: assassino, vida: 6500, armadura: 60, rm: 50, dda: 230, velocidade_ataque: 1.3,
+    - {nome: Escaramuçador, funcao: assassino, vida: 3600, armadura: 60, rm: 50, dda: 230, velocidade_ataque: 1.3,
        status: {Armor Penetration: 15, "% Omnivamp": 8},
        pulsos: [{nome: Golpe de escaramuça, tipo: dano, dano_tipo: fisico, base: 180, dda: 0.9, a_cada: 4, alcance: 300}]}
   colossos:
     nome: Colossos
     grupo: ameaca
+    mortais: true
+    escala_com_minuto: true
     ameaca: [Colosso, Mergulhador]
     quantos: 2
     duracao: 120
     nota: Dois lutadores de muita Vida e dano contínuo de perto, que se curam (Hemodrenário e uma cura própria). O corta-cura e o dano devolvido pesam na corrida.
     atacantes:
-    - {nome: Colosso, funcao: lutador, vida: 9000, armadura: 90, rm: 70, dda: 200, velocidade_ataque: 1.0,
+    - {nome: Colosso, funcao: lutador, vida: 5000, armadura: 90, rm: 70, dda: 200, velocidade_ataque: 1.0,
        status: {"% Armor Penetration": 15}, itens: [Hemodrenário],
        pulsos: [{nome: Golpe de colosso, tipo: dano, dano_tipo: fisico, base: 160, dda: 0.9, a_cada: 5, alcance: 300},
                 {nome: Fôlego de colosso, tipo: cura, base: 250, a_cada: 8, alcance: 100}]}
-    - {nome: Mergulhador, funcao: lutador, vida: 7500, armadura: 80, rm: 60, dda: 210, velocidade_ataque: 1.1,
+    - {nome: Mergulhador, funcao: lutador, vida: 4100, armadura: 80, rm: 60, dda: 210, velocidade_ataque: 1.1,
        itens: [Hemodrenário],
        pulsos: [{nome: Mergulho, tipo: dano, dano_tipo: fisico, base: 200, dda: 0.8, a_cada: 8, alcance: 450,
                  controle: arremesso, duracao: 0.75}]}
   tanques_iniciacao:
     nome: Tanques de iniciação
     grupo: ameaca
+    mortais: true
+    escala_com_minuto: true
     ameaca: [Vanguarda, Guardião]
     quantos: 1
     duracao: 120
     nota: Um tanque que engaja com controle encadeado (arremesso e atordoamento) e um atirador e um mago que aproveitam a janela.
     atacantes:
-    - {nome: Tanque de iniciação, funcao: tanque, vida: 9000, armadura: 120, rm: 90, dda: 100, velocidade_ataque: 0.7,
+    - {nome: Tanque de iniciação, funcao: tanque, vida: 5000, armadura: 120, rm: 90, dda: 100, velocidade_ataque: 0.7,
        status: {Ability Power: 100},
        pulsos: [{nome: Engajamento, tipo: dano, dano_tipo: magico, base: 200, pdh: 0.5, a_cada: 10, alcance: 450,
                  controle: arremesso, duracao: 1.0},
                 {nome: Controle encadeado, tipo: controle, a_cada: 12, alcance: 350, controle: atordoamento, duracao: 1.5}]}
-    - {nome: Atirador, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 280, velocidade_ataque: 1.4,
+    - {nome: Atirador, funcao: atirador, vida: 3300, armadura: 50, rm: 50, dda: 280, velocidade_ataque: 1.4,
        status: {"% Critical Rate": 50}}
-    - {nome: Mago, funcao: mago, vida: 6000, armadura: 50, rm: 50, dda: 60, velocidade_ataque: 0.7,
+    - {nome: Mago, funcao: mago, vida: 3300, armadura: 50, rm: 50, dda: 60, velocidade_ataque: 0.7,
        status: {Ability Power: 550}}
   captores:
     nome: Captores
     grupo: ameaca
+    mortais: true
+    escala_com_minuto: true
     ameaca: [Captor]
     quantos: 1
     duracao: 120
     nota: Um captor que prende de longe (atordoamento) e um assassino que chega em quem foi preso.
     atacantes:
-    - {nome: Captor, funcao: suporte, vida: 6500, armadura: 70, rm: 60, dda: 60, velocidade_ataque: 0.7,
+    - {nome: Captor, funcao: suporte, vida: 3600, armadura: 70, rm: 60, dda: 60, velocidade_ataque: 0.7,
        status: {Ability Power: 250},
        pulsos: [{nome: Captura, tipo: dano, dano_tipo: magico, base: 220, pdh: 0.6, a_cada: 10, alcance: 900,
                  controle: atordoamento, duracao: 1.75}]}
-    - {nome: Assassino, funcao: assassino, vida: 6000, armadura: 50, rm: 50, dda: 260, velocidade_ataque: 1.1,
+    - {nome: Assassino, funcao: assassino, vida: 3300, armadura: 50, rm: 50, dda: 260, velocidade_ataque: 1.1,
        status: {Armor Penetration: 20}}
   artilharia:
     nome: Magos de artilharia
     grupo: ameaca
+    mortais: true
+    escala_com_minuto: true
     ameaca: [Artilharia]
     quantos: 1
     duracao: 180
     nota: Um mago que cutuca com dano mágico de muito longe, um pouco a cada poucos segundos. Escudos mágicos e RM seguram.
     atacantes:
-    - {nome: Mago de artilharia, funcao: mago, vida: 6000, armadura: 50, rm: 50, dda: 0, velocidade_ataque: 0.7,
+    - {nome: Mago de artilharia, funcao: mago, vida: 3300, armadura: 50, rm: 50, dda: 0, velocidade_ataque: 0.7,
        status: {Ability Power: 600, "% Magic Penetration": 20}, alcance: 600,
        pulsos: [{nome: Disparo de longe, tipo: dano, dano_tipo: magico, base: 220, pdh: 0.55, a_cada: 4, alcance: 1100}]}
   magos_explosivos:
     nome: Magos explosivos
     grupo: ameaca
+    mortais: true
+    escala_com_minuto: true
     ameaca: [Explosivo]
     quantos: 2
     duracao: 120
     nota: Dois magos que soltam tudo de uma vez, com um atordoamento. Vale segurar a primeira explosão.
     atacantes:
-    - {nome: Mago explosivo, funcao: mago, vida: 6000, armadura: 50, rm: 50, dda: 0, velocidade_ataque: 0.7,
+    - {nome: Mago explosivo, funcao: mago, vida: 3300, armadura: 50, rm: 50, dda: 0, velocidade_ataque: 0.7,
        status: {Ability Power: 650, Magic Penetration: 15},
        pulsos: [{nome: Combo explosivo, tipo: dano, dano_tipo: magico, base: 550, pdh: 1.0, a_cada: 9, alcance: 650,
                  controle: atordoamento, duracao: 1.0}]}
-    - {nome: Mago explosivo 2, funcao: mago, vida: 6000, armadura: 50, rm: 50, dda: 0, velocidade_ataque: 0.7,
+    - {nome: Mago explosivo 2, funcao: mago, vida: 3300, armadura: 50, rm: 50, dda: 0, velocidade_ataque: 0.7,
        status: {Ability Power: 600},
        pulsos: [{nome: Combo explosivo, tipo: dano, dano_tipo: magico, base: 480, pdh: 0.9, a_cada: 9, alcance: 650}]}
   magos_batalha:
     nome: Magos de batalha
     grupo: ameaca
+    mortais: true
+    escala_com_minuto: true
     ameaca: [Mago de Batalha]
     quantos: 1
     duracao: 180
     nota: Um mago de dano mágico contínuo de perto, com o Tormento de Liandry.
     atacantes:
-    - {nome: Mago de batalha, funcao: mago, vida: 7500, armadura: 70, rm: 60, dda: 0, velocidade_ataque: 0.7,
+    - {nome: Mago de batalha, funcao: mago, vida: 4100, armadura: 70, rm: 60, dda: 0, velocidade_ataque: 0.7,
        status: {Ability Power: 520}, itens: [Tormento de Liandry], alcance: 350,
        pulsos: [{nome: Área contínua, tipo: dano, dano_tipo: magico, base: 90, pdh: 0.3, a_cada: 1.5, alcance: 400}]}
   dois_atiradores:
     nome: Dois atiradores
     grupo: ameaca
+    mortais: true
+    escala_com_minuto: true
     ameaca: [Atirador]
     quantos: 2
     duracao: 120
     nota: Dois atiradores de ataques básicos, um de crítico com Roubo de Vida e um de penetração.
     atacantes:
-    - {nome: Atirador, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 260, velocidade_ataque: 1.5,
+    - {nome: Atirador, funcao: atirador, vida: 3300, armadura: 50, rm: 50, dda: 260, velocidade_ataque: 1.5,
        status: {"% Critical Rate": 50}, itens: [Sedenta por Sangue]}
-    - {nome: Atirador 2, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 240, velocidade_ataque: 1.6,
+    - {nome: Atirador 2, funcao: atirador, vida: 3300, armadura: 50, rm: 50, dda: 240, velocidade_ataque: 1.6,
        status: {"% Critical Rate": 25, "% Armor Penetration": 20}}
   tres_atiradores:
     nome: Três atiradores
     grupo: ameaca
+    mortais: true
+    escala_com_minuto: true
     ameaca: [Atirador]
     quantos: 3
     duracao: 120
     nota: 'Três atiradores de ataques básicos: muitos golpes por segundo, o que favorece Armadura e o que reduz velocidade de ataque.'
     atacantes:
-    - {nome: Atirador, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 260, velocidade_ataque: 1.5,
+    - {nome: Atirador, funcao: atirador, vida: 3300, armadura: 50, rm: 50, dda: 260, velocidade_ataque: 1.5,
        status: {"% Critical Rate": 50}, itens: [Sedenta por Sangue]}
-    - {nome: Atirador 2, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 240, velocidade_ataque: 1.6,
+    - {nome: Atirador 2, funcao: atirador, vida: 3300, armadura: 50, rm: 50, dda: 240, velocidade_ataque: 1.6,
        status: {"% Critical Rate": 25, "% Armor Penetration": 20}}
-    - {nome: Atirador 3, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 220, velocidade_ataque: 1.7,
+    - {nome: Atirador 3, funcao: atirador, vida: 3300, armadura: 50, rm: 50, dda: 220, velocidade_ataque: 1.7,
        status: {"% Critical Rate": 25}}
   encantadores:
     nome: Carry protegido por encantador
     grupo: ameaca
+    mortais: true
+    escala_com_minuto: true
     ameaca: [Encantador]
     quantos: 1
     duracao: 120
     nota: Um atirador protegido por um encantador que o escuda, o cura e deixa a build lenta.
     atacantes:
-    - {nome: Atirador protegido, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 270, velocidade_ataque: 1.5,
+    - {nome: Atirador protegido, funcao: atirador, vida: 3300, armadura: 50, rm: 50, dda: 270, velocidade_ataque: 1.5,
        status: {"% Critical Rate": 50}}
-    - {nome: Encantador, funcao: suporte, vida: 5000, armadura: 50, rm: 50, dda: 50, velocidade_ataque: 0.7,
+    - {nome: Encantador, funcao: suporte, vida: 2800, armadura: 50, rm: 50, dda: 50, velocidade_ataque: 0.7,
        status: {Ability Power: 350},
        pulsos: [{nome: Escudo de encantador, tipo: escudo, base: 220, pdh: 0.6, a_cada: 6, alcance: 700, duracao: 2.5},
                 {nome: Cura de encantador, tipo: cura, base: 120, pdh: 0.4, a_cada: 7, alcance: 700},
@@ -382,13 +413,15 @@ cenarios:
   mergulho_no_carry:
     nome: Mergulho no carry
     grupo: suporte
+    mortais: true
+    escala_com_minuto: true
     duracao: 60
     nota: 'Um assassino e um lutador mergulham no atirador aliado da build, não nela. Mede o que a build faz pelo carry: quanto tempo a mais ele vive e quanto dano consegue dar.'
     atacantes:
-    - {nome: Assassino, funcao: assassino, vida: 6000, armadura: 50, rm: 50, dda: 230, velocidade_ataque: 1.1,
+    - {nome: Assassino, funcao: assassino, vida: 3300, armadura: 50, rm: 50, dda: 230, velocidade_ataque: 1.1,
        status: {Armor Penetration: 18}, alvo_aliado: 0,
        pulsos: [{nome: Explosão de assassino, tipo: dano, dano_tipo: fisico, base: 260, dda: 1.0, a_cada: 7, alcance: 400}]}
-    - {nome: Lutador, funcao: lutador, vida: 7500, armadura: 80, rm: 60, dda: 200, velocidade_ataque: 1.0,
+    - {nome: Lutador, funcao: lutador, vida: 4100, armadura: 80, rm: 60, dda: 200, velocidade_ataque: 1.0,
        itens: [Hemodrenário], alvo_aliado: 0,
        pulsos: [{nome: Mergulho, tipo: dano, dano_tipo: fisico, base: 180, dda: 0.8, a_cada: 8, alcance: 450,
                  controle: arremesso, duracao: 0.75}]}
@@ -398,13 +431,15 @@ cenarios:
   cutucada_no_carry:
     nome: Carry cutucado de longe
     grupo: suporte
+    mortais: true
+    escala_com_minuto: true
     duracao: 60
     nota: Um mago de artilharia e um atirador batem de longe no atirador aliado. Mede a proteção que a build dá a ele.
     atacantes:
-    - {nome: Mago de artilharia, funcao: mago, vida: 6000, armadura: 50, rm: 50, dda: 0, velocidade_ataque: 0.7,
+    - {nome: Mago de artilharia, funcao: mago, vida: 3300, armadura: 50, rm: 50, dda: 0, velocidade_ataque: 0.7,
        status: {Ability Power: 500}, alcance: 600, alvo_aliado: 0,
        pulsos: [{nome: Disparo de longe, tipo: dano, dano_tipo: magico, base: 200, pdh: 0.5, a_cada: 4, alcance: 1100}]}
-    - {nome: Atirador inimigo, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 240, velocidade_ataque: 1.3,
+    - {nome: Atirador inimigo, funcao: atirador, vida: 3300, armadura: 50, rm: 50, dda: 240, velocidade_ataque: 1.3,
        status: {"% Critical Rate": 50}, alvo_aliado: 0}
     aliados:
     - {nome: Atirador aliado, funcao: atirador, vida: 3800, armadura: 45, rm: 40, dda: 230, velocidade_ataque: 1.3,
@@ -412,12 +447,14 @@ cenarios:
   dupla_contra_dupla:
     nome: Dupla contra dupla
     grupo: suporte
+    mortais: true
+    escala_com_minuto: true
     duracao: 60
     nota: A build e um atirador aliado contra um atirador e um encantador, como na fase de rotas da dupla.
     atacantes:
-    - {nome: Atirador inimigo, funcao: atirador, vida: 5000, armadura: 45, rm: 40, dda: 220, velocidade_ataque: 1.3,
+    - {nome: Atirador inimigo, funcao: atirador, vida: 2800, armadura: 45, rm: 40, dda: 220, velocidade_ataque: 1.3,
        status: {"% Critical Rate": 50}, alvo_aliado: 0}
-    - {nome: Encantador inimigo, funcao: suporte, vida: 4500, armadura: 45, rm: 45, dda: 50, velocidade_ataque: 0.7,
+    - {nome: Encantador inimigo, funcao: suporte, vida: 2500, armadura: 45, rm: 45, dda: 50, velocidade_ataque: 0.7,
        status: {Ability Power: 300},
        pulsos: [{nome: Escudo de encantador, tipo: escudo, base: 180, pdh: 0.5, a_cada: 7, alcance: 700, duracao: 2.5},
                 {nome: Toque de encantador, tipo: dano, dano_tipo: magico, base: 120, pdh: 0.4, a_cada: 5, alcance: 650,
@@ -427,7 +464,8 @@ cenarios:
        status: {"% Critical Rate": 50}}
 
   # ---------------------------------------------------------------- corrida (Rodada 15)
-  # Atacantes que MORREM (`mortais: true`): a luta acaba quando a barra de um dos lados zera. Matar acaba com o dano
+  # Atacantes que MORREM (`mortais: true`, como a luta de equipe, as ameaças e os de suporte): a luta acaba quando a
+  # barra de um dos lados zera. Matar acaba com o dano
   # deles, então dano, dano devolvido e corta-cura valem o que valem no jogo. Os atacantes crescem com o minuto testado
   # (`escala_com_minuto`: Vida e dano de um campeão daquela fase; os números abaixo são os do minuto 25). A medida é a
   # corrida das barras de vida (Measures.race; parte `corrida` de nota_builds_7_3d.yml).
@@ -488,6 +526,45 @@ cenarios:
        pulsos: [{nome: Escudo aliado, tipo: escudo, base: 220, pdh: 0.5, a_cada: 6, alcance: 700, duracao: 2.5},
                 {nome: Cura aliada, tipo: cura, base: 120, pdh: 0.35, a_cada: 7, alcance: 700},
                 {nome: Lentidão aliada, tipo: controle, a_cada: 9, alcance: 700, controle: lentidao, lentidao: 0.4, duracao: 1.5}]}
+
+  # Finalizadores (Rodada 15): testam a capacidade de não ser finalizado (Vida, escudos, Anjo Guardião, cura na hora certa).
+  corrida_critico_execucao:
+    nome: Corrida contra crítico com execução
+    grupo: corrida
+    duracao: 60
+    mortais: true
+    escala_com_minuto: true
+    nota: 'Um atirador de crítico completo: A Coletora (executa abaixo de 5% da Vida), Lembranças do Lorde Dominik, Gume do Infinito e Colhedor de Essência. Testa aguentar a rajada de críticos e não ser executado.'
+    atacantes:
+    - {nome: Atirador de crítico, funcao: atirador, vida: 3400, armadura: 90, rm: 60, dda: 160, velocidade_ataque: 1.5,
+       itens: [A Coletora, Lembranças do Lorde Dominik, Gume do Infinito, Colhedor de Essência]}
+  corrida_ap_explosivo:
+    nome: Corrida contra mago explosivo
+    grupo: corrida
+    duracao: 60
+    mortais: true
+    escala_com_minuto: true
+    nota: 'Um mago de explosão que finaliza: o Orbe do Infinito dá 20% a mais de dano às habilidades contra quem tem menos de 40% da Vida, e o combo cresce com a Vida que falta. Testa sair da janela de finalização.'
+    atacantes:
+    - {nome: Mago explosivo, funcao: mago, vida: 3200, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
+       status: {Ability Power: 420, Magic Penetration: 15}, itens: [Orbe do Infinito],
+       pulsos: [{nome: Combo explosivo, tipo: dano, dano_tipo: magico, base: 420, pdh: 0.9, a_cada: 8, alcance: 650,
+                 vida_perdida_alvo: 0.12, controle: atordoamento, duracao: 0.75},
+                {nome: Toque de mago, tipo: dano, dano_tipo: magico, base: 100, pdh: 0.35, a_cada: 2.5, alcance: 650}]}
+  corrida_verdadeiro_finalizacao:
+    nome: Corrida contra queimadura verdadeira
+    grupo: corrida
+    duracao: 60
+    mortais: true
+    escala_com_minuto: true
+    nota: 'Um causador de dano genérico, como um Smolder muito acumulado, uma Shyvana, uma Vayne ou uma Fiora: Dano Verdadeiro contínuo que cresce com a Vida que falta e executa abaixo de 12% da Vida. Armadura e RM não ajudam; Vida, escudos e cura sim.'
+    atacantes:
+    - {nome: Queimador verdadeiro, funcao: lutador, vida: 3600, armadura: 90, rm: 60, dda: 200, velocidade_ataque: 1.3,
+       status: {"% Ability Haste": 40},
+       pulsos: [{nome: Queimadura verdadeira, tipo: dano, dano_tipo: verdadeiro, base: 70, dda: 0.25, a_cada: 1.5, alcance: 550,
+                 vida_perdida_alvo: 0.03},
+                {nome: Golpe de finalização, tipo: dano, dano_tipo: verdadeiro, base: 180, dda: 0.6, a_cada: 6, alcance: 550,
+                 vida_perdida_alvo: 0.08, executa_abaixo: 0.12}]}
 
 # Varreduras do relatório Completo: cada estágio muda um atributo do atacante de referência e mantém os outros.
 # Os 5 estágios de cada dimensão são editáveis na tela (e voltam a estes com "Restaurar o padrão").
@@ -551,6 +628,9 @@ relatorios:
     - {cenario: corrida_lutador, peso: 1}
     - {cenario: corrida_atirador_peel, peso: 1}
     - {cenario: corrida_com_peel_aliado, peso: 1}
+    - {cenario: corrida_critico_execucao, peso: 1}
+    - {cenario: corrida_ap_explosivo, peso: 1}
+    - {cenario: corrida_verdadeiro_finalizacao, peso: 1}
   ameacas:
     nome: Ameaças (Rodada 14)
     cenarios:

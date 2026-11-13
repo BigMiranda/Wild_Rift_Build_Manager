@@ -34,8 +34,8 @@ existe.
 
    O relatório é `corrida`.
 3. ✅ **A nota**: parte nova `corrida` em `BuildScore`, na mesma escala das outras. Os pontos são a parte da distância
-   entre a corrida do campeão sem itens e 100 que a build fecha (`racePoints`). As leituras vêm das lutas da defensiva,
-   com peso `corrida.peso_projetada` 0,5, e do relatório `corrida`, com peso 1. Pesos por classe em
+   entre a corrida do campeão sem itens e 100 que a build fecha (`racePoints`). As leituras vêm do relatório
+   `corrida`; as leituras projetadas das lutas da defensiva saíram na parte 5. Pesos por classe em
    `nota_builds_7_3d.yml`:
 
    | Classe | Antes | Agora |
@@ -81,4 +81,49 @@ existe.
 
 O atirador de crítico é vulnerável sozinho e volta ao empate com o suporte ao lado.
 
-Cada parte foi conferida nos testes (`LifebarRaceTest`). A campanha roda de novo antes de publicar.
+## Parte 5: imortais inalvejáveis, a corrida pelo ritmo do fim e os finalizadores
+
+A primeira campanha com a corrida mostrou o problema da Vida inflada. Os atacantes imortais tinham entre 6.000 e 9.000
+de Vida, e por isso o que depende da Vida máxima do alvo valia cerca de 3 vezes mais: o Ruptor Divino cura 6% dela a
+cada acerto. As 10 melhores builds do Ornn levavam Ruptor Divino e itens de velocidade de ataque, e o Renekton chegava a
+1.380 de índice contra artilharia. Decisões do usuário (13/11/2026):
+
+1. ✅ **Os imortais ficam inalvejáveis** (`Dummy.untargetable`, `untargetableUntil` infinito): ninguém os ataca,
+   conjura neles, controla ou dispara efeitos ao acertar. Medem só quanto a build aguenta. Ficaram assim os 1x1 do
+   Básico, o "5 contra 1" e os cenários do usuário.
+   - O resto passou a ter atacantes que morrem e que crescem com o minuto, aliados também: a luta de equipe, as
+     ameaças e os de suporte.
+   - A Vida dos atacantes é a de um campeão do minuto 25, 55% da antiga.
+   - A utilidade (controle aplicado e dano absorvido) passou a vir das lutas da corrida.
+   - O passo `ameacas` da campanha compara pela corrida.
+2. ✅ **A corrida pelo ritmo do fim**: não importa quanta Vida sobrou, e sim se o lado iria zerar. O tempo até cada lado
+   zerar é a hora da morte ou, para quem está vivo, a Vida no fim sobre o ritmo em que caía na última janela da luta.
+   - A janela é um terço da luta, de 4 a 15 s. A Vida é registrada a cada segundo (`Arena.Input.healthTrail`,
+     `FighterStats.healthTrail`, desligado fora da efetividade).
+   - O ritmo é a diferença entre as médias das duas metades da janela. Quem oscila entre 1 e 400 de Vida até o fim
+     (sustain) segura e nunca zera.
+   - `corrida = 100 x meu tempo / (meu + o deles)`.
+3. ✅ **Finalizadores** (relatório `corrida`):
+   - crítico com execução: A Coletora, Lembranças do Lorde Dominik, Gume do Infinito e Colhedor de Essência;
+   - mago explosivo com o Orbe do Infinito;
+   - queimadura de Dano Verdadeiro que cresce com a Vida que falta e executa abaixo de 12%.
+
+   Dois itens passaram a ser modelados de verdade: A Coletora (`executa`, abaixo de 5% da Vida) e o Orbe do Infinito
+   (`amplifica` com `alvo_abaixo: 0.40`). Os pulsos dos bonecos ganharam `vida_perdida_alvo` e `executa_abaixo`.
+
+**Ornn aos 20 min**, depois desta parte:
+
+| Teste | Tanque | Ruptor Divino |
+|---|---|---|
+| Crítico (resistência) | 89,4 | 71,5 |
+| Misto (resistência) | 90,5 | 75,0 |
+| Média da corrida | parecida | parecida |
+
+**Kalista de crítico aos 20 min**, corrida:
+
+| Teste | Kalista de crítico | Com Anjo Guardião |
+|---|---|---|
+| Crítico com execução | 35,7 | 46,0 |
+| Atirador com suporte | 36,8 | 48,6 |
+
+Golden inalterado. Cada parte foi conferida nos testes (`LifebarRaceTest`).

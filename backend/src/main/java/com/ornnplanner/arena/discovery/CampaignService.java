@@ -527,7 +527,9 @@ public class CampaignService {
             }
             List<com.ornnplanner.arena.EffectModel.Outcome> out = effect.evaluate(req);
             for (int k = 0; k < tests.size(); k++) {
-                Double v = out.get(k).index;
+                // Rodada 15: the threat fights are mortal: the build that wins the lifebar race best
+                com.ornnplanner.arena.EffectModel.Outcome o = out.get(k);
+                Double v = tests.get(k).mortal ? (o.build == null || o.reference == null ? null : o.build.race) : o.index;
                 scores[i][k] = v == null ? Double.NEGATIVE_INFINITY : v;
             }
         }

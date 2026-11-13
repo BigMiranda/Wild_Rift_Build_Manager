@@ -10,68 +10,85 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Rodada 15, the lifebar race: the game is about the enemy lifebar going to zero before yours. Damage dealt (reflected
- * included), healing cut by Grievous Wounds and kills take enemy lifebar; the race compares it with the own lifebar lost.
+ * Rodada 15, the lifebar race: the time each side takes to go to zero (its death, or its health at the end over the pace
+ * it was losing it in the last seconds). Sustain that holds its health at the end never goes to zero, even near zero.
  */
 class LifebarRaceTest {
 
-    private static ArenaModel.FighterStats fighter(double max, double taken, double healed, Double death) {
+    /** A fighter whose health goes linearly from {@code from} to {@code to} over {@code seconds}, then stays. */
+    private static ArenaModel.FighterStats fighter(double max, double[] trail, Double death) {
         ArenaModel.FighterStats f = new ArenaModel.FighterStats();
         f.maxHealth = max;
-        f.taken = taken;
-        f.healed = healed;
+        f.healthTrail = new ArrayList<>();
+        for (double h : trail) {
+            f.healthTrail.add(h);
+        }
+        f.health = trail.length == 0 ? max : trail[trail.length - 1];
         f.deathTime = death;
         return f;
     }
 
-    private static EffectModel.Measures race(ArenaModel.FighterStats me, ArenaModel.FighterStats... enemies) {
+    private static double[] line(double from, double to, int seconds) {
+        double[] t = new double[seconds];
+        for (int k = 0; k < seconds; k++) {
+            t[k] = from + (to - from) * (k + 1) / seconds;
+        }
+        return t;
+    }
+
+    private static EffectModel.Measures race(double duration, ArenaModel.FighterStats me, ArenaModel.FighterStats... enemies) {
         ArenaModel.Result r = new ArenaModel.Result();
-        r.duration = 30;
+        r.duration = duration;
         r.fighters = new ArrayList<>();
         r.fighters.add(me);
         r.fighters.addAll(List.of(enemies));
-        return EffectTestService.measure(r, enemies.length, 0, 30);
+        return EffectTestService.measure(r, enemies.length, 0, duration);
     }
 
     @Test
-    void evenPaceIsFifty() {
-        EffectModel.Measures m = race(fighter(2000, 1000, 0, null), fighter(4000, 2000, 0, null));
-        assertEquals(0.5, m.enemyLost, 1e-9);
-        assertEquals(0.5, m.teamLost, 1e-9);
-        assertEquals(50, m.race, 1e-9);
+    void bothLosingAtTheSamePaceIsFifty() {
+        EffectModel.Measures m = race(60, fighter(3000, line(3000, 1500, 60), null), fighter(3000, line(3000, 1500, 60), null));
+        assertEquals(50, m.race, 1e-6);
+        assertEquals(120, m.raceMine, 1e-6);
     }
 
     @Test
-    void healingCutTakesEnemyLifebar() {
-        // the same damage; with Grievous Wounds the enemy healed 600 instead of 1200
-        double without = race(fighter(2000, 1000, 0, null), fighter(4000, 2400, 1200, null)).race;
-        double with = race(fighter(2000, 1000, 0, null), fighter(4000, 2400, 600, null)).race;
-        assertTrue(with > without, with + " > " + without);
+    void sustainNearZeroThatHoldsWins() {
+        // the build drops to about 200 in 4 s and swings between 1 and 400 until the end; the enemy keeps losing
+        double[] trail = new double[60];
+        for (int k = 0; k < 60; k++) {
+            trail[k] = k < 4 ? 3000 - 700 * (k + 1) : (k % 2 == 0 ? 1 : 400);
+        }
+        EffectModel.Measures m = race(60, fighter(3000, trail, null), fighter(3000, line(3000, 1500, 60), null));
+        assertNull(m.raceMine, "it never goes to zero");
+        assertEquals(100, m.race, 1e-9);
     }
 
     @Test
-    void aKillCountsWhole() {
-        EffectModel.Measures m = race(fighter(2000, 500, 0, null), fighter(4000, 4000, 0, 12.0));
-        assertEquals(1, m.enemyLost, 1e-9);
-        assertEquals(100 * 1 / 1.25, m.race, 1e-9);
+    void aKillEndsTheirClock() {
+        EffectModel.Measures m = race(12, fighter(2000, line(2000, 1600, 12), null), fighter(4000, line(4000, 0, 12), 12.0));
+        assertEquals(12, m.raceEnemy, 1e-9);
+        assertTrue(m.race > 80, "won the race: " + m.race);
     }
 
     @Test
-    void dyingLosesTheWholeLifebar() {
-        EffectModel.Measures m = race(fighter(2000, 2600, 0, 20.0), fighter(4000, 2000, 0, null));
-        assertEquals(1, m.teamLost, 1e-9);
-        assertEquals(100 * 0.5 / 1.5, m.race, 1e-9);
+    void dyingFirstLoses() {
+        EffectModel.Measures m = race(20, fighter(2000, line(2000, 0, 20), 20.0), fighter(4000, line(4000, 3000, 20), null));
+        assertEquals(20, m.raceMine, 1e-9);
+        assertTrue(m.race < 30, "lost the race: " + m.race);
     }
 
     @Test
-    void immortalAttackersProjectPastOneLifebar() {
-        // the durability scenarios: the attacker never dies, the build took two of its lifebars before dying
-        EffectModel.Measures m = race(fighter(2000, 2500, 0, 60.0), fighter(4000, 8000, 0, null));
-        assertEquals(2, m.enemyLost, 1e-9);
-        assertTrue(m.race > 50, "it would have won: " + m.race);
+    void bothHoldingIsEven() {
+        EffectModel.Measures m = race(60, fighter(3000, line(3000, 2500, 60), null), fighter(3000, line(3000, 2500, 60), null));
+        // both lose 500 in 60 s, but at a steady pace: neither holds, the race is even
+        assertEquals(50, m.race, 1e-6);
+        assertEquals(50, EffectTestService.raceOf(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY), 1e-9);
+        assertEquals(0, EffectTestService.raceOf(30, Double.POSITIVE_INFINITY), 1e-9);
     }
 
     @Test

@@ -109,6 +109,8 @@ public class Arena {
         public Combo script;
         /** A ragdoll (the lab): how it moves and the effects it applies; null = a champion. */
         public ArenaModel.Dummy dummy;
+        /** Rodada 15: record its health at each whole second ({@code FighterStats.healthTrail}; the effectiveness tests). */
+        public boolean healthTrail;
         /** What the automatic brain picked for it (null = a brain set by hand). */
         public AutoBrain.Choice autoChoice;
         /** Share of its health it starts with (null = full): drills of training, the lab. */
@@ -148,6 +150,7 @@ public class Arena {
             c.combos = combos;
             c.script = script;
             c.dummy = dummy;
+            c.healthTrail = healthTrail;
             c.startHealth = startHealth;
             c.startCooldowns = startCooldowns;
             c.startResource = startResource;
@@ -337,6 +340,7 @@ public class Arena {
         // states of the sheets
         double invulnerableUntil = -1;
         double untargetableUntil = -1;
+        double nextTrail = 1;
         /** The invisibility on, with what reveals it (null = none, or Vayne's own). */
         Map<String, Object> stealth;
         /** The form of the sheet it is in (formas); null = its base sheet. */
@@ -1059,6 +1063,7 @@ public class Arena {
             tickPeriodic();
             tickSafeZone();
             trackEvents();
+            trail();
             if (now >= nextFrame - 1e-9) {
                 frame();
                 nextFrame += FRAME_EVERY;
@@ -1163,6 +1168,9 @@ public class Arena {
             u.maxHp += stacks * num(map(in.kit.get("acumulos_permanentes")).get("vida"), 0);
         }
         u.hp = in.startHealth == null ? u.maxHp : Math.max(1, u.maxHp * Math.min(1, in.startHealth));
+        if (in.dummy != null && in.dummy.untargetable) {
+            u.untargetableUntil = Double.MAX_VALUE;
+        }
         in.f.shieldSources.forEach((src, v) -> {
             if (!manualItems.contains(src)) {
                 u.shield.merge(key(u, src), v, Double::sum);
@@ -5078,6 +5086,10 @@ public class Arena {
             if (Boolean.TRUE.equals(e.p.get("vida_alta")) && a.hp <= 0.5 * a.maxHp) {
                 continue;
             }
+            // Rodada 15 (Orbe do Infinito): only against a target below this share of its max health
+            if (e.p.get("alvo_abaixo") != null && t.hp >= num(e.p.get("alvo_abaixo"), 0) * t.maxHp) {
+                continue;
+            }
             double pct = num(e.p.get("pct"), 0);
             if (e.p.get("pct_por_s") != null) {
                 pct = Math.min(num(e.p.get("max"), 1), num(e.p.get("pct_por_s"), 0) * Math.max(0, now - a.combatSince));
@@ -5234,6 +5246,7 @@ public class Arena {
             onHit(a, t, type, kind);
         }
         afterDamage(a, t, dmg, type, kind, critPart);
+        itemExecute(a, t, kind);
         if (now < a.firstStrikeUntil && !"Primeiro Ataque".equals(source) && kind != REFLECT && dmg > 0) {
             deal(a, t, dmg * 0.07, "verdadeiro", "Primeiro Ataque", ITEM, 0);
         }
@@ -6586,6 +6599,9 @@ public class Arena {
                             + typeText(type) + c.targetText(), c.total, type, c.detail());
                     break;
                 }
+                case "executa":
+                    value(u, e.item, "Executa campeões abaixo de " + pctText(num(p.get("abaixo"), 0.05)) + " da Vida máxima", null, null, null);
+                    break;
                 case "espinhos": {
                     Calc c = new Calc().flat(num(p.get("dano"), 0), null).ratio(p, "armadura_bonus", bn(u, Stats.ARMOR), ARMOR_BONUS)
                             .ratio(p, "vida_bonus", bn(u, Stats.MAX_HEALTH), HP_BONUS);
@@ -7136,6 +7152,31 @@ public class Arena {
      * penetration, its items' ability effects: burns, shred, spellblade); a shield or heal goes to the ally with the
      * lowest share of health in range, itself included.
      */
+    /**
+     * Rodada 15 (A Coletora): damage that leaves an enemy champion below the item's threshold of its max health executes
+     * it. Not on minions, monsters or structures.
+     */
+    private void itemExecute(U a, U t, int kind) {
+        if (t.dead || t.npc || a.team() == t.team() || kind == REFLECT) {
+            return;
+        }
+        for (ItemEffect e : a.f.effects) {
+            if ("executa".equals(e.kind()) && t.hp > 0 && t.hp < num(e.p.get("abaixo"), 0.05) * t.maxHp) {
+                count(a, "execucao");
+                deal(a, t, (t.hp + t.shieldLeft()) * 3 + 1, "verdadeiro", e.item, ITEM, 0);
+                return;
+            }
+        }
+    }
+
+    /** A ragdoll's pulse that executes (Rodada 15, the finishers' tests). */
+    private void pulseExecute(U u, U t, ArenaModel.Pulse p, String src) {
+        if (p.executeBelow > 0 && !t.dead && t.hp < p.executeBelow * t.maxHp) {
+            count(u, "execucao");
+            deal(u, t, (t.hp + t.shieldLeft()) * 3 + 1, "verdadeiro", src, ABILITY, 0);
+        }
+    }
+
     private void dummyPulses(U u) {
         ArenaModel.Dummy d = u.in.dummy;
         if (d == null || d.pulses == null || d.pulses.isEmpty() || !u.canAct()) {
@@ -7154,10 +7195,12 @@ public class Arena {
                     continue;
                 }
                 fireAll(u, "ao_conjurar", null);
+                amount += p.missingHealth * Math.max(0, t.maxHp - t.hp);
                 if (amount > 0) {
                     deal(u, t, amount, p.type == null ? "magico" : p.type, src, ABILITY, 0);
                     onAbilityItems(u, t);
                 }
+                pulseExecute(u, t, p, src);
                 pulseControl(u, t, p);
             } else {
                 U best = null;
@@ -9467,6 +9510,22 @@ public class Arena {
         Boolean before = u.trackedOn.put(source, on);
         if (before == null ? on : before != on) {
             u.r.toggles.add(new ArenaModel.Toggle(t, source, on));
+        }
+    }
+
+    /** Rodada 15: the health of the units that ask for it, at each whole second. */
+    private void trail() {
+        for (U u : units) {
+            if (!u.in.healthTrail) {
+                continue;
+            }
+            while (now >= u.nextTrail - 1e-9) {
+                if (u.r.healthTrail == null) {
+                    u.r.healthTrail = new ArrayList<>();
+                }
+                u.r.healthTrail.add(u.dead ? 0 : Math.round(u.hp * 10) / 10.0);
+                u.nextTrail += 1;
+            }
         }
     }
 

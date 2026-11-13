@@ -29,8 +29,10 @@
 #                  até `max` (por 3s; os escudos que ele já tem e os que receber)
 #   reduz_resistencia  cada acerto (`gatilho`) reduz a `resistencia` (armadura | rm) do alvo em `por_acerto`, até `max`
 #                  por `duracao` s
+#   executa        (Rodada 15) dano que deixa um campeão inimigo abaixo de `abaixo` da Vida máxima o executa
 #   amplifica      dano causado a mais: `pct` (+ `pct_por_s` em combate até `max`); `dano_tipo` restringe; `alvo_vida_bonus`
-#                  (Lembranças: até `max` com 1.200 de Vida adicional do alvo); `vida_alta`: só acima de 50% de Vida
+#                  (Lembranças: até `max` com 1.200 de Vida adicional do alvo); `vida_alta`: só acima de 50% de Vida; `alvo_abaixo`:
+#                  só contra alvos abaixo dessa parte da Vida máxima (Orbe do Infinito)
 #   amplifica_alvo inimigos sofrem `pct` a mais (`aura`: todos os inimigos, com `dano_tipo`; `marca`: o alvo de uma
 #                  habilidade por `duracao` s)
 #   reduz_dano     dano sofrido a menos: `pct` contra `contra` (ataque | critico)
@@ -75,6 +77,11 @@ itens:
   Criafendas: [{passiva: "Corrupção do Vazio", tipo: amplifica, pct_por_s: 0.02, max: 0.08}]
   Passos Imortais: [{tipo: amplifica, pct: 0.05, vida_alta: true}]
   Lança de Shojin: [{tipo: amplifica, pct_por_s: 0.03, max: 0.12, so_habilidade: true}]
+  # Rodada 15: Ruína Inevitável (habilidades causam 20% a mais contra quem tem menos de 40% de Vida)
+  Orbe do Infinito: [{passiva: "Ruína Inevitável", tipo: amplifica, pct: 0.20, alvo_abaixo: 0.40, so_habilidade: true}]
+
+  # ------------------------------------------------------------- Execução (Rodada 15)
+  A Coletora: [{passiva: "Morte Abrupta", tipo: executa, abaixo: 0.05}]
 
   # ------------------------------------------------------------- Redução de dano sofrido
   Botas Galvanizadas de Aço: [{tipo: reduz_dano, pct: 0.10, contra: ataque}]

@@ -59,7 +59,8 @@ export function weightedIndex(report, outcomes) {
   let w = 0;
   report.tests.forEach((e, i) => {
     const o = outcomes[i];
-    if (o?.index != null && Number.isFinite(o.index)) {
+    // Rodada 15: a mortal fight ends when one side is gone; its durability score does not apply
+    if (o?.index != null && Number.isFinite(o.index) && !o.mortal) {
       sum += (e.weight ?? 1) * o.index;
       w += e.weight ?? 1;
     }
@@ -82,7 +83,7 @@ export function weakPoints(report, outcomes) {
   const mean = weightedIndex(report, outcomes);
   if (mean == null) return [];
   return report.tests.map((e, i) => ({ key: e.key, o: outcomes[i] }))
-    .filter((x) => x.o?.index != null && x.o.index < mean * 0.7)
+    .filter((x) => x.o?.index != null && !x.o.mortal && x.o.index < mean * 0.7)
     .sort((a, b) => a.o.index - b.o.index);
 }
 

@@ -10,12 +10,13 @@
 #   utilidade  o controle aplicado (s de controle por 10 s de luta, x `utilidade.controle_por_10s`) e a parte do dano
 #              do time que a build absorveu nos cenários com aliados (`utilidade.absorvido`), até 100.
 #   corrida    (Rodada 15) a corrida das barras de vida: o jogo é sobre a barra inimiga zerar antes da sua, também para
-#              tanques. Em cada luta, a parte da barra inimiga que o lado da build tirou (dano, dano devolvido, menos a
-#              cura e os escudos que eles receberam: a cura cortada pelas Feridas Dolorosas conta; quem morre conta
-#              inteiro) contra a parte da própria barra que perdeu: corrida = 100 x inimiga / (inimiga + minha), 50 =
-#              empate. Em pontos: quanto da distância da referência até 100 a build fecha. Vem de dois lugares: as lutas
-#              da defensiva (atacantes imortais: a corrida é projetada, peso `corrida.peso_projetada`) e o relatório
-#              `corrida` da efetividade (atacantes que morrem: matar acaba com o dano deles).
+#              tanques. Nas lutas do relatório `corrida` da efetividade (atacantes que morrem), o tempo até cada lado
+#              zerar: quando morreu, ou a Vida no fim pelo ritmo em que a perdia nos últimos segundos. Quem segura a Vida
+#              no fim (sustain, mesmo perto de zero) nunca zera. Corrida = 100 x meu tempo / (meu + o deles), 50 =
+#              empate, 100 = eu não zero e eles sim. Dano, dano devolvido, cura cortada e abates encurtam o deles. Em
+#              pontos: quanto da distância da referência até 100 a build fecha.
+#   A utilidade (controle aplicado e dano do time absorvido) também vem dessas lutas: nos testes de resistência os
+#   atacantes não podem ser alvejados.
 #   duelos     opcional: x1 contra os representativos de cada classe (fichas A ou B), com o cérebro automático, no
 #              mesmo minuto: 100 x (vida que sobra minha - a do adversário). Desligado por padrão (peso 0): precisa de
 #              builds salvas dos adversários e custa uma luta por par.
@@ -74,7 +75,6 @@ utilidade:
 
 corrida:
   relatorio: corrida      # efetividade_7_3d.yml: atacantes que morrem
-  peso_projetada: 0.5     # cada luta da defensiva (atacantes imortais) vale metade de uma luta de verdade
 
 duelos:
   peso: 0

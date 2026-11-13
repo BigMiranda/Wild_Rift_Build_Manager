@@ -238,14 +238,16 @@ public final class EffectModel {
         public double fightLength;
         public double maxHealth;
         /**
-         * Rodada 15, the lifebar race: the share of the enemies' lifebar the build's side took (damage, reflected damage,
-         * minus the healing and shields they got; a dead one counts whole; above 1 = the immortal attackers would have
-         * died), the share of its own side's lifebar it lost (a dead one whole), and the race,
-         * 100 x enemyLost / (enemyLost + teamLost): 50 = both lifebars go at the same pace, 100 = it loses nothing.
+         * Rodada 15, the lifebar race: the share of the enemies' lifebar gone at the end and of its own side's (a dead one
+         * whole), and the race, from the time each side takes to go to zero ({@code EffectTestService.race}): 50 = both
+         * at the same time, 100 = it never does and they do.
          */
         public double enemyLost;
         public double teamLost;
         public double race;
+        /** Rodada 15: seconds until each side's lifebar is gone (its death, or the projection at its late pace); null = never. */
+        public Double raceMine;
+        public Double raceEnemy;
     }
 
     /** A grade of the score: its key and the least score it takes (null = everything below the others). */
@@ -260,6 +262,8 @@ public final class EffectModel {
         public String testName;
         /** Rodada 15: what happens in the scenario, in one or two sentences (its {@code nota}). */
         public String testNote;
+        /** Rodada 15: its attackers die (a race to read); false = they are untargetable and never die (durability only). */
+        public boolean mortal;
         public Measures build;
         public Measures reference;
         /**

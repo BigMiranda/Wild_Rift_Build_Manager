@@ -91,6 +91,10 @@ public final class ArenaModel {
          */
         public String control;
         public double slow = 0.3;
+        /** Rodada 15, finishers: extra damage of this share of the target's missing health. */
+        public double missingHealth;
+        /** Rodada 15, finishers: the hit executes a target left below this share of its max health (0 = never). */
+        public double executeBelow;
 
         public Pulse copy() {
             Pulse p = new Pulse();
@@ -105,6 +109,8 @@ public final class ArenaModel {
             p.duration = duration;
             p.control = control;
             p.slow = slow;
+            p.missingHealth = missingHealth;
+            p.executeBelow = executeBelow;
             return p;
         }
     }
@@ -160,6 +166,12 @@ public final class ArenaModel {
          */
         public boolean immortal;
         /**
+         * Rodada 15: no one can target it (attacks, abilities, controls, on-hit effects): the durability tests' attackers,
+         * which only measure how much the build takes. Without it, a build fed on them (lifesteal, healing by the target's
+         * max health) as on an endless lifebar.
+         */
+        public boolean untargetable;
+        /**
          * Growing resistances (an offensive effectiveness target): armor and magic resist go from their values to this
          * one over {@link #growSeconds} from its first second in combat, and stay (null = fixed).
          */
@@ -211,6 +223,7 @@ public final class ArenaModel {
             d.attackSpeed = attackSpeed;
             d.attackRange = attackRange;
             d.immortal = immortal;
+            d.untargetable = untargetable;
             d.growTo = growTo;
             d.growSeconds = growSeconds;
             d.dashEvery = dashEvery;
@@ -590,6 +603,9 @@ public final class ArenaModel {
          */
         @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
         public Double outOfFight;
+        /** Rodada 15: its health at each whole second (only when its input asks, {@code Arena.Input.healthTrail}). */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public List<Double> healthTrail;
         /** Where it ended the fight. */
         public double endX;
         public double endY;

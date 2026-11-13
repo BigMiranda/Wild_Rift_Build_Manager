@@ -87,10 +87,10 @@ class PassiveValueTest {
         return values.measure(q).get(0);
     }
 
-    /** 🎯 The attackers heal, so cutting it is worth gold: they never die, it shows as damage that stays dealt. */
+    /** 🎯 The attackers heal, so cutting it is worth gold (Rodada 15: in a fight where they die; no one can hit the durability tests' attackers). */
     @Test
     void cuttingTheAttackersHealingIsWorthGold() {
-        Reading r = measure(build("corta-cura", "Coração de Aço", "Armadura de Espinhos"), "Armadura de Espinhos", "Entrelaçar", 26, "atirador_alimentado");
+        Reading r = measure(build("corta-cura", "Coração de Aço", "Armadura de Espinhos"), "Armadura de Espinhos", "Entrelaçar", 26, "corrida_lutador");
         System.out.printf("Entrelaçar: %.0f gold, %.1f%% of the score%n", r.gold, r.lossPct);
         assertTrue(r.gold > 0, "Entrelaçar is worth " + r.gold);
         assertTrue(r.damage, "it reads as damage: the time to die does not change");
@@ -149,8 +149,8 @@ class PassiveValueTest {
     /** The passive off changes the fight; the same builds give the same reading (the cache keys differ by the name). */
     @Test
     void measuringIsDeterministicAndReadsThePassiveOff() {
-        Reading a = measure(build("e", "Desespero Eterno", "Armadura de Espinhos"), "Desespero Eterno", "Angústia", 15, "critico");
-        Reading b = measure(build("f", "Desespero Eterno", "Armadura de Espinhos"), "Desespero Eterno", "Angústia", 15, "critico");
+        Reading a = measure(build("e", "Desespero Eterno", "Armadura de Espinhos"), "Desespero Eterno", "Angústia", 15, "corrida_lutador");
+        Reading b = measure(build("f", "Desespero Eterno", "Armadura de Espinhos"), "Desespero Eterno", "Angústia", 15, "corrida_lutador");
         assertNotNull(a);
         assertTrue(a.lossPct != 0, "the passive heals in the fight");
         assertEquals(a.scoreOn, b.scoreOn, 1e-9);

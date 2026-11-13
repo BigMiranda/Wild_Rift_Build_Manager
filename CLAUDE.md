@@ -119,13 +119,16 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   archetype); lane styles per match seat (`estilos_rota` in macro_<patch>.yml, default identical to before); campaign
   steps `ameacas` and `estilos`; `GuideService.suggest` branches on the lane rival's subclass (style) and the enemy
   subclasses (build).
-- Rodada 15 (`docs/rodada-15.md`): the lifebar race. `EffectTestService.race` gives every effectiveness fight
-  `Measures.enemyLost` / `teamLost` / `race` (100 x enemy / (enemy + own); damage, reflected damage, healing cut and kills
-  take enemy lifebar; with immortal attackers it is a projection). Scenarios with `mortais: true` (group and report
-  `corrida`) have attackers that die. `BuildScore.RACE` ("corrida") is a fifth score part: points = the gap from the
-  no-item reference's race to 100 closed (`racePoints`), from the defensive fights (weight `corrida.peso_projetada`) and
-  the `corrida` report. Every scenario and offensive target has a `nota` shown in the screens and on the site
-  (`Outcome.testNote`, `targetNote`).
+- Rodada 15 (`docs/rodada-15.md`): two kinds of effectiveness test. Without `mortais` (basico 1x1, 5 contra 1, user
+  tests) the attackers never die and are untargetable (`Dummy.untargetable`): durability only. With `mortais: true`
+  (team fight, threats, support, the `corrida` report) both sides die and grow with the minute. The lifebar race
+  (`EffectTestService.race`): each side's time to zero, its death or its end health over its late pace from the
+  per-second `FighterStats.healthTrail` (`Arena.Input.healthTrail`, off outside effectiveness); a side that holds never
+  goes to zero; `race = 100 x mine / (mine + theirs)`. `BuildScore.RACE` ("corrida") is a fifth score part from the
+  `corrida` report (`racePoints`: the gap from the no-item reference to 100 closed); utility is read in those fights.
+  A Coletora (`executa`) and Orbe do Infinito (`amplifica.alvo_abaixo`) are modeled; ragdoll pulses have
+  `vida_perdida_alvo` / `executa_abaixo`. Every scenario and offensive target has a `nota` (`Outcome.testNote`,
+  `targetNote`, `Outcome.mortal`).
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.

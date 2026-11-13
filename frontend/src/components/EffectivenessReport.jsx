@@ -124,9 +124,10 @@ export function BasicResult({ report, outcomes, names }) {
                   <td title={o?.testNote ?? undefined}>{o?.testName ?? names[e.key] ?? e.key}
                     {o?.testNote && <small className="muted test-note">{o.testNote}</small>}</td>
                   <td>{n1(e.weight ?? 1)}</td>
-                  <td>{o?.error ? <span className="error">{o.error}</span> : <IndexBar outcome={o} />}</td>
-                  <td className="race-cell" title={m ? t('efx.raceCell', { enemy: n0(100 * m.enemyLost), mine: n0(100 * m.teamLost) }) : undefined}>
-                    {m ? <>{n0(m.race)}{o?.reference && <small className="muted"> / {n0(o.reference.race)}</small>}</> : '—'}</td>
+                  <td>{o?.error ? <span className="error">{o.error}</span>
+                    : o?.mortal ? <span className="muted" title={t('efx.indexMortal')}>—</span> : <IndexBar outcome={o} />}</td>
+                  <td className="race-cell" title={m && o?.mortal ? t('efx.raceCell', { enemy: n0(100 * m.enemyLost), mine: n0(100 * m.teamLost) }) : t('efx.raceNone')}>
+                    {m && o?.mortal ? <>{n0(m.race)}{o?.reference && <small className="muted"> / {n0(o.reference.race)}</small>}</> : '—'}</td>
                   <td>{ttd(m)}</td>
                   <td>{ttd(o?.reference)}</td>
                   <td>{netRate(m)}</td>
