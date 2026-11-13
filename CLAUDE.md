@@ -139,7 +139,11 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   ridge model in log-odds (`BuildModel`: a coefficient per order, a correction per condition, penalty by 5-fold CV) is
   what the guide's "ajustada" uses; `POST /runs/{id}/builds` remeasures them, `POST /runs/{id}/report` is the report of
   favorable and unfavorable stats and passives (alone, in the measured builds, over what is fixed; partners from the
-  measured pairs). Starts after the seventh shift the lateral offsets (the first seven never change).
+  measured pairs). Starts after the seventh shift the lateral offsets (the first seven never change). Part 3: the
+  guide assembles both builds jointly (`joint`: each against the other's, then `improve` swaps by predicted race);
+  refinement rounds (`refino_*`, `?refine=true`) fight the guide's own builds and refit, logging the model's error and
+  bias on them before it saw them; `POST /runs/{id}/improve` improves one side's build by real fights (the model
+  proposes 4 swaps per slot, 12 starts decide) and adds what it fought to the builds.
   Local only (the public mode never starts it).
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a

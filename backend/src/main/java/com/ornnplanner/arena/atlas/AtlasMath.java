@@ -3,6 +3,8 @@ package com.ornnplanner.arena.atlas;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 
@@ -125,12 +127,13 @@ public final class AtlasMath {
             }
         }
         if (f[2] != 0) {
-            for (int i = 0; i < keys.size(); i++) {
-                for (int j = i + 1; j < keys.size(); j++) {
-                    for (int k = j + 1; k < keys.size(); k++) {
-                        Double n = note3(races, base, keys.get(i), keys.get(j), keys.get(k));
+            List<String> tk = inTriples(races, keys);
+            for (int i = 0; i < tk.size(); i++) {
+                for (int j = i + 1; j < tk.size(); j++) {
+                    for (int k = j + 1; k < tk.size(); k++) {
+                        Double n = note3(races, base, tk.get(i), tk.get(j), tk.get(k));
                         if (n != null) {
-                            sum += f[2] * weights.get(keys.get(i)) * weights.get(keys.get(j)) * weights.get(keys.get(k)) * n;
+                            sum += f[2] * weights.get(tk.get(i)) * weights.get(tk.get(j)) * weights.get(tk.get(k)) * n;
                         }
                     }
                 }
@@ -158,10 +161,15 @@ public final class AtlasMath {
                 if (n != null) {
                     t[2] += weights.get(keys.get(i)) * weights.get(keys.get(j)) * n;
                 }
-                for (int k = j + 1; k < keys.size(); k++) {
-                    Double m = note3(races, base, keys.get(i), keys.get(j), keys.get(k));
+            }
+        }
+        List<String> tk = inTriples(races, keys);
+        for (int i = 0; i < tk.size(); i++) {
+            for (int j = i + 1; j < tk.size(); j++) {
+                for (int k = j + 1; k < tk.size(); k++) {
+                    Double m = note3(races, base, tk.get(i), tk.get(j), tk.get(k));
                     if (m != null) {
-                        t[3] += weights.get(keys.get(i)) * weights.get(keys.get(j)) * weights.get(keys.get(k)) * m;
+                        t[3] += weights.get(tk.get(i)) * weights.get(tk.get(j)) * weights.get(tk.get(k)) * m;
                     }
                 }
             }
@@ -186,14 +194,63 @@ public final class AtlasMath {
             if (p != null) {
                 d[1] += weights.get(keys.get(i)) * p;
             }
-            for (int j = i + 1; j < keys.size(); j++) {
-                Double t = note3(races, base, x, keys.get(i), keys.get(j));
-                if (t != null) {
-                    d[2] += weights.get(keys.get(i)) * weights.get(keys.get(j)) * t;
+        }
+        if (triples(races).contains(x)) {
+            List<String> tk = inTriples(races, keys);
+            for (int i = 0; i < tk.size(); i++) {
+                for (int j = i + 1; j < tk.size(); j++) {
+                    Double t = note3(races, base, x, tk.get(i), tk.get(j));
+                    if (t != null) {
+                        d[2] += weights.get(tk.get(i)) * weights.get(tk.get(j)) * t;
+                    }
                 }
             }
         }
         return d;
+    }
+
+    /** The keys (in order) that belong to some measured triple: only they can have a triple's interaction. */
+    private static List<String> inTriples(Map<String, Double> races, List<String> keys) {
+        Set<String> in = triples(races);
+        List<String> out = new ArrayList<>();
+        for (String k : keys) {
+            if (in.contains(k)) {
+                out.add(k);
+            }
+        }
+        return out;
+    }
+
+    private static final int CACHE = 8;
+    /** The last maps asked (by identity) and their keys in triples: a map of races is read many times, never changed. */
+    private static final List<Map<String, Double>> CACHED_MAPS = new ArrayList<>();
+    private static final List<Set<String>> CACHED_KEYS = new ArrayList<>();
+
+    /** Every condition key that is part of a measured set of three or more. */
+    static Set<String> triples(Map<String, Double> races) {
+        synchronized (CACHED_MAPS) {
+            for (int i = 0; i < CACHED_MAPS.size(); i++) {
+                if (CACHED_MAPS.get(i) == races) {
+                    return CACHED_KEYS.get(i);
+                }
+            }
+        }
+        Set<String> out = new HashSet<>();
+        for (String k : races.keySet()) {
+            String[] parts = k.split("\\|");
+            if (parts.length >= 3) {
+                Collections.addAll(out, parts);
+            }
+        }
+        synchronized (CACHED_MAPS) {
+            if (CACHED_MAPS.size() >= CACHE) {
+                CACHED_MAPS.remove(0);
+                CACHED_KEYS.remove(0);
+            }
+            CACHED_MAPS.add(races);
+            CACHED_KEYS.add(out);
+        }
+        return out;
     }
 
     /** The keys with a weight, sorted, without {@code skip}. */

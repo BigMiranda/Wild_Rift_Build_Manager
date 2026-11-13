@@ -129,6 +129,8 @@ public class AtlasService {
         c.top3d = (int) num(all.get("top_3d"), c.top3d);
         c.validation = (int) num(all.get("validacao"), c.validation);
         c.builds = (int) num(all.get("builds_inteiras"), c.builds);
+        c.refineRounds = (int) num(all.get("refino_rodadas"), c.refineRounds);
+        c.refineBuilds = (int) num(all.get("refino_builds"), c.refineBuilds);
         if (all.get("fontes") instanceof List) {
             c.sources = new ArrayList<>();
             for (Object o : (List<Object>) all.get("fontes")) {
@@ -654,20 +656,192 @@ public class AtlasService {
         List<Double> out = new ArrayList<>();
         int n = Math.max(1, starts);
         for (int k = 0; k < n; k++) {
-            Arena.Input x = a.copy();
-            Arena.Input y = b.copy();
-            x.x = 4600;
-            x.y = 0;
-            y.x = 4600 + DISTANCES[k % DISTANCES.length];
-            y.y = LATERAL[(k + k / DISTANCES.length) % LATERAL.length];
-            x.healthTrail = true;
-            y.healthTrail = true;
-            EffectModel.Measures m = new EffectModel.Measures();
-            EffectTestService.race(m, arena.runPlain(List.of(x, y), c.duration), 0, 1, 0);
-            out.add(m.race);
+            out.add(raceAt(a, b, c, k));
         }
         return out;
     }
+
+    /** Side A's race in start k alone. */
+    private double raceAt(Arena.Input a, Arena.Input b, AtlasModel.Config c, int k) {
+        Arena.Input x = a.copy();
+        Arena.Input y = b.copy();
+        x.x = 4600;
+        x.y = 0;
+        y.x = 4600 + DISTANCES[k % DISTANCES.length];
+        y.y = LATERAL[(k + k / DISTANCES.length) % LATERAL.length];
+        x.healthTrail = true;
+        y.healthTrail = true;
+        EffectModel.Measures m = new EffectModel.Measures();
+        EffectTestService.race(m, arena.runPlain(List.of(x, y), c.duration), 0, 1, 0);
+        return m.race;
+    }
+
+    /** Starts of each real fight of the improvement by fights (the first twelve of the confirmation's). */
+    private static final int IMPROVE_STARTS = 12;
+    /** The model's best swaps fought for real per slot. */
+    private static final int IMPROVE_CANDIDATES = 4;
+
+    /**
+     * Improves one side's assembled build by real fights: the two builds are assembled jointly from what is fixed;
+     * then, slot by slot (never a fixed item; boots for boots), the model's best swaps are fought for real against the
+     * other side's build and the one with the best real race stays, while it gains a point or more. Every build fought
+     * joins the run's whole builds and the model is fitted again: the model proposes, the fights decide.
+     */
+    public AtlasModel.Improvement improveByFights(long id, AtlasModel.GuideRequest q) {
+        synchronized (this) {
+            if (running != null) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "O atlas está rodando uma execução: espere ou cancele.");
+            }
+            running = id;
+            cancel = false;
+        }
+        try {
+            AtlasModel.Run run = find(id);
+            AtlasModel.MinuteResult mr = minuteOf(run, q.minute);
+            if (mr.model == null) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Meça as builds inteiras antes (aba Validação).");
+            }
+            prime(mr);
+            AtlasModel.Config c = run.config;
+            BuildRepository.Build baseA = campaign.standardBuild(c.a);
+            BuildRepository.Build baseB = campaign.standardBuild(c.b);
+            String side = "B".equals(q.side) ? "B" : "A";
+            AtlasModel.Fixed[] p = joint(mr, q.a, q.b, 0, new AtlasModel.SideGuide(), new AtlasModel.SideGuide());
+            AtlasModel.Fixed mine = copy("A".equals(side) ? p[0] : p[1]);
+            AtlasModel.Fixed theirs = "A".equals(side) ? p[1] : p[0];
+            AtlasModel.Fixed fixedMine = "A".equals(side) ? q.a : q.b;
+            Set<Long> fixed = new HashSet<>(fixedMine.items == null ? List.of() : fixedMine.items);
+            AtlasModel.Improvement out = new AtlasModel.Improvement();
+            out.side = side;
+            out.champion = ("A".equals(side) ? mr.a : mr.b).champion;
+            out.start = copy(mine);
+            out.against = theirs;
+            List<AtlasModel.BuildSample> fought = new ArrayList<>();
+            out.startPredicted = view(side, predictPair(mr, side, mine, theirs));
+            double cur = real(c, mr, baseA, baseB, side, mine, theirs, fought);
+            out.startReal = cur;
+            for (int pass = 0; pass < 2; pass++) {
+                boolean changed = false;
+                for (int i = 0; i < mine.items.size(); i++) {
+                    Long old = mine.items.get(i);
+                    if (fixed.contains(old)) {
+                        continue;
+                    }
+                    ItemDef oi = catalog.item(old);
+                    boolean boots = oi != null && oi.boots();
+                    List<Long> others = new ArrayList<>(mine.items);
+                    others.remove(i);
+                    // the model's best swaps for this slot
+                    List<double[]> cands = new ArrayList<>();
+                    for (ItemDef it : catalog.buyable()) {
+                        if (it.id == old || mine.items.contains(it.id) || it.boots() != boots || !itemFits(it, others)) {
+                            continue;
+                        }
+                        mine.items.set(i, it.id);
+                        cands.add(new double[] {it.id, view(side, predictPair(mr, side, mine, theirs))});
+                    }
+                    mine.items.set(i, old);
+                    cands.sort(Comparator.comparingDouble((double[] x) -> -x[1]).thenComparingDouble(x -> x[0]));
+                    Long bestId = null;
+                    double bestReal = cur;
+                    for (int k = 0; k < Math.min(IMPROVE_CANDIDATES, cands.size()); k++) {
+                        long cand = (long) cands.get(k)[0];
+                        mine.items.set(i, cand);
+                        double r = real(c, mr, baseA, baseB, side, mine, theirs, fought);
+                        if (r > bestReal + 1) {
+                            bestReal = r;
+                            bestId = cand;
+                        }
+                    }
+                    mine.items.set(i, bestId != null ? bestId : old);
+                    if (bestId != null) {
+                        AtlasModel.Step st = new AtlasModel.Step();
+                        st.from = oi == null ? String.valueOf(old) : oi.name;
+                        st.to = catalog.item(bestId).name;
+                        st.before = cur;
+                        st.after = bestReal;
+                        out.steps.add(st);
+                        cur = bestReal;
+                        changed = true;
+                    }
+                }
+                if (!changed) {
+                    break;
+                }
+            }
+            out.build = mine;
+            out.names = new ArrayList<>();
+            for (Long it : mine.items) {
+                ItemDef d = catalog.item(it);
+                out.names.add(d == null ? String.valueOf(it) : d.name);
+            }
+            // the final build confirmed with the confirmation's starts
+            AtlasModel.BuildSample last = sample(side, mine, theirs);
+            ArenaModel.Scenario sc = new ArenaModel.Scenario();
+            sc.fighters = List.of(fixedSlot(baseA, mr.minute, last.a, 0), fixedSlot(baseB, mr.minute, last.b, 1));
+            List<Arena.Input> ins = arena.prepareSlots(sc);
+            List<Double> rs = races(ins.get(0), ins.get(1), c, Math.max(CONFIRM_STARTS, c.starts));
+            double mean = 0;
+            for (double r : rs) {
+                mean += r / rs.size();
+            }
+            double var = 0;
+            for (double r : rs) {
+                var += (r - mean) * (r - mean) / Math.max(1, rs.size() - 1);
+            }
+            out.endReal = view(side, mean);
+            out.endMargin = 1.96 * Math.sqrt(var / rs.size());
+            out.fights = fought.size() * IMPROVE_STARTS + rs.size();
+            // what was fought teaches the model
+            mr.builds.addAll(fought);
+            fitBuilds(mr);
+            out.endPredicted = view(side, predictPair(mr, side, mine, theirs));
+            out.learned = fought.size();
+            repo.finish(id, run.status, run.error, run.result);
+            return out;
+        } finally {
+            synchronized (this) {
+                running = null;
+            }
+            kick();
+        }
+    }
+
+    /** Side A's predicted race of a side's build against the other's. */
+    private double predictPair(AtlasModel.MinuteResult mr, String side, AtlasModel.Fixed mine, AtlasModel.Fixed theirs) {
+        String other = "A".equals(side) ? "B" : "A";
+        return predict(mr, weights(mr, side, mine), weights(mr, other, theirs), 0);
+    }
+
+    private static AtlasModel.BuildSample sample(String side, AtlasModel.Fixed mine, AtlasModel.Fixed theirs) {
+        AtlasModel.BuildSample s = new AtlasModel.BuildSample();
+        s.kind = "real";
+        s.a = copy("A".equals(side) ? mine : theirs);
+        s.b = copy("A".equals(side) ? theirs : mine);
+        return s;
+    }
+
+    /** A side's real race (its view) of its build against the other's, over the improvement's starts; kept as a sample. */
+    private double real(AtlasModel.Config c, AtlasModel.MinuteResult mr, BuildRepository.Build baseA, BuildRepository.Build baseB,
+                        String side, AtlasModel.Fixed mine, AtlasModel.Fixed theirs, List<AtlasModel.BuildSample> fought) {
+        AtlasModel.BuildSample s = sample(side, mine, theirs);
+        ArenaModel.Scenario sc = new ArenaModel.Scenario();
+        sc.fighters = List.of(fixedSlot(baseA, mr.minute, s.a, 0), fixedSlot(baseB, mr.minute, s.b, 1));
+        List<Arena.Input> ins = arena.prepareSlots(sc);
+        List<Callable<Double>> jobs = new ArrayList<>();
+        for (int k = 0; k < IMPROVE_STARTS; k++) {
+            final int start = k;
+            jobs.add(() -> raceAt(ins.get(0), ins.get(1), c, start));
+        }
+        double sum = 0;
+        for (double r : ArenaService.parallel(jobs)) {
+            sum += r;
+        }
+        s.race = sum / IMPROVE_STARTS;
+        fought.add(s);
+        return view(side, s.race);
+    }
+
 
     /** A side's slot: its base build at the minute, holding exactly the conditions' items, runes and spell swapped in. */
     ArenaModel.Slot slot(BuildRepository.Build base, double minute, List<AtlasModel.Condition> conds, int team) {
@@ -776,6 +950,20 @@ public class AtlasService {
                 todo.add(s);
             }
         }
+        int fights = fight(id, c, mr, baseA, baseB, todo, tag + "builds inteiras");
+        if (cancel) {
+            return fights;
+        }
+        mr.builds = new ArrayList<>(todo);
+        mr.refinement = new ArrayList<>();
+        fitBuilds(mr);
+        fights += refine(id, c, mr, baseA, baseB, tag);
+        return fights;
+    }
+
+    /** Fights the samples (each its real race, the mean over the run's starts). Returns the fights. */
+    private int fight(long id, AtlasModel.Config c, AtlasModel.MinuteResult mr, BuildRepository.Build baseA,
+                      BuildRepository.Build baseB, List<AtlasModel.BuildSample> todo, String stage) {
         int fights = 0;
         for (int from = 0; from < todo.size() && !cancel; from += BATCH) {
             List<AtlasModel.BuildSample> batch = todo.subList(from, Math.min(todo.size(), from + BATCH));
@@ -802,15 +990,138 @@ public class AtlasService {
                 batch.get(i).race = done.get(i);
             }
             fights += batch.size() * Math.max(1, c.starts);
-            repo.progress(id, "rodando", tag + "builds inteiras", Math.min(todo.size(), from + BATCH), todo.size());
+            repo.progress(id, "rodando", stage, Math.min(todo.size(), from + BATCH), todo.size());
         }
-        if (cancel) {
-            return fights;
-        }
-        mr.builds = new ArrayList<>(todo);
-        fitBuilds(mr);
         return fights;
     }
+
+    /**
+     * Refinement: rounds of the guide's own builds. Each round assembles the two builds jointly from nothing fixed and
+     * from random first items (the guided pools), adds neighbours (one item swapped on one side, a side without its
+     * rune page), predicts them with the current model, fights them, records how far the prediction was, and fits the
+     * model again with them. Returns the fights.
+     */
+    private int refine(long id, AtlasModel.Config c, AtlasModel.MinuteResult mr, BuildRepository.Build baseA,
+                       BuildRepository.Build baseB, String tag) {
+        if (mr.model == null || c.refineRounds <= 0 || c.refineBuilds <= 0) {
+            return 0;
+        }
+        int fights = 0;
+        List<ItemDef> shop = catalog.buyable();
+        prime(mr);
+        AtlasModel.BuildModel keep = mr.model;
+        mr.model = null;
+        List<ItemDef> poolA = guided(mr, "A", shop);
+        List<ItemDef> poolB = guided(mr, "B", shop);
+        mr.model = keep;
+        Set<String> seen = new HashSet<>();
+        for (AtlasModel.BuildSample s : mr.builds) {
+            seen.add(AtlasRepository.write(s.a) + "/" + AtlasRepository.write(s.b));
+        }
+        int done = mr.refinement.size();
+        for (int round = 0; round < c.refineRounds && !cancel; round++) {
+            Random rng = new Random(c.seed * 977 + (long) (mr.minute * 100) + 31L * (done + round));
+            prime(mr);
+            List<AtlasModel.BuildSample> todo = new ArrayList<>();
+            for (int ctx = 0; todo.size() < c.refineBuilds && ctx < c.refineBuilds; ctx++) {
+                AtlasModel.Fixed fa = new AtlasModel.Fixed();
+                AtlasModel.Fixed fb = new AtlasModel.Fixed();
+                if (ctx > 0) {
+                    fa.items.add(pick(rng, poolA, fa).id);
+                    fb.items.add(pick(rng, poolB, fb).id);
+                }
+                AtlasModel.Fixed[] p = joint(mr, fa, fb, 0, new AtlasModel.SideGuide(), new AtlasModel.SideGuide());
+                List<AtlasModel.Fixed[]> pairs = new ArrayList<>();
+                pairs.add(p);
+                pairs.add(new AtlasModel.Fixed[] {swap(rng, p[0], poolA, fa), p[1]});
+                pairs.add(new AtlasModel.Fixed[] {p[0], swap(rng, p[1], poolB, fb)});
+                pairs.add(new AtlasModel.Fixed[] {rng.nextBoolean() ? itemsOnly(p[0]) : p[0], rng.nextBoolean() ? p[1] : itemsOnly(p[1])});
+                for (AtlasModel.Fixed[] x : pairs) {
+                    if (todo.size() >= c.refineBuilds) {
+                        break;
+                    }
+                    if (seen.add(AtlasRepository.write(x[0]) + "/" + AtlasRepository.write(x[1]))) {
+                        AtlasModel.BuildSample s = new AtlasModel.BuildSample();
+                        s.kind = "refino";
+                        s.a = x[0];
+                        s.b = x[1];
+                        todo.add(s);
+                    }
+                }
+                repo.progress(id, "rodando", tag + "refino " + (done + round + 1) + ": montando builds", todo.size(), c.refineBuilds);
+            }
+            List<Double> pred = new ArrayList<>();
+            for (AtlasModel.BuildSample s : todo) {
+                pred.add(predict(mr, weights(mr, "A", s.a), weights(mr, "B", s.b), 0));
+            }
+            fights += fight(id, c, mr, baseA, baseB, todo, tag + "refino " + (done + round + 1) + ": lutando");
+            if (cancel) {
+                break;
+            }
+            List<Double> real = new ArrayList<>();
+            double mae = 0;
+            double bias = 0;
+            for (int i = 0; i < todo.size(); i++) {
+                real.add(todo.get(i).race);
+                mae += Math.abs(pred.get(i) - todo.get(i).race) / todo.size();
+                bias += (pred.get(i) - todo.get(i).race) / todo.size();
+            }
+            mr.refinement.add(new double[] {done + round + 1, todo.size(), mae, bias, AtlasMath.correlation(real, pred)});
+            mr.builds.addAll(todo);
+            fitBuilds(mr);
+        }
+        return fights;
+    }
+
+    /** A random item of the pool that is not boots and goes with what the build holds. */
+    private ItemDef pick(Random rng, List<ItemDef> pool, AtlasModel.Fixed f) {
+        for (int i = 0; i < 50; i++) {
+            ItemDef it = pool.get(rng.nextInt(pool.size()));
+            if (!it.boots() && !f.items.contains(it.id) && itemFits(it, f.items)) {
+                return it;
+            }
+        }
+        return pool.get(0);
+    }
+
+    /** The build with one item it chose (not one fixed) swapped for another of the pool. */
+    private AtlasModel.Fixed swap(Random rng, AtlasModel.Fixed b, List<ItemDef> pool, AtlasModel.Fixed fixed) {
+        AtlasModel.Fixed out = copy(b);
+        List<Integer> free = new ArrayList<>();
+        for (int i = 0; i < out.items.size(); i++) {
+            ItemDef it = catalog.item(out.items.get(i));
+            if (!fixed.items.contains(out.items.get(i)) && it != null && !it.boots()) {
+                free.add(i);
+            }
+        }
+        if (free.isEmpty()) {
+            return out;
+        }
+        int at = free.get(rng.nextInt(free.size()));
+        out.items.remove(at);
+        out.items.add(at, pick(rng, pool, out).id);
+        return out;
+    }
+
+    /** The build without its rune page and spell (the base's). */
+    private static AtlasModel.Fixed itemsOnly(AtlasModel.Fixed b) {
+        AtlasModel.Fixed out = copy(b);
+        out.keystone = null;
+        out.runes = new ArrayList<>();
+        out.spell = null;
+        return out;
+    }
+
+    private static AtlasModel.Fixed copy(AtlasModel.Fixed b) {
+        AtlasModel.Fixed out = new AtlasModel.Fixed();
+        out.items.addAll(b.items);
+        out.keystone = b.keystone;
+        out.runes.addAll(b.runes);
+        out.spell = b.spell;
+        out.conditions.addAll(b.conditions);
+        return out;
+    }
+
 
     /** The empty guide's 30 best items per gold and 3 best boots of a side (the notes with the validation's factors). */
     private List<ItemDef> guided(AtlasModel.MinuteResult mr, String side, List<ItemDef> shop) {
@@ -1128,7 +1439,7 @@ public class AtlasService {
      * Measures the whole builds of a finished run again (or for the first time, for runs from before them) and refits
      * the model, in the background on the atlas's thread; the run's other measures stay.
      */
-    public AtlasModel.Run remeasureBuilds(long id) {
+    public AtlasModel.Run remeasureBuilds(long id, boolean onlyRefine) {
         AtlasModel.Run run = find(id);
         if (run.result == null || run.result.minutes.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Essa execução ainda não tem resultado.");
@@ -1154,7 +1465,15 @@ public class AtlasService {
                     if (cancel) {
                         break;
                     }
-                    mr.fights += measureBuilds(id, c, mr, baseA, baseB, "min " + fmt(mr.minute) + ": ");
+                    String tag = "min " + fmt(mr.minute) + ": ";
+                    if (!onlyRefine || mr.model == null) {
+                        mr.fights += measureBuilds(id, c, mr, baseA, baseB, tag);
+                    } else {
+                        if (mr.refinement == null) {
+                            mr.refinement = new ArrayList<>();
+                        }
+                        mr.fights += refine(id, c, mr, baseA, baseB, tag);
+                    }
                 }
             } catch (RuntimeException e) {
                 log.error("Atlas builds of run {} failed", id, e);
@@ -1299,7 +1618,29 @@ public class AtlasService {
         }
         g.a = sideGuide(mr, "A", q.a, wa, wb, order);
         g.b = sideGuide(mr, "B", q.b, wb, wa, order);
+        joint(mr, q.a, q.b, order, g.a, g.b);
         return g;
+    }
+
+    /** Rounds of the joint assembly: each side builds against the other's assembled build, in turns. */
+    private static final int JOINT_ROUNDS = 2;
+
+    /**
+     * The two builds assembled against each other: A against what B fixed, then B against A's build, then A again
+     * against B's, and so on; each side's build race is then the duel of the two builds. Returns {A's, B's}.
+     */
+    AtlasModel.Fixed[] joint(AtlasModel.MinuteResult mr, AtlasModel.Fixed fa, AtlasModel.Fixed fb, int order,
+                             AtlasModel.SideGuide ga, AtlasModel.SideGuide gb) {
+        AtlasModel.Fixed curA = build(mr, "A", fa, weights(mr, "B", fb), order, ga);
+        AtlasModel.Fixed curB = build(mr, "B", fb, weights(mr, "A", curA), order, gb);
+        for (int r = 1; r < JOINT_ROUNDS; r++) {
+            curA = build(mr, "A", fa, weights(mr, "B", curB), order, ga);
+            curB = build(mr, "B", fb, weights(mr, "A", curA), order, gb);
+        }
+        double duel = predict(mr, weights(mr, "A", curA), weights(mr, "B", curB), order);
+        ga.buildRace = duel;
+        gb.buildRace = 100 - duel;
+        return new AtlasModel.Fixed[] {curA, curB};
     }
 
     /**
@@ -1451,11 +1792,12 @@ public class AtlasService {
         }
         Set<Long> held = new HashSet<>(f.items == null ? List.of() : f.items);
         boolean hasBoots = held.stream().map(catalog::item).anyMatch(it -> it != null && it.boots());
+        double before = predict(mr, mine, theirs, order);
         for (ItemDef it : catalog.buyable()) {
             if (held.contains(it.id) || it.boots() && hasBoots || !itemFits(it, f.items)) {
                 continue;
             }
-            g.items.add(itemOption(mr, side, f, mine, theirs, order, it));
+            g.items.add(itemOption(mr, side, f, mine, theirs, order, it, before));
         }
         g.conditions.sort(byGain());
         g.keystones.sort(byGain());
@@ -1465,13 +1807,17 @@ public class AtlasService {
                 .thenComparing(o -> o.name));
         cut(g.conditions, 40);
         cut(g.items, 40);
-        build(mr, side, f, theirs, order, g);
         return g;
     }
 
-    /** The build the notes assemble: items by gain per gold up to five and boots, then keystone, runes and spell. */
-    private void build(AtlasModel.MinuteResult mr, String side, AtlasModel.Fixed f, Map<String, Double> theirs, int order,
-                       AtlasModel.SideGuide g) {
+    /**
+     * The build the notes assemble against {@code theirs}: items by gain per gold up to five and boots, then keystone,
+     * runes and spell. Fills the side guide's build (replacing an earlier one) and returns it.
+     */
+    private AtlasModel.Fixed build(AtlasModel.MinuteResult mr, String side, AtlasModel.Fixed f, Map<String, Double> theirs, int order,
+                                   AtlasModel.SideGuide g) {
+        g.build = new ArrayList<>();
+        g.buildRunes = new ArrayList<>();
         AtlasModel.Fixed cur = new AtlasModel.Fixed();
         cur.items.addAll(f.items == null ? List.of() : f.items);
         cur.keystone = f.keystone;
@@ -1494,12 +1840,13 @@ public class AtlasService {
                 break;
             }
             Map<String, Double> mine = weights(mr, side, cur);
+            double before = predict(mr, mine, theirs, order);
             AtlasModel.Option best = null;
             for (ItemDef it : catalog.buyable()) {
                 if (cur.items.contains(it.id) || it.boots() && boots || !it.boots() && items >= 5 || !itemFits(it, cur.items)) {
                     continue;
                 }
-                AtlasModel.Option o = itemOption(mr, side, cur, mine, theirs, order, it);
+                AtlasModel.Option o = itemOption(mr, side, cur, mine, theirs, order, it, before);
                 double v = o.perThousand == null ? o.gain : o.perThousand;
                 if (best == null || v > (best.perThousand == null ? best.gain : best.perThousand)) {
                     best = o;
@@ -1543,15 +1890,83 @@ public class AtlasService {
                 }
             }
         }
+        improve(mr, side, f, cur, theirs, order);
+        // the build in purchase order, each item's gain over the ones before it (with the final page)
+        Set<Long> fixed = new HashSet<>(f.items == null ? List.of() : f.items);
+        g.build = new ArrayList<>();
+        AtlasModel.Fixed prefix = copy(cur);
+        prefix.items = new ArrayList<>();
+        for (Long id : cur.items) {
+            ItemDef it = catalog.item(id);
+            if (fixed.contains(id) || it == null) {
+                AtlasModel.Option o = new AtlasModel.Option();
+                o.itemId = id;
+                o.name = it == null ? String.valueOf(id) : it.name;
+                o.cost = it == null ? null : it.cost;
+                o.key = "fixo";
+                g.build.add(o);
+            } else {
+                g.build.add(itemOption(mr, side, prefix, weights(mr, side, prefix), theirs, order, it));
+            }
+            prefix.items.add(id);
+        }
         AtlasModel.Side s = "A".equals(side) ? mr.a : mr.b;
         g.buildKeystone = cur.keystone != null ? cur.keystone : s.keystone;
         g.buildRunes.addAll(cur.runes);
         g.buildSpell = cur.spell;
         g.buildRace = view(side, predict(mr, weights(mr, side, cur), theirs, order));
+        return cur;
+    }
+
+    /**
+     * Swaps of one chosen item (never a fixed one; boots for boots) for the one that raises the side's race the most,
+     * until no swap helps: the greedy picks by gain per gold, which orders the purchases but does not make the best
+     * whole build.
+     */
+    private void improve(AtlasModel.MinuteResult mr, String side, AtlasModel.Fixed f, AtlasModel.Fixed cur,
+                         Map<String, Double> theirs, int order) {
+        Set<Long> fixed = new HashSet<>(f.items == null ? List.of() : f.items);
+        double best = view(side, predict(mr, weights(mr, side, cur), theirs, order));
+        for (int pass = 0; pass < 3; pass++) {
+            boolean changed = false;
+            for (int i = 0; i < cur.items.size(); i++) {
+                Long old = cur.items.get(i);
+                if (fixed.contains(old)) {
+                    continue;
+                }
+                ItemDef oi = catalog.item(old);
+                boolean boots = oi != null && oi.boots();
+                List<Long> others = new ArrayList<>(cur.items);
+                others.remove(i);
+                Long bestId = null;
+                for (ItemDef it : catalog.buyable()) {
+                    if (it.id == old || cur.items.contains(it.id) || it.boots() != boots || !itemFits(it, others)) {
+                        continue;
+                    }
+                    cur.items.set(i, it.id);
+                    double v = view(side, predict(mr, weights(mr, side, cur), theirs, order));
+                    if (v > best + 0.05) {
+                        best = v;
+                        bestId = it.id;
+                    }
+                }
+                cur.items.set(i, bestId != null ? bestId : old);
+                changed |= bestId != null;
+            }
+            if (!changed) {
+                break;
+            }
+        }
     }
 
     private AtlasModel.Option itemOption(AtlasModel.MinuteResult mr, String side, AtlasModel.Fixed f, Map<String, Double> mine,
                                          Map<String, Double> theirs, int order, ItemDef it) {
+        return itemOption(mr, side, f, mine, theirs, order, it, predict(mr, mine, theirs, order));
+    }
+
+    /** An item's option with the prediction before it already known (the same for every item of one step). */
+    private AtlasModel.Option itemOption(AtlasModel.MinuteResult mr, String side, AtlasModel.Fixed f, Map<String, Double> mine,
+                                         Map<String, Double> theirs, int order, ItemDef it, double before) {
         AtlasModel.Fixed with = new AtlasModel.Fixed();
         with.items.addAll(f.items == null ? List.of() : f.items);
         with.items.add(it.id);
@@ -1560,7 +1975,6 @@ public class AtlasService {
         with.spell = f.spell;
         with.conditions.addAll(f.conditions == null ? List.of() : f.conditions);
         Map<String, Double> after = weights(mr, side, with);
-        double before = predict(mr, mine, theirs, order);
         double now = predict(mr, after, theirs, order);
         AtlasModel.Option o = new AtlasModel.Option();
         o.key = "item:" + it.id;

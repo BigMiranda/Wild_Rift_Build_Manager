@@ -62,16 +62,25 @@ public class AtlasController {
         return atlas.revalidate(id);
     }
 
-    /** Measures the run's whole builds again (in the background) and refits the model of whole builds. */
+    /**
+     * Measures the run's whole builds again (in the background) and refits the model of whole builds;
+     * {@code ?refine=true} only adds refinement rounds over the builds already measured.
+     */
     @PostMapping("/runs/{id}/builds")
-    public AtlasModel.Run builds(@PathVariable long id) {
-        return atlas.remeasureBuilds(id);
+    public AtlasModel.Run builds(@PathVariable long id, @RequestParam(defaultValue = "false") boolean refine) {
+        return atlas.remeasureBuilds(id, refine);
     }
 
     /** The favorable and unfavorable status and passive conditions of each side, from what is fixed. */
     @PostMapping("/runs/{id}/report")
     public AtlasModel.ConditionReport report(@PathVariable long id, @RequestBody AtlasModel.GuideRequest q) {
         return atlas.report(id, q);
+    }
+
+    /** Improves one side's assembled build by real fights (the model proposes the swaps, the fights decide). */
+    @PostMapping("/runs/{id}/improve")
+    public AtlasModel.Improvement improve(@PathVariable long id, @RequestBody AtlasModel.GuideRequest q) {
+        return atlas.improveByFights(id, q);
     }
 
     /** Fights for real what each side fixed, next to the prediction. */

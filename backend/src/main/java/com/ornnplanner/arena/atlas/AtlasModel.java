@@ -40,6 +40,13 @@ public final class AtlasModel {
          * data the model of whole builds is fitted on.
          */
         public int builds = 600;
+        /**
+         * Rounds of refinement after the whole builds: the guide's own assembled builds (from nothing fixed and from
+         * random first items) and their neighbours are fought, then the model is fitted again with them, so it learns
+         * where the guide's choices lead (the builds it overrates are the ones it picks).
+         */
+        public int refineRounds = 2;
+        public int refineBuilds = 120;
         /** Condition sources: status, passiva, fundamental, runa, feitico. */
         public List<String> sources = new ArrayList<>(List.of("status", "passiva", "fundamental", "runa", "feitico"));
         public long seed = 1;
@@ -106,6 +113,11 @@ public final class AtlasModel {
         public transient boolean useLogit;
         /** The whole builds fought, with their real races. */
         public List<BuildSample> builds = new ArrayList<>();
+        /**
+         * Each refinement round: {round, builds, mean absolute error, mean bias (predicted minus real), correlation} of
+         * the model on the round's builds before it saw them: how far it is from the builds the guide assembles.
+         */
+        public List<double[]> refinement = new ArrayList<>();
         /** The model fitted on them (null = none measured). */
         public BuildModel model;
         /** Each status and passive condition's mean gain over the measured builds (side key -> points, its side's view). */
@@ -121,7 +133,7 @@ public final class AtlasModel {
     public static class BuildSample {
         public Fixed a = new Fixed();
         public Fixed b = new Fixed();
-        /** sorteada (any item of the shop) | guiada (among the empty guide's best items per gold) */
+        /** sorteada (any item of the shop) | guiada (among the empty guide's best items per gold) | refino (the guide's own builds and neighbours) */
         public String kind;
         public double race;
     }
@@ -183,6 +195,8 @@ public final class AtlasModel {
         public int order;
         /** pontos | logit; null = the run's (the better on its validation). */
         public String scale;
+        /** The side the improvement by fights works on: A | B. */
+        public String side;
     }
 
     /** A ranked option of a side (a condition, an item, a rune, a spell): what it adds to that side's race. */
@@ -272,6 +286,37 @@ public final class AtlasModel {
         public boolean model;
         public SideReport a = new SideReport();
         public SideReport b = new SideReport();
+    }
+
+    /** One swap the real fights kept. */
+    public static class Step {
+        public String from;
+        public String to;
+        /** The side's real race before and after (its view). */
+        public double before;
+        public double after;
+    }
+
+    /** A side's build improved by real fights against the other side's assembled build. */
+    public static class Improvement {
+        public String side;
+        public String champion;
+        /** The assembled build it started from, the other side's build, and the improved build (with its item names). */
+        public Fixed start;
+        public Fixed against;
+        public Fixed build;
+        public List<String> names = new ArrayList<>();
+        public List<Step> steps = new ArrayList<>();
+        /** Real races (the side's view): the start's over the improvement's starts, the end's over the confirmation's. */
+        public double startReal;
+        public double endReal;
+        public double endMargin;
+        /** The model's predictions of the start (before) and of the end (after it learned from the fights). */
+        public double startPredicted;
+        public double endPredicted;
+        public int fights;
+        /** Builds fought that joined the run's whole builds. */
+        public int learned;
     }
 
     public static class Guide {

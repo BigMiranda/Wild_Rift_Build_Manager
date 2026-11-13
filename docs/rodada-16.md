@@ -289,3 +289,70 @@ ponto ou mais:
    monta.
 3. Mais minutos.
 
+## Parte 3: o otimismo das builds montadas (✅)
+
+**O problema:** com nada fixado, a build que o guia montava previa 85,1 e a luta real dava 71,3. O guia escolhe
+justamente o que o modelo superestima. Além disso, cada lado montava contra o que o outro tinha fixado, não contra a
+build que o outro montava.
+
+**O que mudou:**
+
+- **Montagem conjunta** (`joint`): A monta contra o que B fixou; depois B contra a build de A, e A de novo contra a de
+  B (2 rodadas). A corrida das duas builds montadas é o duelo entre elas.
+- **Trocas pela corrida** (`improve`): a escolha gulosa por ganho a cada mil de ouro dá a ordem de compra, mas não
+  monta a melhor build inteira. Depois dela, cada item escolhido (nunca um fixado; botas por botas) é trocado pelo que
+  mais sobe a corrida prevista, até nenhuma troca ajudar. Na tela, o ganho de cada item é contado sobre os anteriores.
+- **Refino** (`refino_rodadas: 3`, `refino_builds: 120`; o botão "Refinar com as builds do guia" chama
+  `?refine=true`). Cada rodada:
+  - monta as duas builds, uma contra a outra, sem nada fixado e a partir de primeiros itens sorteados;
+  - acrescenta vizinhas (um item trocado de um lado, um lado sem a página de runas);
+  - prevê essas builds antes de vê-las, luta, guarda o erro e o viés (previsto menos real) e ajusta o modelo de novo.
+- **Melhorar lutando** (`POST /runs/{id}/improve`, um botão por lado no guia):
+  - parte das duas builds montadas;
+  - item por item, as 4 trocas que o modelo mais indica são lutadas de verdade (12 largadas) contra a build do outro
+    lado;
+  - fica a troca que ganha 1 ponto ou mais na luta real;
+  - tudo o que foi lutado entra nas builds medidas e o modelo é ajustado de novo.
+
+  O modelo propõe; quem decide é a luta. Custa ~45 s e ~600 lutas por lado.
+- **Velocidade:** os trios só são procurados entre as condições que estão em algum trio medido (`AtlasMath.triples`).
+  O resultado é o mesmo, mas um guia com a montagem conjunta e as trocas leva ~7 s.
+
+**Piloto, refino** (erro do modelo nas builds do guia antes de vê-las):
+
+| Rodada | Montagem | Erro médio | Viés (previsto − real) |
+|---|---|---|---|
+| 1 | conjunta, gulosa | 22,4 | +17,5 |
+| 2 | conjunta, gulosa | 12,4 | −3,0 |
+| 3 | conjunta, gulosa | 10,1 | +3,0 |
+| 4 | conjunta, gulosa | 8,8 | −0,4 |
+| 5 | com as trocas | 17,9 | −13,6 |
+| 6 | com as trocas | 15,3 | −9,4 |
+
+- **Rodadas 1 a 4:** o otimismo (+17,5) sumiu em duas rodadas.
+- **Builds montadas pela gulosa depois do refino, lutadas com 24 largadas:**
+  - nada fixado: 32,8 previsto contra 32,5 ± 8,0 real;
+  - Força da Natureza × Ruptor: 30,4 contra 33,3 ± 4,0;
+  - Rookern × Liandry: 27,2 contra 37,7 ± 0,9;
+  - Coração Congelado × Seraph: 38,8 contra 56,0 ± 11,6.
+- **Rodadas 5 e 6:** as trocas levam o guia a regiões que o modelo viu pouco, e lá ele erra para baixo (as builds
+  saem melhores do que ele prevê).
+  - Exemplo: contra o Rumble tanque (Randuin, Mobilização Blindada, Manto da Aurora, Liandry, Desespero Eterno,
+    Solari), a build AD do guia para o Ornn deu 67 real (79,6 com as runas da base) contra 35 previsto.
+  - A build tanque padrão da campanha deu 4 real (10,5 previsto).
+  - Ou seja: a direção acerta, mas o número de uma build específica ainda pode errar 30 pontos.
+- **Melhorar lutando, sem nada fixado:**
+  - Ornn: 49,3 → 56,8 ± 6,6 real, com Lembrete Mortal → Lord Dominik e Espada do Rei Destruído → Malmortius.
+  - Rumble: 50,7 → 85,3 ± 8,6 real contra a build montada do Ornn. Ele termina com Armadura de Espinhos, Mobilização
+    Blindada, Ruptor, Cajado do Vazio, Manto da Aurora e Manto da Meia-noite.
+- **Builds medidas no fim:** 1.320 do refino e das buscas, mais as lutas de "Melhorar lutando". Erro do modelo por
+  validação cruzada: 10,6 (a base erra 16,2).
+
+**Leitura:**
+
+- O modelo serve para ordenar e propor.
+- O número absoluto de uma build específica pode errar 10 a 30 pontos, por causa do ruído das lutas e de regiões
+  pouco vistas.
+- Para uma build final, use "Melhorar lutando" ou "Lutar de verdade".
+- Cada uso deixa o modelo melhor naquela região.
+

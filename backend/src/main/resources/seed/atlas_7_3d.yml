@@ -29,6 +29,10 @@
 #                feitiço trocados), metade sorteada da loja toda e metade entre os melhores itens do guia vazio. Sobre
 #                elas se ajusta o modelo de builds inteiras (Rodada 16, parte 2): as notas, os pares e os trios em
 #                chances, com um coeficiente por ordem e uma correção por condição, escolhida por validação cruzada
+#   refino_rodadas, refino_builds  rodadas de refino depois delas: o guia monta as duas builds uma contra a outra (sem
+#                nada fixado e a partir de primeiros itens sorteados), mais vizinhas (um item trocado, sem a página de
+#                runas); o modelo as prevê antes de vê-las (o erro e o viés ficam guardados), elas são lutadas e o modelo
+#                é ajustado de novo. O guia escolhe o que o modelo superestima; o refino ensina o modelo justamente aí
 #   fontes       quais condições entram
 patch: "7.3d"
 
@@ -42,6 +46,8 @@ padrao:
   top_3d: 12
   validacao: 150
   builds_inteiras: 600
+  refino_rodadas: 3
+  refino_builds: 120
   fontes: [status, passiva, fundamental, runa, feitico]
   semente: 1
 

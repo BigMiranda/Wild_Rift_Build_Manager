@@ -343,10 +343,10 @@ function WholeBuilds({ m, run, onStarted }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const md = m.model;
-  const start = async () => {
+  const start = async (refine) => {
     setBusy(true);
     setError(null);
-    try { await api.post(`/api/atlas/runs/${run.id}/builds`); onStarted(); } catch (e) { setError(e.message); } finally { setBusy(false); }
+    try { await api.post(`/api/atlas/runs/${run.id}/builds${refine ? '?refine=true' : ''}`); onStarted(); } catch (e) { setError(e.message); } finally { setBusy(false); }
   };
   const kinds = (m.builds ?? []).reduce((acc, x) => ({ ...acc, [x.kind]: (acc[x.kind] ?? 0) + 1 }), {});
   return (
@@ -357,11 +357,14 @@ function WholeBuilds({ m, run, onStarted }) {
         modelo que os guias usam: as notas, os pares e os trios em chances, com um coeficiente por ordem e uma correção por
         condição (o que as notas não veem dela dentro de uma build), a força das correções escolhida por validação cruzada
         em cinco partes.</p>
-      <button onClick={start} disabled={busy}>{busy ? 'Começando…' : md ? 'Medir as builds inteiras de novo' : 'Medir builds inteiras'}</button>
+      <div className="row">
+        <button onClick={() => start(false)} disabled={busy}>{busy ? 'Começando…' : md ? 'Medir as builds inteiras de novo' : 'Medir builds inteiras'}</button>
+        {md && <button onClick={() => start(true)} disabled={busy}>Refinar com as builds do guia</button>}
+      </div>
       {error && <p className="error">{error}</p>}
       {md && (
         <>
-          <p className="small">{md.samples} builds ({kinds.sorteada ?? 0} sorteadas, {kinds.guiada ?? 0} guiadas). Notas de {m.a.champion} ×{' '}
+          <p className="small">{md.samples} builds ({kinds.sorteada ?? 0} sorteadas, {kinds.guiada ?? 0} guiadas, {kinds.refino ?? 0} do refino). Notas de {m.a.champion} ×{' '}
             {n2(md.coef[0])}, notas de {m.b.champion} × {n2(md.coef[1])}, pares × {n2(md.coef[2])}, trios × {n2(md.coef[3])};{' '}
             {md.lambda == null ? 'sem correções por condição (a validação cruzada preferiu sem)'
               : `${Object.keys(md.theta ?? {}).length} correções por condição (penalidade ${md.lambda})`}.</p>
@@ -373,6 +376,23 @@ function WholeBuilds({ m, run, onStarted }) {
               ))}
             </tbody>
           </table>
+          {(m.refinement ?? []).length > 0 && (
+            <>
+              <p className="muted small">Refino: a cada rodada o guia monta as duas builds uma contra a outra (sem nada fixado e a
+                partir de primeiros itens sorteados), mais vizinhas delas (um item trocado, um lado sem a página de runas). O
+                modelo as prevê antes de vê-las, elas são lutadas, e o modelo é ajustado de novo com elas. O erro e o viés de
+                cada rodada são os do modelo nas builds que o próprio guia escolhe: o viés positivo é o otimismo (o guia escolhe
+                o que o modelo superestima).</p>
+              <table className="data">
+                <thead><tr><th>Rodada</th><th>Builds</th><th>Erro médio antes de vê-las</th><th>Viés (prevista − real)</th><th>Correlação</th></tr></thead>
+                <tbody>
+                  {m.refinement.map((r) => (
+                    <tr key={r[0]}><td>{r[0]}</td><td>{r[1]}</td><td>{n1(r[2])}</td><td className={tone(-r[3])}>{signed(r[3])}</td><td>{n1(r[4] * 100)}%</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
         </>
       )}
     </>
@@ -440,7 +460,7 @@ function SideGuide({ side, m, g, fixed, setFixed, itemsList }) {
       </div>
       {g && (
         <>
-          <h5>Build montada pelas notas <small className="muted">corrida {n1(g.buildRace)}</small></h5>
+          <h5>Build montada pelas notas <small className="muted">duelo contra a build montada do outro lado: {n1(g.buildRace)}</small></h5>
           <div className="atlas-build">
             {g.build.map((o, i) => (
               <span key={`${o.itemId}-${i}`} title={`${o.name}${o.key === 'fixo' ? ' (fixado)' : ` · ${signed(o.gain)}`}`} className={o.key === 'fixo' ? 'fixed' : ''}>
@@ -506,11 +526,53 @@ function Confirm({ run, m, g, order, scale }) {
   );
 }
 
+/** One side's assembled build improved by real fights: the model proposes each slot's swaps, the fights decide. */
+function Improve({ run, m, a, b, onLearned }) {
+  const [res, setRes] = useState(null);
+  const [busy, setBusy] = useState(null);
+  const [error, setError] = useState(null);
+  const go = async (side) => {
+    setBusy(side);
+    setError(null);
+    try {
+      const r = await api.post(`/api/atlas/runs/${run.id}/improve`, { minute: m.minute, a, b, side });
+      setRes(r);
+      onLearned();
+    } catch (e) { setError(e.message); } finally { setBusy(null); }
+  };
+  return (
+    <div className="atlas-improve">
+      <div className="row">
+        {['A', 'B'].map((side) => (
+          <button key={side} onClick={() => go(side)} disabled={busy != null}>
+            {busy === side ? 'Lutando (pode levar um minuto)…' : `Melhorar a build de ${side === 'A' ? m.a.champion : m.b.champion} lutando`}
+          </button>
+        ))}
+        {error && <span className="error">{error}</span>}
+      </div>
+      <p className="muted small">Parte das duas builds montadas. Item por item (nunca um fixado; botas por botas), as 4 trocas que o modelo
+        mais indica são lutadas de verdade (12 largadas) contra a build montada do outro lado, e fica a que ganha 1 ponto ou mais na luta
+        real. Tudo o que foi lutado entra nas builds medidas e o modelo é ajustado de novo.</p>
+      {res && (
+        <div className="small">
+          <p><strong>{res.champion}</strong>: {res.names.join(', ')}. Corrida real {n1(res.startReal)} → <strong>{n1(res.endReal)}</strong> ± {n1(res.endMargin)}
+            {' '}({res.fights} lutas; o modelo previa {n1(res.startPredicted)} no começo e prevê {n1(res.endPredicted)} depois de aprender com
+            {' '}{res.learned} builds).</p>
+          {res.steps.length ? (
+            <ol>{res.steps.map((st, i) => <li key={i}>{st.from} → {st.to}: {n1(st.before)} → {n1(st.after)}</li>)}</ol>
+          ) : <p className="muted">Nenhuma troca ganhou na luta real: a build montada já era a melhor entre as propostas.</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Guides({ run, m, itemsList, a, setA, b, setB }) {
   const [order, setOrder] = useState(0);
   const [scale, setScale] = useState(null);
   const [g, setG] = useState(null);
   const [error, setError] = useState(null);
+  const [learned, setLearned] = useState(0);
   useEffect(() => {
     let live = true;
     setError(null);
@@ -518,7 +580,7 @@ function Guides({ run, m, itemsList, a, setA, b, setB }) {
       .then((x) => { if (live) setG(x); })
       .catch((e) => { if (live) setError(e.message); });
     return () => { live = false; };
-  }, [run.id, m.minute, a, b, order, scale]);
+  }, [run.id, m.minute, a, b, order, scale, learned]);
   return (
     <>
       <p className="muted small">Fixe um momento à frente em cada lado (itens já comprados, runas, feitiço) e as notas são
@@ -539,6 +601,7 @@ function Guides({ run, m, itemsList, a, setA, b, setB }) {
       </div>
       {error && <p className="error">{error}</p>}
       {g && <Confirm run={run} m={m} g={g} order={order} scale={scale} />}
+      {g && m.model && <Improve run={run} m={m} a={a} b={b} onLearned={() => setLearned((x) => x + 1)} />}
       <div className="atlas-two">
         <SideGuide side="A" m={m} g={g?.a} fixed={a} setFixed={setA} itemsList={itemsList} />
         <SideGuide side="B" m={m} g={g?.b} fixed={b} setFixed={setB} itemsList={itemsList} />
