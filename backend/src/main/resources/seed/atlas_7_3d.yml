@@ -25,6 +25,10 @@
 #   top_2d       pares só entre as N condições mais relevantes de cada lado pela nota sozinha (0 = todos os pares)
 #   top_3d       trios entre as N mais relevantes de cada lado (pela nota e pelos pares)
 #   validacao    conjuntos sorteados, nunca medidos, para conferir a previsão de 1, 2 e 3 dimensões
+#   builds_inteiras  builds de verdade (itens reais nos dois lados, às vezes uma runa fundamental, uma runa ou um
+#                feitiço trocados), metade sorteada da loja toda e metade entre os melhores itens do guia vazio. Sobre
+#                elas se ajusta o modelo de builds inteiras (Rodada 16, parte 2): as notas, os pares e os trios em
+#                chances, com um coeficiente por ordem e uma correção por condição, escolhida por validação cruzada
 #   fontes       quais condições entram
 patch: "7.3d"
 
@@ -37,6 +41,7 @@ padrao:
   top_2d: 0
   top_3d: 12
   validacao: 150
+  builds_inteiras: 600
   fontes: [status, passiva, fundamental, runa, feitico]
   semente: 1
 

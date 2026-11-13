@@ -11,6 +11,7 @@ import { interactions, note1, sideView } from '../atlasMath.js';
  */
 
 const n1 = (v) => (v == null ? '—' : (Math.round(v * 10) / 10).toLocaleString('pt-BR'));
+const n2 = (v) => (v == null ? '—' : (Math.round(v * 100) / 100).toLocaleString('pt-BR'));
 const signed = (v) => (v == null ? '—' : `${v > 0 ? '+' : ''}${n1(v)}`);
 const SOURCE = { status: 'status', passiva: 'passiva de item', fundamental: 'runa fundamental', runa: 'runa', feitico: 'feitiço' };
 const emptyFixed = () => ({ items: [], keystone: null, runes: [], spell: null, conditions: [] });
@@ -177,7 +178,7 @@ function ManyDims({ m, names, n }) {
   );
 }
 
-function Validation({ m, run, onDone }) {
+function Validation({ m, run, onDone, onStarted }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const redo = async () => {
@@ -208,8 +209,172 @@ function Validation({ m, run, onDone }) {
           ))}
         </tbody>
       </table>
+      <WholeBuilds m={m} run={run} onStarted={onStarted} />
       <p className="muted small">{m.fights.toLocaleString('pt-BR')} lutas em {Math.round(m.seconds / 60)} min (preparar os lutadores:
         {' '}{Math.round(m.prepareSeconds / 60)} min; lutar: {Math.round(m.fightSeconds / 60)} min).</p>
+    </>
+  );
+}
+
+const READINGS = {
+  inBuilds: 'nas builds medidas',
+  here: 'sobre o que está fixado',
+  alone: 'sozinha, sobre a base',
+};
+const NEUTRAL = 0.5;
+
+function Partners({ row }) {
+  const parts = [
+    ['sinergia', row.synergies, 'atlas-up'],
+    ['sobrepõe', row.overlaps, 'atlas-down'],
+    ['anulada por', row.counters, 'atlas-down'],
+    ['pune', row.punishes, 'atlas-up'],
+  ].filter(([, l]) => l?.length);
+  if (!parts.length) return <span className="muted">—</span>;
+  return (
+    <span className="atlas-partners">
+      {parts.map(([label, l, cls]) => (
+        <span key={label}><small className="muted">{label}:</small>{' '}
+          {l.map((p, i) => <span key={p.key}>{i > 0 && ', '}{p.name} <span className={cls}>{signed(p.value)}</span></span>)}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function ConditionTable({ rows, reading }) {
+  return (
+    <table className="data">
+      <thead><tr><th>Condição</th><th>Sozinha</th><th>Nas builds</th><th>Com o fixado</th><th>Por mil de ouro</th><th>Com quem</th></tr></thead>
+      <tbody>
+        {rows.map((r) => {
+          const v = r[reading] ?? r.here;
+          return (
+            <tr key={r.key}>
+              <td><span className="atlas-cond">{r.itemId != null && <ItemIcon id={r.itemId} size={20} />} {r.name}
+                <small className="muted"> {SOURCE[r.source]}</small></span></td>
+              <td className={tone(r.alone)}>{signed(r.alone)}</td>
+              <td className={tone(r.inBuilds)}>{signed(r.inBuilds)}</td>
+              <td className={tone(r.here)}>{signed(r.here)}</td>
+              <td className={tone(v)}>{r.gold ? signed((v / r.gold) * 1000) : '—'}</td>
+              <td className="small"><Partners row={r} /></td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function SideConditions({ r, reading, source }) {
+  const rows = r.rows.filter((x) => !source || x.source === source);
+  const value = (x) => x[reading] ?? x.here;
+  const fav = rows.filter((x) => value(x) > NEUTRAL).sort((x, y) => value(y) - value(x));
+  const unf = rows.filter((x) => value(x) < -NEUTRAL).sort((x, y) => value(x) - value(y));
+  const neutral = rows.filter((x) => Math.abs(value(x)) <= NEUTRAL);
+  return (
+    <div>
+      <h4>{r.champion} <small className="muted">corrida com o fixado {n1(r.race)}</small></h4>
+      <h5>Favoráveis ({fav.length})</h5>
+      {fav.length ? <ConditionTable rows={fav} reading={reading} /> : <p className="muted small">Nenhuma.</p>}
+      <h5>Desfavoráveis ({unf.length})</h5>
+      {unf.length ? <ConditionTable rows={unf} reading={reading} /> : <p className="muted small">Nenhuma.</p>}
+      <details className="small">
+        <summary>Neutras ({neutral.length}): entre {signed(-NEUTRAL)} e {signed(NEUTRAL)}</summary>
+        <p className="muted">{neutral.map((x) => x.name).join(' · ')}</p>
+      </details>
+    </div>
+  );
+}
+
+/** The favorable and unfavorable status and passive conditions of each side, from what the guides fixed. */
+function Report({ run, m, a, b }) {
+  const [rep, setRep] = useState(null);
+  const [error, setError] = useState(null);
+  const [reading, setReading] = useState('inBuilds');
+  const [source, setSource] = useState('');
+  useEffect(() => {
+    let live = true;
+    setError(null);
+    api.post(`/api/atlas/runs/${run.id}/report`, { minute: m.minute, a, b })
+      .then((x) => { if (live) setRep(x); })
+      .catch((e) => { if (live) setError(e.message); });
+    return () => { live = false; };
+  }, [run.id, m.minute, a, b]);
+  const fixed = [a, b].some((f) => f.items.length || f.keystone || f.runes.length || f.spell || f.conditions.length);
+  return (
+    <>
+      <p className="muted small">Cada status e cada passiva de item, de cada lado, e quanto ela muda a corrida a favor de quem a tem
+        (pontos; 50 é empate). Três leituras: <strong>sozinha</strong> (a nota medida sobre a base sem itens);{' '}
+        <strong>nas builds</strong> (a média do que ela acrescenta em cada build inteira medida, pelo modelo de builds
+        inteiras: o que rende numa build de verdade); e <strong>com o fixado</strong> (o que ela acrescenta sobre o que está
+        fixado nos guias{fixed ? '' : ': nada fixado agora, então é a base'}). Um status conta um nível a mais; uma passiva,
+        tê-la contra não tê-la. "Com quem" são os pares medidos que mudam o valor dela em 1 ponto ou mais: sinergia e
+        sobreposição com as condições do mesmo lado, e as do outro lado que a anulam ou que ela pune.</p>
+      <div className="row">
+        <label className="inline">Separar por <select value={reading} onChange={(e) => setReading(e.target.value)}>
+          {Object.entries(READINGS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select></label>
+        <label className="inline">Fonte <select value={source} onChange={(e) => setSource(e.target.value)}>
+          <option value="">status e passivas</option><option value="status">status</option><option value="passiva">passivas</option>
+        </select></label>
+        {rep && !rep.model && <span className="small atlas-down">Sem builds inteiras medidas: "nas builds" fica vazio. Meça-as na aba Validação.</span>}
+      </div>
+      {error && <p className="error">{error}</p>}
+      {rep && (
+        <div className="atlas-report">
+          <SideConditions r={rep.a} reading={reading} source={source} />
+          <SideConditions r={rep.b} reading={reading} source={source} />
+        </div>
+      )}
+    </>
+  );
+}
+
+const ERRORS = [
+  ['modelo', 'modelo de builds inteiras (validação cruzada)'],
+  ['fatores', 'fatores por ordem (ajustados nos conjuntos)'],
+  ['notas', 'só as notas, em chances'],
+  ['inteiras', 'notas, pares e trios inteiros, em chances'],
+  ['base', 'sempre a corrida da base'],
+];
+
+function WholeBuilds({ m, run, onStarted }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const md = m.model;
+  const start = async () => {
+    setBusy(true);
+    setError(null);
+    try { await api.post(`/api/atlas/runs/${run.id}/builds`); onStarted(); } catch (e) { setError(e.message); } finally { setBusy(false); }
+  };
+  const kinds = (m.builds ?? []).reduce((acc, x) => ({ ...acc, [x.kind]: (acc[x.kind] ?? 0) + 1 }), {});
+  return (
+    <>
+      <h4>Builds inteiras</h4>
+      <p className="muted small">Builds de verdade lutadas (itens reais nos dois lados, às vezes uma runa fundamental, uma runa ou um
+        feitiço trocados): metade sorteada da loja toda, metade entre os melhores itens do guia vazio. Sobre elas se ajusta o
+        modelo que os guias usam: as notas, os pares e os trios em chances, com um coeficiente por ordem e uma correção por
+        condição (o que as notas não veem dela dentro de uma build), a força das correções escolhida por validação cruzada
+        em cinco partes.</p>
+      <button onClick={start} disabled={busy}>{busy ? 'Começando…' : md ? 'Medir as builds inteiras de novo' : 'Medir builds inteiras'}</button>
+      {error && <p className="error">{error}</p>}
+      {md && (
+        <>
+          <p className="small">{md.samples} builds ({kinds.sorteada ?? 0} sorteadas, {kinds.guiada ?? 0} guiadas). Notas de {m.a.champion} ×{' '}
+            {n2(md.coef[0])}, notas de {m.b.champion} × {n2(md.coef[1])}, pares × {n2(md.coef[2])}, trios × {n2(md.coef[3])};{' '}
+            {md.lambda == null ? 'sem correções por condição (a validação cruzada preferiu sem)'
+              : `${Object.keys(md.theta ?? {}).length} correções por condição (penalidade ${md.lambda})`}.</p>
+          <table className="data">
+            <thead><tr><th>Previsão das builds medidas</th><th>Erro médio (pontos)</th><th>Correlação</th></tr></thead>
+            <tbody>
+              {ERRORS.filter(([k]) => md.errors?.[k]).map(([k, label]) => (
+                <tr key={k}><td>{label}</td><td>{n1(md.errors[k][0])}</td><td>{n1(md.errors[k][1] * 100)}%</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
     </>
   );
 }
@@ -334,16 +499,14 @@ function Confirm({ run, m, g, order, scale }) {
   return (
     <div className="row">
       <button onClick={fight} disabled={busy}>{busy ? 'Lutando…' : 'Lutar de verdade com as duas builds montadas'}</button>
-      {res && <span className="small">Corrida real de {m.a.champion}: <strong>{n1(res.real)}</strong> (prevista {n1(res.predicted)});
-        largadas: {res.starts.map(n1).join(' · ')}</span>}
+      {res && <span className="small">Corrida real de {m.a.champion}: <strong>{n1(res.real)}</strong> ± {n1(res.margin)}
+        {' '}(prevista {n1(res.predicted)}); {res.starts.length} largadas: {res.starts.map(n1).join(' · ')}</span>}
       {error && <span className="error">{error}</span>}
     </div>
   );
 }
 
-function Guides({ run, m, itemsList }) {
-  const [a, setA] = useState(emptyFixed);
-  const [b, setB] = useState(emptyFixed);
+function Guides({ run, m, itemsList, a, setA, b, setB }) {
   const [order, setOrder] = useState(0);
   const [scale, setScale] = useState(null);
   const [g, setG] = useState(null);
@@ -363,7 +526,7 @@ function Guides({ run, m, itemsList }) {
         deles (espalhados nos níveis medidos) e pela passiva. Clique numa sugestão para fixá-la.</p>
       <div className="row">
         <label className="inline">Previsão <select value={order} onChange={(e) => setOrder(Number(e.target.value))}>
-          <option value={0}>ajustada pela validação</option>
+          <option value={0}>{m.model ? 'ajustada (modelo de builds inteiras)' : 'ajustada pela validação'}</option>
           <option value={1}>só as notas (1 dimensão)</option><option value={2}>notas e pares inteiros (2)</option>
           <option value={3}>notas, pares e trios inteiros (3)</option>
         </select></label>
@@ -392,6 +555,9 @@ export default function Atlas() {
   const [run, setRun] = useState(null);
   const [minute, setMinute] = useState(null);
   const [tab, setTab] = useState('guias');
+  const [fa, setFa] = useState(emptyFixed);
+  const [fb, setFb] = useState(emptyFixed);
+  useEffect(() => { setFa(emptyFixed()); setFb(emptyFixed()); }, [selected]);
   const [tick, setTick] = useState(0);
   const reload = () => setTick((t) => t + 1);
   useEffect(() => { api.get('/api/atlas/presets').then(setPresets).catch(() => {}); }, []);
@@ -434,15 +600,16 @@ export default function Atlas() {
             </div>
           )}
           <div className="chips" role="tablist">
-            {[['guias', 'Guias'], ['1d', '1 dimensão'], ['2d', '2 dimensões'], ['3d', '3 dimensões'], ['validacao', 'Validação']].map(([k, label]) => (
+            {[['guias', 'Guias'], ['condicoes', 'Condições'], ['1d', '1 dimensão'], ['2d', '2 dimensões'], ['3d', '3 dimensões'], ['validacao', 'Validação']].map(([k, label]) => (
               <button key={k} type="button" className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{label}</button>
             ))}
           </div>
-          {tab === 'guias' && <Guides run={run} m={m} itemsList={itemsList} />}
+          {tab === 'guias' && <Guides run={run} m={m} itemsList={itemsList} a={fa} setA={setFa} b={fb} setB={setFb} />}
+          {tab === 'condicoes' && <Report run={run} m={m} a={fa} b={fb} />}
           {tab === '1d' && <OneDim m={m} names={names} />}
           {tab === '2d' && <ManyDims m={m} names={names} n={2} />}
           {tab === '3d' && <ManyDims m={m} names={names} n={3} />}
-          {tab === 'validacao' && <Validation m={m} run={run} onDone={setRun} />}
+          {tab === 'validacao' && <Validation m={m} run={run} onDone={setRun} onStarted={reload} />}
         </section>
       )}
     </div>

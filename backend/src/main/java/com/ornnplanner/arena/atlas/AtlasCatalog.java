@@ -234,6 +234,12 @@ public class AtlasCatalog {
         return out;
     }
 
+    /** The gold of a stat amount, by the price of a point (null when the stat has no price). */
+    public Double statGold(String stat, Double amount) {
+        Double p = stat == null ? null : planner.referenceData().statPrices.get(stat);
+        return p == null || amount == null ? null : p * amount;
+    }
+
     public RuneCatalog.Rune rune(String name) {
         return runes.find(name).orElse(null);
     }

@@ -65,9 +65,13 @@ public class AtlasRepository {
         jdbc.update("DELETE FROM atlas_run WHERE id = ?", id);
     }
 
-    /** Runs left running by a stop of the app: back to pending, to run again from the start. */
+    /**
+     * Runs left running by a stop of the app: back to pending, to run again from the start; those that already had a
+     * result (a new measure of their builds was running) keep it, done.
+     */
     public int resetRunning() {
-        return jdbc.update("UPDATE atlas_run SET status = 'pendente', stage = NULL, done = 0 WHERE status = 'rodando'");
+        return jdbc.update("UPDATE atlas_run SET status = CASE WHEN result IS NULL THEN 'pendente' ELSE 'feito' END,"
+                + " stage = NULL, done = 0 WHERE status = 'rodando'");
     }
 
     private static AtlasModel.Run row(ResultSet rs) throws SQLException {

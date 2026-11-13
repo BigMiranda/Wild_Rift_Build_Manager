@@ -1,6 +1,7 @@
 package com.ornnplanner.engine;
 
 import com.ornnplanner.arena.atlas.AtlasMath;
+import com.ornnplanner.arena.atlas.AtlasModel;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
@@ -86,5 +87,62 @@ class AtlasMathTest {
         assertArrayEquals(new double[] {0.5, 0.5}, AtlasMath.statWeights(90, 60, 120), 1e-9);
         assertArrayEquals(new double[] {0, 1.5}, AtlasMath.statWeights(180, 60, 120), 1e-9);
         assertEquals(1, AtlasMath.correlation(List.of(1.0, 2.0, 3.0), List.of(2.0, 4.0, 6.0)), 1e-9);
+    }
+
+    @Test
+    void theTermsSplitTheSumByOrderAndSide() {
+        Map<String, Double> r = races();
+        Map<String, Double> w = new LinkedHashMap<>(all("A:x", "A:y", "B:z"));
+        w.put("A:y", 0.5);
+        double[] t = AtlasMath.terms(r, 50, w);
+        // notes of A: 10 + 0.5 x 5; of B: -10; pairs: 0.5 x 5 - 5 + 0; triple: 0.5 x 7
+        assertArrayEquals(new double[] {12.5, -10, -2.5, 3.5}, t, 1e-9);
+        assertEquals(50 + t[0] + t[1] + t[2] + t[3], AtlasMath.predict(r, 50, w, 3), 1e-9);
+    }
+
+    @Test
+    void thePartialIsWhatAWeightAddsExactly() {
+        Map<String, Double> r = races();
+        Map<String, Double> without = all("A:y", "B:z");
+        double[] d = AtlasMath.partial(r, 50, without, "A:x");
+        // note 10; pairs with y (+5) and z (-5); the triple 7
+        assertArrayEquals(new double[] {10, 0, 7}, d, 1e-9);
+        Map<String, Double> with = new LinkedHashMap<>(without);
+        with.put("A:x", 0.6);
+        double before = AtlasMath.predict(r, 50, without, 3);
+        assertEquals(before + 0.6 * (d[0] + d[1] + d[2]), AtlasMath.predict(r, 50, with, 3), 1e-9);
+        // the condition itself in the set is left out
+        assertArrayEquals(d, AtlasMath.partial(r, 50, with, "A:x"), 1e-9);
+    }
+
+    @Test
+    void ridgeFindsTheCoefficientsAndShrinksWithThePenalty() {
+        double[][] x = new double[40][];
+        double[] y = new double[40];
+        for (int i = 0; i < 40; i++) {
+            x[i] = new double[] {i % 7, (i * 3) % 5, 1};
+            y[i] = 2 * x[i][0] - 1.5 * x[i][1] + 0.25;
+        }
+        assertArrayEquals(new double[] {2, -1.5, 0.25}, AtlasMath.ridge(x, y, new double[] {0, 0, 0}), 1e-9);
+        double[] shrunk = AtlasMath.ridge(x, y, new double[] {1000, 1000, 1000});
+        assertEquals(true, Math.abs(shrunk[0]) < 2 && Math.abs(shrunk[1]) < 1.5);
+    }
+
+    @Test
+    void theModelsGradientMatchesItsLogit() {
+        Map<String, Double> lg = AtlasMath.logits(races());
+        double lb = AtlasMath.logit(50);
+        AtlasModel.BuildModel m = new AtlasModel.BuildModel();
+        m.coef = new double[] {0.8, 0.9, 0.5, 0.25};
+        m.theta.put("A:x", -0.2);
+        Map<String, Double> without = all("A:y", "B:z");
+        Map<String, Double> with = new LinkedHashMap<>(without);
+        with.put("A:x", 1.0);
+        double g = AtlasMath.modelGrad(lg, lb, without, "A:x", m);
+        assertEquals(AtlasMath.modelLogit(lg, lb, without, m) + g, AtlasMath.modelLogit(lg, lb, with, m), 1e-9);
+        // whole coefficients and no correction: the logit prediction with every order
+        AtlasModel.BuildModel whole = new AtlasModel.BuildModel();
+        whole.coef = new double[] {1, 1, 1, 1};
+        assertEquals(AtlasMath.predictLogit(lg, lb, with, 3), AtlasMath.expit(AtlasMath.modelLogit(lg, lb, with, whole)), 1e-9);
     }
 }

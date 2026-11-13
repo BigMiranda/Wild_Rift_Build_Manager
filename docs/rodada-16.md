@@ -202,3 +202,90 @@ Decisões do usuário (13/11/2026):
 As notas sozinhas e o ordenamento do próximo item já dão a direção. O número absoluto de uma build inteira, por
 enquanto, só vale pela luta de verdade.
 
+## Parte 2: builds inteiras e o relatório de condições (✅)
+
+**O problema:** a previsão por inclusão-exclusão foi validada em conjuntos de 3 a 8 condições, mas uma build inteira
+carrega umas 24. Nessas, ela saturava em 100, e as builds que o guia montava erravam ~20 pontos na luta real.
+
+**O que mudou:**
+
+- **Builds inteiras medidas** (`builds_inteiras: 600` no seed): builds de verdade, com os itens reais nos dois lados.
+  - Metade é sorteada da loja toda. Cada lado troca às vezes uma runa fundamental, uma runa ou o feitiço.
+  - Metade é guiada: os 30 melhores itens por ouro do guia vazio, com páginas de runas como as do guia (runa
+    fundamental e feitiço em 60% das vezes, até 4 runas compatíveis entre as melhores pelas notas).
+  - Os tamanhos dos dois lados são próximos (1 a 5 itens, mais botas em 70% das vezes).
+  - Custo: ~10 minutos para 600 builds, quase tudo preparando os lutadores.
+- **Modelo de builds inteiras** (`AtlasModel.BuildModel`), em chances (logit):
+  - Fórmula: base + coeficientes × {notas de A, notas de B, pares, trios} + uma correção por condição × o peso dela.
+  - Ajuste por regressão ridge. A força das correções é escolhida por validação cruzada em 5 partes, sobre o erro em
+    pontos.
+  - É a previsão "ajustada" dos guias e da luta de verdade. Sem builds medidas, valem os fatores por ordem da parte 1.
+- **Execuções antigas:** o botão "Medir builds inteiras" (aba Validação, `POST /runs/{id}/builds`) mede em segundo
+  plano e mantém o resto da execução. Se o programa parar no meio, a execução volta a "feito", não a "pendente".
+- **Lutar de verdade:** 24 largadas com a margem de 95%, porque uma build sozinha oscila de 0 a 100 entre largadas.
+  Antes eram só 7 largadas distintas: a partir da 8ª elas se repetiam. Agora cada volta de 7 desloca as posições
+  laterais, e as 7 primeiras (as das medidas) não mudam.
+
+**Piloto Ornn × Rumble (minuto 15), 600 builds:**
+
+| Previsão das builds medidas | Erro médio (pontos) | Correlação |
+|---|---|---|
+| modelo de builds inteiras (validação cruzada) | 8,7 | 0,79 |
+| sempre a corrida da base | 15,8 | 0 |
+| fatores por ordem da parte 1 | 33,4 | 0,59 |
+| só as notas, em chances | 33,3 | -0,13 |
+| notas, pares e trios inteiros, em chances | 42,5 | 0,36 |
+
+- **Coeficientes:** as notas do Ornn × 0,91, as do Rumble × 0,53, os pares × 0,08 e os trios × 0,03. Numa build
+  inteira, as interações medidas em 2 e 3 dimensões quase não somam.
+- **Correções:** 300 correções por condição (penalidade 100).
+- **Primeira medida, sem as páginas de runas:** erro de 7,5 (correlação 0,83). Mas as runas que o guia montava
+  (4 runas, runa fundamental e feitiço juntos) ficavam fora do que o modelo tinha visto. Com Rookern fixado no Ornn e
+  Liandry no Rumble, a build montada previa 80,1, e a luta real deu 42,7 ± 11,8. Isolando, só com itens a previsão
+  acertava (59,0 previsto, 55,7 real): o erro vinha da página de runas do Ornn.
+- **Depois das páginas de runas na metade guiada:**
+  - Rookern × Liandry: a build montada inteira deu 68,5 ± 9,0 real contra 72,1 previsto.
+  - As variações (sem a runa fundamental do Rumble, só itens de um lado, só itens dos dois) caíram todas dentro da
+    margem, com erro de 3 a 7 pontos.
+  - Sem nada fixado, as builds montadas ainda erram ~14 pontos (71,3 ± 3,6 real contra 85,1 previsto). Escolher
+    sempre o item de maior ganho previsto puxa a previsão para cima: o guia escolhe justamente o que o modelo
+    superestima.
+
+**Relatório de condições** (aba Condições, `POST /runs/{id}/report`): cada status e passiva de cada lado, separados
+em favoráveis, desfavoráveis e neutras (±0,5 ponto). Há três leituras, e a separação usa a que o usuário escolher:
+
+- **sozinha:** a nota medida sobre a base sem itens;
+- **nas builds:** a média do que a condição acrescenta em cada build medida, pelo modelo (calculada no ajuste);
+- **com o fixado:** o que ela acrescenta sobre o que está fixado nos guias (as fixações são as mesmas das duas abas).
+
+Um status conta um nível a mais; uma passiva, tê-la contra não tê-la. O cálculo é exato pela derivada
+(`AtlasMath.partial`, `modelGrad`), porque a previsão é multilinear em cada peso.
+
+Para status, há também o ganho por mil de ouro. "Com quem" lista os pares medidos que mudam o valor da condição em 1
+ponto ou mais:
+
+- do mesmo lado: sinergia e sobreposição;
+- do outro lado: as que a anulam e as que ela pune.
+
+**Leituras do piloto:**
+
+- **Ornn, favoráveis nas builds:** Manto da Meia-noite +12,2, Resistência Mágica +80 +12,1, Ruptor Divino +9,5,
+  Dano de Ataque +90 +8,9, Força da Natureza +8,1, Liandry +8.
+- **Ornn, desfavoráveis:** Aceleração de Habilidade +15 (−10,2 sozinha, −2,5 nas builds), Cimitarra Mercurial e
+  Velocidade de Movimento +45.
+  - A aceleração e a velocidade piorarem o Ornn indica que a IA da Arena decide pior com elas (mais recargas e
+    aproximações mal usadas). Fica como pergunta aberta da Arena, não como regra de build.
+- **Rumble, favoráveis nas builds:** Manto da Meia-noite +9,2, Ruptor Divino +8,7, Liandry +7,5, Abraço de Seraph
+  +6,8, Céu Dividido +6,6, Muramana +6,6.
+- **Rumble, desfavoráveis:** só mana e regeneração de mana, perto de zero (o kit dele não usa mana).
+- **O Curar do Rumble aparece em quase todo "pune":** é o efeito de limiar da parte 1. Com a base empatada, a cura
+  decide a luta.
+
+**O que falta:**
+
+1. Montar a build do guia contra a build montada do outro lado (hoje cada lado monta contra o que o outro tem
+   fixado).
+2. Corrigir o otimismo da escolha gulosa, por exemplo com uma segunda rodada de builds medidas em volta das que o guia
+   monta.
+3. Mais minutos.
+

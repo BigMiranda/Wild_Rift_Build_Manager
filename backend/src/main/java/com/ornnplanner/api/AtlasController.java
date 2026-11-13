@@ -62,6 +62,18 @@ public class AtlasController {
         return atlas.revalidate(id);
     }
 
+    /** Measures the run's whole builds again (in the background) and refits the model of whole builds. */
+    @PostMapping("/runs/{id}/builds")
+    public AtlasModel.Run builds(@PathVariable long id) {
+        return atlas.remeasureBuilds(id);
+    }
+
+    /** The favorable and unfavorable status and passive conditions of each side, from what is fixed. */
+    @PostMapping("/runs/{id}/report")
+    public AtlasModel.ConditionReport report(@PathVariable long id, @RequestBody AtlasModel.GuideRequest q) {
+        return atlas.report(id, q);
+    }
+
     /** Fights for real what each side fixed, next to the prediction. */
     @PostMapping("/runs/{id}/confirm")
     public AtlasModel.Confirmation confirm(@PathVariable long id, @RequestBody AtlasModel.GuideRequest q) {

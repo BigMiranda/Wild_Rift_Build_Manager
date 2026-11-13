@@ -135,6 +135,11 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   passives, keystones, runes, spells) are fought alone, in pairs and in triples (`Combatant.holdItems` / `extraItems`
   hold exactly the condition's items instead of the purchases); the guide predicts any set by inclusion-exclusion up to
   order 3 (multilinear in the conditions' weights) and ranks items, runes and spell for each side from what is fixed.
+  Part 2: whole builds (`builds_inteiras`, real items both sides, guided half with whole rune pages) are fought and a
+  ridge model in log-odds (`BuildModel`: a coefficient per order, a correction per condition, penalty by 5-fold CV) is
+  what the guide's "ajustada" uses; `POST /runs/{id}/builds` remeasures them, `POST /runs/{id}/report` is the report of
+  favorable and unfavorable stats and passives (alone, in the measured builds, over what is fixed; partners from the
+  measured pairs). Starts after the seventh shift the lateral offsets (the first seven never change).
   Local only (the public mode never starts it).
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a

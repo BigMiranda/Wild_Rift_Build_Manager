@@ -139,6 +139,152 @@ public final class AtlasMath {
         return sum;
     }
 
+    /**
+     * The terms of a weighted set by order, the first split by side: {notes of A, notes of B, pairs, triples}. The sum is
+     * the base plus the four (what {@link #sum} gives with whole factors).
+     */
+    public static double[] terms(Map<String, Double> races, double base, Map<String, Double> weights) {
+        List<String> keys = present(weights, null);
+        double[] t = new double[4];
+        for (String x : keys) {
+            Double n = note1(races, base, x);
+            if (n != null) {
+                t[x.startsWith("A:") ? 0 : 1] += weights.get(x) * n;
+            }
+        }
+        for (int i = 0; i < keys.size(); i++) {
+            for (int j = i + 1; j < keys.size(); j++) {
+                Double n = note2(races, base, keys.get(i), keys.get(j));
+                if (n != null) {
+                    t[2] += weights.get(keys.get(i)) * weights.get(keys.get(j)) * n;
+                }
+                for (int k = j + 1; k < keys.size(); k++) {
+                    Double m = note3(races, base, keys.get(i), keys.get(j), keys.get(k));
+                    if (m != null) {
+                        t[3] += weights.get(keys.get(i)) * weights.get(keys.get(j)) * weights.get(keys.get(k)) * m;
+                    }
+                }
+            }
+        }
+        return t;
+    }
+
+    /**
+     * The sum's derivative in one condition's weight, by order: {its note, its pairs' interactions times the others'
+     * weights, its triples' times the two others' weights}, the others being the set without it. The sum is multilinear,
+     * so giving the condition a weight w adds exactly w times these (each times its order's factor).
+     */
+    public static double[] partial(Map<String, Double> races, double base, Map<String, Double> weights, String x) {
+        List<String> keys = present(weights, x);
+        double[] d = new double[3];
+        Double n = note1(races, base, x);
+        if (n != null) {
+            d[0] = n;
+        }
+        for (int i = 0; i < keys.size(); i++) {
+            Double p = note2(races, base, x, keys.get(i));
+            if (p != null) {
+                d[1] += weights.get(keys.get(i)) * p;
+            }
+            for (int j = i + 1; j < keys.size(); j++) {
+                Double t = note3(races, base, x, keys.get(i), keys.get(j));
+                if (t != null) {
+                    d[2] += weights.get(keys.get(i)) * weights.get(keys.get(j)) * t;
+                }
+            }
+        }
+        return d;
+    }
+
+    /** The keys with a weight, sorted, without {@code skip}. */
+    private static List<String> present(Map<String, Double> weights, String skip) {
+        List<String> keys = new ArrayList<>();
+        for (Map.Entry<String, Double> e : weights.entrySet()) {
+            if (e.getValue() != null && Math.abs(e.getValue()) > 1e-12 && !e.getKey().equals(skip)) {
+                keys.add(e.getKey());
+            }
+        }
+        Collections.sort(keys);
+        return keys;
+    }
+
+    /**
+     * The model of whole builds, in log-odds: the base, the four terms ({@link #terms} on the log-odds) times the model's
+     * coefficients, and each condition's correction times its weight.
+     */
+    public static double modelLogit(Map<String, Double> logits, double logitBase, Map<String, Double> weights, AtlasModel.BuildModel m) {
+        double[] t = terms(logits, logitBase, weights);
+        double l = logitBase;
+        for (int i = 0; i < 4; i++) {
+            l += m.coef[i] * t[i];
+        }
+        for (Map.Entry<String, Double> e : weights.entrySet()) {
+            Double th = m.theta.get(e.getKey());
+            if (th != null && e.getValue() != null) {
+                l += th * e.getValue();
+            }
+        }
+        return l;
+    }
+
+    /** The model's derivative in one condition's weight (log-odds), the set taken without it. */
+    public static double modelGrad(Map<String, Double> logits, double logitBase, Map<String, Double> weights, String x, AtlasModel.BuildModel m) {
+        double[] d = partial(logits, logitBase, weights, x);
+        return m.coef[x.startsWith("A:") ? 0 : 1] * d[0] + m.coef[2] * d[1] + m.coef[3] * d[2] + m.theta.getOrDefault(x, 0.0);
+    }
+
+    /**
+     * Ridge regression: the coefficients minimizing the squared error plus each coefficient's penalty times its square
+     * (a penalty per column: small on the few global terms, larger on the many corrections). Gaussian elimination with
+     * partial pivoting on the normal equations.
+     */
+    public static double[] ridge(double[][] x, double[] y, double[] penalty) {
+        int p = penalty.length;
+        double[][] a = new double[p][p + 1];
+        for (int r = 0; r < x.length; r++) {
+            for (int i = 0; i < p; i++) {
+                if (x[r][i] == 0) {
+                    continue;
+                }
+                for (int j = 0; j < p; j++) {
+                    a[i][j] += x[r][i] * x[r][j];
+                }
+                a[i][p] += x[r][i] * y[r];
+            }
+        }
+        for (int i = 0; i < p; i++) {
+            a[i][i] += penalty[i];
+        }
+        for (int c = 0; c < p; c++) {
+            int piv = c;
+            for (int r = c + 1; r < p; r++) {
+                if (Math.abs(a[r][c]) > Math.abs(a[piv][c])) {
+                    piv = r;
+                }
+            }
+            double[] tmp = a[c];
+            a[c] = a[piv];
+            a[piv] = tmp;
+            if (Math.abs(a[c][c]) < 1e-12) {
+                continue;
+            }
+            for (int r = 0; r < p; r++) {
+                if (r == c || a[r][c] == 0) {
+                    continue;
+                }
+                double f = a[r][c] / a[c][c];
+                for (int k = c; k <= p; k++) {
+                    a[r][k] -= f * a[c][k];
+                }
+            }
+        }
+        double[] beta = new double[p];
+        for (int i = 0; i < p; i++) {
+            beta[i] = Math.abs(a[i][i]) < 1e-12 ? 0 : a[i][p] / a[i][i];
+        }
+        return beta;
+    }
+
     /** Pearson's correlation (0 when either side is flat). */
     public static double correlation(List<Double> a, List<Double> b) {
         int n = Math.min(a.size(), b.size());

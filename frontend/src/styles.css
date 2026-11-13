@@ -1520,6 +1520,12 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .atlas-up { color: #6fcf97; }
 .atlas-down { color: #e07070; }
 .atlas-cond { display: inline-flex; align-items: center; gap: 4px; }
+.atlas-partners { display: flex; flex-direction: column; gap: 2px; white-space: normal; min-width: 280px; }
+.atlas-report { display: flex; flex-direction: column; gap: 20px; overflow-x: auto; }
+.atlas-report table td:first-child { min-width: 220px; }
+.atlas-report table td:last-child { text-align: left; }
+.atlas-partners > span { display: block; }
+.atlas h5 { margin: 12px 0 4px; }
 .atlas-options { list-style: none; padding: 0; margin: 4px 0 10px; display: grid; gap: 3px; }
 .atlas-options li { display: flex; align-items: center; gap: 8px; }
 .atlas-pick { display: inline-flex; align-items: center; gap: 6px; text-align: left; }

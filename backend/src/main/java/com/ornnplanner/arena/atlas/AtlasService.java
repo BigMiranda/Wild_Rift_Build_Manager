@@ -46,6 +46,8 @@ public class AtlasService {
 
     private static final Logger log = LoggerFactory.getLogger(AtlasService.class);
     private static final int BATCH = 400;
+    /** Starts of a real fight of two whole builds: one build swings from 0 to 100 between starts. */
+    private static final int CONFIRM_STARTS = 24;
     private static final double[] DISTANCES = {800, 650, 950, 720, 880, 760, 900};
     private static final double[] LATERAL = {0, 80, -80, 40, -40, 120, -120};
 
@@ -126,6 +128,7 @@ public class AtlasService {
         c.top2d = (int) num(all.get("top_2d"), c.top2d);
         c.top3d = (int) num(all.get("top_3d"), c.top3d);
         c.validation = (int) num(all.get("validacao"), c.validation);
+        c.builds = (int) num(all.get("builds_inteiras"), c.builds);
         if (all.get("fontes") instanceof List) {
             c.sources = new ArrayList<>();
             for (Object o : (List<Object>) all.get("fontes")) {
@@ -267,6 +270,9 @@ public class AtlasService {
         }
         if (c.validation > 0 && !cancel) {
             validate(mr, c, f, poolA, poolB, ta, tb, id, tag);
+        }
+        if (c.builds > 0 && !cancel) {
+            f.fights += measureBuilds(id, c, mr, baseA, baseB, tag);
         }
         mr.fights = f.fights;
         mr.seconds = (System.nanoTime() - t0) / 1e9;
@@ -631,26 +637,36 @@ public class AtlasService {
             return in;
         }
 
-        /** Side A's race, the mean over the starts. */
         private double race(Arena.Input a, Arena.Input b) {
             double sum = 0;
-            int n = Math.max(1, c.starts);
-            for (int k = 0; k < n; k++) {
-                Arena.Input x = a.copy();
-                Arena.Input y = b.copy();
-                x.x = 4600;
-                x.y = 0;
-                y.x = 4600 + DISTANCES[k % DISTANCES.length];
-                y.y = LATERAL[k % LATERAL.length];
-                x.healthTrail = true;
-                y.healthTrail = true;
-                ArenaModel.Result r = arena.runPlain(List.of(x, y), c.duration);
-                EffectModel.Measures m = new EffectModel.Measures();
-                EffectTestService.race(m, r, 0, 1, 0);
-                sum += m.race;
+            for (double r : races(a, b, c, c.starts)) {
+                sum += r;
             }
-            return sum / n;
+            return sum / Math.max(1, c.starts);
         }
+    }
+
+    /**
+     * Side A's race in each of n starts. The first seven pair each distance with its lateral offset; after them every
+     * round of seven shifts the offsets by one, so up to 49 starts are all different (the first seven never change).
+     */
+    private List<Double> races(Arena.Input a, Arena.Input b, AtlasModel.Config c, int starts) {
+        List<Double> out = new ArrayList<>();
+        int n = Math.max(1, starts);
+        for (int k = 0; k < n; k++) {
+            Arena.Input x = a.copy();
+            Arena.Input y = b.copy();
+            x.x = 4600;
+            x.y = 0;
+            y.x = 4600 + DISTANCES[k % DISTANCES.length];
+            y.y = LATERAL[(k + k / DISTANCES.length) % LATERAL.length];
+            x.healthTrail = true;
+            y.healthTrail = true;
+            EffectModel.Measures m = new EffectModel.Measures();
+            EffectTestService.race(m, arena.runPlain(List.of(x, y), c.duration), 0, 1, 0);
+            out.add(m.race);
+        }
+        return out;
     }
 
     /** A side's slot: its base build at the minute, holding exactly the conditions' items, runes and spell swapped in. */
@@ -728,37 +744,557 @@ public class AtlasService {
         b.spells = s;
     }
 
+    // ------------------------------------------------------------------ whole builds
+
+    /**
+     * Whole builds fought for real: half drawn from the whole shop, half among the empty guide's best items per gold
+     * (where the guide works), with close sizes on both sides and sometimes a keystone, a rune or a spell swapped; then
+     * the model of whole builds is fitted on them. Returns the fights.
+     */
+    private int measureBuilds(long id, AtlasModel.Config c, AtlasModel.MinuteResult mr, BuildRepository.Build baseA,
+                              BuildRepository.Build baseB, String tag) {
+        Random rng = new Random(c.seed * 131 + (long) (mr.minute * 100) + 7);
+        prime(mr);
+        AtlasModel.BuildModel keep = mr.model;
+        mr.model = null;   // the guided pool comes from the notes, not from an earlier model
+        List<ItemDef> shop = catalog.buyable();
+        List<ItemDef> bestA = guided(mr, "A", shop);
+        List<ItemDef> bestB = guided(mr, "B", shop);
+        mr.model = keep;
+        List<AtlasModel.BuildSample> todo = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        int guard = 0;
+        while (todo.size() < c.builds && guard++ < c.builds * 20) {
+            boolean guidedKind = todo.size() % 2 == 1;
+            int ka = 1 + rng.nextInt(5);
+            int kb = Math.max(1, Math.min(5, ka + rng.nextInt(3) - 1));
+            AtlasModel.BuildSample s = new AtlasModel.BuildSample();
+            s.kind = guidedKind ? "guiada" : "sorteada";
+            s.a = draw(rng, guidedKind ? bestA : shop, shop, ka, mr, "A", guidedKind);
+            s.b = draw(rng, guidedKind ? bestB : shop, shop, kb, mr, "B", guidedKind);
+            if (seen.add(AtlasRepository.write(s.a) + "/" + AtlasRepository.write(s.b))) {
+                todo.add(s);
+            }
+        }
+        int fights = 0;
+        for (int from = 0; from < todo.size() && !cancel; from += BATCH) {
+            List<AtlasModel.BuildSample> batch = todo.subList(from, Math.min(todo.size(), from + BATCH));
+            List<Callable<Double>> jobs = new ArrayList<>();
+            long p0 = System.nanoTime();
+            for (AtlasModel.BuildSample s : batch) {
+                ArenaModel.Scenario sc = new ArenaModel.Scenario();
+                sc.fighters = List.of(fixedSlot(baseA, mr.minute, s.a, 0), fixedSlot(baseB, mr.minute, s.b, 1));
+                List<Arena.Input> ins = arena.prepareSlots(sc);
+                jobs.add(() -> {
+                    List<Double> r = races(ins.get(0), ins.get(1), c, c.starts);
+                    double sum = 0;
+                    for (double v : r) {
+                        sum += v;
+                    }
+                    return sum / r.size();
+                });
+            }
+            long p1 = System.nanoTime();
+            List<Double> done = ArenaService.parallel(jobs);
+            mr.prepareSeconds += (p1 - p0) / 1e9;
+            mr.fightSeconds += (System.nanoTime() - p1) / 1e9;
+            for (int i = 0; i < batch.size(); i++) {
+                batch.get(i).race = done.get(i);
+            }
+            fights += batch.size() * Math.max(1, c.starts);
+            repo.progress(id, "rodando", tag + "builds inteiras", Math.min(todo.size(), from + BATCH), todo.size());
+        }
+        if (cancel) {
+            return fights;
+        }
+        mr.builds = new ArrayList<>(todo);
+        fitBuilds(mr);
+        return fights;
+    }
+
+    /** The empty guide's 30 best items per gold and 3 best boots of a side (the notes with the validation's factors). */
+    private List<ItemDef> guided(AtlasModel.MinuteResult mr, String side, List<ItemDef> shop) {
+        AtlasModel.Fixed none = new AtlasModel.Fixed();
+        List<AtlasModel.Option> opts = new ArrayList<>();
+        for (ItemDef it : shop) {
+            opts.add(itemOption(mr, side, none, Map.of(), Map.of(), 0, it));
+        }
+        opts.sort(Comparator.comparingDouble((AtlasModel.Option o) -> -(o.perThousand == null ? o.gain : o.perThousand))
+                .thenComparing(o -> o.name));
+        List<ItemDef> out = new ArrayList<>();
+        int items = 0;
+        int boots = 0;
+        for (AtlasModel.Option o : opts) {
+            ItemDef it = catalog.item(o.itemId);
+            if (it.boots() ? boots++ < 3 : items++ < 30) {
+                out.add(it);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * A random build: k items of the pool that go together and boots most of the time. Drawn from the whole shop it
+     * sometimes swaps one keystone, one rune or the spell; guided it takes a page like the guide's, among the side's best
+     * by their notes: often a keystone and the spell, and up to four runes that go together.
+     */
+    private AtlasModel.Fixed draw(Random rng, List<ItemDef> pool, List<ItemDef> shop, int k, AtlasModel.MinuteResult mr,
+                                  String sideKey, boolean page) {
+        AtlasModel.Side side = "A".equals(sideKey) ? mr.a : mr.b;
+        List<ItemDef> items = new ArrayList<>();
+        List<ItemDef> boots = new ArrayList<>();
+        for (ItemDef it : pool) {
+            (it.boots() ? boots : items).add(it);
+        }
+        if (boots.isEmpty()) {
+            shop.stream().filter(ItemDef::boots).forEach(boots::add);
+        }
+        AtlasModel.Fixed f = new AtlasModel.Fixed();
+        int guard = 0;
+        while (f.items.size() < k && guard++ < 200 && !items.isEmpty()) {
+            ItemDef it = items.get(rng.nextInt(items.size()));
+            if (!f.items.contains(it.id) && itemFits(it, f.items)) {
+                f.items.add(it.id);
+            }
+        }
+        if (rng.nextDouble() < 0.7 && !boots.isEmpty()) {
+            ItemDef b = boots.get(rng.nextInt(boots.size()));
+            if (itemFits(b, f.items)) {
+                f.items.add(b.id);
+            }
+        }
+        List<AtlasModel.Condition> keystones = new ArrayList<>();
+        List<AtlasModel.Condition> runes = new ArrayList<>();
+        List<AtlasModel.Condition> spells = new ArrayList<>();
+        for (AtlasModel.Condition c : side.conditions) {
+            if ("fundamental".equals(c.source)) {
+                keystones.add(c);
+            } else if ("runa".equals(c.source)) {
+                runes.add(c);
+            } else if ("feitico".equals(c.source)) {
+                spells.add(c);
+            }
+        }
+        if (page) {
+            keystones = best(mr, sideKey, keystones, 4);
+            runes = best(mr, sideKey, runes, 8);
+            spells = best(mr, sideKey, spells, 3);
+        }
+        double chance = page ? 0.6 : 0.25;
+        if (rng.nextDouble() < chance && !keystones.isEmpty()) {
+            f.keystone = keystones.get(rng.nextInt(keystones.size())).rune;
+        }
+        int nRunes = page ? rng.nextInt(5) : rng.nextDouble() < 0.25 ? 1 : 0;
+        Set<String> tags = new HashSet<>();
+        for (int i = 0; i < 20 && f.runes.size() < nRunes && !runes.isEmpty(); i++) {
+            AtlasModel.Condition r = runes.get(rng.nextInt(runes.size()));
+            if (!f.runes.contains(r.rune) && r.exclusive.stream().noneMatch(tags::contains)) {
+                f.runes.add(r.rune);
+                tags.addAll(r.exclusive);
+            }
+        }
+        if (rng.nextDouble() < chance && !spells.isEmpty()) {
+            f.spell = spells.get(rng.nextInt(spells.size())).spell;
+        }
+        return f;
+    }
+
+    /** The n conditions with the best notes for their side (its own view). */
+    private static List<AtlasModel.Condition> best(AtlasModel.MinuteResult mr, String side, List<AtlasModel.Condition> l, int n) {
+        List<AtlasModel.Condition> out = new ArrayList<>(l);
+        out.sort(Comparator.comparingDouble((AtlasModel.Condition c) -> {
+            Double v = AtlasMath.note1(mr.races, mr.base, side + ":" + c.key);
+            return v == null ? 1e9 : "A".equals(side) ? -v : v;
+        }).thenComparing(c -> c.key));
+        return new ArrayList<>(out.subList(0, Math.min(n, out.size())));
+    }
+
+    /** The model of whole builds on the measured ones, and each condition's mean gain inside them. */
+    void fitBuilds(AtlasModel.MinuteResult mr) {
+        List<Map<String, Double>> ws = new ArrayList<>();
+        List<Double> ys = new ArrayList<>();
+        for (AtlasModel.BuildSample s : mr.builds) {
+            Map<String, Double> all = weights(mr, "A", s.a);
+            all.putAll(weights(mr, "B", s.b));
+            ws.add(all);
+            ys.add(s.race);
+        }
+        mr.model = fitModel(mr, ws, ys);
+        prime(mr);
+        mr.inBuilds = inBuilds(mr, ws);
+    }
+
+    /** Penalties on the conditions' corrections tried by the cross validation (-1 = no corrections). */
+    private static final double[] LAMBDAS = {-1, 300, 100, 30, 10, 3};
+    /** The small penalty on the four global coefficients. */
+    private static final double GLOBAL_PENALTY = 0.5;
+    private static final int FOLDS = 5;
+
+    /**
+     * Ridge regression of the measured builds' log-odds on the four terms and the conditions' weights, its penalty
+     * picked by five-fold cross validation on the error in points; the errors of the other predictions next to it.
+     */
+    static AtlasModel.BuildModel fitModel(AtlasModel.MinuteResult mr, List<Map<String, Double>> ws, List<Double> ys) {
+        int n = ws.size();
+        if (n < 20) {
+            return null;
+        }
+        Map<String, Double> lg = AtlasMath.logits(mr.races);
+        double lb = AtlasMath.logit(mr.base);
+        java.util.TreeSet<String> keySet = new java.util.TreeSet<>();
+        ws.forEach(w -> keySet.addAll(w.keySet()));
+        List<String> keys = new ArrayList<>(keySet);
+        Map<String, Integer> col = new java.util.HashMap<>();
+        for (int i = 0; i < keys.size(); i++) {
+            col.put(keys.get(i), 4 + i);
+        }
+        double[][] x = new double[n][4 + keys.size()];
+        double[] y = new double[n];
+        for (int i = 0; i < n; i++) {
+            double[] t = AtlasMath.terms(lg, lb, ws.get(i));
+            System.arraycopy(t, 0, x[i], 0, 4);
+            for (Map.Entry<String, Double> e : ws.get(i).entrySet()) {
+                x[i][col.get(e.getKey())] = e.getValue();
+            }
+            y[i] = AtlasMath.logit(Math.max(1, Math.min(99, ys.get(i)))) - lb;
+        }
+        double best = Double.MAX_VALUE;
+        double bestLambda = -1;
+        double[] bestPred = null;
+        for (double lambda : LAMBDAS) {
+            int p = lambda < 0 ? 4 : 4 + keys.size();
+            double[] pred = new double[n];
+            for (int fold = 0; fold < FOLDS; fold++) {
+                List<double[]> tx = new ArrayList<>();
+                List<Double> ty = new ArrayList<>();
+                for (int i = 0; i < n; i++) {
+                    if (i % FOLDS != fold) {
+                        tx.add(java.util.Arrays.copyOf(x[i], p));
+                        ty.add(y[i]);
+                    }
+                }
+                double[] beta = AtlasMath.ridge(tx.toArray(new double[0][]), ty.stream().mapToDouble(Double::doubleValue).toArray(),
+                        penalty(p, lambda));
+                for (int i = fold; i < n; i += FOLDS) {
+                    pred[i] = AtlasMath.expit(lb + dot(x[i], beta));
+                }
+            }
+            double mae = 0;
+            for (int i = 0; i < n; i++) {
+                mae += Math.abs(pred[i] - ys.get(i)) / n;
+            }
+            if (mae < best - 1e-9) {
+                best = mae;
+                bestLambda = lambda;
+                bestPred = pred;
+            }
+        }
+        int p = bestLambda < 0 ? 4 : 4 + keys.size();
+        double[][] xs = new double[n][];
+        for (int i = 0; i < n; i++) {
+            xs[i] = java.util.Arrays.copyOf(x[i], p);
+        }
+        double[] beta = AtlasMath.ridge(xs, y, penalty(p, bestLambda));
+        AtlasModel.BuildModel m = new AtlasModel.BuildModel();
+        m.coef = java.util.Arrays.copyOf(beta, 4);
+        for (int i = 4; i < p; i++) {
+            if (Math.abs(beta[i]) > 1e-9) {
+                m.theta.put(keys.get(i - 4), beta[i]);
+            }
+        }
+        m.lambda = bestLambda < 0 ? null : bestLambda;
+        m.samples = n;
+        m.errors.put("modelo", new double[] {best, AtlasMath.correlation(ys, toList(bestPred))});
+        // the other predictions, on the same builds
+        double[] base = new double[n];
+        double[] one = new double[n];
+        double[] whole = new double[n];
+        double[] fitted = new double[n];
+        for (int i = 0; i < n; i++) {
+            base[i] = mr.base;
+            one[i] = AtlasMath.predictLogit(lg, lb, ws.get(i), 1);
+            whole[i] = AtlasMath.predictLogit(lg, lb, ws.get(i), 3);
+            if (mr.factors != null) {
+                fitted[i] = "pontos".equals(mr.scale) ? AtlasMath.predict(mr.races, mr.base, ws.get(i), mr.factors)
+                        : AtlasMath.predictLogit(lg, lb, ws.get(i), mr.factors);
+            }
+        }
+        m.errors.put("base", errors(base, ys));
+        m.errors.put("notas", errors(one, ys));
+        m.errors.put("inteiras", errors(whole, ys));
+        if (mr.factors != null) {
+            m.errors.put("fatores", errors(fitted, ys));
+        }
+        return m;
+    }
+
+    private static double[] penalty(int p, double lambda) {
+        double[] pen = new double[p];
+        for (int i = 0; i < p; i++) {
+            pen[i] = i < 4 ? GLOBAL_PENALTY : lambda;
+        }
+        return pen;
+    }
+
+    private static double dot(double[] x, double[] beta) {
+        double s = 0;
+        for (int i = 0; i < beta.length; i++) {
+            s += x[i] * beta[i];
+        }
+        return s;
+    }
+
+    private static List<Double> toList(double[] v) {
+        List<Double> out = new ArrayList<>();
+        for (double d : v) {
+            out.add(d);
+        }
+        return out;
+    }
+
+    private static double[] errors(double[] pred, List<Double> ys) {
+        double mae = 0;
+        for (int i = 0; i < pred.length; i++) {
+            mae += Math.abs(pred[i] - ys.get(i)) / pred.length;
+        }
+        return new double[] {mae, AtlasMath.correlation(ys, toList(pred))};
+    }
+
+    /** Each status and passive condition's mean gain over the measured builds, in its side's view. */
+    static Map<String, Double> inBuilds(AtlasModel.MinuteResult mr, List<Map<String, Double>> ws) {
+        Map<String, Double> sum = new LinkedHashMap<>();
+        if (ws.isEmpty()) {
+            return sum;
+        }
+        for (Map<String, Double> w : ws) {
+            double raw = raw(mr, w);
+            for (String side : List.of("A", "B")) {
+                for (AtlasModel.Condition c : ("A".equals(side) ? mr.a : mr.b).conditions) {
+                    if ("status".equals(c.source) || "passiva".equals(c.source)) {
+                        String k = side + ":" + c.key;
+                        sum.merge(k, gain(mr, w, raw, k, "status".equals(c.source)), Double::sum);
+                    }
+                }
+            }
+        }
+        sum.replaceAll((k, v) -> v / ws.size());
+        return sum;
+    }
+
+    /** The run's own scale for the readings (the model, when there is one, is on log-odds). */
+    static void prime(AtlasModel.MinuteResult mr) {
+        mr.useLogit = !"pontos".equals(mr.scale);
+        mr.logits = AtlasMath.logits(mr.races);
+    }
+
+    /** A set's prediction before the scale's last step: log-odds (model or logit scale) or points. */
+    static double raw(AtlasModel.MinuteResult mr, Map<String, Double> w) {
+        double lb = AtlasMath.logit(mr.base);
+        if (mr.model != null) {
+            return AtlasMath.modelLogit(mr.logits, lb, w, mr.model);
+        }
+        double[] f = mr.factors != null ? mr.factors : AtlasMath.factors(3);
+        return mr.useLogit ? AtlasMath.sum(mr.logits, lb, w, f) : AtlasMath.sum(mr.races, mr.base, w, f);
+    }
+
+    /** The raw prediction's derivative in a condition's weight (the set taken without it). */
+    private static double grad(AtlasModel.MinuteResult mr, Map<String, Double> w, String x) {
+        double lb = AtlasMath.logit(mr.base);
+        if (mr.model != null) {
+            return AtlasMath.modelGrad(mr.logits, lb, w, x, mr.model);
+        }
+        double[] f = mr.factors != null ? mr.factors : AtlasMath.factors(3);
+        double[] d = mr.useLogit ? AtlasMath.partial(mr.logits, lb, w, x) : AtlasMath.partial(mr.races, mr.base, w, x);
+        return f[0] * d[0] + f[1] * d[1] + f[2] * d[2];
+    }
+
+    private static double out(AtlasModel.MinuteResult mr, double raw) {
+        return mr.model != null || mr.useLogit ? AtlasMath.expit(raw) : Math.max(0, Math.min(100, raw));
+    }
+
+    /**
+     * What a condition changes in its side's race over a set (in that side's view): a stat one more level's worth, a
+     * passive having it against not having it. Exact: the prediction is multilinear in each weight.
+     */
+    static double gain(AtlasModel.MinuteResult mr, Map<String, Double> w, double raw, String key, boolean stat) {
+        double g = grad(mr, w, key);
+        double without = stat ? raw : raw - w.getOrDefault(key, 0.0) * g;
+        double with = without + g;
+        double d = out(mr, with) - out(mr, without);
+        return key.startsWith("A:") ? d : -d;
+    }
+
+    /**
+     * Measures the whole builds of a finished run again (or for the first time, for runs from before them) and refits
+     * the model, in the background on the atlas's thread; the run's other measures stay.
+     */
+    public AtlasModel.Run remeasureBuilds(long id) {
+        AtlasModel.Run run = find(id);
+        if (run.result == null || run.result.minutes.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Essa execução ainda não tem resultado.");
+        }
+        synchronized (this) {
+            if (running != null) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "O atlas está rodando outra execução: espere ou cancele.");
+            }
+            running = id;
+            cancel = false;
+        }
+        AtlasModel.Config c = run.config;
+        if (c.builds <= 0) {
+            c.builds = new AtlasModel.Config().builds;
+        }
+        repo.progress(id, "rodando", "builds inteiras", 0, c.builds);
+        runner.submit(() -> {
+            String error = null;
+            try {
+                BuildRepository.Build baseA = campaign.standardBuild(c.a);
+                BuildRepository.Build baseB = campaign.standardBuild(c.b);
+                for (AtlasModel.MinuteResult mr : run.result.minutes) {
+                    if (cancel) {
+                        break;
+                    }
+                    mr.fights += measureBuilds(id, c, mr, baseA, baseB, "min " + fmt(mr.minute) + ": ");
+                }
+            } catch (RuntimeException e) {
+                log.error("Atlas builds of run {} failed", id, e);
+                error = e.getMessage() == null ? e.toString() : e.getMessage();
+            } finally {
+                repo.finish(id, "feito", error, run.result);
+                synchronized (this) {
+                    running = null;
+                }
+                kick();
+            }
+        });
+        return find(id);
+    }
+
+    // ------------------------------------------------------------------ the report of conditions
+
+    /**
+     * The status and passive conditions of each side and what they are worth: alone, inside the measured builds, and
+     * over what is fixed now; with the conditions that raise or cancel them (measured pairs).
+     */
+    public AtlasModel.ConditionReport report(long id, AtlasModel.GuideRequest q) {
+        AtlasModel.MinuteResult mr = minuteOf(find(id), q.minute);
+        prime(mr);
+        Map<String, Double> all = weights(mr, "A", q.a);
+        all.putAll(weights(mr, "B", q.b));
+        double raw = raw(mr, all);
+        Map<String, String> names = new LinkedHashMap<>();
+        mr.a.conditions.forEach(c -> names.put("A:" + c.key, c.name));
+        mr.b.conditions.forEach(c -> names.put("B:" + c.key, c.name));
+        AtlasModel.ConditionReport out = new AtlasModel.ConditionReport();
+        out.minute = mr.minute;
+        out.model = mr.model != null;
+        out.a = sideReport(mr, "A", all, raw, names);
+        out.b = sideReport(mr, "B", all, raw, names);
+        return out;
+    }
+
+    private AtlasModel.SideReport sideReport(AtlasModel.MinuteResult mr, String side, Map<String, Double> all, double raw,
+                                             Map<String, String> names) {
+        AtlasModel.Side s = "A".equals(side) ? mr.a : mr.b;
+        AtlasModel.SideReport r = new AtlasModel.SideReport();
+        r.champion = s.champion;
+        r.race = view(side, out(mr, raw));
+        for (AtlasModel.Condition c : s.conditions) {
+            boolean stat = "status".equals(c.source);
+            if (!stat && !"passiva".equals(c.source)) {
+                continue;
+            }
+            String k = side + ":" + c.key;
+            AtlasModel.ConditionRow row = new AtlasModel.ConditionRow();
+            row.key = c.key;
+            row.name = c.name;
+            row.source = c.source;
+            row.itemId = stat ? null : c.itemId;
+            row.stat = c.stat;
+            row.amount = c.amount;
+            row.level = c.level;
+            Double n = AtlasMath.note1(mr.races, mr.base, k);
+            row.alone = n == null ? null : "A".equals(side) ? n : -n;
+            row.inBuilds = mr.inBuilds == null ? null : mr.inBuilds.get(k);
+            row.here = gain(mr, all, raw, k, stat);
+            row.gold = stat ? catalog.statGold(c.stat, c.amount) : null;
+            partners(mr, side, k, row, names);
+            r.rows.add(row);
+        }
+        r.rows.sort(Comparator.comparingDouble((AtlasModel.ConditionRow x) -> -(x.inBuilds != null ? x.inBuilds : x.here))
+                .thenComparing(x -> x.name));
+        return r;
+    }
+
+    /** The measured pairs that change a condition's worth by a point or more, the three largest of each kind. */
+    private static void partners(AtlasModel.MinuteResult mr, String side, String k, AtlasModel.ConditionRow row,
+                                 Map<String, String> names) {
+        for (Map.Entry<String, String> e : names.entrySet()) {
+            String o = e.getKey();
+            if (o.equals(k)) {
+                continue;
+            }
+            Double v = AtlasMath.note2(mr.races, mr.base, k, o);
+            if (v == null) {
+                continue;
+            }
+            double mine = "A".equals(side) ? v : -v;
+            if (Math.abs(mine) < 1) {
+                continue;
+            }
+            AtlasModel.Partner p = new AtlasModel.Partner();
+            p.key = o.substring(2);
+            p.name = e.getValue();
+            p.value = mine;
+            boolean own = o.startsWith(side + ":");
+            (own ? mine > 0 ? row.synergies : row.overlaps : mine > 0 ? row.punishes : row.counters).add(p);
+        }
+        for (List<AtlasModel.Partner> l : List.of(row.synergies, row.overlaps, row.counters, row.punishes)) {
+            l.sort(Comparator.comparingDouble((AtlasModel.Partner p) -> -Math.abs(p.value)).thenComparing(p -> p.name));
+            while (l.size() > 3) {
+                l.remove(l.size() - 1);
+            }
+        }
+    }
+
+    /** The run's minute nearest to the one asked (the first when none is asked). */
+    private static AtlasModel.MinuteResult minuteOf(AtlasModel.Run run, Double minute) {
+        if (run.result == null || run.result.minutes.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Essa execução ainda não tem resultado.");
+        }
+        AtlasModel.MinuteResult mr = run.result.minutes.get(0);
+        if (minute != null) {
+            for (AtlasModel.MinuteResult m : run.result.minutes) {
+                if (Math.abs(m.minute - minute) < Math.abs(mr.minute - minute)) {
+                    mr = m;
+                }
+            }
+        }
+        return mr;
+    }
+
     // ------------------------------------------------------------------ the guide
 
     /** What each side gains next from what is fixed, predicted from the run's races at the nearest minute. */
     public AtlasModel.Guide guide(long id, AtlasModel.GuideRequest q) {
         AtlasModel.Run run = find(id);
-        if (run.result == null || run.result.minutes.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Essa execução ainda não tem resultado.");
-        }
-        AtlasModel.MinuteResult mr = run.result.minutes.get(0);
-        if (q.minute != null) {
-            for (AtlasModel.MinuteResult m : run.result.minutes) {
-                if (Math.abs(m.minute - q.minute) < Math.abs(mr.minute - q.minute)) {
-                    mr = m;
-                }
-            }
-        }
-        int order = q.order <= 0 && mr.factors != null ? 0 : Math.max(1, Math.min(3, q.order <= 0 ? 3 : q.order));
+        AtlasModel.MinuteResult mr = minuteOf(run, q.minute);
+        boolean fitted = mr.factors != null || mr.model != null;
+        int order = q.order <= 0 && fitted ? 0 : Math.max(1, Math.min(3, q.order <= 0 ? 3 : q.order));
         AtlasModel.Guide g = new AtlasModel.Guide();
         g.minute = mr.minute;
         g.order = order;
         g.scale = q.scale != null ? q.scale : mr.scale == null ? "logit" : mr.scale;
         g.factors = order == 0 ? mr.factors : AtlasMath.factors(order);
         mr.useLogit = "logit".equals(g.scale);
-        if (mr.useLogit) {
+        if (mr.useLogit || mr.model != null) {
             mr.logits = AtlasMath.logits(mr.races);
         }
         Map<String, Double> wa = weights(mr, "A", q.a);
         Map<String, Double> wb = weights(mr, "B", q.b);
         Map<String, Double> all = new LinkedHashMap<>(wa);
         all.putAll(wb);
-        for (int o = mr.factors != null ? 0 : 1; o <= 3; o++) {
+        for (int o = fitted ? 0 : 1; o <= 3; o++) {
             g.byOrder.put(o, predict(mr, all, Map.of(), o));
         }
         g.a = sideGuide(mr, "A", q.a, wa, wb, order);
@@ -772,17 +1308,7 @@ public class AtlasService {
      */
     public AtlasModel.Confirmation confirm(long id, AtlasModel.GuideRequest q) {
         AtlasModel.Run run = find(id);
-        if (run.result == null || run.result.minutes.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Essa execução ainda não tem resultado.");
-        }
-        AtlasModel.MinuteResult mr = run.result.minutes.get(0);
-        if (q.minute != null) {
-            for (AtlasModel.MinuteResult m : run.result.minutes) {
-                if (Math.abs(m.minute - q.minute) < Math.abs(mr.minute - q.minute)) {
-                    mr = m;
-                }
-            }
-        }
+        AtlasModel.MinuteResult mr = minuteOf(run, q.minute);
         AtlasModel.Config c = run.config;
         ArenaModel.Slot sa = fixedSlot(campaign.standardBuild(c.a), mr.minute, q.a, 0);
         ArenaModel.Slot sb = fixedSlot(campaign.standardBuild(c.b), mr.minute, q.b, 1);
@@ -791,21 +1317,15 @@ public class AtlasService {
         List<Arena.Input> ins = arena.prepareSlots(sc);
         AtlasModel.Confirmation out = new AtlasModel.Confirmation();
         out.minute = mr.minute;
-        int n = Math.max(1, c.starts);
-        for (int k = 0; k < n; k++) {
-            Arena.Input x = ins.get(0).copy();
-            Arena.Input y = ins.get(1).copy();
-            x.x = 4600;
-            x.y = 0;
-            y.x = 4600 + DISTANCES[k % DISTANCES.length];
-            y.y = LATERAL[k % LATERAL.length];
-            x.healthTrail = true;
-            y.healthTrail = true;
-            EffectModel.Measures m = new EffectModel.Measures();
-            EffectTestService.race(m, arena.runPlain(List.of(x, y), c.duration), 0, 1, 0);
-            out.starts.add(m.race);
-            out.real += m.race / n;
+        out.starts = races(ins.get(0), ins.get(1), c, Math.max(CONFIRM_STARTS, c.starts));
+        for (double r : out.starts) {
+            out.real += r / out.starts.size();
         }
+        double var = 0;
+        for (double r : out.starts) {
+            var += (r - out.real) * (r - out.real) / Math.max(1, out.starts.size() - 1);
+        }
+        out.margin = 1.96 * Math.sqrt(var / out.starts.size());
         AtlasModel.GuideRequest g = new AtlasModel.GuideRequest();
         g.minute = mr.minute;
         g.a = q.a;
@@ -1073,6 +1593,9 @@ public class AtlasService {
     private static double predict(AtlasModel.MinuteResult mr, Map<String, Double> mine, Map<String, Double> theirs, int order) {
         Map<String, Double> all = new LinkedHashMap<>(mine);
         all.putAll(theirs);
+        if (order == 0 && mr.model != null) {
+            return AtlasMath.expit(AtlasMath.modelLogit(mr.logits, AtlasMath.logit(mr.base), all, mr.model));
+        }
         double[] f = order == 0 && mr.factors != null ? mr.factors : AtlasMath.factors(order);
         return mr.useLogit ? AtlasMath.predictLogit(mr.logits, AtlasMath.logit(mr.base), all, f)
                 : AtlasMath.predict(mr.races, mr.base, all, f);

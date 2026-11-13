@@ -35,6 +35,11 @@ public final class AtlasModel {
         public int top3d = 12;
         /** Random sets of conditions fought to check the predictions of 1, 2 and 3 dimensions. */
         public int validation = 150;
+        /**
+         * Whole builds fought for real (real items on both sides, sometimes a keystone, a rune or a spell swapped): the
+         * data the model of whole builds is fitted on.
+         */
+        public int builds = 600;
         /** Condition sources: status, passiva, fundamental, runa, feitico. */
         public List<String> sources = new ArrayList<>(List.of("status", "passiva", "fundamental", "runa", "feitico"));
         public long seed = 1;
@@ -99,11 +104,45 @@ public final class AtlasModel {
         public transient Map<String, Double> logits;
         @com.fasterxml.jackson.annotation.JsonIgnore
         public transient boolean useLogit;
+        /** The whole builds fought, with their real races. */
+        public List<BuildSample> builds = new ArrayList<>();
+        /** The model fitted on them (null = none measured). */
+        public BuildModel model;
+        /** Each status and passive condition's mean gain over the measured builds (side key -> points, its side's view). */
+        public Map<String, Double> inBuilds = new LinkedHashMap<>();
         public int fights;
         public double seconds;
         /** Seconds preparing the fighters (one thread) and fighting (in parallel). */
         public double prepareSeconds;
         public double fightSeconds;
+    }
+
+    /** A whole build of each side and its real race (side A's view). */
+    public static class BuildSample {
+        public Fixed a = new Fixed();
+        public Fixed b = new Fixed();
+        /** sorteada (any item of the shop) | guiada (among the empty guide's best items per gold) */
+        public String kind;
+        public double race;
+    }
+
+    /**
+     * The model of whole builds, in log-odds: logit(race) = logit(base) + coef . {notes of A, notes of B, pairs, triples}
+     * + the sum of each condition's correction times its weight. Fitted by ridge regression on the measured builds:
+     * the coefficients shrink (or grow) each order as a whole, the corrections fix what the notes miss about a condition
+     * inside a build (diminishing returns, what only pays with other items).
+     */
+    public static class BuildModel {
+        public double[] coef;
+        public Map<String, Double> theta = new LinkedHashMap<>();
+        /** The penalty on the corrections the cross validation picked (null = no corrections). */
+        public Double lambda;
+        public int samples;
+        /**
+         * Each prediction's error on the measured builds: name -> {mean absolute error, correlation}. The model's by
+         * five-fold cross validation (fitted without the builds it is judged on).
+         */
+        public Map<String, double[]> errors = new LinkedHashMap<>();
     }
 
     public static class Result {
@@ -182,6 +221,57 @@ public final class AtlasModel {
         public double predicted;
         /** Each start's race. */
         public List<Double> starts = new ArrayList<>();
+        /** Half the width of the real race's 95% interval (1.96 standard errors of the mean over the starts). */
+        public double margin;
+    }
+
+    /** A condition that changes another's value when they go together (a measured pair). */
+    public static class Partner {
+        public String key;
+        public String name;
+        /** The pair's interaction in the reading side's view (points). */
+        public double value;
+    }
+
+    /** One status or passive condition of a side: how much it is worth in each reading, and with whom. */
+    public static class ConditionRow {
+        public String key;
+        public String name;
+        public String source;
+        public Long itemId;
+        public String stat;
+        public Double amount;
+        public Integer level;
+        /** Its note alone, over the base with nothing else (points, its side's view). */
+        public Double alone;
+        /** Its mean gain added to the measured whole builds (by the model). */
+        public Double inBuilds;
+        /** Its gain over what is fixed now on both sides. */
+        public double here;
+        /** The gold of a stat condition (null for a passive). */
+        public Double gold;
+        /** Own conditions that make it worth more / less (synergy / overlap). */
+        public List<Partner> synergies = new ArrayList<>();
+        public List<Partner> overlaps = new ArrayList<>();
+        /** The other side's conditions that cancel it / that it punishes. */
+        public List<Partner> counters = new ArrayList<>();
+        public List<Partner> punishes = new ArrayList<>();
+    }
+
+    public static class SideReport {
+        public String champion;
+        /** The side's race with what is fixed (its own view). */
+        public double race;
+        public List<ConditionRow> rows = new ArrayList<>();
+    }
+
+    /** The favorable and unfavorable status and passive conditions of each side, from what is fixed. */
+    public static class ConditionReport {
+        public double minute;
+        /** Whether the readings come from the model of whole builds (else from the notes with the fitted factors). */
+        public boolean model;
+        public SideReport a = new SideReport();
+        public SideReport b = new SideReport();
     }
 
     public static class Guide {
