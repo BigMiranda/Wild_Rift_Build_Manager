@@ -81,6 +81,12 @@ button.link { background: none; border: none; color: var(--muted); padding: 0; t
 .outcomes { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
 .outcomes li { display: flex; justify-content: space-between; gap: 8px; align-items: center; border-bottom: 1px solid rgba(34, 59, 87, .5); padding: 3px 0; min-width: 0; }
 .outcomes li > span:first-child { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+.outcomes .test-note { display: block; font-size: 11.5px; line-height: 1.35; margin-top: 2px; }
+.outcomes .outcome-values { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.race-badge { font-size: 12px; padding: 1px 6px; border-radius: 4px; white-space: nowrap; border: 1px solid rgba(34, 59, 87, .9); }
+.race-badge.up { color: #7fd99a; }
+.race-badge.down { color: #f0a070; }
+.race-badge small { opacity: .7; }
 .abilities { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
 .ability header { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
 .ability .slot { background: #1b324c; border-radius: 3px; padding: 0 6px; font-weight: 700; }

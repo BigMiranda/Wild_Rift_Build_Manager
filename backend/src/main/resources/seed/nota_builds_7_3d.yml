@@ -9,6 +9,13 @@
 #              referência que a build economiza (índice 200 = 50 pontos; abaixo de 100, negativo);
 #   utilidade  o controle aplicado (s de controle por 10 s de luta, x `utilidade.controle_por_10s`) e a parte do dano
 #              do time que a build absorveu nos cenários com aliados (`utilidade.absorvido`), até 100.
+#   corrida    (Rodada 15) a corrida das barras de vida: o jogo é sobre a barra inimiga zerar antes da sua, também para
+#              tanques. Em cada luta, a parte da barra inimiga que o lado da build tirou (dano, dano devolvido, menos a
+#              cura e os escudos que eles receberam: a cura cortada pelas Feridas Dolorosas conta; quem morre conta
+#              inteiro) contra a parte da própria barra que perdeu: corrida = 100 x inimiga / (inimiga + minha), 50 =
+#              empate. Em pontos: quanto da distância da referência até 100 a build fecha. Vem de dois lugares: as lutas
+#              da defensiva (atacantes imortais: a corrida é projetada, peso `corrida.peso_projetada`) e o relatório
+#              `corrida` da efetividade (atacantes que morrem: matar acaba com o dano deles).
 #   duelos     opcional: x1 contra os representativos de cada classe (fichas A ou B), com o cérebro automático, no
 #              mesmo minuto: 100 x (vida que sobra minha - a do adversário). Desligado por padrão (peso 0): precisa de
 #              builds salvas dos adversários e custa uma luta por par.
@@ -22,14 +29,16 @@ leitura:
   ofensiva: largadas     # média de largadas (a ofensiva não tem comportamento fixo)
   largadas: 3
 
+# Rodada 15: a corrida entrou em todas (antes: Tanque 0.70 / 0.20 / 0.10, Lutador 0.45 / 0.45 / 0.10, Atirador, Mago e
+# Assassino só ofensiva, Controlador 0.30 / 0.55 / 0.15, Especialista 0.50 / 0.50).
 classes:
-  Tanque:       {defensiva: 0.70, utilidade: 0.20, ofensiva: 0.10}
-  Lutador:      {defensiva: 0.45, ofensiva: 0.45, utilidade: 0.10}
-  Atirador:     {ofensiva: 1.00, piso: 20}
-  Mago:         {ofensiva: 1.00, piso: 20}
-  Assassino:    {ofensiva: 1.00, piso: 10}
-  Controlador:  {defensiva: 0.30, utilidade: 0.55, ofensiva: 0.15}   # Rodada 14: era 0.40 / 0.40 / 0.20
-  Especialista: {defensiva: 0.50, ofensiva: 0.50}
+  Tanque:       {defensiva: 0.55, utilidade: 0.15, ofensiva: 0.10, corrida: 0.20}
+  Lutador:      {defensiva: 0.30, ofensiva: 0.30, utilidade: 0.10, corrida: 0.30}
+  Atirador:     {ofensiva: 0.70, corrida: 0.30, piso: 20}
+  Mago:         {ofensiva: 0.70, corrida: 0.30, piso: 20}
+  Assassino:    {ofensiva: 0.70, corrida: 0.30, piso: 10}
+  Controlador:  {defensiva: 0.25, utilidade: 0.50, ofensiva: 0.10, corrida: 0.15}
+  Especialista: {defensiva: 0.35, ofensiva: 0.35, corrida: 0.30}
 piso_peso: 1.0
 
 # O arquétipo da build no minuto ajusta os pesos (somados aos da classe e normalizados): um lutador com build de tanque
@@ -62,6 +71,10 @@ utilidade:
     arquetipos: [suporte]
     pesos: {carry_vivo: 0.35, carry_dano: 0.25, controle: 0.2, dano_cortado: 0.2}
     peso_utilidade: 0.25
+
+corrida:
+  relatorio: corrida      # efetividade_7_3d.yml: atacantes que morrem
+  peso_projetada: 0.5     # cada luta da defensiva (atacantes imortais) vale metade de uma luta de verdade
 
 duelos:
   peso: 0

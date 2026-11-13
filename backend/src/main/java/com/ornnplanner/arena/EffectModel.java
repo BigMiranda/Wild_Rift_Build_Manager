@@ -94,6 +94,11 @@ public final class EffectModel {
          * by default: an attacker has its fixed stats whatever the minute tested, so builds at different minutes compare.
          */
         public boolean scalesWithMinute;
+        /**
+         * Rodada 15: the attackers die (group "corrida"): the fight ends when one side's lifebar is gone. Off = they
+         * never die and the fight lasts until the build dies (the durability readings).
+         */
+        public boolean mortal;
     }
 
     /** One stage of a sweep: a dimension of the reference attacker set to a value. */
@@ -232,6 +237,15 @@ public final class EffectModel {
         public Double alliesAlive;
         public double fightLength;
         public double maxHealth;
+        /**
+         * Rodada 15, the lifebar race: the share of the enemies' lifebar the build's side took (damage, reflected damage,
+         * minus the healing and shields they got; a dead one counts whole; above 1 = the immortal attackers would have
+         * died), the share of its own side's lifebar it lost (a dead one whole), and the race,
+         * 100 x enemyLost / (enemyLost + teamLost): 50 = both lifebars go at the same pace, 100 = it loses nothing.
+         */
+        public double enemyLost;
+        public double teamLost;
+        public double race;
     }
 
     /** A grade of the score: its key and the least score it takes (null = everything below the others). */
@@ -244,6 +258,8 @@ public final class EffectModel {
     public static class Outcome {
         public String tag;
         public String testName;
+        /** Rodada 15: what happens in the scenario, in one or two sentences (its {@code nota}). */
+        public String testNote;
         public Measures build;
         public Measures reference;
         /**

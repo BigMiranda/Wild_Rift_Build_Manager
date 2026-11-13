@@ -239,15 +239,16 @@ def key_minutes(timeline):
 class Calculator:
     """O que cada build ganha pré-calculado."""
 
-    def __init__(self, site, basic, offense, quick):
+    def __init__(self, site, basic, offense, quick, race=None):
         self.s = site
         self.basic = basic        # the basic report's tests [{key, weight}]
+        self.race = race or []    # Rodada 15: the race report's tests (attackers that die)
         self.offense = offense    # the offensive report's targets [{key, weight}] (None = the app has no offense)
         self.quick = quick
         self.seconds = 0.0
 
-    def effect(self, build, minute):
-        jobs = [{'tag': e['key'], 'testKey': e['key']} for e in self.basic]
+    def effect(self, build, minute, tests=None):
+        jobs = [{'tag': e['key'], 'testKey': e['key']} for e in (self.basic if tests is None else tests)]
         out = []
         for i in range(0, len(jobs), 6):
             r = self.s.post('/api/effect/evaluate', {'build': build, 'minute': minute, 'jobs': jobs[i:i + 6]})
@@ -296,6 +297,8 @@ class Calculator:
         for m in minutes:
             k = f'{m:g}'
             at[k] = {'point': point_at((full or {}).get('series'), m), 'effect': self.effect(build, m)}
+            if self.race:
+                at[k]['race'] = self.effect(build, m, self.race)
             if not self.quick:
                 at[k]['offense'] = self.offense_at(build, m)
                 at[k]['abilities'] = self.abilities(build, m)
@@ -525,7 +528,9 @@ def main(argv=None):
     champions = {c['code']: c for c in s.read('/api/champions') or []}
     profiles = {p['code']: p for p in s.read('/api/champions/profiles') or []}
     basic = s.read('/api/effect/reports/basico') or {}
-    calc = Calculator(s, basic.get('tests') or [], ((offense_meta or {}).get('report') or {}).get('targets'), a.rapido)
+    race = s.read('/api/effect/reports/corrida', required=False) or {}
+    calc = Calculator(s, basic.get('tests') or [], ((offense_meta or {}).get('report') or {}).get('targets'), a.rapido,
+                      race.get('tests') or [])
     print('Catálogo: ok')
 
     all_builds = s.read('/api/builds') or []

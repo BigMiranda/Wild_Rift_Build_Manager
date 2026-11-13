@@ -110,7 +110,7 @@ export function BasicResult({ report, outcomes, names }) {
         <table className="data eff-table">
           <thead>
             <tr>
-              <th>{t('efx.col.test')}</th><th>{t('efx.col.weight')}</th><th>{t('efx.col.index')}</th><th>{t('efx.col.ttd')}</th>
+              <th>{t('efx.col.test')}</th><th>{t('efx.col.weight')}</th><th>{t('efx.col.index')}</th><th title={t('efx.col.raceTitle')}>{t('efx.col.race')}</th><th>{t('efx.col.ttd')}</th>
               <th>{t('efx.col.ref')}</th><th title={t('efx.col.netTitle')}>{t('efx.col.net')}</th><th>{t('efx.col.ehp')}</th><th>{t('efx.col.mitigated')}</th><th>{t('efx.col.shield')}</th>
               <th>{t('efx.col.heal')}</th><th>{t('efx.col.dealt')}</th><th title={t('efx.col.cutTitle')}>{t('efx.col.cut')}</th><th>{t('efx.col.cc')}</th><th>{t('efx.col.team')}</th>
             </tr>
@@ -121,9 +121,12 @@ export function BasicResult({ report, outcomes, names }) {
               const m = o?.build;
               return (
                 <tr key={e.key}>
-                  <td>{o?.testName ?? names[e.key] ?? e.key}</td>
+                  <td title={o?.testNote ?? undefined}>{o?.testName ?? names[e.key] ?? e.key}
+                    {o?.testNote && <small className="muted test-note">{o.testNote}</small>}</td>
                   <td>{n1(e.weight ?? 1)}</td>
                   <td>{o?.error ? <span className="error">{o.error}</span> : <IndexBar outcome={o} />}</td>
+                  <td title={m ? t('efx.raceCell', { enemy: n0(100 * m.enemyLost), mine: n0(100 * m.teamLost) }) : undefined}>
+                    {m ? <>{n0(m.race)}{o?.reference && <small className="muted"> / {n0(o.reference.race)}</small>}</> : '—'}</td>
                   <td>{ttd(m)}</td>
                   <td>{ttd(o?.reference)}</td>
                   <td>{netRate(m)}</td>

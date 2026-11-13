@@ -395,6 +395,7 @@ public class OffenseTestService {
             try {
                 Target t = targetOf(job);
                 o.targetName = t.name;
+                o.targetNote = t.note;
                 EffectModel.Variant v = job.variant == null ? new EffectModel.Variant() : job.variant;
                 String tk = EffectTestService.hash(EffectTestService.write(t));
                 List<String> mine = new ArrayList<>();

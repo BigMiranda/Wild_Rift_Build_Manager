@@ -72,7 +72,7 @@ export function ChampionsPage() {
   );
 }
 
-const SCORE_HELP = 'Nota da build: a nota por classe (defensiva, ofensiva e utilidade pesadas pela classe do campeão), '
+const SCORE_HELP = 'Nota da build: a nota por classe (defensiva, ofensiva, utilidade e a corrida das barras de vida, pesadas pela classe do campeão), '
   + 'robusta nos minutos 10, 15, 20 e no fim. É a que ordenou as builds da Descoberta.';
 
 /**

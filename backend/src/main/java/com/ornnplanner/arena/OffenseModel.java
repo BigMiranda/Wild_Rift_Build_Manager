@@ -138,6 +138,8 @@ public final class OffenseModel {
     public static class Outcome {
         public String tag;
         public String targetName;
+        /** Rodada 15: what the target does, in one sentence (its {@code nota}). */
+        public String targetNote;
         public Measures build;
         public Measures reference;
         /**

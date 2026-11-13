@@ -134,7 +134,12 @@ function TestEditor({ test, onChange, items, meta, readOnly }) {
               <option value="1x1">{t('efx.group.1x1')}</option>
               <option value="equipe">{t('efx.group.equipe')}</option>
               <option value="ameaca">{t('efx.group.ameaca')}</option>
+              <option value="suporte">{t('efx.group.suporte')}</option>
+              <option value="corrida">{t('efx.group.corrida')}</option>
             </select>
+          </label>
+          <label className="inline" title={t('efx.mortalTitle')}>
+            <input type="checkbox" checked={!!test.mortal} onChange={(e) => set({ mortal: e.target.checked })} /> {t('efx.mortal')}
           </label>
           <label className="inline" title={t('efx.scalesTitle')}>
             <input type="checkbox" checked={!!test.scalesWithMinute} onChange={(e) => set({ scalesWithMinute: e.target.checked })} /> {t('efx.scales')}

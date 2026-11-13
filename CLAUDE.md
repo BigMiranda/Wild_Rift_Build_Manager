@@ -119,6 +119,13 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   archetype); lane styles per match seat (`estilos_rota` in macro_<patch>.yml, default identical to before); campaign
   steps `ameacas` and `estilos`; `GuideService.suggest` branches on the lane rival's subclass (style) and the enemy
   subclasses (build).
+- Rodada 15 (`docs/rodada-15.md`): the lifebar race. `EffectTestService.race` gives every effectiveness fight
+  `Measures.enemyLost` / `teamLost` / `race` (100 x enemy / (enemy + own); damage, reflected damage, healing cut and kills
+  take enemy lifebar; with immortal attackers it is a projection). Scenarios with `mortais: true` (group and report
+  `corrida`) have attackers that die. `BuildScore.RACE` ("corrida") is a fifth score part: points = the gap from the
+  no-item reference's race to 100 closed (`racePoints`), from the defensive fights (weight `corrida.peso_projetada`) and
+  the `corrida` report. Every scenario and offensive target has a `nota` shown in the screens and on the site
+  (`Outcome.testNote`, `targetNote`).
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.

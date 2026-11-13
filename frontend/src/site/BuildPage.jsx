@@ -108,7 +108,20 @@ function Sheet({ point }) {
   );
 }
 
-function Outcomes({ list, name, weights }) {
+/** Rodada 15: the lifebar race of a fight, 50 = even; the champion with no items after the slash. */
+function Race({ o }) {
+  const m = o?.build;
+  if (m?.race == null) return null;
+  const title = `Corrida das barras de vida: tirou ${n0(100 * m.enemyLost)}% da barra inimiga e perdeu ${n0(100 * m.teamLost)}% da sua`
+    + (o.reference?.race != null ? `; sem itens: ${n0(o.reference.race)}` : '');
+  return (
+    <span className={`race-badge ${m.race >= 50 ? 'up' : 'down'}`} title={title}>
+      corrida {n0(m.race)}{o.reference?.race != null && <small> / {n0(o.reference.race)}</small>}
+    </span>
+  );
+}
+
+function Outcomes({ list, name, weights, note = 'testNote', race = false }) {
   if (!list?.length) return <p className="muted">Não calculada.</p>;
   const total = weights ? weightedOf(weights, list) : null;
   const grades = list.find((o) => o?.grades)?.grades;
@@ -119,9 +132,10 @@ function Outcomes({ list, name, weights }) {
       <ul className="outcomes">
         {list.map((o, i) => (
           <li key={o.tag ?? i}>
-            <span>{o[name] ?? o.tag}</span>
+            <span className="outcome-name">{o[name] ?? o.tag}
+              {o[note] && <small className="muted test-note">{o[note]}</small>}</span>
             {o.error ? <small className="error">{o.error}</small>
-              : <IndexBadge value={o.index} grade={o.grade} />}
+              : <span className="outcome-values">{!race && <IndexBadge value={o.index} grade={o.grade} />}<Race o={o} /></span>}
           </li>
         ))}
       </ul>
@@ -252,12 +266,26 @@ export default function BuildPage({ buildKey, params }) {
         <h3>Ficha {at.point ? <small className="muted">nível {at.point.level}</small> : null}</h3>
         <Sheet point={at.point} />
         <h3>Efetividade defensiva</h3>
-        <p className="muted small">Quanto da taxa de dano líquido de referência a build cancela, nos cenários do relatório básico.</p>
+        <p className="muted small">Quanto da taxa de dano líquido da referência (o campeão sem itens) a build cancela, nos cenários
+          do relatório básico. Nesses testes os atacantes não morrem: a luta dura até a build morrer, e o número mede quanto ela
+          aguenta. A "corrida" ao lado projeta, na mesma luta, quem zeraria a barra do outro primeiro (50 = empate), contando o
+          dano que a build causa, o que devolve e a cura que corta.</p>
         <Outcomes list={at.effect} name="testName" weights={basic?.tests} />
+        {at.race !== undefined && (
+          <>
+            <h3>Corrida das barras de vida</h3>
+            <p className="muted small">Lutas em que os inimigos morrem de verdade, com a Vida e o dano de um campeão daquela fase:
+              a luta acaba quando a barra de um dos lados zera. 50 = os dois lados caem no mesmo ritmo, 100 = a build vence sem
+              perder Vida. Depois da barra, o mesmo campeão sem itens.</p>
+            <Outcomes list={at.race} name="testName" race />
+          </>
+        )}
         {at.offense !== undefined && (
           <>
             <h3>Efetividade ofensiva</h3>
-            <Outcomes list={at.offense} name="targetName" />
+            <p className="muted small">A build ataca um boneco que não revida e morre de verdade; o número compara o tempo para
+              matá-lo com o do campeão sem itens (100 = igual, 200 = na metade do tempo).</p>
+            <Outcomes list={at.offense} name="targetName" note="targetNote" />
           </>
         )}
         {at.abilities !== undefined && (

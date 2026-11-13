@@ -5,7 +5,7 @@ import { mmss, n0, n1 } from '../format.js';
 import { useTask } from '../tasks.js';
 import Help from './Help.jsx';
 
-const PARTS = ['defensiva', 'ofensiva', 'utilidade', 'duelos'];
+const PARTS = ['defensiva', 'ofensiva', 'utilidade', 'corrida', 'duelos'];
 
 /** One minute's score: class, archetype, the weights and parts, mean, P20, floor and total. */
 export function ScoreRow({ s }) {

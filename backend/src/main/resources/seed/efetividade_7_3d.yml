@@ -24,7 +24,8 @@
 #               enfrenta (pelas resistências, penetrações e efeitos de habilidade dos itens dele, como Liandry); escudo
 #               e cura vão ao aliado com menos Vida (proporcional) no alcance, ele mesmo incluído.
 #
-# Por cenário: nome, grupo (1x1 | equipe), atacantes, aliados, duracao (s), nota, escala_com_minuto.
+# Por cenário: nome, grupo (1x1 | equipe | ameaca | suporte | corrida), atacantes, aliados, duracao (s), nota (o que
+# acontece no teste, mostrada nas telas e no site), escala_com_minuto, mortais (Rodada 15: os atacantes morrem).
 #
 # O que muda com o minuto testado: só a build (itens, nível, status). O atacante tem os status fixos do preset, em
 # qualquer minuto, e por isso builds em minutos diferentes se comparam. Com `escala_com_minuto: true` (desligado nos
@@ -115,7 +116,7 @@ cenarios:
     nome: Crítico
     grupo: 1x1
     duracao: 180
-    nota: 100% de crítico e 300 de DdA, só ataques básicos, com o Roubo de Vida da Sedenta por Sangue (os 75 de DdA dela estão nos 300)
+    nota: Um atirador que só dá ataques básicos, todos críticos (300 de DdA, 2,5 ataques por segundo), e se cura com o Roubo de Vida da Sedenta por Sangue. Armadura e o que reduz crítico ou velocidade de ataque seguram mais.
     atacantes:
     - {nome: Atirador crítico, funcao: atirador, vida: 8000, armadura: 60, rm: 60, dda: 225, velocidade_ataque: 2.5,
        status: {"% Critical Rate": 100}, itens: [Sedenta por Sangue], pulsos: []}
@@ -123,6 +124,7 @@ cenarios:
     nome: Anti-tanque físico
     grupo: 1x1
     duracao: 180
+    nota: 'Um lutador feito para derrubar tanques: dano por % da Vida (Espada do Rei Destruído), penetração de Armadura (Lembranças) e cura pelo Hemodrenário. Empilhar Vida rende menos aqui.'
     atacantes:
     - {nome: Lutador anti-tanque, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 210, velocidade_ataque: 1.5,
        itens: [Espada do Rei Destruído, Ruptor Divino, Lembranças do Lorde Dominik, Hemodrenário]}
@@ -130,6 +132,7 @@ cenarios:
     nome: Tormento de Liandry
     grupo: 1x1
     duracao: 180
+    nota: Um mago que queima a Vida máxima com o Tormento de Liandry, dano mágico contínuo. Resistência Mágica e cura seguram; Vida pura alimenta a queimadura.
     atacantes:
     - {nome: Mago de Liandry, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
        status: {Ability Power: 600}, itens: [Tormento de Liandry]}
@@ -137,6 +140,7 @@ cenarios:
     nome: Liandry + Maldição Sanguinária
     grupo: 1x1
     duracao: 180
+    nota: O mago do Liandry com a Maldição Sanguinária, que corta a Resistência Mágica a cada acerto, e o Criafendas, que o cura. Testa a RM quando ela é reduzida.
     atacantes:
     - {nome: Mago de Liandry e Maldição, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
        status: {Ability Power: 530}, itens: [Tormento de Liandry, Maldição Sanguinária, Criafendas]}
@@ -144,6 +148,7 @@ cenarios:
     nome: Cajado do Vazio
     grupo: 1x1
     duracao: 180
+    nota: 'Um mago com o Cajado do Vazio (40% de penetração mágica): a Resistência Mágica vale menos, a Vida segura melhor.'
     atacantes:
     - {nome: Mago do Cajado, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
        status: {Ability Power: 600}, itens: [Cajado do Vazio]}
@@ -151,6 +156,7 @@ cenarios:
     nome: 1000 de PdH + Cajado do Vazio
     grupo: 1x1
     duracao: 180
+    nota: 'Um mago no fim de jogo: 1.000 de PdH, Cajado do Vazio e Criafendas. Explosões mágicas grandes.'
     atacantes:
     - {nome: Mago de 1000 PdH, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
        status: {Ability Power: 930}, itens: [Cajado do Vazio, Criafendas]}
@@ -158,7 +164,7 @@ cenarios:
     nome: Misto
     grupo: 1x1
     duracao: 180
-    nota: ataques físicos e habilidades mágicas
+    nota: 'Um lutador que mistura ataques físicos e habilidades mágicas, com o Hemodrenário: testa se a build só se defende de um tipo de dano.'
     atacantes:
     - {nome: Lutador misto, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 260, velocidade_ataque: 1.5,
        status: {Ability Power: 500}, itens: [Hemodrenário],
@@ -167,7 +173,7 @@ cenarios:
     nome: Verdadeiro
     grupo: 1x1
     duracao: 180
-    nota: ataques físicos fracos e habilidades de Dano Verdadeiro
+    nota: 'Um lutador cujas habilidades causam Dano Verdadeiro, que ignora Armadura e RM: só Vida, escudos, cura e redução de dano ajudam.'
     atacantes:
     - {nome: Lutador verdadeiro, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 160, velocidade_ataque: 1.2,
        itens: [Hemodrenário],
@@ -176,7 +182,7 @@ cenarios:
     nome: Atirador alimentado
     grupo: 1x1
     duracao: 180
-    nota: muito DdA e crítico, com Lembranças do Lorde Dominik e o Roubo de Vida da Sedenta por Sangue
+    nota: 'Um atirador com a build completa (Gume do Infinito, Lembranças, Dança da Morte, Sedenta por Sangue): muito dano físico, penetração e cura.'
     atacantes:
     - {nome: Atirador alimentado, funcao: atirador, vida: 8000, armadura: 60, rm: 60, dda: 175, velocidade_ataque: 1.5,
        status: {"% Critical Rate": 25},
@@ -185,6 +191,7 @@ cenarios:
     nome: 5 contra 1
     grupo: equipe
     duracao: 120
+    nota: 'A build sozinha contra cinco: atirador, mago, lutador, assassino e tanque. Mede quanto ela aguenta sendo o alvo de todos.'
     atacantes:
     - {nome: Atirador, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 300, velocidade_ataque: 1.5,
        status: {"% Critical Rate": 50}}
@@ -200,7 +207,7 @@ cenarios:
     nome: Luta de equipe genérica
     grupo: equipe
     duracao: 120
-    nota: os mesmos 5 atacantes do "5 contra 1", com 4 aliados bonecos
+    nota: 'Os mesmos cinco do "5 contra 1", agora com quatro aliados ao lado da build (suporte, atirador, mago e lutador). Mede quanto dano ela segura pelo time e quanto tempo os aliados ficam vivos.'
     atacantes:
     - {nome: Atirador, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 300, velocidade_ataque: 1.5,
        status: {"% Critical Rate": 50}}
@@ -232,7 +239,7 @@ cenarios:
     ameaca: [Assassino, Escaramuçador]
     quantos: 2
     duracao: 120
-    nota: dois assassinos que chegam perto e explodem (letalidade), com uma lentidão no avanço
+    nota: Dois assassinos que chegam perto e explodem (letalidade), com uma lentidão no avanço. Armadura e Vida logo de início seguram a explosão.
     atacantes:
     - {nome: Assassino de explosão, funcao: assassino, vida: 6000, armadura: 50, rm: 50, dda: 250, velocidade_ataque: 1.1,
        status: {Armor Penetration: 25},
@@ -247,7 +254,7 @@ cenarios:
     ameaca: [Colosso, Mergulhador]
     quantos: 2
     duracao: 120
-    nota: dois lutadores de muita Vida e dano contínuo de perto, que se curam (Hemodrenário e uma cura própria)
+    nota: Dois lutadores de muita Vida e dano contínuo de perto, que se curam (Hemodrenário e uma cura própria). O corta-cura e o dano devolvido pesam na corrida.
     atacantes:
     - {nome: Colosso, funcao: lutador, vida: 9000, armadura: 90, rm: 70, dda: 200, velocidade_ataque: 1.0,
        status: {"% Armor Penetration": 15}, itens: [Hemodrenário],
@@ -263,7 +270,7 @@ cenarios:
     ameaca: [Vanguarda, Guardião]
     quantos: 1
     duracao: 120
-    nota: um tanque que engaja com controle encadeado e dois que aproveitam (atirador e mago)
+    nota: Um tanque que engaja com controle encadeado (arremesso e atordoamento) e um atirador e um mago que aproveitam a janela.
     atacantes:
     - {nome: Tanque de iniciação, funcao: tanque, vida: 9000, armadura: 120, rm: 90, dda: 100, velocidade_ataque: 0.7,
        status: {Ability Power: 100},
@@ -280,7 +287,7 @@ cenarios:
     ameaca: [Captor]
     quantos: 1
     duracao: 120
-    nota: um captor que prende de longe e um assassino que chega no preso
+    nota: Um captor que prende de longe (atordoamento) e um assassino que chega em quem foi preso.
     atacantes:
     - {nome: Captor, funcao: suporte, vida: 6500, armadura: 70, rm: 60, dda: 60, velocidade_ataque: 0.7,
        status: {Ability Power: 250},
@@ -294,7 +301,7 @@ cenarios:
     ameaca: [Artilharia]
     quantos: 1
     duracao: 180
-    nota: dano mágico de muito longe, um pouco a cada poucos segundos
+    nota: Um mago que cutuca com dano mágico de muito longe, um pouco a cada poucos segundos. Escudos mágicos e RM seguram.
     atacantes:
     - {nome: Mago de artilharia, funcao: mago, vida: 6000, armadura: 50, rm: 50, dda: 0, velocidade_ataque: 0.7,
        status: {Ability Power: 600, "% Magic Penetration": 20}, alcance: 600,
@@ -305,7 +312,7 @@ cenarios:
     ameaca: [Explosivo]
     quantos: 2
     duracao: 120
-    nota: dois magos que soltam tudo de uma vez, com um atordoamento
+    nota: Dois magos que soltam tudo de uma vez, com um atordoamento. Vale segurar a primeira explosão.
     atacantes:
     - {nome: Mago explosivo, funcao: mago, vida: 6000, armadura: 50, rm: 50, dda: 0, velocidade_ataque: 0.7,
        status: {Ability Power: 650, Magic Penetration: 15},
@@ -320,7 +327,7 @@ cenarios:
     ameaca: [Mago de Batalha]
     quantos: 1
     duracao: 180
-    nota: dano mágico contínuo de perto, com Liandry
+    nota: Um mago de dano mágico contínuo de perto, com o Tormento de Liandry.
     atacantes:
     - {nome: Mago de batalha, funcao: mago, vida: 7500, armadura: 70, rm: 60, dda: 0, velocidade_ataque: 0.7,
        status: {Ability Power: 520}, itens: [Tormento de Liandry], alcance: 350,
@@ -331,6 +338,7 @@ cenarios:
     ameaca: [Atirador]
     quantos: 2
     duracao: 120
+    nota: Dois atiradores de ataques básicos, um de crítico com Roubo de Vida e um de penetração.
     atacantes:
     - {nome: Atirador, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 260, velocidade_ataque: 1.5,
        status: {"% Critical Rate": 50}, itens: [Sedenta por Sangue]}
@@ -342,6 +350,7 @@ cenarios:
     ameaca: [Atirador]
     quantos: 3
     duracao: 120
+    nota: 'Três atiradores de ataques básicos: muitos golpes por segundo, o que favorece Armadura e o que reduz velocidade de ataque.'
     atacantes:
     - {nome: Atirador, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 260, velocidade_ataque: 1.5,
        status: {"% Critical Rate": 50}, itens: [Sedenta por Sangue]}
@@ -355,7 +364,7 @@ cenarios:
     ameaca: [Encantador]
     quantos: 1
     duracao: 120
-    nota: um atirador com um encantador que o escuda e o cura
+    nota: Um atirador protegido por um encantador que o escuda, o cura e deixa a build lenta.
     atacantes:
     - {nome: Atirador protegido, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 270, velocidade_ataque: 1.5,
        status: {"% Critical Rate": 50}}
@@ -374,7 +383,7 @@ cenarios:
     nome: Mergulho no carry
     grupo: suporte
     duracao: 60
-    nota: um assassino e um lutador mergulham no atirador aliado
+    nota: 'Um assassino e um lutador mergulham no atirador aliado da build, não nela. Mede o que a build faz pelo carry: quanto tempo a mais ele vive e quanto dano consegue dar.'
     atacantes:
     - {nome: Assassino, funcao: assassino, vida: 6000, armadura: 50, rm: 50, dda: 230, velocidade_ataque: 1.1,
        status: {Armor Penetration: 18}, alvo_aliado: 0,
@@ -390,7 +399,7 @@ cenarios:
     nome: Carry cutucado de longe
     grupo: suporte
     duracao: 60
-    nota: um mago de artilharia e um atirador batem no atirador aliado de longe
+    nota: Um mago de artilharia e um atirador batem de longe no atirador aliado. Mede a proteção que a build dá a ele.
     atacantes:
     - {nome: Mago de artilharia, funcao: mago, vida: 6000, armadura: 50, rm: 50, dda: 0, velocidade_ataque: 0.7,
        status: {Ability Power: 500}, alcance: 600, alvo_aliado: 0,
@@ -404,7 +413,7 @@ cenarios:
     nome: Dupla contra dupla
     grupo: suporte
     duracao: 60
-    nota: a build e um atirador contra um atirador e um encantador (a fase de rotas da dupla)
+    nota: A build e um atirador aliado contra um atirador e um encantador, como na fase de rotas da dupla.
     atacantes:
     - {nome: Atirador inimigo, funcao: atirador, vida: 5000, armadura: 45, rm: 40, dda: 220, velocidade_ataque: 1.3,
        status: {"% Critical Rate": 50}, alvo_aliado: 0}
@@ -416,6 +425,69 @@ cenarios:
     aliados:
     - {nome: Atirador aliado, funcao: atirador, vida: 3800, armadura: 45, rm: 40, dda: 230, velocidade_ataque: 1.3,
        status: {"% Critical Rate": 50}}
+
+  # ---------------------------------------------------------------- corrida (Rodada 15)
+  # Atacantes que MORREM (`mortais: true`): a luta acaba quando a barra de um dos lados zera. Matar acaba com o dano
+  # deles, então dano, dano devolvido e corta-cura valem o que valem no jogo. Os atacantes crescem com o minuto testado
+  # (`escala_com_minuto`: Vida e dano de um campeão daquela fase; os números abaixo são os do minuto 25). A medida é a
+  # corrida das barras de vida (Measures.race; parte `corrida` de nota_builds_7_3d.yml).
+  corrida_atirador:
+    nome: Corrida contra um atirador
+    grupo: corrida
+    duracao: 60
+    mortais: true
+    escala_com_minuto: true
+    nota: 'Um atirador sozinho, só batendo, que se cura com a Sedenta por Sangue. Quem zera a barra do outro primeiro?'
+    atacantes:
+    - {nome: Atirador, funcao: atirador, vida: 3600, armadura: 90, rm: 60, dda: 300, velocidade_ataque: 1.7,
+       status: {"% Critical Rate": 60, "% Armor Penetration": 25}, itens: [Sedenta por Sangue]}
+  corrida_lutador:
+    nome: Corrida contra um lutador que se cura
+    grupo: corrida
+    duracao: 60
+    mortais: true
+    escala_com_minuto: true
+    nota: Um lutador de perto que se cura (Hemodrenário e uma cura própria). O corta-cura e o dano devolvido encurtam a vida dele.
+    atacantes:
+    - {nome: Lutador, funcao: lutador, vida: 5200, armadura: 150, rm: 100, dda: 260, velocidade_ataque: 1.2,
+       status: {"% Armor Penetration": 15}, itens: [Hemodrenário],
+       pulsos: [{nome: Golpe de lutador, tipo: dano, dano_tipo: fisico, base: 220, dda: 1.0, a_cada: 5, alcance: 300},
+                {nome: Fôlego de lutador, tipo: cura, base: 260, a_cada: 8, alcance: 100}]}
+  corrida_atirador_peel:
+    nome: Corrida contra um atirador com suporte
+    grupo: corrida
+    duracao: 60
+    mortais: true
+    escala_com_minuto: true
+    nota: Um atirador com um suporte de proteção que o escuda, o cura e deixa a build lenta. Para vencer, é preciso derrubar o atirador através da proteção.
+    atacantes:
+    - {nome: Atirador protegido, funcao: atirador, vida: 3600, armadura: 90, rm: 60, dda: 300, velocidade_ataque: 1.7,
+       status: {"% Critical Rate": 60, "% Armor Penetration": 25}, itens: [Sedenta por Sangue]}
+    - {nome: Suporte de proteção, funcao: suporte, vida: 3000, armadura: 70, rm: 60, dda: 50, velocidade_ataque: 0.7,
+       status: {Ability Power: 250},
+       pulsos: [{nome: Escudo de proteção, tipo: escudo, base: 200, pdh: 0.5, a_cada: 7, alcance: 700, duracao: 2.5},
+                {nome: Cura de proteção, tipo: cura, base: 110, pdh: 0.35, a_cada: 8, alcance: 700},
+                {nome: Lentidão de proteção, tipo: controle, a_cada: 10, alcance: 700, controle: lentidao, lentidao: 0.4, duracao: 1.5}]}
+  corrida_com_peel_aliado:
+    nome: Corrida com um suporte aliado
+    grupo: corrida
+    duracao: 60
+    mortais: true
+    escala_com_minuto: true
+    nota: A build com um suporte aliado que a escuda e a cura, contra um mergulhador e um atirador, como um carry joga de verdade.
+    atacantes:
+    - {nome: Mergulhador, funcao: lutador, vida: 4800, armadura: 140, rm: 90, dda: 250, velocidade_ataque: 1.1,
+       status: {"% Armor Penetration": 15}, itens: [Hemodrenário],
+       pulsos: [{nome: Mergulho, tipo: dano, dano_tipo: fisico, base: 220, dda: 1.0, a_cada: 7, alcance: 450,
+                 controle: arremesso, duracao: 0.75}]}
+    - {nome: Atirador, funcao: atirador, vida: 3600, armadura: 90, rm: 60, dda: 300, velocidade_ataque: 1.7,
+       status: {"% Critical Rate": 60, "% Armor Penetration": 25}}
+    aliados:
+    - {nome: Suporte aliado, funcao: suporte, vida: 3000, armadura: 70, rm: 60, dda: 50, velocidade_ataque: 0.7,
+       status: {Ability Power: 250},
+       pulsos: [{nome: Escudo aliado, tipo: escudo, base: 220, pdh: 0.5, a_cada: 6, alcance: 700, duracao: 2.5},
+                {nome: Cura aliada, tipo: cura, base: 120, pdh: 0.35, a_cada: 7, alcance: 700},
+                {nome: Lentidão aliada, tipo: controle, a_cada: 9, alcance: 700, controle: lentidao, lentidao: 0.4, duracao: 1.5}]}
 
 # Varreduras do relatório Completo: cada estágio muda um atributo do atacante de referência e mantém os outros.
 # Os 5 estágios de cada dimensão são editáveis na tela (e voltam a estes com "Restaurar o padrão").
@@ -472,6 +544,13 @@ relatorios:
     - {cenario: mergulho_no_carry, peso: 1}
     - {cenario: cutucada_no_carry, peso: 1}
     - {cenario: dupla_contra_dupla, peso: 1}
+  corrida:
+    nome: Corrida das barras de vida (Rodada 15)
+    cenarios:
+    - {cenario: corrida_atirador, peso: 1}
+    - {cenario: corrida_lutador, peso: 1}
+    - {cenario: corrida_atirador_peel, peso: 1}
+    - {cenario: corrida_com_peel_aliado, peso: 1}
   ameacas:
     nome: Ameaças (Rodada 14)
     cenarios:
@@ -515,32 +594,38 @@ ofensivo:
   alvos:
     fragil:
       nome: Frágil
+      nota: 'Um alvo de pouca Vida e pouca resistência: mede a explosão, quem mata mais rápido.'
       vida: 1500
       armadura: 30
       rm: 30
     vida_alta:
       nome: Muita vida, poucas resistências
+      nota: 'Muita Vida e pouca resistência: favorece dano por % da Vida e dano contínuo.'
       vida: 5000
       armadura: 40
       rm: 40
     cura_alta:
       nome: Muita vida e muita cura
+      nota: 'Muita Vida e cura de 2% da Vida por segundo: o corta-cura (Feridas Dolorosas) e o dano alto rendem aqui.'
       vida: 5000
       armadura: 60
       rm: 60
       cura_pct: 2
     resistente:
       nome: Pouca vida, muita resistência
+      nota: 'Pouca Vida e muita Armadura e RM: favorece penetração e Dano Verdadeiro.'
       vida: 2000
       armadura: 250
       rm: 250
     muralha:
       nome: Muita vida e muita resistência
+      nota: 'Muita Vida e muita resistência: o tanque do fim de jogo. Penetração e dano por % da Vida.'
       vida: 5000
       armadura: 250
       rm: 250
     escudo_continuo:
       nome: Escudo contínuo e muita resistência
+      nota: 'Muita resistência e um escudo renovado a cada segundo: favorece o corte de escudos e golpes grandes.'
       vida: 3000
       armadura: 250
       rm: 250
@@ -549,7 +634,7 @@ ofensivo:
       escudo_duracao: 1.2
     resistencia_crescente:
       nome: Resistência crescente
-      nota: O perfil do Ornn ou da Duplaguarda.
+      nota: 'A Armadura e a RM sobem até 300 nos primeiros 5 s, como um tanque que fica mais duro na luta (o perfil do Ornn ou da Duplaguarda).'
       vida: 3000
       armadura: 50
       rm: 50
@@ -557,6 +642,7 @@ ofensivo:
       cresce_em: 5
     escudo_janela:
       nome: Resistência e escudo grande em janela
+      nota: 'Muita resistência e um escudo grande a cada 8 s: vale guardar o dano para quando o escudo cai.'
       vida: 3000
       armadura: 250
       rm: 250
@@ -565,6 +651,7 @@ ofensivo:
       escudo_duracao: 2.5
     esquiva_velocidade:
       nome: Esquiva por velocidade
+      nota: 'Um alvo rápido que anda de um lado ao outro da rota: favorece alcance, lentidão e velocidade.'
       vida: 3000
       armadura: 60
       rm: 60
@@ -572,6 +659,7 @@ ofensivo:
       comportamento: anda
     esquiva_avancos:
       nome: Esquiva por avanços
+      nota: 'Um alvo que avança uma vez por segundo numa direção sorteada: favorece habilidades que acertam sempre e alcance.'
       vida: 3000
       armadura: 60
       rm: 60

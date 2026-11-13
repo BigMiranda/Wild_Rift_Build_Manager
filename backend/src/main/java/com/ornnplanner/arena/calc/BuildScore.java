@@ -39,7 +39,9 @@ public class BuildScore {
     public static final String OFFENSIVE = "ofensiva";
     public static final String UTILITY = "utilidade";
     public static final String DUELS = "duelos";
-    public static final List<String> PARTS = List.of(DEFENSIVE, OFFENSIVE, UTILITY, DUELS);
+    /** Rodada 15: the lifebar race (the enemy lifebar gone before yours), from every fight of the build. */
+    public static final String RACE = "corrida";
+    public static final List<String> PARTS = List.of(DEFENSIVE, OFFENSIVE, UTILITY, RACE, DUELS);
 
     /** One scenario's reading, in points (0 = as the reference with no items, 100 = perfect). */
     public static class Reading {
@@ -233,7 +235,8 @@ public class BuildScore {
             s.weights.replaceAll((k, v) -> v / Math.max(1e-9, sum));
         }
         Map<String, Object> read = (Map<String, Object>) rules.getOrDefault("leitura", Map.of());
-        if (s.weights.get(DEFENSIVE) > 0 || s.weights.get(UTILITY) > 0 || floor(s.championClass) > Double.NEGATIVE_INFINITY) {
+        if (s.weights.get(DEFENSIVE) > 0 || s.weights.get(UTILITY) > 0 || s.weights.get(RACE) > 0
+                || floor(s.championClass) > Double.NEGATIVE_INFINITY) {
             defensive(build, minute, o != null && o.defensiveMode != null ? o.defensiveMode
                     : String.valueOf(read.getOrDefault("defensiva", EffectModel.FIXED)), o == null ? null : o.starts, o == null ? 0 : o.limit, s);
         }
@@ -263,6 +266,9 @@ public class BuildScore {
                 r.weight = targets.get(i).weight;
                 s.readings.add(r);
             }
+        }
+        if (s.weights.get(RACE) > 0) {
+            race(build, minute, o == null ? null : o.starts, o == null ? 0 : o.limit, s);
         }
         if (supportRules != null && s.weights.get(UTILITY) > 0) {
             support(build, minute, supportRules, o == null ? null : o.starts, s);
@@ -309,6 +315,17 @@ public class BuildScore {
             r.points = o.index;
             r.weight = rep.tests.get(i).weight;
             s.readings.add(r);
+            if (o.reference != null) {
+                // Rodada 15: the same fight as a race (projected: these attackers never die)
+                Reading rr = new Reading();
+                rr.part = RACE;
+                rr.key = "corrida|" + rep.tests.get(i).key;
+                rr.name = o.testName;
+                rr.index = o.build.race;
+                rr.points = racePoints(o.build.race, o.reference.race);
+                rr.weight = rep.tests.get(i).weight * projectedWeight();
+                s.readings.add(rr);
+            }
             double cc = o.build.fightLength > 0 ? o.build.controlApplied / o.build.fightLength * 10 * ccFactor : 0;
             double u = Math.min(100, cc + (o.build.absorbedShare == null ? 0 : o.build.absorbedShare * absorbed));
             usum += u;
@@ -396,6 +413,59 @@ public class BuildScore {
         double cut = clamp(100 * (enemyR - enemyB) / Math.max(1, enemyR));
         return num(w.get("carry_vivo"), 0.35) * alive + num(w.get("carry_dano"), 0.25) * damage
                 + num(w.get("controle"), 0.2) * cc + num(w.get("dano_cortado"), 0.2) * cut;
+    }
+
+    /**
+     * Rodada 15: the race report (efetividade's {@code corrida}: attackers that die, so killing ends their damage), each
+     * scenario a race reading against the reference.
+     */
+    @SuppressWarnings("unchecked")
+    private void race(BuildRepository.Build build, double minute, Integer starts, int limit, Score s) {
+        Map<String, Object> cfg = (Map<String, Object>) rules.getOrDefault("corrida", Map.of());
+        EffectModel.Report rep = effect.report(String.valueOf(cfg.getOrDefault("relatorio", "corrida")));
+        if (limit > 0 && rep.tests.size() > limit) {
+            rep.tests = new ArrayList<>(rep.tests.subList(0, limit));
+        }
+        EffectModel.Request req = new EffectModel.Request();
+        req.build = build;
+        req.minute = minute;
+        req.readMode = EffectModel.AS_PLAYED;
+        req.starts = starts;
+        for (EffectModel.Entry e : rep.tests) {
+            EffectModel.Job j = new EffectModel.Job();
+            j.testKey = e.key;
+            req.jobs.add(j);
+        }
+        List<EffectModel.Outcome> out = effect.evaluate(req);
+        for (int i = 0; i < out.size(); i++) {
+            EffectModel.Outcome o = out.get(i);
+            if (o.build == null || o.reference == null) {
+                continue;
+            }
+            Reading r = new Reading();
+            r.part = RACE;
+            r.key = "corrida|" + rep.tests.get(i).key;
+            r.name = o.testName;
+            r.index = o.build.race;
+            r.points = racePoints(o.build.race, o.reference.race);
+            r.weight = rep.tests.get(i).weight;
+            s.readings.add(r);
+        }
+    }
+
+    /** The weight of a race read from a durability fight (immortal attackers, a projection) next to a real one (1). */
+    @SuppressWarnings("unchecked")
+    private double projectedWeight() {
+        Map<String, Object> cfg = (Map<String, Object>) rules.getOrDefault("corrida", Map.of());
+        return num(cfg.get("peso_projetada"), 0.5);
+    }
+
+    /**
+     * A race in points, the scale of the other parts: the share of the reference's gap to a perfect race (100) the build
+     * closes. 0 = as the champion with no items, 100 = it loses nothing, below 0 = worse.
+     */
+    public static double racePoints(double race, double reference) {
+        return 100 * (race - reference) / Math.max(1, 100 - reference);
     }
 
     private static double clamp(double v) {

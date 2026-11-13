@@ -385,6 +385,7 @@ public class EffectTestService {
             try {
                 Test test = scaled(testOf(job), at);
                 o.testName = test.name;
+                o.testNote = test.note;
                 Variant v = job.variant == null ? new Variant() : job.variant;
                 String tk = hash(write(test));
                 String bk = buildKey + "|" + tk + "|" + write(v) + "|" + mode;
@@ -560,7 +561,7 @@ public class EffectTestService {
         placeBots(test, (team, bot, x, y) -> {
             ArenaModel.Slot s = new ArenaModel.Slot();
             s.team = team;
-            s.dummy = dummy(bot, team == 1);
+            s.dummy = dummy(bot, team == 1 && !test.mortal);
             s.x = x;
             s.y = y;
             s.target = focusIndex(test, bot);
@@ -624,7 +625,7 @@ public class EffectTestService {
         me.y = 0;
         f.inputs.add(me);
         placeBots(test, (team, bot, x, y) -> {
-            Arena.Input in = botInput(bot, team).copy();
+            Arena.Input in = botInput(bot, team, test.mortal).copy();
             in.x = team == 1 ? x + offset[0] : x;
             in.y = team == 1 ? y + offset[1] : y;
             in.target = focusIndex(test, bot);
@@ -703,8 +704,8 @@ public class EffectTestService {
         return d;
     }
 
-    private Arena.Input botInput(Bot b, int team) {
-        ArenaModel.Dummy d = dummy(b, team == 1);
+    private Arena.Input botInput(Bot b, int team, boolean mortal) {
+        ArenaModel.Dummy d = dummy(b, team == 1 && !mortal);
         String key = "bot|" + team + "|" + write(d);
         return inputs.computeIfAbsent(key, k -> {
             Arena.Input in = arena.dummyInput(d);
@@ -1149,7 +1150,45 @@ public class EffectTestService {
             m.absorbedShare = team > 0 ? 100 * me.rawTaken / team : 0;
             m.alliesAlive = alive / allies;
         }
+        race(m, r, index, attackers, allies);
         return m;
+    }
+
+    /**
+     * Rodada 15, the lifebar race: the game is about the enemy lifebar going to zero before yours, for tanks too. From
+     * the same fight: the share of the enemies' lifebar the build's side took and the share of its own side's it lost.
+     * Damage the build reflects and healing its Grievous Wounds cut take enemy lifebar; kills count whole.
+     */
+    static void race(Measures m, ArenaModel.Result r, int index, int attackers, int allies) {
+        double enemyMax = 0;
+        double enemyLost = 0;
+        for (int k = 0; k < attackers; k++) {
+            ArenaModel.FighterStats e = r.fighters.get(1 + k);
+            enemyMax += e.maxHealth;
+            // immortal attackers (the durability scenarios) can lose more than one lifebar: the projection of the race
+            enemyLost += e.deathTime != null ? e.maxHealth : Math.max(0, e.taken - e.shieldAbsorbed - e.healed);
+        }
+        double teamMax = 0;
+        double teamLost = 0;
+        List<ArenaModel.FighterStats> side = new ArrayList<>();
+        side.add(r.fighters.get(index));
+        for (int k = 0; k < allies; k++) {
+            side.add(r.fighters.get(1 + attackers + k));
+        }
+        for (ArenaModel.FighterStats f : side) {
+            teamMax += f.maxHealth;
+            teamLost += f.deathTime != null ? f.maxHealth
+                    : Math.min(f.maxHealth, Math.max(0, f.taken - f.shieldAbsorbed - f.healed));
+        }
+        m.enemyLost = enemyMax > 0 ? enemyLost / enemyMax : 0;
+        m.teamLost = teamMax > 0 ? teamLost / teamMax : 0;
+        m.race = raceOf(m.enemyLost, m.teamLost);
+    }
+
+    /** 100 x enemy / (enemy + mine), mine at least 1% of a lifebar; 50 when nothing happened. */
+    public static double raceOf(double enemyLost, double teamLost) {
+        double mine = Math.max(0.01, teamLost);
+        return enemyLost <= 0 && teamLost <= 0 ? 50 : 100 * enemyLost / (enemyLost + mine);
     }
 
     /** The mean of the reference's measures (a folder's builds); one is itself. */
@@ -1193,6 +1232,9 @@ public class EffectTestService {
             out.controlApplied += m.controlApplied / n;
             out.fightLength += m.fightLength / n;
             out.maxHealth += m.maxHealth / n;
+            out.enemyLost += m.enemyLost / n;
+            out.teamLost += m.teamLost / n;
+            out.race += m.race / n;
             out.died |= m.died;
             if (m.absorbedShare != null) {
                 out.absorbedShare = (out.absorbedShare == null ? 0 : out.absorbedShare) + m.absorbedShare / n;
@@ -1216,6 +1258,7 @@ public class EffectTestService {
         t.threatCount = m.get("quantos") instanceof Number ? ((Number) m.get("quantos")).intValue() : null;
         t.duration = num(m.get("duracao"), 60);
         t.scalesWithMinute = Boolean.TRUE.equals(m.get("escala_com_minuto"));
+        t.mortal = Boolean.TRUE.equals(m.get("mortais"));
         for (Object o : (List<Object>) m.getOrDefault("atacantes", List.of())) {
             t.attackers.add(bot((Map<String, Object>) o, ids));
         }
