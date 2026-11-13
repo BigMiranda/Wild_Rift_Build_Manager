@@ -1173,7 +1173,7 @@ public class EffectTestService {
      * 50 = both go at the same time, 100 = it never goes to zero and they do. Damage, reflected damage, healing cut and
      * kills shorten theirs. With attackers no one can target (the durability tests) theirs never ends: no race there.
      */
-    static void race(Measures m, ArenaModel.Result r, int index, int attackers, int allies) {
+    public static void race(Measures m, ArenaModel.Result r, int index, int attackers, int allies) {
         List<ArenaModel.FighterStats> them = new ArrayList<>();
         for (int k = 0; k < attackers; k++) {
             them.add(r.fighters.get(1 + k));

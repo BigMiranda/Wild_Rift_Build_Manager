@@ -355,3 +355,18 @@ CREATE TABLE IF NOT EXISTS macro_policy (
     rules                 INTEGER,                   -- MacroTraining.RULES when it was trained
     created_at            TEXT NOT NULL
 );
+
+-- Rodada 16: the interaction atlas's runs (a closed fight between two champions, conditions alone, in pairs and triples)
+CREATE TABLE IF NOT EXISTS atlas_run (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL,
+    config      TEXT NOT NULL,                  -- JSON: AtlasModel.Config (the fixed context: champions, mode, minutes)
+    status      TEXT NOT NULL,                  -- pendente | rodando | feito | erro | cancelado
+    stage       TEXT,
+    done        INTEGER NOT NULL DEFAULT 0,
+    total       INTEGER NOT NULL DEFAULT 0,
+    error       TEXT,
+    result      TEXT,                           -- JSON: AtlasModel.Result (the races of every set measured)
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);

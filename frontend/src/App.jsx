@@ -22,6 +22,7 @@ import Arena from './pages/Arena.jsx';
 import Match from './pages/Match.jsx';
 import Calculator from './pages/Calculator.jsx';
 import Discovery from './pages/Discovery.jsx';
+import Atlas from './pages/Atlas.jsx';
 import Campaigns from './pages/Campaigns.jsx';
 import Guides from './pages/Guides.jsx';
 import Ranking from './pages/Ranking.jsx';
@@ -239,6 +240,7 @@ function Shell({ meta, items, reload, error, settingsBox }) {
       {pane('simulacoes/partida', () => <Match />)}
       {pane('simulacoes/calculadora', () => <Calculator />)}
       {pane('simulacoes/descoberta', () => <Discovery />)}
+      {pane('simulacoes/atlas', () => <Atlas />)}
 
       {pane('admin/catalogo', () => <Admin meta={meta} items={items} onChanged={reload} />)}
       {pane('admin/efetividade', () => <Effectiveness items={items} />)}

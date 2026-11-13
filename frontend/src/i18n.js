@@ -3387,6 +3387,7 @@ const PT = {
   'sub.simulacoes.laboratorio': "Laboratório",
   'sub.simulacoes.partida': "Partida",
   'sub.simulacoes.calculadora': "Calculadora",
+  'sub.simulacoes.atlas': "Atlas",
   'sub.admin.catalogo': "Catálogo",
   'sub.admin.efetividade': "Configuração da Efetividade",
   'sub.admin.sobre': "Sobre e configurações",

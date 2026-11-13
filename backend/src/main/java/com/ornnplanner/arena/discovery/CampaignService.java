@@ -648,6 +648,21 @@ public class CampaignService {
     }
 
     /** A kit as a build of the champion: the base (runes, spells, pace) with the kit's order and runes. */
+    /**
+     * Rodada 16 (the interaction atlas): the champion's base build for an analysis (its first saved build, else a
+     * synthetic one) with the latest campaign's standard kit and rune page, when there is one.
+     */
+    public BuildRepository.Build standardBuild(String unit) {
+        BuildRepository.Build base = base(unit, new ChampionResult());
+        ChampionResult latest = latest(unit);
+        if (latest != null && latest.discovery != null && latest.discovery.standard != null) {
+            BuildRepository.Build b = kitBuild(base, latest.discovery.standard, latest.discovery.standard);
+            b.name = "padrão da campanha";
+            return b;
+        }
+        return base;
+    }
+
     static BuildRepository.Build kitBuild(BuildRepository.Build base, DiscoveryModel.KitView k, DiscoveryModel.KitView standard) {
         BuildRepository.Build b = DiscoveryService.copy(base, BuildRepository.Build.class);
         b.id = null;

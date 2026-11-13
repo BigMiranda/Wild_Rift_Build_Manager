@@ -129,6 +129,13 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   A Coletora (`executa`) and Orbe do Infinito (`amplifica.alvo_abaixo`) are modeled; ragdoll pulses have
   `vida_perdida_alvo` / `executa_abaixo`. Every scenario and offensive target has a `nota` (`Outcome.testNote`,
   `targetNote`, `Outcome.mortal`).
+- Rodada 16 (`docs/rodada-16.md`): the interaction atlas, `arena/atlas/` (`AtlasService`, `AtlasCatalog`, `AtlasMath`,
+  `api/AtlasController`, table `atlas_run`, seed `atlas_<patch>.yml`, screen Simulações › Atlas). A run's context
+  (two champions, mode x1, minutes) comes from the seed or the request; conditions (stats at two levels, item
+  passives, keystones, runes, spells) are fought alone, in pairs and in triples (`Combatant.holdItems` / `extraItems`
+  hold exactly the condition's items instead of the purchases); the guide predicts any set by inclusion-exclusion up to
+  order 3 (multilinear in the conditions' weights) and ranks items, runes and spell for each side from what is fixed.
+  Local only (the public mode never starts it).
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.

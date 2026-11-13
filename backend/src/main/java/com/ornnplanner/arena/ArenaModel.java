@@ -65,6 +65,12 @@ public final class ArenaModel {
         /** Items held differently (passives off, flat stats on top), for the measured value of a passive; never stored. */
         @JsonIgnore
         public Map<Long, com.ornnplanner.engine.Model.ItemEdit> edits;
+        /** Rodada 16: hold exactly these items instead of the build's purchases (FighterBuilder.Combatant#holdItems). */
+        @JsonIgnore
+        public List<Long> holdItems;
+        /** Rodada 16: synthetic items of pure stats held on top. */
+        @JsonIgnore
+        public List<com.ornnplanner.engine.Model.ItemDef> extraItems;
     }
 
     /**

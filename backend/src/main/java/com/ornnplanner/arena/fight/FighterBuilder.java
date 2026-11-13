@@ -50,6 +50,14 @@ public class FighterBuilder {
         /** Items held differently: passives off (with their fight effects and triggers), flat stats on top. */
         @com.fasterxml.jackson.annotation.JsonIgnore
         public Map<Long, com.ornnplanner.engine.Model.ItemEdit> edits;
+        /**
+         * Rodada 16 (the interaction atlas): hold exactly these shop items at the minute instead of the build's purchases
+         * (the build still gives the level, runes, spells and skill order); null = the purchases.
+         */
+        public List<Long> holdItems;
+        /** Rodada 16: synthetic items held on top (a condition of pure stats), by their own negative ids. */
+        @com.fasterxml.jackson.annotation.JsonIgnore
+        public List<com.ornnplanner.engine.Model.ItemDef> extraItems;
     }
 
     /** A combatant resolved: its build, inventory, level and minute. */
@@ -415,6 +423,14 @@ public class FighterBuilder {
         r.minute = minute;
         r.level = p.level;
         r.items = new ArrayList<>();
+        if (c.holdItems != null) {
+            r.items.addAll(c.holdItems);
+            for (com.ornnplanner.engine.Model.ItemDef d : c.extraItems == null ? List.<com.ornnplanner.engine.Model.ItemDef>of() : c.extraItems) {
+                r.items.add(d.id);
+                r.extra.put(d.id, d);
+            }
+            return r;
+        }
         for (ItemContribution ic : p.contributions) {
             if (!ic.rune && (c.excludeItems == null || !c.excludeItems.contains(ic.itemId))) {
                 com.ornnplanner.engine.Model.ItemDef as = c.replaceItems == null ? null : c.replaceItems.get(ic.itemId);

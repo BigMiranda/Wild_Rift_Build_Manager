@@ -1,0 +1,47 @@
+# Atlas de interações (Rodada 16, docs/rodada-16.md): as condições (status, passivas de itens, runas fundamentais,
+# runas, feitiços) medidas sozinhas, em pares e em trios, numa luta fechada entre dois campeões. A medida é a corrida das
+# barras de vida (Rodada 15), na visão do lado A: 50 = empate.
+#
+# Uma execução tem o seu contexto fixado: os dois campeões (`a`, `b`, códigos de unidade), o modo (só x1 por enquanto) e
+# os minutos. A base de cada lado é a build padrão da última campanha do campeão (runas, feitiço, ordem de habilidades e
+# o ritmo que dá o nível no minuto), sem itens: as condições entram por cima, e as runas e o feitiço por troca.
+#
+# Condições (AtlasCatalog), todas lidas dos seeds:
+#   status       cada status que os itens finais e as botas dão fixo, em dois níveis: o que um item dá (a mediana) e o
+#                dobro
+#   passiva      cada item final ou bota com passiva, ativo ou efeito de luta, sem os status fixos dele
+#   fundamental  cada runa fundamental diferente da base
+#   runa         cada runa que a base não tem: na linha dela da árvore principal, ou na vaga secundária
+#   feitico      cada feitiço que a base não tem, no lugar do que não é o Flash
+# Capacidades que a Arena ainda não modela (invisibilidade, revelar...) ficam de fora até serem configuradas.
+#
+# Campos (cada execução pode trocar qualquer um do `padrao`):
+#   minutos      os minutos medidos (cada um é uma medição inteira)
+#   dimensoes    1, 2, 3: sozinhas, pares e trios
+#   duracao      segundos de cada luta
+#   largadas     lutas por medida, de distâncias e posições diferentes (a média). Uma luta fechada é sensível: um
+#                pouco mais de velocidade ou aceleração muda as decisões da IA. Com 1 e 3 largadas, as notas sozinhas
+#                se correlacionaram 0,69 no piloto; as lutas custam pouco (o que custa é preparar cada lutador)
+#   top_2d       pares só entre as N condições mais relevantes de cada lado pela nota sozinha (0 = todos os pares)
+#   top_3d       trios entre as N mais relevantes de cada lado (pela nota e pelos pares)
+#   validacao    conjuntos sorteados, nunca medidos, para conferir a previsão de 1, 2 e 3 dimensões
+#   fontes       quais condições entram
+patch: "7.3d"
+
+padrao:
+  modo: x1
+  minutos: [15]
+  dimensoes: [1, 2, 3]
+  duracao: 60
+  largadas: 6
+  top_2d: 0
+  top_3d: 12
+  validacao: 150
+  fontes: [status, passiva, fundamental, runa, feitico]
+  semente: 1
+
+execucoes:
+  ornn_rumble:
+    nome: "Ornn × Rumble (piloto)"
+    a: ORNN
+    b: RUMBLE
