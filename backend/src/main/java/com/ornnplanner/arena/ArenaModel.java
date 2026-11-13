@@ -93,6 +93,8 @@ public final class ArenaModel {
         public double slow = 0.3;
         /** Rodada 15, finishers: extra damage of this share of the target's missing health. */
         public double missingHealth;
+        /** Rodada 15: extra damage of this share of the target's max health. */
+        public double maxHealth;
         /** Rodada 15, finishers: the hit executes a target left below this share of its max health (0 = never). */
         public double executeBelow;
 
@@ -110,6 +112,7 @@ public final class ArenaModel {
             p.control = control;
             p.slow = slow;
             p.missingHealth = missingHealth;
+            p.maxHealth = maxHealth;
             p.executeBelow = executeBelow;
             return p;
         }

@@ -7195,7 +7195,7 @@ public class Arena {
                     continue;
                 }
                 fireAll(u, "ao_conjurar", null);
-                amount += p.missingHealth * Math.max(0, t.maxHp - t.hp);
+                amount += p.missingHealth * Math.max(0, t.maxHp - t.hp) + p.maxHealth * t.maxHp;
                 if (amount > 0) {
                     deal(u, t, amount, p.type == null ? "magico" : p.type, src, ABILITY, 0);
                     onAbilityItems(u, t);

@@ -31,15 +31,17 @@ leitura:
   largadas: 3
 
 # Rodada 15: a corrida entrou em todas (antes: Tanque 0.70 / 0.20 / 0.10, Lutador 0.45 / 0.45 / 0.10, Atirador, Mago e
-# Assassino só ofensiva, Controlador 0.30 / 0.55 / 0.15, Especialista 0.50 / 0.50).
+# Assassino só ofensiva, Controlador 0.30 / 0.55 / 0.15, Especialista 0.50 / 0.50). Depois, a defensiva (atacantes
+# imortais e inalvejáveis) passou a valer menos: muitos itens e passivas só se pagam interagindo com outros campeões,
+# o que só a corrida mede.
 classes:
-  Tanque:       {defensiva: 0.55, utilidade: 0.15, ofensiva: 0.10, corrida: 0.20}
-  Lutador:      {defensiva: 0.30, ofensiva: 0.30, utilidade: 0.10, corrida: 0.30}
-  Atirador:     {ofensiva: 0.70, corrida: 0.30, piso: 20}
-  Mago:         {ofensiva: 0.70, corrida: 0.30, piso: 20}
-  Assassino:    {ofensiva: 0.70, corrida: 0.30, piso: 10}
-  Controlador:  {defensiva: 0.25, utilidade: 0.50, ofensiva: 0.10, corrida: 0.15}
-  Especialista: {defensiva: 0.35, ofensiva: 0.35, corrida: 0.30}
+  Tanque:       {defensiva: 0.35, utilidade: 0.15, ofensiva: 0.10, corrida: 0.40}
+  Lutador:      {defensiva: 0.20, ofensiva: 0.30, utilidade: 0.10, corrida: 0.40}
+  Atirador:     {ofensiva: 0.55, corrida: 0.45, piso: 20}
+  Mago:         {ofensiva: 0.55, corrida: 0.45, piso: 20}
+  Assassino:    {ofensiva: 0.55, corrida: 0.45, piso: 10}
+  Controlador:  {defensiva: 0.15, utilidade: 0.50, ofensiva: 0.10, corrida: 0.25}
+  Especialista: {defensiva: 0.25, ofensiva: 0.30, corrida: 0.45}
 piso_peso: 1.0
 
 # O arquétipo da build no minuto ajusta os pesos (somados aos da classe e normalizados): um lutador com build de tanque

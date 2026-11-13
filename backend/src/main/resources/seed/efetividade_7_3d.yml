@@ -35,6 +35,8 @@
 #     (aliados também). A Vida dos atacantes é a de um campeão do minuto 25 (`escala_com_minuto`). Medem a corrida das
 #     barras de vida.
 #   Pulsos de finalização: `vida_perdida_alvo` (dano extra pela parte da Vida que falta ao alvo) e `executa_abaixo`.
+#   `vida_max_alvo` (dano extra pela parte da Vida máxima do alvo). As lutas contra imortais duram 60 s (eram 180 e
+#   120): a build só apanha, e o que dura mais que isso entra pela projeção da taxa líquida.
 #
 # O que muda com o minuto testado: só a build (itens, nível, status). O atacante tem os status fixos do preset, em
 # qualquer minuto, e por isso builds em minutos diferentes se comparam. Com `escala_com_minuto: true` (desligado nos
@@ -124,7 +126,7 @@ cenarios:
   critico:
     nome: Crítico
     grupo: 1x1
-    duracao: 180
+    duracao: 60
     nota: Um atirador que só dá ataques básicos, todos críticos (300 de DdA, 2,5 ataques por segundo), e se cura com o Roubo de Vida da Sedenta por Sangue. Armadura e o que reduz crítico ou velocidade de ataque seguram mais.
     atacantes:
     - {nome: Atirador crítico, funcao: atirador, vida: 8000, armadura: 60, rm: 60, dda: 225, velocidade_ataque: 2.5,
@@ -132,7 +134,7 @@ cenarios:
   anti_tanque_fisico:
     nome: Anti-tanque físico
     grupo: 1x1
-    duracao: 180
+    duracao: 60
     nota: 'Um lutador feito para derrubar tanques: dano por % da Vida (Espada do Rei Destruído), penetração de Armadura (Lembranças) e cura pelo Hemodrenário. Empilhar Vida rende menos aqui.'
     atacantes:
     - {nome: Lutador anti-tanque, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 210, velocidade_ataque: 1.5,
@@ -140,7 +142,7 @@ cenarios:
   liandry:
     nome: Tormento de Liandry
     grupo: 1x1
-    duracao: 180
+    duracao: 60
     nota: Um mago que queima a Vida máxima com o Tormento de Liandry, dano mágico contínuo. Resistência Mágica e cura seguram; Vida pura alimenta a queimadura.
     atacantes:
     - {nome: Mago de Liandry, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
@@ -148,7 +150,7 @@ cenarios:
   liandry_maldicao:
     nome: Liandry + Maldição Sanguinária
     grupo: 1x1
-    duracao: 180
+    duracao: 60
     nota: O mago do Liandry com a Maldição Sanguinária, que corta a Resistência Mágica a cada acerto, e o Criafendas, que o cura. Testa a RM quando ela é reduzida.
     atacantes:
     - {nome: Mago de Liandry e Maldição, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
@@ -156,7 +158,7 @@ cenarios:
   cajado_vazio:
     nome: Cajado do Vazio
     grupo: 1x1
-    duracao: 180
+    duracao: 60
     nota: 'Um mago com o Cajado do Vazio (40% de penetração mágica): a Resistência Mágica vale menos, a Vida segura melhor.'
     atacantes:
     - {nome: Mago do Cajado, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
@@ -164,7 +166,7 @@ cenarios:
   pdh_1000_cajado:
     nome: 1000 de PdH + Cajado do Vazio
     grupo: 1x1
-    duracao: 180
+    duracao: 60
     nota: 'Um mago no fim de jogo: 1.000 de PdH, Cajado do Vazio e Criafendas. Explosões mágicas grandes.'
     atacantes:
     - {nome: Mago de 1000 PdH, funcao: mago, vida: 8000, armadura: 60, rm: 60, dda: 0, velocidade_ataque: 0.7,
@@ -172,7 +174,7 @@ cenarios:
   misto:
     nome: Misto
     grupo: 1x1
-    duracao: 180
+    duracao: 60
     nota: 'Um lutador que mistura ataques físicos e habilidades mágicas, com o Hemodrenário: testa se a build só se defende de um tipo de dano.'
     atacantes:
     - {nome: Lutador misto, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 260, velocidade_ataque: 1.5,
@@ -181,7 +183,7 @@ cenarios:
   verdadeiro:
     nome: Verdadeiro
     grupo: 1x1
-    duracao: 180
+    duracao: 60
     nota: 'Um lutador cujas habilidades causam Dano Verdadeiro, que ignora Armadura e RM: só Vida, escudos, cura e redução de dano ajudam.'
     atacantes:
     - {nome: Lutador verdadeiro, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 160, velocidade_ataque: 1.2,
@@ -190,16 +192,34 @@ cenarios:
   atirador_alimentado:
     nome: Atirador alimentado
     grupo: 1x1
-    duracao: 180
+    duracao: 60
     nota: 'Um atirador com a build completa (Gume do Infinito, Lembranças, Dança da Morte, Sedenta por Sangue): muito dano físico, penetração e cura.'
     atacantes:
     - {nome: Atirador alimentado, funcao: atirador, vida: 8000, armadura: 60, rm: 60, dda: 175, velocidade_ataque: 1.5,
        status: {"% Critical Rate": 25},
        itens: [Gume do Infinito, Lembranças do Lorde Dominik, Canhão Fumegante, Dança da Morte, Sedenta por Sangue]}
+  verdadeiro_vida_max:
+    nome: Verdadeiro pela Vida máxima
+    grupo: 1x1
+    duracao: 60
+    nota: 'Um atirador de muitos ataques por segundo cujo terceiro golpe causa Dano Verdadeiro pela Vida máxima do alvo, como as Flechas de Prata da Vayne. Armadura e RM não ajudam e Vida pura alimenta o dano: escudos, cura e redução de dano sim.'
+    atacantes:
+    - {nome: Atirador de Dano Verdadeiro, funcao: atirador, vida: 8000, armadura: 60, rm: 60, dda: 220, velocidade_ataque: 2.0,
+       status: {"% Critical Rate": 25},
+       pulsos: [{nome: Terceiro golpe, tipo: dano, dano_tipo: verdadeiro, base: 60, vida_max_alvo: 0.08, a_cada: 1.5, alcance: 550}]}
+  misto_vida_max:
+    nome: Misto pela Vida máxima
+    grupo: 1x1
+    duracao: 60
+    nota: 'Um lutador que mistura ataques físicos com a Espada do Rei Destruído (dano pela Vida atual) e habilidades mágicas com o Tormento de Liandry (queimadura pela Vida máxima). Empilhar Vida rende pouco e resistência de um tipo só também.'
+    atacantes:
+    - {nome: Lutador misto de Vida, funcao: lutador, vida: 8000, armadura: 60, rm: 60, dda: 200, velocidade_ataque: 1.4,
+       status: {Ability Power: 350}, itens: [Espada do Rei Destruído, Tormento de Liandry],
+       pulsos: [{nome: Golpe mágico, tipo: dano, dano_tipo: magico, base: 120, pdh: 0.6, vida_max_alvo: 0.04, a_cada: 4, alcance: 350}]}
   cinco_contra_um:
     nome: 5 contra 1
     grupo: equipe
-    duracao: 120
+    duracao: 60
     nota: 'A build sozinha contra cinco: atirador, mago, lutador, assassino e tanque. Mede quanto ela aguenta sendo o alvo de todos.'
     atacantes:
     - {nome: Atirador, funcao: atirador, vida: 6000, armadura: 50, rm: 50, dda: 300, velocidade_ataque: 1.5,
@@ -600,6 +620,8 @@ relatorios:
     - {cenario: misto, peso: 1}
     - {cenario: verdadeiro, peso: 1}
     - {cenario: atirador_alimentado, peso: 1}
+    - {cenario: verdadeiro_vida_max, peso: 1}
+    - {cenario: misto_vida_max, peso: 1}
   completo:
     nome: Completo
     cenarios:
@@ -612,6 +634,8 @@ relatorios:
     - {cenario: misto, peso: 1}
     - {cenario: verdadeiro, peso: 1}
     - {cenario: atirador_alimentado, peso: 1}
+    - {cenario: verdadeiro_vida_max, peso: 1}
+    - {cenario: misto_vida_max, peso: 1}
     - {cenario: cinco_contra_um, peso: 1}
     - {cenario: luta_de_equipe, peso: 1}
     varreduras: [pen_pct, pen_pct_fisica, pen_pct_magica, pen_fixa, critico, dda, pdh, resistencias, vida, inimigos]

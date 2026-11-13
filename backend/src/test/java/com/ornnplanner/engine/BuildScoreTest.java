@@ -62,8 +62,8 @@ class BuildScoreTest {
         assertTrue(tank.get(BuildScore.DEFENSIVE) > tank.get(BuildScore.OFFENSIVE));
         Map<String, Double> marksman = scorer.weights("Atirador", null);
         // Rodada 15: a marksman is its damage and the lifebar race (before, only the damage)
-        assertEquals(0.7, marksman.get(BuildScore.OFFENSIVE), 1e-9);
-        assertEquals(0.3, marksman.get(BuildScore.RACE), 1e-9);
+        assertEquals(0.55, marksman.get(BuildScore.OFFENSIVE), 1e-9);
+        assertEquals(0.45, marksman.get(BuildScore.RACE), 1e-9);
         assertTrue(tank.get(BuildScore.RACE) > 0);
         Map<String, Double> fighterAsTank = scorer.weights("Lutador", "tanque");
         assertTrue(fighterAsTank.get(BuildScore.DEFENSIVE) > scorer.weights("Lutador", null).get(BuildScore.DEFENSIVE));

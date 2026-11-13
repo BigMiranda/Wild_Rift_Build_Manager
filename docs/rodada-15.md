@@ -127,3 +127,27 @@ cada acerto. As 10 melhores builds do Ornn levavam Ruptor Divino e itens de velo
 | Atirador com suporte | 36,8 | 48,6 |
 
 Golden inalterado. Cada parte foi conferida nos testes (`LifebarRaceTest`).
+
+## Parte 6: os imortais valem menos e lutam menos
+
+Decisão do usuário (13/11/2026): muitos itens e passivas só se pagam interagindo com outros campeões, o que os testes
+contra imortais inalvejáveis não medem.
+
+- ✅ **Pesos** (`nota_builds_7_3d.yml`):
+
+  | Classe | Defensiva | Utilidade | Ofensiva | Corrida |
+  |---|---|---|---|---|
+  | Tanque | 0,35 | 0,15 | 0,10 | 0,40 |
+  | Lutador | 0,20 | 0,10 | 0,30 | 0,40 |
+  | Atirador, Mago, Assassino | — | — | 0,55 | 0,45 |
+  | Controlador | 0,15 | 0,50 | 0,10 | 0,25 |
+  | Especialista | 0,25 | — | 0,30 | 0,45 |
+
+- ✅ **Lutas mais curtas**: as lutas contra imortais duram 60 s (eram 180 nos 1x1 e 120 no "5 contra 1"). O que dura
+  mais que isso entra pela projeção da taxa líquida.
+- ✅ **Dois cenários de alto DPS pela Vida máxima**, que faltavam no Básico e no Completo:
+  - "Verdadeiro pela Vida máxima": um terceiro golpe como as Flechas de Prata;
+  - "Misto pela Vida máxima": Espada do Rei Destruído, Tormento de Liandry e golpe mágico pela Vida máxima.
+
+  Os pulsos ganharam `vida_max_alvo`.
+

@@ -1394,6 +1394,7 @@ public class EffectTestService {
             p.control = m.get("controle") == null ? null : String.valueOf(m.get("controle"));
             p.slow = num(m.get("lentidao"), 0.3);
             p.missingHealth = num(m.get("vida_perdida_alvo"), 0);
+            p.maxHealth = num(m.get("vida_max_alvo"), 0);
             p.executeBelow = num(m.get("executa_abaixo"), 0);
             if ("controle".equals(p.kind) && p.control == null) {
                 p.control = "atordoamento";
