@@ -152,6 +152,9 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   (their triggers are fight-made or `modelado`). Part 2: % damage reductions (`Stats.DR_STATS`: all, physical, magic,
   attacks, critical strikes; `Stats.damageCut` = `format.js › damageCut`), lines of the Physical / Magic Reduction
   charts; the arena reads all / per-type from the sheet, attacks and crits stay the items' `reduz_dano`.
+- Rodada 18 (`docs/rodada-18.md`): kit sheets for the other 34 Baron lane champions (56 sheets in `kits_7_3f.yml`;
+  quality C, D for Sylas, Zed, Viego, Jayce, Gnar), same method as `docs/fichas/lote-1.md`, gaps in `lacunas`.
+  New mechanic `nao_morre: s` (health stays at 1 or more; Tryndamere's R). `FichasBaraoTest` duels each new sheet.
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.
