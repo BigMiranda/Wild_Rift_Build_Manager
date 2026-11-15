@@ -82,6 +82,7 @@
 #                 dano armazenado, veja armazena) | acumulos_permanentes (valor por acúmulo)
 #   ao_acertar    {devolve_recarga: fração da recarga restante (uma vez por conjuração), zera_recarga_se: [marca, abate]}: ao
 #                 acertar um campeão inimigo (marca = o alvo tinha a marca genérica deste lançador, que é consumida)
+#   pilar_recarga (Rodada 17) avanço com destroi_pilar: destruir um pilar / terreno corta essa fração da recarga restante
 #   efeitos       marca: s (a marca genérica; `marca: true` segue sendo a da Vayne / do K'Sante)
 #   armazena      por campeão: {causado, sofrido, contra_nao_campeoes (frações), max_vida, decai_apos (s)}; uma habilidade
 #                 usa com o termo `armazenado` (escudo ou dano) e zera com consome_armazenado: true
@@ -175,6 +176,7 @@ campeoes:
         dano: {tipo: fisico, base: [80, 140, 200, 260], arm_bonus: 0.4, rm_bonus: 0.4}
         terreno: {raio: 360, arremessa: 1.25}     # ao bater em parede ou pilar: onda de choque
         destroi_pilar: true
+        pilar_recarga: 0.25      # WR (Rodada 17): destruir um pilar corta 25% da recarga desta habilidade
         fontes: "recarga, conjuração, dano, arremesso: WR; alcance, velocidade, raios: PC"
       "R":
         nome: Chamado do Deus da Forja

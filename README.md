@@ -121,7 +121,8 @@ preço próprio em `precos_status.yml` (`alias` × `factor`, editável no Admin)
 | Escudo / Cura | vida extra temporária numa luta (um acionamento, ou "acionamentos por luta" na opção) | o da Vida |
 | Escudo / Cura em Aliados | o mesmo dado a aliados (opção "aliados") | o da Vida |
 | Aceleração da Ultimate | soma-se à AH só na ultimate (medido: Ornn nível 15, ult de 70s; 10 AH + 10 da Zeke = 58,3s, igual a 20 AH) | 1/4 da AH (1 de 4 habilidades) |
-| Aceleração de Habilidade Básica | Lança de Shojin, Navori, Mandato Imperial, Ímpeto Gradual | 3/4 da AH |
+| Aceleração de Habilidade Básica | Lança de Shojin, Mandato Imperial, Ímpeto Gradual | 3/4 da AH |
+| % Redução de Recarga das Básicas / da Ultimate / da Habilidade N | cortes da recarga restante, em média: Ímpeto Gradual (20%), Transcendência (8% no nível 9), Navori (14% por ataque), Arcanista do Axioma (7% da ult no abate), Investida do Ornn no pilar (25% na 3), Bumerangue apanhado do Gnar (40% na 1), Desintegrar com abate da Annie (50% na 1) | 1% ≈ 1,25 de AH, pela parte das habilidades (3/4, 1/4, 1/4) |
 | Estase | segundos invulnerável em que as recargas correm (Zhonya, Armaguarda, Anjo Guardião) | 5× a AH (1s numa luta de ~20s) |
 | Vampirismo Universal | Hemodrenário, Grevas Vorazes, Conquistador, Lenda: Linhagem... | o do Roubo de Vida |
 
@@ -131,7 +132,18 @@ da Vida (efeito à parte, para simular um dano explosivo que não dá tempo à c
 e curas em 30%; Coração de Aço cresce com "golpes carregados por minuto" (21 + 0,525% da Vida por golpe), como o
 Aperto dos Mortos-Vivos. Cada efeito é ligado ou desligado **na build**, para todas as compras do item (painel
 "Efeitos modelados dos itens", abaixo da sequência de compras), com sua opção e taxa. A ficha do momento mostra a
-**Vida efetiva numa luta** (Vida + escudos + curas) e a aceleração total da ultimate e das básicas. Dano, redução de
+**Vida efetiva numa luta** (Vida + escudos + curas), a aceleração total da ultimate e das básicas e quanto de recarga
+cada uma tem a menos ao todo.
+
+**Recarga** (Rodada 17): Aceleração da Ultimate, Aceleração de Habilidade Básica e as reduções em % são subtipos da
+Aceleração de Habilidade, como o Escudo Mágico / Físico são do Escudo. A recarga de uma habilidade é
+`base / (1 + AH / 100) × (1 − redução / 100)`, com AH = Aceleração + a da ultimate ou das básicas e a redução das
+básicas (ou da ultimate) combinada com a da própria habilidade; as reduções em % se multiplicam entre si (cada uma
+corta o que sobrou, como a Tenacidade). O gráfico de Aceleração de Habilidade desenha, além da AH, a da ultimate, a das
+básicas e a de uma habilidade com redução própria, já com as reduções em % convertidas na AH que cortaria o mesmo; as
+habilidades do campeão no modo "momento" mostram a recarga efetiva. Na Arena, os cortes que a luta faz de verdade
+(Ímpeto Gradual, Transcendência, Navori, abate do Arcanista, pilar do Ornn) ficam fora da ficha e só as escolhas da
+build (Gnar apanhando o bumerangue) entram como redução em %. Dano, redução de
 resistências, Feridas Dolorosas, corte de escudo e redução de dano sofrido dependem do inimigo e ficam para as
 lutas da Arena.
 

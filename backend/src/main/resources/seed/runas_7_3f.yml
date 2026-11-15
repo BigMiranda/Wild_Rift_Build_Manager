@@ -147,6 +147,8 @@ fundamentais:
       de ataque à distância. Aceleração de Habilidade Básica: 10. Tempo de Recarga: 21s - 7s (nível).
     efeitos:
     - {passiva: Ímpeto Gradual, tipo: Aceleração de Habilidade Básica, valor: 10, condicional: true}
+    # Rodada 17: corta 20% das recargas restantes das básicas ao acionar (a Arena faz o corte; na linha do tempo, 20%)
+    - {passiva: Ímpeto Gradual, tipo: "% Redução de Recarga das Básicas", valor: 20, condicional: true}
   Primeiro Ataque:
     tags: Iniciação, Amplificação de Dano, ouro adicional
     ouro_extra: true
@@ -450,6 +452,9 @@ runas:
     texto: >-
       Sua ultimate causa/concede 10% a mais de dano, cura e Escudo (o aumento do dano em área de ação é reduzido a
       5%). Eliminar um Campeão inimigo reduz o Tempo de Recarga restante da sua ultimate em 7%.
+    efeitos:
+    # Rodada 17: o abate corta 7% da recarga restante da ultimate (a Arena faz o corte; na linha do tempo, 7%)
+    - {passiva: Arcanista do Axioma, tipo: "% Redução de Recarga da Ultimate", valor: 7, condicional: true}
   Faixa de Fluxo de Mana:
     arvore: Feitiçaria
     linha: 1
@@ -489,6 +494,8 @@ runas:
     - {tipo: Aceleração de Habilidade, valor: 5}
     efeitos:
     - {passiva: Transcendência, tipo: Aceleração de Habilidade, valor: 5, nivel_min: 5}
+    # Rodada 17: no nível 9, a básica que acerta corta 8% da própria recarga (8s de recarga; a Arena faz o corte)
+    - {passiva: Transcendência, tipo: "% Redução de Recarga das Básicas", valor: 8, nivel_min: 9, condicional: true}
   Celeridade:
     arvore: Feitiçaria
     linha: 2

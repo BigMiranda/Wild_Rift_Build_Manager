@@ -3021,11 +3021,18 @@ public class Arena {
     }
 
     private double cooldown(U u, String slot, Map<String, Object> ab) {
-        double base = val(ab, "recarga", u.rank(slot), u.f.level, 10);
-        if ("R".equals(slot)) {
-            return base / (1 + (u.stat(Stats.ABILITY_HASTE) + u.stat("Ultimate Haste")) / 100);
-        }
-        return base / (1 + (u.stat(Stats.ABILITY_HASTE) + u.stat("Basic Ability Haste")) / 100);
+        return val(ab, "recarga", u.rank(slot), u.f.level, 10) * cooldownFactor(u, slot);
+    }
+
+    /**
+     * Share of the base cooldown an ability waits: the haste of the moment, then the % cooldown reductions of the
+     * fighter's sheet only (Rodada 17). Those the fight plays as cuts of the cooldown left (Ímpeto Gradual,
+     * Transcendência, Arcanista, Navori, Ornn's pillar) are off on the sheet (their triggers are fight-made), so they
+     * never count twice; the ones that depend on the build's choice (Gnar catching the boomerang) count all fight.
+     */
+    private double cooldownFactor(U u, String slot) {
+        double haste = u.stat(Stats.ABILITY_HASTE) + u.stat("R".equals(slot) ? "Ultimate Haste" : "Basic Ability Haste");
+        return 1 / (1 + haste / 100) * Stats.cooldownFactor(s -> Stats.CDR_STATS.contains(s) ? u.f.stat(s) : 0, slot);
     }
 
     private boolean isReady(U u, String slot) {
@@ -3730,8 +3737,15 @@ public class Arena {
                         effects(u, v, ef, rank, source);
                     }
                 }
-                if (Boolean.TRUE.equals(ab.get("destroi_pilar"))) {
-                    fields.removeIf(f -> f.terrain && dist(f.x, f.y, u.x, u.y) <= f.radius + u.radius() + 60);
+                if (Boolean.TRUE.equals(ab.get("destroi_pilar"))
+                        && fields.removeIf(f -> f.terrain && dist(f.x, f.y, u.x, u.y) <= f.radius + u.radius() + 60)
+                        && ab.get("pilar_recarga") != null) {
+                    // Rodada 17: destroying a pillar cuts this ability's cooldown left (Ornn's Investida: 25%)
+                    Double left = u.ready.get(slot);
+                    if (left != null && left > now) {
+                        u.ready.put(slot, now + (left - now) * (1 - num(ab.get("pilar_recarga"), 0)));
+                        count(u, "recarga_pilar:" + slot);
+                    }
                 }
             };
         }
@@ -6022,6 +6036,14 @@ public class Arena {
             if (a.team() != t.team() && !a.dead && now - e.getValue() <= 3 + 1e-9) {
                 fireAll(a, "abate", null);
                 for (ItemEffect fx : a.f.effects) {
+                    if ("arcanista".equals(fx.kind()) && fx.p.get("abate_recarga_ult") != null) {
+                        // Rodada 17: a takedown cuts the ultimate's cooldown left
+                        Double r = a.ready.get("R");
+                        if (r != null && r > now) {
+                            a.ready.put("R", now + (r - now) * (1 - num(fx.p.get("abate_recarga_ult"), 0)));
+                            count(a, "recarga_arcanista:R");
+                        }
+                    }
                     if ("hubris".equals(fx.kind())) {
                         // 5 + 1 per champion it killed: the match's kills before the fight and this fight's, this one included
                         a.hubrisKills++;
@@ -6792,9 +6814,11 @@ public class Arena {
             m.put("fromText", ab.get("_parsed") != null);
             double baseCd = val(ab, "recarga", rank, lv, 10);
             double haste = u.stat(Stats.ABILITY_HASTE) + u.stat("R".equals(slot) ? "Ultimate Haste" : "Basic Ability Haste");
+            double factor = cooldownFactor(u, slot);
             m.put("cooldownBase", baseCd);
             m.put("haste", haste);
-            m.put("cooldown", baseCd / (1 + haste / 100));
+            m.put("cooldownCut", Math.max(0, 100 * (1 - factor * (1 + haste / 100))));
+            m.put("cooldown", baseCd * factor);
             if (ab.get("alcance") != null) {
                 m.put("range", num(ab.get("alcance"), 0));
             }

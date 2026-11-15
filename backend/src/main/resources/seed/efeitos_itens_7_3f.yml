@@ -30,7 +30,10 @@
 #   Aceleração da Ultimate       soma-se à Aceleração de Habilidade só na ultimate (medido: Ornn nível 15, ult 70s;
 #                                10 AH + 10 da ult = 20 AH = 58,3s): 1/4 do preço da AH (1 de 4 habilidades)
 #   Aceleração de Hab. Básica    3/4 do preço da AH
-#   Estase                       segundos invulnerável em que as recargas correm sem risco: numa luta de ~20s,
+#   % Redução de Recarga das     Rodada 17: o que um corte da recarga restante faz em média com a recarga das básicas /
+#   Básicas / da Ultimate / da   da ultimate / de uma habilidade; vem depois da Aceleração e as fontes se multiplicam
+#   Habilidade N                 (precos_status.yml)
+#   Estase                      segundos invulnerável em que as recargas correm sem risco: numa luta de ~20s,
 #                                1s ≈ 5 de AH
 # Valores de Campeões corpo a corpo quando o texto diferencia (os de ataque à distância ficam na nota).
 # Efeitos que dependem do inimigo (dano, redução de resistência, Feridas Dolorosas, corte de escudo, redução de dano
@@ -141,9 +144,9 @@ itens:
       passiva: Golpes Hábeis
       condicional: true
       opcao: {nome: Ataques por recarga, min: 0, max: 5, padrao: 2}
-      nota: "cada ataque corta 15% da recarga restante: 2 ataques ≈ 38 de AH básica (aprox. 19 por ataque)"
+      nota: "cada ataque corta 15% da recarga restante das básicas: 2 ataques = 1 − 0,85² ≈ 28% de recarga a menos (14% por ataque)"
       linhas:
-      - {tipo: Aceleração de Habilidade Básica, valor: 0, valor_por_opcao: 19}
+      - {tipo: "% Redução de Recarga das Básicas", valor: 0, valor_por_opcao: 14}
 
   # ------------------------------------------------------------------ Acúmulos permanentes
   Coração de Aço:

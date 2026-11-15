@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { statLabel, t } from '../i18n.js';
-import { CHART_STATS, PERCENT_STATS, SERIES_COLORS, mmss, n0, n1, statOf } from '../format.js';
+import { CHART_STATS, PERCENT_STATS, SERIES_COLORS, abilityCdr, cooldownCut, mmss, n0, n1, statOf } from '../format.js';
 import { PASSIVES_VIEW, acquiredPassives, passiveColor, pointItemIds } from '../passives.js';
 import ItemIcon from './ItemIcon.jsx';
 import PassiveCompare, { PassiveLight } from './PassiveCompare.jsx';
@@ -48,9 +48,11 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
   const plotLeft = MARGIN.left + Y_AXIS_WIDTH;
   const plotWidth = Math.max(1, width - plotLeft - MARGIN.right);
   const x = (minute) => plotLeft + (Math.min(minute, maxMinute) / maxMinute) * plotWidth;
-  const extra = stat === 'Shield' ? shieldLines(lines) : [];
-  const lineVs = (key) => (key.startsWith('v') ? null : SHIELD_VS.find((v) => key.startsWith(v.prefix)));
+  const extra = extraLines(lines, stat);
+  const lineVs = (key) => (key.startsWith('v') ? null : (EXTRA_LINES[stat] ?? []).find((v) => key.startsWith(v.prefix)));
   const lineLabel = (key) => lineVs(key)?.label() ?? statLabel(stat);
+  // In the Ability Haste chart every line also says how much less cooldown its haste is (1 - 1 / (1 + haste / 100)).
+  const cdrNote = (v) => (stat === 'Ability Haste' ? ` · ${t('chart.cdrOf', { pct: n0(100 * (1 - 1 / (1 + Math.max(0, v) / 100))) })}` : '');
 
   return (
     <div>
@@ -107,7 +109,7 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
               <Tooltip
                 contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)' }}
                 labelFormatter={(v) => t('chart.minute', { time: mmss(v) })}
-                formatter={(v, name, p) => [`${n1(v)}${PERCENT_STATS.has(stat) ? '%' : ''} ${lineLabel(p.dataKey)} · ${t('chart.lv', { n: p.payload[`lv${p.dataKey.slice(lineVs(p.dataKey)?.prefix.length ?? 1)}`] })}`, name]}
+                formatter={(v, name, p) => [`${n1(v)}${PERCENT_STATS.has(stat) ? '%' : ''} ${lineLabel(p.dataKey)}${cdrNote(v)} · ${t('chart.lv', { n: p.payload[`lv${p.dataKey.slice(lineVs(p.dataKey)?.prefix.length ?? 1)}`] })}`, name]}
                 cursor={{ stroke: 'var(--muted)', strokeDasharray: '3 3' }}
               />
               {lines.length + extra.length >= 2 && <Legend wrapperStyle={{ color: 'var(--text-2)' }} />}
@@ -155,6 +157,7 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
             selectedX={selectedMinute != null ? x(selectedMinute) : null}
           />
         ))}
+        {extra.length > 0 && stat === 'Ability Haste' && <small className="muted chart-note">{t('chart.hasteHint')}<br /></small>}
         <small className="muted">{t('chart.clickHint')}</small>
       </div>
     </div>
@@ -336,19 +339,38 @@ function ChartTip({ tip, wide, light, details }) {
   );
 }
 
-/**
- * In the Shield chart, besides the shield against any damage, the shield a build has against physical damage (shield +
- * physical shield) and against magic damage (shield + magic shield): dashed / dotted in the build's color, only for the
- * builds that ever have that kind of shield.
- */
-const SHIELD_VS = [
-  { prefix: 'ad', stat: 'Physical Shield', dash: '6 3', label: () => t('chart.shieldVsAd') },
-  { prefix: 'ap', stat: 'Magic Shield', dash: '2 3', label: () => t('chart.shieldVsAp') },
-];
+const has = (total, stat) => (total[stat] ?? 0) > 0.05;
 
-function shieldLines(lines) {
-  return lines.flatMap((s) => SHIELD_VS
-    .filter((vs) => s.result.series.some((p) => (p.total[vs.stat] ?? 0) > 0.05))
+/**
+ * Lines of a chart's subtypes, dashed / dotted in the build's color, only for the builds that ever have that subtype:
+ * - Shield: besides the shield against any damage, the shield against physical damage (shield + physical shield) and
+ *   against magic damage (shield + magic shield);
+ * - Ability Haste (the cooldown chart): the haste of the ultimate and of the basic abilities (Ability Haste + Ultimate /
+ *   Basic Ability Haste) with the % cooldown reductions in it (the haste that alone would cut as much), and an ability
+ *   with a reduction of its own (Ornn's Investida on a pillar).
+ */
+const EXTRA_LINES = {
+  Shield: [
+    { prefix: 'ad', dash: '6 3', label: () => t('chart.shieldVsAd'), has: (x) => has(x, 'Physical Shield'),
+      value: (x) => (x.Shield ?? 0) + (x['Physical Shield'] ?? 0) },
+    { prefix: 'ap', dash: '2 3', label: () => t('chart.shieldVsAp'), has: (x) => has(x, 'Magic Shield'),
+      value: (x) => (x.Shield ?? 0) + (x['Magic Shield'] ?? 0) },
+  ],
+  'Ability Haste': [
+    { prefix: 'ul', dash: '6 3', label: () => t('chart.hasteUlt'),
+      has: (x) => has(x, 'Ultimate Haste') || has(x, '% Ultimate Cooldown Reduction'), value: (x) => cooldownCut(x, 'R').effHaste },
+    { prefix: 'ba', dash: '2 3', label: () => t('chart.hasteBasic'),
+      has: (x) => has(x, 'Basic Ability Haste') || has(x, '% Basic Cooldown Reduction'), value: (x) => cooldownCut(x, null).effHaste },
+    ...['1', '2', '3'].map((n) => ({
+      prefix: `a${n}`, dash: '8 3 2 3', label: () => t('chart.hasteAbility', { n }),
+      has: (x) => has(x, abilityCdr(n)), value: (x) => cooldownCut(x, n).effHaste,
+    })),
+  ],
+};
+
+function extraLines(lines, stat) {
+  return lines.flatMap((s) => (EXTRA_LINES[stat] ?? [])
+    .filter((vs) => s.result.series.some((p) => vs.has(p.total)))
     .map((vs) => ({ s, vs })));
 }
 
@@ -370,9 +392,7 @@ function lineData(lines, stat) {
       if (p) {
         row[`v${s.key}`] = statOf(p.total, stat);
         row[`lv${s.key}`] = p.level;
-        if (stat === 'Shield') {
-          for (const vs of SHIELD_VS) row[`${vs.prefix}${s.key}`] = (p.total.Shield ?? 0) + (p.total[vs.stat] ?? 0);
-        }
+        for (const vs of EXTRA_LINES[stat] ?? []) row[`${vs.prefix}${s.key}`] = vs.value(p.total);
       }
     }
     return row;

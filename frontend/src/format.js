@@ -22,7 +22,7 @@ export const statOf = (totals, stat) => (DERIVED_STATS[stat] ? DERIVED_STATS[sta
 
 /** Stats selectable in the chart. */
 export const CHART_STATS = [...TABLE_STATS.slice(0, 3), 'Physical Reduction', 'Magic Reduction', ...TABLE_STATS.slice(3),
-  'Shield', 'Heal', 'Ultimate Haste'];
+  'Shield', 'Heal'];
 
 /** Stats of the champion sheet (in-game stats tab order). */
 export const SHEET_STATS = [
@@ -38,7 +38,30 @@ export const SHEET_STATS = [
  * Effective stats of modeled effects (items, runes, champion): what shields, heals, stasis and ability haste of one
  * ability are worth in a fight. They never change the max health or the ability haste shown.
  */
-export const EFFECTIVE_STATS = ['Shield', 'Magic Shield', 'Physical Shield', 'Heal', 'Ally Shield', 'Ally Heal', 'Ultimate Haste', 'Basic Ability Haste', 'Stasis'];
+export const EFFECTIVE_STATS = ['Shield', 'Magic Shield', 'Physical Shield', 'Heal', 'Ally Shield', 'Ally Heal', 'Ultimate Haste', 'Basic Ability Haste',
+  '% Basic Cooldown Reduction', '% Ultimate Cooldown Reduction', '% Ability 1 Cooldown Reduction', '% Ability 2 Cooldown Reduction',
+  '% Ability 3 Cooldown Reduction', 'Stasis'];
+
+/** % cooldown reduction of one ability only (slot 1, 2 or 3). */
+export const abilityCdr = (slot) => `% Ability ${slot} Cooldown Reduction`;
+
+/** Two % amounts of a stat whose sources each cut what is left (Tenacity, cooldown reductions): as Stats.combine. */
+const cutTogether = (a, b) => 100 - ((100 - a) * (100 - b)) / 100;
+
+/**
+ * How an ability's cooldown is cut at a point (mirrors Stats.cooldownFactor): haste = Ability Haste + Ultimate / Basic
+ * Ability Haste, pct = the % reductions (of the ultimate, or of the basics and of that ability, combined), factor = the
+ * share of the base cooldown it waits, cut = how much less in %, effHaste = the haste that alone would cut as much.
+ */
+export function cooldownCut(total, slot) {
+  const v = (s) => total?.[s] ?? 0;
+  const ult = slot === 'R';
+  const haste = v('Ability Haste') + v(ult ? 'Ultimate Haste' : 'Basic Ability Haste');
+  const pct = ult ? v('% Ultimate Cooldown Reduction')
+    : cutTogether(v('% Basic Cooldown Reduction'), slot ? v(abilityCdr(slot)) : 0);
+  const factor = (1 / (1 + Math.max(0, haste) / 100)) * (1 - Math.max(0, Math.min(90, pct)) / 100);
+  return { haste, pct, factor, cut: (1 - factor) * 100, effHaste: (1 / factor - 1) * 100 };
+}
 
 /** Penetration stats (flat armor penetration is the game's lethality): shown in the dock whenever they are not 0. */
 export const PENETRATION_STATS = ['Armor Penetration', '% Armor Penetration', 'Magic Penetration', '% Magic Penetration'];
@@ -65,7 +88,9 @@ export function extraStats(point, shown = []) {
 
 /** Stats whose value is a percentage. */
 export const PERCENT_STATS = new Set(['Physical Reduction', 'Magic Reduction', '% Attack Speed', '% Critical Rate', '% Armor Penetration', '% Magic Penetration',
-  '% Lifesteal', '% Omnivamp', '% Tenacity', '% Heal and shield strength', '% Move Speed', '% Health Regen', '% Mana Regeneration']);
+  '% Lifesteal', '% Omnivamp', '% Tenacity', '% Heal and shield strength', '% Move Speed', '% Health Regen', '% Mana Regeneration',
+  '% Basic Cooldown Reduction', '% Ultimate Cooldown Reduction', '% Ability 1 Cooldown Reduction', '% Ability 2 Cooldown Reduction',
+  '% Ability 3 Cooldown Reduction']);
 
 const fmt = (digits) => (v) => {
   if (v == null || Number.isNaN(v)) return '—';

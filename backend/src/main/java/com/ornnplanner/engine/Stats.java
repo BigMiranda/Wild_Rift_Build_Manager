@@ -33,11 +33,35 @@ public final class Stats {
     public static final String TENACITY = "% Tenacity";
 
     /**
-     * Two amounts of one stat together. Every stat adds up, except Tenacity: each source cuts what is left, so
-     * 10% + 30% = 37%, + 20% = 50%, + 20% = 60% (measured in the game's shop).
+     * Cooldown reduction in % (Rodada 17): what a refund of the cooldown left does to an ability's cooldown on
+     * average (Ímpeto Gradual, Transcendência, Arcanista do Axioma, Navori, Ornn's Investida on a pillar). Kinds of
+     * Ability Haste's cooldown cut, like Ultimate / Basic Ability Haste: of the basic abilities, of the ultimate, of
+     * one ability. Applied after the haste: cooldown = base / (1 + haste / 100) x (1 - reduction / 100).
+     */
+    public static final String BASIC_CDR = "% Basic Cooldown Reduction";
+    public static final String ULT_CDR = "% Ultimate Cooldown Reduction";
+    /** Of one ability only: {@code "% Ability <slot> Cooldown Reduction"}, slot 1, 2 or 3. */
+    public static String abilityCdr(String slot) {
+        return "% Ability " + slot + " Cooldown Reduction";
+    }
+
+    public static final List<String> CDR_STATS = List.of(BASIC_CDR, ULT_CDR, abilityCdr("1"), abilityCdr("2"), abilityCdr("3"));
+
+    /** Stats whose sources each cut what is left (see {@link #combine}). */
+    private static final java.util.Set<String> MULTIPLICATIVE = java.util.stream.Stream.concat(
+            java.util.stream.Stream.of(TENACITY), CDR_STATS.stream()).collect(java.util.stream.Collectors.toUnmodifiableSet());
+
+    /** Whether a stat's sources each cut what is left instead of adding up. */
+    public static boolean multiplicative(String stat) {
+        return MULTIPLICATIVE.contains(stat);
+    }
+
+    /**
+     * Two amounts of one stat together. Every stat adds up, except Tenacity and the cooldown reductions: each source
+     * cuts what is left, so 10% + 30% = 37%, + 20% = 50%, + 20% = 60% (Tenacity measured in the game's shop).
      */
     public static double combine(String stat, double a, double b) {
-        if (TENACITY.equals(stat)) {
+        if (MULTIPLICATIVE.contains(stat)) {
             return 100 - (100 - a) * (100 - b) / 100;
         }
         return a + b;
@@ -45,10 +69,22 @@ public final class Stats {
 
     /** The inverse of {@link #combine}: a total without one of its parts. */
     public static double remove(String stat, double total, double part) {
-        if (TENACITY.equals(stat)) {
+        if (MULTIPLICATIVE.contains(stat)) {
             return part >= 100 ? total : 100 - (100 - total) / ((100 - part) / 100);
         }
         return total - part;
+    }
+
+    /**
+     * Share of an ability's base cooldown it actually waits (0..1), from a stats map: the haste (Ability Haste plus
+     * Ultimate / Basic Ability Haste), then the % reductions (basic or ultimate, and the ability's own).
+     */
+    public static double cooldownFactor(java.util.function.ToDoubleFunction<String> stat, String slot) {
+        boolean ult = "R".equals(slot);
+        double haste = stat.applyAsDouble(ABILITY_HASTE) + stat.applyAsDouble(ult ? "Ultimate Haste" : "Basic Ability Haste");
+        double cut = ult ? stat.applyAsDouble(ULT_CDR)
+                : combine(BASIC_CDR, stat.applyAsDouble(BASIC_CDR), stat.applyAsDouble(abilityCdr(slot)));
+        return 1 / (1 + Math.max(0, haste) / 100) * (1 - Math.max(0, Math.min(90, cut)) / 100);
     }
 
     /** {@code m.merge} with {@link #combine}. */

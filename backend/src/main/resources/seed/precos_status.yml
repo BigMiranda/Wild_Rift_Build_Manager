@@ -36,6 +36,15 @@
 #   Estase: segundos invulnerável em que as recargas correm; numa luta de ~20s, 1s = 5% do tempo ≈ 5 de AH.
 "Ultimate Haste":       {loja: "Aceleração da Ultimate", alias: "Ability Haste", factor: 0.25, type: Magic}
 "Basic Ability Haste":  {loja: "Aceleração de Habilidade Básica", alias: "Ability Haste", factor: 0.75, type: Magic}
+# Redução de Tempo de Recarga em % (Rodada 17): o que uma devolução da recarga restante (Ímpeto Gradual, Transcendência,
+# Arcanista do Axioma, Navori, a Investida do Ornn no pilar) faz em média com a recarga. Vem depois da Aceleração e as
+# fontes se multiplicam (cada uma corta o que sobrou). 1% de recarga a menos ≈ 1,25 de AH na faixa comum (40 de AH), e
+# vale para a parte das habilidades que ela atinge: básicas 3 de 4, ultimate 1 de 4, uma habilidade 1 de 4.
+"% Basic Cooldown Reduction":     {loja: "% Redução de Recarga das Básicas", alias: "Ability Haste", factor: 0.94, type: Magic}
+"% Ultimate Cooldown Reduction":  {loja: "% Redução de Recarga da Ultimate", alias: "Ability Haste", factor: 0.31, type: Magic}
+"% Ability 1 Cooldown Reduction": {loja: "% Redução de Recarga da Habilidade 1", alias: "Ability Haste", factor: 0.31, type: Magic}
+"% Ability 2 Cooldown Reduction": {loja: "% Redução de Recarga da Habilidade 2", alias: "Ability Haste", factor: 0.31, type: Magic}
+"% Ability 3 Cooldown Reduction": {loja: "% Redução de Recarga da Habilidade 3", alias: "Ability Haste", factor: 0.31, type: Magic}
 "Shield":               {loja: "Escudo", alias: "Max Health", type: Defence}
 # Escudo que só absorve Dano Mágico (Rookern, Malmortius, Esmagadores) ou só Dano Físico (Mobilização Blindada).
 "Magic Shield":         {loja: "Escudo Mágico", alias: "Max Health", factor: 0.5, type: Defence}

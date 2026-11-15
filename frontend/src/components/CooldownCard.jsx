@@ -163,13 +163,16 @@ function CardDetails({ fighter, cdKey, build }) {
   if (!a) return <p className="muted">{t('arena.card.noDetails')}</p>;
   const level = fighter.level ?? point?.level ?? 1;
   const plan = planOf(data.b.championSetup);
-  const arenaCd = fighter.abilities?.find((x) => x.slot === cdKey)?.cooldown;
-  const haste = point?.total?.['Ability Haste'] ?? 0;
+  const arenaAb = fighter.abilities?.find((x) => x.slot === cdKey);
+  const arenaCd = arenaAb?.cooldown;
+  const haste = arenaAb?.haste ?? point?.total?.['Ability Haste'] ?? 0;
+  const cut = arenaAb?.cooldownCut ?? 0;
   return (
     <div className="cd-card-more">
       <Ability a={a} tag={cdKey} stats={point ? { total: point.total, base: point.base } : null}
         planRank={rankOf(plan, cdKey, level)} level={level} />
-      {arenaCd != null && <p className="muted">{t('arena.card.haste', { s: n1(arenaCd), ah: n0(haste) })}</p>}
+      {arenaCd != null && <p className="muted">{cut > 0.05 ? t('arena.card.hasteCut', { s: n1(arenaCd), ah: n0(haste), pct: n1(cut) })
+        : t('arena.card.haste', { s: n1(arenaCd), ah: n0(haste) })}</p>}
     </div>
   );
 }

@@ -145,6 +145,11 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   bias on them before it saw them; `POST /runs/{id}/improve` improves one side's build by real fights (the model
   proposes 4 swaps per slot, 12 starts decide) and adds what it fought to the builds.
   Local only (the public mode never starts it).
+- Rodada 17 (`docs/rodada-17.md`): kinds of cooldown cut as stats — Ultimate / Basic Ability Haste and the % cooldown
+  reductions (`Stats.CDR_STATS`, multiplicative like Tenacity; `Stats.cooldownFactor` = `format.js › cooldownCut`),
+  drawn as lines of the Ability Haste chart. The arena reads the % reductions from the fighter's sheet only; the cuts a
+  fight plays itself (Ímpeto Gradual, Transcendência, Navori, Arcanista's takedown, Ornn's pillar) stay off that sheet
+  (their triggers are fight-made or `modelado`).
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.

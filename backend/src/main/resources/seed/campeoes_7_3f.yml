@@ -554,6 +554,13 @@ campeoes:
       nv1: {DdA: 52, PdH: 0, Vida: 600, Mana: 435, Armadura: 34, RM: 36, VdA: 0.75, AH: 0, RegVida: 8, RegMana: 12}
       nv15: {DdA: 90, PdH: 0, Vida: 2280, Mana: 1233, Armadura: 97, RM: 53, VdA: 0.80, AH: 0, RegVida: 16, RegMana: 28}
       # runas da página padrão descontadas: Foco Absoluto
+    efeitos:
+      Desintegrar abate:
+        habilidade: 1
+        condicional: true
+        nota: "abater com Desintegrar reduz a recarga dela pela metade (e devolve a Mana)"
+        linhas:
+        - {tipo: "% Redução de Recarga da Habilidade 1", valor: 50}
     passiva:
       nome: Piromania
       tipos: [Passivo, Controle]
@@ -2144,6 +2151,12 @@ campeoes:
         - {tipo: Armadura, valor: 5, valor_nv15: 60}
         - {tipo: Resistência Mágica, valor: 5, valor_nv15: 70}
         - {tipo: Dano de Ataque, valor: 8, valor_nv15: 50}
+      Bumerangue apanhado:
+        habilidade: 1
+        condicional: true
+        nota: "Mini-Gnar apanha o bumerangue: −40% na recarga (o pedregulho do Mega-Gnar apanhado em 5s: −70%)"
+        linhas:
+        - {tipo: "% Redução de Recarga da Habilidade 1", valor: 40}
     passiva:
       nome: Fúria Genética
       tipos: [Passivo, Fortalecimento]
@@ -5740,6 +5753,13 @@ campeoes:
       VdM: 345
       nv1: {DdA: 62, PdH: 0, Vida: 690, Mana: 380, Armadura: 48, RM: 42, VdA: 0.73, AH: 0, RegVida: 17, RegMana: 12}
       nv15: {DdA: 118, PdH: 0, Vida: 2538, Mana: 1220, Armadura: 120, RM: 71, VdA: 0.84, AH: 0, RegVida: 34, RegMana: 24}
+    efeitos:
+      Investida no pilar:
+        habilidade: 3
+        condicional: true
+        nota: "a Investida Calcinante destrói um pilar de magma (o da Ruptura Vulcânica): −25% na recarga dela"
+        linhas:
+        - {tipo: "% Redução de Recarga da Habilidade 3", valor: 25}
     passiva:
       nome: Forja Viva
       tipos: [Passivo, Fortalecimento]

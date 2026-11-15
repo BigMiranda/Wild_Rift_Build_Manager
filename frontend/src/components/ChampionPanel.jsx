@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { currentLang, statLabel, t } from '../i18n.js';
-import { mmss } from '../format.js';
+import { cooldownCut, mmss, n0, n1 } from '../format.js';
 import { computeText, fmt as fmtNum, MARKER_STAT } from '../abilityMath.js';
 import { ABILITIES, ORDERS, assign, planOf, rankOf, ranksAt, validOrder, validPlan } from '../skills.js';
 import { StatIcon } from './StatIcon.jsx';
@@ -70,13 +70,21 @@ export function Ability({ a, tag, stats, planRank, level }) {
   const maxRank = Math.max(1, ...rows.map(([, v]) => (Array.isArray(v) ? v.length : 1)));
   const rank = picked ?? Math.max(1, Math.min(maxRank, planRank ?? 1));
   const parts = useMemo(() => computeText(a.texto, a.niveis, rank, stats), [a, rank, stats]);
+  // The cooldown at the rank shown with the moment's haste and % cooldown reductions (Rodada 17).
+  const cdRow = a.niveis?.['Tempo de Recarga'];
+  const baseCd = Array.isArray(cdRow) ? Number(cdRow[Math.min(cdRow.length, rank) - 1]) : a.recarga;
+  const cut = stats && tag !== 'P' && Number.isFinite(baseCd) ? cooldownCut(stats.total, tag) : null;
   return (
     <div className="champ-ability">
       <div className="champ-ability-head">
         <span className="champ-tag">{tag}</span>
         <strong>{a.nome}</strong>
         {(a.tipos ?? []).map((x) => <span key={x} className="champ-type">{x}</span>)}
-        {a.recarga != null && <small className="muted">{t('champ.cooldown', { s: a.recarga })}</small>}
+        {a.recarga != null && (cut && cut.cut > 0.05
+          ? <small className="muted champ-cd-eff" title={t('champ.cooldownEffTitle', { ah: n0(cut.haste), pct: n1(cut.pct), cut: n1(cut.cut) })}>
+            {t('champ.cooldownEff', { s: fmtNum(baseCd), eff: n1(baseCd * cut.factor) })}
+          </small>
+          : <small className="muted">{t('champ.cooldown', { s: a.recarga })}</small>)}
         {tag !== 'P' && maxRank > 1 && (
           <span className="champ-rank-pick" role="group" aria-label={t('champ.rank')}>
             {Array.from({ length: maxRank }, (_, i) => i + 1).map((r) => (

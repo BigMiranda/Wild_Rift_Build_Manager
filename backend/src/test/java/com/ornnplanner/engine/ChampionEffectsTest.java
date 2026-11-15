@@ -149,6 +149,24 @@ class ChampionEffectsTest {
         Map<String, List<double[]>> rate = Map.of("Poder Maligno Fenomenal", List.<double[]>of(new double[] {0, 3}));
         Map<String, Double> veigar = stats("VEIGAR", List.of(1, 2, 3), Map.of(), 1, rate, 10);
         assertEquals(30.0, veigar.get(ABILITY_POWER), EPS);
-        assertTrue(champions.effects("ORNN").isEmpty());
+        // Ornn (Rodada 17): his only modeled effect is the Investida that destroys a pillar, a conditional -25% on its cooldown.
+        assertEquals(List.of("Investida no pilar"), champions.effects("ORNN").stream().map(e -> e.name).collect(java.util.stream.Collectors.toList()));
+        assertEquals(25.0, stats("ORNN", List.of(1, 2, 3), Map.of("Investida no pilar", true), 15, Map.of(), 0)
+                .getOrDefault("% Ability 3 Cooldown Reduction", 0.0), EPS);
+        assertEquals(0.0, stats("ORNN", List.of(1, 2, 3), Map.of(), 15, Map.of(), 0)
+                .getOrDefault("% Ability 3 Cooldown Reduction", 0.0), EPS);
+    }
+
+    @Test
+    void cooldownReductionsMultiply() {
+        // Rodada 17: % cooldown reductions cut what is left, like Tenacity; the cooldown applies haste, then the cuts.
+        assertEquals(36.0, Stats.combine(Stats.BASIC_CDR, 20, 20), EPS);
+        assertEquals(20.0, Stats.remove(Stats.BASIC_CDR, 36, 20), EPS);
+        Map<String, Double> m = Map.of(Stats.ABILITY_HASTE, 25.0, "Basic Ability Haste", 25.0, Stats.BASIC_CDR, 20.0,
+                Stats.abilityCdr("3"), 25.0, "Ultimate Haste", 0.0);
+        // basics: 1 / 1.5 x 0.8 x 0.75 for the 3rd, x 0.8 for the 1st; ultimate: 1 / 1.25
+        assertEquals(0.4, Stats.cooldownFactor(s -> m.getOrDefault(s, 0.0), "3"), EPS);
+        assertEquals(0.8 / 1.5, Stats.cooldownFactor(s -> m.getOrDefault(s, 0.0), "1"), EPS);
+        assertEquals(0.8, Stats.cooldownFactor(s -> m.getOrDefault(s, 0.0), "R"), EPS);
     }
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useEffectValues } from '../effectValues.js';
 import { statLabel, t } from '../i18n.js';
-import { DERIVED_STATS, EFFECTIVE_STATS, PERCENT_STATS, SHEET_STATS, extraStats, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
+import { DERIVED_STATS, EFFECTIVE_STATS, PERCENT_STATS, SHEET_STATS, abilityCdr, cooldownCut, extraStats, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
 import ItemIcon from './ItemIcon.jsx';
 import { useItemReader } from './BuildDock.jsx';
 import RichText from './RichText.jsx';
@@ -78,12 +78,21 @@ function EffectiveSheet({ total }) {
   }
   if (v('Ultimate Haste') > 0) rows.push({ key: 'ult', stat: 'Ability Haste', label: t('sheet.ultHaste'), value: n0(v('Ability Haste') + v('Ultimate Haste')) });
   if (v('Basic Ability Haste') > 0) rows.push({ key: 'basic', stat: 'Ability Haste', label: t('sheet.basicHaste'), value: n0(v('Ability Haste') + v('Basic Ability Haste')) });
+  // Every kind of cooldown cut together (haste, then the % reductions), for the abilities a held kind reaches.
+  const cdr = (key, slot, label) => {
+    const c = cooldownCut(total, slot);
+    rows.push({ key, stat: 'Ability Haste', label, value: pct(c.cut),
+      title: t('sheet.cdrTitle', { ah: n0(c.haste), pct: n1(c.pct), eff: n0(c.effHaste) }) });
+  };
+  if (v('Ultimate Haste') > 0 || v('% Ultimate Cooldown Reduction') > 0) cdr('cdrU', 'R', t('sheet.cdrUlt'));
+  if (v('Basic Ability Haste') > 0 || v('% Basic Cooldown Reduction') > 0) cdr('cdrB', null, t('sheet.cdrBasic'));
+  for (const n of ['1', '2', '3']) if (v(abilityCdr(n)) > 0) cdr(`cdr${n}`, n, t('sheet.cdrAbility', { n }));
   return (
     <>
       <h4 className="sheet-sub" title={t('sheet.effectiveHelp')}>{t('sheet.effective')}</h4>
       <div className="stat-sheet">
         {rows.map((r) => (
-          <div key={r.key} className="sheet-row" title={r.key === 'eff' ? t('sheet.effectiveHelp') : undefined}>
+          <div key={r.key} className="sheet-row" title={r.key === 'eff' ? t('sheet.effectiveHelp') : r.title}>
             <span className="sheet-label" style={{ color: statColor(r.stat) }}><StatIcon stat={r.stat} />{r.label}</span>
             <span className="sheet-value">{r.strong ? <strong>{r.value}</strong> : r.value}</span>
           </div>

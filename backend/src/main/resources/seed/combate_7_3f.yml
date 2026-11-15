@@ -199,7 +199,8 @@ ativacao:
 #   misericordia       +`pct` em Campeões abaixo de `vida_alvo_abaixo`
 #   chamuscar          habilidade que causa dano queima: dano depois de `atraso` s (recarga)
 #   arcanista          só a própria ultimate: +`pct` de dano (acertos e dano ao longo do tempo), cura e escudo; passivas
-#                      de itens que a ultimate aciona (Virtude Radiante, Hexoplaca) não
+#                      de itens que a ultimate aciona (Virtude Radiante, Hexoplaca) não; `abate_recarga_ult`: o abate
+#                      corta essa fração da recarga restante da ultimate
 #   transcendencia     a partir do `nivel_min`: habilidade básica que acerta reduz a própria recarga em `pct` (recarga)
 #   nimbus             depois de um feitiço: +`pct` de Velocidade de Movimento por `duracao` s
 #   revitalizar        curas e escudos em alvos abaixo de `vida_abaixo`: +`pct`
@@ -226,7 +227,7 @@ runas:
   Dilacerar: [{tipo: dilacerar, pct: 0.065, vida_alvo_acima: 0.6}]
   Golpe de Misericórdia: [{tipo: misericordia, pct: 0.08, vida_alvo_abaixo: 0.4}]
   Chamuscar: [{tipo: chamuscar, dano: 21, dano_nv15: 49, atraso: 1, recarga: 8, dano_tipo: magico}]
-  Arcanista do Axioma: [{tipo: arcanista, pct: 0.10}]
+  Arcanista do Axioma: [{tipo: arcanista, pct: 0.10, abate_recarga_ult: 0.07}]   # Rodada 17: o abate corta 7% da recarga restante da ult
   Transcendência: [{tipo: transcendencia, nivel_min: 9, pct: 0.08, recarga: 8}]
   Manto de Nimbus: [{tipo: nimbus, pct: 0.25, duracao: 3}]   # 10–40% pela recarga do feitiço: 25% (EST)
   Revitalizar: [{tipo: revitalizar, pct: 0.10, vida_abaixo: 0.4}]
@@ -357,3 +358,8 @@ gatilhos:
   Húbris: {quando: modelado, nota: "o efeito de combate dá 5 + 1 por abate ao abater, por 30s"}
   Caça Incansável: {quando: fora_de_combate}
   Foco Absoluto: {quando: vida_acima, vida: 0.65}
+  # Rodada 17: cortes de recarga que o efeito de combate da runa já faz (a % da linha do tempo fica fora da luta)
+  Transcendência: {quando: modelado, nota: "a partir do nível 9, a básica que acerta corta 8% da própria recarga"}
+  Arcanista do Axioma: {quando: modelado, nota: "o abate corta 7% da recarga restante da ultimate"}
+  # ------------------------------------------------------------- campeões (Rodada 17)
+  Investida no pilar: {quando: modelado, nota: "a ficha do Ornn corta 25% da recarga da Investida que destrói um pilar"}

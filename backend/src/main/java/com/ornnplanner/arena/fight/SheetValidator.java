@@ -21,7 +21,7 @@ public final class SheetValidator {
             "raio_fortalecido", "raio_interno", "angulo", "velocidade", "velocidade_mais_vdm", "velocidade_final", "aceleracao", "duracao",
             "intervalo", "dano", "danos", "efeitos", "efeitos_fortalecido", "fortalecido", "zonas", "origem", "expande", "move", "segue",
             "atravessa", "para_apos_campeao", "pilar", "avanca", "imparavel", "imune_deslocamento", "cc_durante_avanco", "ultimo_golpe",
-            "terreno", "destroi_pilar", "distancia", "comprimento", "velocidade_projetil", "reconjurar", "trava", "janela", "alcance_extra",
+            "terreno", "destroi_pilar", "pilar_recarga", "distancia", "comprimento", "velocidade_projetil", "reconjurar", "trava", "janela", "alcance_extra",
             "reinicia_ataque", "salta", "por_acumulo", "cargas", "recarga_carga", "sem_dano", "proximo_ataque", "invisivel_com_R", "marca",
             "escudo", "duracao_escudo", "duracao_velocidade", "velocidade_movimento", "velocidade_ataque", "vampirismo", "dda", "vida_extra",
             "furia_ao_usar", "furia_por_s", "aura", "carregar", "segunda_carga", "empurra", "terreno_ate", "fontes", "nota",
