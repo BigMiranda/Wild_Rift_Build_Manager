@@ -30,7 +30,8 @@ class FichasBaraoTest {
             "Draven", "Evelynn", "Ezreal", "Fiddlesticks", "Galio", "Hecarim", "Heimerdinger", "Hwei", "Janna", "Jhin", "Jinx", "Kai'Sa", "Kalista", "Karma",
             "Katarina", "Kayn", "Kha'Zix", "Kindred", "Kog'Maw", "Lee Sin", "Leona", "Lillia", "Lissandra", "Lucian", "Lulu", "Lux", "Master Yi", "Mel", "Milio",
             "Miss Fortune", "Morgana", "Nami", "Nidalee", "Nilah", "Nocturne", "Norra", "Nunu e Willump", "Orianna", "Pyke", "Rakan", "Rammus", "Rell", "Rengar", "Ryze", "Samira",
-            "Senna", "Seraphine", "Shyvana", "Sivir", "Smolder", "Sona", "Soraka", "Swain", "Syndra", "Taliyah", "Talon", "Thresh", "Tristana", "Twisted Fate", "Twitch");
+            "Senna", "Seraphine", "Shyvana", "Sivir", "Smolder", "Sona", "Soraka", "Swain", "Syndra", "Taliyah", "Talon", "Thresh", "Tristana", "Twisted Fate", "Twitch",
+            "Varus", "Veigar", "Vel'Koz", "Vex", "Vi", "Viktor", "Xayah", "Xin Zhao", "Yunara", "Yuumi", "Zeri", "Ziggs", "Zilean", "Zoe", "Zyra");
 
     private static List<String> all() {
         List<String> out = new java.util.ArrayList<>(RODADA_18);
