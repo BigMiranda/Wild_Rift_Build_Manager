@@ -1425,3 +1425,246 @@ campeoes:
         lacuna: avanco_dirigivel
         nota: "avanço reto até o alvo; dano e controle do meio da faixa (150→400, 0,5→1,5 s)"
         fontes: "texto do jogo; raio 175 (interno) / 350: WR; alcance, velocidade: EST"
+
+  # ---------------------------------------------------------------------------------------------------------------
+  # Rodada 18 (docs/rodada-18.md): os demais campeões da rota Barão. Mesmo método do lote 1: números de dano, razões,
+  # recargas, durações e %: texto do jogo (campeoes_7_3f.yml); geometria: wiki (tools/fichas/gerar_rascunhos.py), WR ou
+  # PC; EST sem fonte. Só mecânicas que o motor já tem; o que falta vai em `lacunas` / `nota`.
+  Dr. Mundo:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [resiste_primeiro_controle, escala_vida_perdida_propria, cura_pelo_dano_sofrido, minimo_de_dano]
+    nota: "a passiva (resiste ao 1º controle) e o DdA passivo da E pela Vida perdida não estão na ficha"
+    habilidades:
+      "1":
+        nome: Serra Infectada
+        forma: linha
+        recarga: [4]
+        conjuracao: 0.25
+        alcance: 1050
+        largura: 120
+        velocidade: 2000
+        dano: {tipo: magico, vida_atual_alvo: [0.2, 0.23, 0.26, 0.29]}
+        efeitos: {lentidao: 0.4, duracao: 2, cura_por_campeao: {base: 50}}
+        lacuna: minimo_de_dano
+        nota: "sem o mínimo de 90–300 (a fórmula do motor só soma termos)"
+        fontes: "texto do jogo; alcance 1050, largura 120, velocidade 2000, conjuração 0,25: WR"
+      "2":
+        nome: Choquinho Cardíaco
+        forma: proprio
+        recarga: [13, 12, 11, 10]
+        duracao: 4
+        aura: {raio: 325, intervalo: 1, dano: {tipo: magico, base: [20, 40, 60, 80]}}
+        reconjurar:
+          apos: 0.5
+          janela: 3.5
+          versoes:
+            - {nome: Choquinho Cardíaco (detonar), forma: area, raio: 325, dano: {tipo: magico, base: [20, 40, 60, 80], vida_bonus: 0.05}}
+        lacuna: cura_pelo_dano_sofrido
+        nota: "o dano por segundo sobe com o rank como a detonação (EST); sem a cura de 30–45% do dano sofrido na detonação"
+        fontes: "texto do jogo; raio 325: WR; dano por segundo nos ranks e janela: EST"
+      "3":
+        nome: Traumatismo
+        forma: ataque
+        recarga: [8, 7.5, 7, 6.5]
+        janela: 4
+        reinicia_ataque: true
+        dano: {tipo: fisico, base: [5, 20, 35, 50], vida_bonus: 0.05}
+        lacuna: escala_vida_perdida_propria
+        nota: "sem os até +60% pela Vida perdida do Dr. Mundo e sem o arremesso do alvo abatido"
+        fontes: "texto do jogo; janela: EST"
+      "R":
+        nome: Dosagem Máxima
+        forma: proprio
+        recarga: [70, 65, 60]
+        duracao: 10
+        velocidade_movimento: [0.15, 0.25, 0.35]
+        cura: {vida_max: [0.15, 0.35, 0.55]}
+        nota: "a cura dos 10 s sai de uma vez; sem a Vida base +25–35% da Vida perdida e sem o DdA de 4–7% da Vida adicional"
+        fontes: "texto do jogo"
+
+  Volibear:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [frenesi_na_reconjuracao, buff_proprio_no_avanco]
+    nota: "a passiva (velocidade de ataque por acúmulo e o raio nas garras com 5 acúmulos) não está na ficha"
+    mobilidade: {"R": salto}
+    habilidades:
+      "1":
+        nome: Esmagamento Trovejante
+        forma: ataque
+        recarga: [13, 12, 11, 10]
+        janela: 4
+        velocidade_movimento: [0.2, 0.3, 0.4, 0.5]
+        duracao_velocidade: 4
+        dano: {tipo: fisico, base: [15, 40, 65, 90], dda_bonus: 1.0}
+        efeitos: {atordoa: 1}
+        nota: "a velocidade é a de correr até campeões (no jogo, metade em outra direção)"
+        fontes: "texto do jogo"
+      "2":
+        nome: Fúria Selvagem
+        forma: alvo
+        recarga: [5]
+        conjuracao: 0.25
+        alcance: 325
+        dano: {tipo: fisico, base: [5, 30, 55, 80], dda: 1.1, vida_bonus: 0.065}
+        lacuna: frenesi_na_reconjuracao
+        nota: "sem o Frenesi: o 2º golpe em 8 s no mesmo alvo (60% a mais e cura) é tratado como o 1º"
+        fontes: "texto do jogo; alcance 325: PC; conjuração 0,25: WR"
+      "3":
+        nome: Divisor de Céus
+        forma: zonas
+        origem: ponto
+        recarga: [13]
+        conjuracao: 0.25
+        alcance: 1200
+        atraso: 2
+        zonas: [{forma: circulo, raio: 425}]
+        dano: {tipo: magico, base: [80, 110, 140, 170], pdh: 0.5, vida_max_alvo: 0.11}
+        efeitos: {lentidao: 0.4, duracao: 2}
+        escudo: {pdh: 0.75, vida_max: 0.14}
+        duracao_escudo: 2.5
+        nota: "o escudo vem sempre na conjuração (no jogo, só se o Volibear estiver na zona da descarga)"
+        fontes: "texto do jogo; raio 425: PC; alcance 1200, atraso 2 s: PC (antigo); conjuração: EST"
+      "R":
+        nome: Emissário da Tempestade
+        forma: avanco
+        recarga: [90, 80, 70]
+        alcance: 700
+        velocidade: 750
+        ate_ponto: true
+        atravessa_parede: true
+        raio: 300
+        dano: {tipo: fisico, base: [300, 500, 700], pdh: 1.0, dda_bonus: 2.1}
+        efeitos: {lentidao: 0.5, duracao: 1}
+        lacuna: buff_proprio_no_avanco
+        nota: "sem a Vida (+175–525) e o alcance (+50) dos 12 s; o dano vale para quem está na área do pouso (no texto, só bem abaixo dele)"
+        fontes: "texto do jogo; alcance 700, raio 300, velocidade 750: PC"
+
+  Pantheon:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [determinacao_mortal, bloqueio_por_direcao, critico_abaixo_da_vida, penetracao_passiva]
+    nota: "a passiva (habilidade aprimorada a cada 5 ataques ou habilidades) e a Penetração de Armadura da R não estão na ficha"
+    mobilidade: {"2": salto, "R": salto}
+    habilidades:
+      "1":
+        nome: Lança Meteórica
+        forma: zonas
+        recarga: [8.5, 8, 7.5, 7]
+        conjuracao: 0.2
+        alcance: 600
+        zonas: [{forma: retangulo, comprimento: 600, largura: 120}]
+        dano: {tipo: fisico, base: [80, 120, 160, 200], dda_bonus: 1.2}
+        ao_acertar: {devolve_recarga: 0.6}
+        lacuna: critico_abaixo_da_vida
+        nota: "o toque (estocada à frente); sem o arremesso carregado e sem o crítico em alvo abaixo de 25%; a recarga volta 60% só ao acertar"
+        fontes: "texto do jogo; alcance 600, largura 120, conjuração 0,2: PC"
+      "2":
+        nome: Escudo-Cometa
+        forma: alvo
+        recarga: [12, 11, 10, 9]
+        alcance: 600
+        salta: true
+        dano: {tipo: fisico, base: [70, 120, 170, 220], pdh: 1.0}
+        efeitos: {atordoa: 1}
+        nota: "sem o ataque triplo da Determinação Mortal"
+        fontes: "texto do jogo; alcance 600: PC"
+      "3":
+        nome: Égide Impetuosa
+        forma: proprio
+        recarga: [15, 14, 13, 12]
+        conjuracao: 0.25
+        duracao: 1.5
+        reducao_dano: {pct: 0.9, duracao: 1.5}
+        aura: {raio: 525, intervalo: 0.5, dano: {tipo: fisico, dda: 0.333}}
+        reconjurar:
+          apos: 1.5
+          janela: 1
+          versoes:
+            - {nome: Égide Impetuosa (golpe), forma: zonas, zonas: [{forma: setor, angulo: 60, raio: 525}], dano: {tipo: fisico, base: [60, 120, 180, 240], dda_bonus: 1.5}}
+        lacuna: bloqueio_por_direcao
+        nota: "o bloqueio de uma direção vira 90% a menos de dano (EST) em volta; o golpe do fim é uma reconjuração; o Pantheon ataca e anda durante (no jogo, não ataca)"
+        fontes: "texto do jogo; raio 525, ângulo 60, conjuração 0,25: PC; redução: EST"
+      "R":
+        nome: Constelação Cadente
+        forma: avanco
+        recarga: [90, 80, 70]
+        conjuracao: 2
+        alcance: 5500
+        velocidade: 1500
+        ate_ponto: true
+        atravessa_parede: true
+        raio: 350
+        dano: {tipo: magico, base: [300, 500, 700], pdh: 1.0}
+        efeitos: {lentidao: 0.5, duracao: 2}
+        nota: "a preparação de 2 s é a conjuração; o dano cheio numa área de 350 (no jogo, 700 com até −50% na borda) e sem a lança da queda"
+        fontes: "texto do jogo; alcance 5500: PC; raio 350 (metade de 700), velocidade, preparação 2 s: EST"
+
+  Urgot:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 350             # PC
+    espera_ataque: 0.25      # EST
+    velocidade_projetil: 2000   # EST
+    lacunas: [canhoes_das_pernas, alvo_mais_proximo, execucao_reconjurada]
+    nota: "a passiva (explosões das pernas: 60% do DdA + 3% da Vida máxima do alvo, 15 s por perna) não está na ficha"
+    mobilidade: {"3": avanco}
+    habilidades:
+      "1":
+        nome: Carga Corrosiva
+        forma: zonas
+        origem: ponto
+        recarga: [9.5, 9, 8.5, 8]
+        conjuracao: 0.25
+        alcance: 800
+        atraso: 0.5
+        zonas: [{forma: circulo, raio: 210}]
+        dano: {tipo: fisico, base: [40, 95, 150, 205], dda: 0.7}
+        efeitos: {lentidao: [0.45, 0.5, 0.55, 0.6], duracao: 1.25}
+        fontes: "texto do jogo; alcance 800, raio 210, conjuração 0,25: WR; atraso (voo a 1550): EST pelo PC"
+      "2":
+        nome: Expurgar
+        forma: canal
+        recarga: [12, 8, 4, 0.5]
+        duracao: 4
+        intervalo: 0.33
+        alcance: 400
+        zonas: [{forma: circulo, raio: 400}]
+        dano: {tipo: fisico, base: 120, dda: [2.4, 3.3, 4.2, 5.1]}   # total de 12 tiros: 10 + 20–42,5% do DdA cada
+        lacuna: alvo_mais_proximo
+        nota: "12 tiros em 4 s (EST: 3 por segundo) em todos a até 400 (no jogo, só no mais próximo); sem os efeitos de contato a 70% e sem a duração infinita no rank máximo"
+        fontes: "texto do jogo; raio 400: WR; tiros por segundo: EST"
+      "3":
+        nome: Desdém
+        forma: avanco
+        recarga: [14, 13, 12, 11]
+        conjuracao: 0.45
+        alcance: 475
+        velocidade: 1200
+        raio: 100
+        escudo: {base: [70, 100, 130, 160], dda_bonus: 1.5, vida_bonus: 0.15}
+        duracao_escudo: 4
+        dano: {tipo: fisico, base: [90, 130, 170, 210], dda_bonus: 1.0}
+        efeitos: {atordoa: 1.5}
+        nota: "o escudo vem no fim do avanço (no jogo, no começo); sem o arremesso do campeão para trás do Urgot"
+        fontes: "texto do jogo; alcance 475, velocidade 1200, conjuração 0,45: WR; raio: EST"
+      "R":
+        nome: Pior que a Morte
+        forma: linha
+        recarga: [60, 55, 50]
+        conjuracao: 0.5
+        alcance: 2500
+        largura: 160
+        velocidade: 3200
+        dano: {tipo: fisico, base: [100, 225, 350], dda_bonus: 0.7}
+        efeitos: {lentidao: 0.5, duracao: 4, executa_abaixo: 0.25}
+        lacuna: execucao_reconjurada
+        nota: "a execução abaixo de 25% vale no acerto (no jogo, ao reconjurar ou no fim dos 4 s, com 1,5 s de puxão e o Temor em volta); lentidão média (até 75% pela Vida perdida)"
+        fontes: "texto do jogo; alcance 2500, largura 160, velocidade 3200, conjuração 0,5: WR"
