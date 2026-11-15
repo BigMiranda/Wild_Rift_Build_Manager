@@ -40,13 +40,30 @@ export const SHEET_STATS = [
  */
 export const EFFECTIVE_STATS = ['Shield', 'Magic Shield', 'Physical Shield', 'Heal', 'Ally Shield', 'Ally Heal', 'Ultimate Haste', 'Basic Ability Haste',
   '% Basic Cooldown Reduction', '% Ultimate Cooldown Reduction', '% Ability 1 Cooldown Reduction', '% Ability 2 Cooldown Reduction',
-  '% Ability 3 Cooldown Reduction', 'Stasis'];
+  '% Ability 3 Cooldown Reduction', '% Damage Reduction', '% Physical Damage Reduction', '% Magic Damage Reduction',
+  '% Attack Damage Reduction', '% Critical Damage Reduction', 'Stasis'];
 
 /** % cooldown reduction of one ability only (slot 1, 2 or 3). */
 export const abilityCdr = (slot) => `% Ability ${slot} Cooldown Reduction`;
 
 /** Two % amounts of a stat whose sources each cut what is left (Tenacity, cooldown reductions): as Stats.combine. */
 const cutTogether = (a, b) => 100 - ((100 - a) * (100 - b)) / 100;
+
+/**
+ * Damage taken cut at a point, in % (mirrors Stats.damageCut and the arena): the resistance (armor / magic resistance),
+ * then the % reductions of all damage and of that type; `attack` adds the reduction of champions' attacks (physical),
+ * `crit` also that of critical strikes. kind: 'physical' | 'magic'. Returns { res, pct, total } (all in %): res = the
+ * resistance's part alone, pct = the % reductions' part alone, total = both together.
+ */
+export function damageCut(total, kind, { attack = false, crit = false } = {}) {
+  const v = (s) => Math.max(0, Math.min(100, total?.[s] ?? 0));
+  const physical = kind === 'physical';
+  const res = damageReduction(total?.[physical ? 'Armor' : 'Magic Resistance'] ?? 0);
+  let pct = cutTogether(v('% Damage Reduction'), v(physical ? '% Physical Damage Reduction' : '% Magic Damage Reduction'));
+  if (physical && attack) pct = cutTogether(pct, v('% Attack Damage Reduction'));
+  if (physical && crit) pct = cutTogether(pct, v('% Critical Damage Reduction'));
+  return { res, pct, total: cutTogether(res, pct) };
+}
 
 /**
  * How an ability's cooldown is cut at a point (mirrors Stats.cooldownFactor): haste = Ability Haste + Ultimate / Basic
@@ -90,7 +107,8 @@ export function extraStats(point, shown = []) {
 export const PERCENT_STATS = new Set(['Physical Reduction', 'Magic Reduction', '% Attack Speed', '% Critical Rate', '% Armor Penetration', '% Magic Penetration',
   '% Lifesteal', '% Omnivamp', '% Tenacity', '% Heal and shield strength', '% Move Speed', '% Health Regen', '% Mana Regeneration',
   '% Basic Cooldown Reduction', '% Ultimate Cooldown Reduction', '% Ability 1 Cooldown Reduction', '% Ability 2 Cooldown Reduction',
-  '% Ability 3 Cooldown Reduction']);
+  '% Ability 3 Cooldown Reduction', '% Damage Reduction', '% Physical Damage Reduction', '% Magic Damage Reduction',
+  '% Attack Damage Reduction', '% Critical Damage Reduction']);
 
 const fmt = (digits) => (v) => {
   if (v == null || Number.isNaN(v)) return '—';

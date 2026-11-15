@@ -45,6 +45,15 @@
 "% Ability 1 Cooldown Reduction": {loja: "% Redução de Recarga da Habilidade 1", alias: "Ability Haste", factor: 0.31, type: Magic}
 "% Ability 2 Cooldown Reduction": {loja: "% Redução de Recarga da Habilidade 2", alias: "Ability Haste", factor: 0.31, type: Magic}
 "% Ability 3 Cooldown Reduction": {loja: "% Redução de Recarga da Habilidade 3", alias: "Ability Haste", factor: 0.31, type: Magic}
+# Redução de Dano em % (Rodada 17, parte 2): dano a menos depois da Armadura / RM; as fontes se multiplicam. 1% de todo
+# o dano a menos ≈ 2 de Armadura e 2 de RM com 100 de cada (+1% de vida efetiva) numa luta inteira; as de habilidade
+# duram poucos segundos (≈ 1/4 da luta), daí o preço: todo o dano = a Armadura, um tipo = metade. Ataques de Campeões
+# (botas) valem o tempo todo contra o dano físico de ataques: a Armadura; críticos, uma parte dos ataques: 0,4.
+"% Damage Reduction":          {loja: "% Redução de Dano", alias: "Armor", factor: 1, type: Defence}
+"% Physical Damage Reduction": {loja: "% Redução de Dano Físico", alias: "Armor", factor: 0.5, type: Defence}
+"% Magic Damage Reduction":    {loja: "% Redução de Dano Mágico", alias: "Magic Resistance", factor: 0.5, type: Defence}
+"% Attack Damage Reduction":   {loja: "% Redução de Dano de Ataques", alias: "Armor", factor: 1, type: Defence}
+"% Critical Damage Reduction": {loja: "% Redução de Dano Crítico", alias: "Armor", factor: 0.4, type: Defence}
 "Shield":               {loja: "Escudo", alias: "Max Health", type: Defence}
 # Escudo que só absorve Dano Mágico (Rookern, Malmortius, Esmagadores) ou só Dano Físico (Mobilização Blindada).
 "Magic Shield":         {loja: "Escudo Mágico", alias: "Max Health", factor: 0.5, type: Defence}

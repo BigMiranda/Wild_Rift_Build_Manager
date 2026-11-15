@@ -362,6 +362,12 @@ campeoes:
         linhas:
         - {tipo: Cura, valor: 27}
         - {tipo: Cura em Aliados, valor: 54}
+      Vontade Indestrutível:
+        habilidade: R
+        condicional: true
+        nota: "Rodada 17: 55/65/75% de redução de dano por 7s"
+        linhas:
+        - {tipo: "% Redução de Dano", valor: [55, 65, 75]}
     passiva:
       nome: Urro Triunfante
       tipos: [Passivo, Cura]
@@ -425,6 +431,12 @@ campeoes:
         habilidade: R
         linhas:
         - {tipo: "% Penetração de Armadura", valor: [10, 20, 30]}
+      Execução Pública (redução):
+        habilidade: R
+        condicional: true
+        nota: "Rodada 17: 10/20/30% de redução de dano durante a supressão (1s)"
+        linhas:
+        - {tipo: "% Redução de Dano", valor: [10, 20, 30]}
     passiva:
       nome: Passo do Cão-dragão
       tipos: [Passivo, Mobilidade]
@@ -1014,6 +1026,12 @@ campeoes:
         - {tipo: Armadura, ratio: [0.1, 0.12, 0.14, 0.16], ref: Armadura, escopo: bonus}
         - {tipo: Resistência Mágica, valor: [10, 15, 20, 25]}
         - {tipo: Resistência Mágica, ratio: [0.1, 0.12, 0.14, 0.16], ref: Resistência Mágica, escopo: bonus}
+      Inquebrável:
+        habilidade: 3
+        condicional: true
+        nota: "Rodada 17: 35–50% a menos de dano pela frente, com o escudo erguido (4s); anula o primeiro golpe"
+        linhas:
+        - {tipo: "% Redução de Dano", valor: [35, 40, 45, 50]}
     passiva:
       nome: Golpes Concussivos
       tipos: [Passivo, Controle]
@@ -2016,6 +2034,14 @@ campeoes:
       VdM: 355
       nv1: {DdA: 58, PdH: 0, Vida: 630, Mana: 435, Armadura: 40, RM: 44, VdA: 1.05, AH: 0, RegVida: 8, RegMana: 12}
       nv15: {DdA: 109, PdH: 0, Vida: 2702, Mana: 897, Armadura: 103, RM: 72, VdA: 1.11, AH: 0, RegVida: 19, RegMana: 22}
+    efeitos:
+      Escudo de Durand (Defender):
+        habilidade: 2
+        condicional: true
+        nota: "Rodada 17: segurando, até 2s; sem as partes de PdH, RM e Vida adicionais"
+        linhas:
+        - {tipo: "% Redução de Dano Mágico", valor: [25, 30, 35, 40]}
+        - {tipo: "% Redução de Dano Físico", valor: [12.5, 15, 17.5, 20]}
     passiva:
       nome: Esmagada Colossal
       tipos: [Passivo, Mágico]
@@ -2081,6 +2107,12 @@ campeoes:
         linhas:
         - {tipo: Armadura, ratio: 0.1, ref: Armadura, escopo: bonus}
         - {tipo: Resistência Mágica, ratio: 0.1, ref: Resistência Mágica, escopo: bonus}
+      Coragem (ativo):
+        habilidade: 2
+        condicional: true
+        nota: "Rodada 17: 30% de redução de dano por 4s"
+        linhas:
+        - {tipo: "% Redução de Dano", valor: 30}
     passiva:
       nome: Perseverança
       tipos: [Passivo]
@@ -2243,6 +2275,12 @@ campeoes:
         opcao: {nome: Curas por luta, min: 0, max: 4, padrao: 2}
         linhas:
         - {tipo: Cura, ratio: 0, ratio_por_opcao: 0.085, ref: Vida Máxima}
+      Fúria da Bebedeira:
+        habilidade: 2
+        condicional: true
+        nota: "Rodada 17: 11–17% de redução de dano por 2,5s (sem a parte do PdH)"
+        linhas:
+        - {tipo: "% Redução de Dano", valor: [11, 13, 15, 17]}
     passiva:
       nome: Happy Hour
       tipos: [Passivo, Fortalecimento]
@@ -2667,6 +2705,12 @@ campeoes:
         nota: "4 acúmulos, valor do nível 1"
         linhas:
         - {tipo: "% Velocidade de Ataque", valor: 12}
+      Dança Desafiadora (segurar):
+        habilidade: 2
+        condicional: true
+        nota: "Rodada 17: 60% de redução de dano segurando, até 1,5s (sem a parte do PdH)"
+        linhas:
+        - {tipo: "% Redução de Dano", valor: 60}
     passiva:
       nome: Fervor Ioniano
       tipos: [Passivo, Fortalecimento]
@@ -2803,6 +2847,12 @@ campeoes:
         habilidade: 3
         linhas:
         - {tipo: "% Velocidade de Ataque", valor: [25, 30, 35, 40]}
+      Cataclisma (arena):
+        habilidade: R
+        condicional: true
+        nota: "Rodada 17: inimigos dentro da arena causam 12/16/20% a menos de dano (3,5s)"
+        linhas:
+        - {tipo: "% Redução de Dano", valor: [12, 16, 20]}
     passiva:
       nome: Cadência Marcial
       tipos: [Passivo, Físico]
@@ -3931,6 +3981,12 @@ campeoes:
         - {tipo: Vida Máxima, ratio: -0.3, ref: Vida Máxima}
         - {tipo: Armadura, ratio: -0.75, ref: Armadura, escopo: bonus}
         - {tipo: Resistência Mágica, ratio: -0.75, ref: Resistência Mágica, escopo: bonus}
+      Criador de Caminhos (carga):
+        habilidade: 2
+        condicional: true
+        nota: "Rodada 17: 30% de redução de dano carregando (75% no avanço com a ultimate)"
+        linhas:
+        - {tipo: "% Redução de Dano", valor: 30}
     passiva:
       nome: Instinto Valente
       tipos: [Passivo, Fortalecimento]
@@ -4613,6 +4669,12 @@ campeoes:
         linhas:
         - {tipo: "% Velocidade de Ataque", valor: [30, 60, 90]}
         - {tipo: "% Velocidade de Movimento", valor: [35, 45, 55]}
+      Meditar:
+        habilidade: 2
+        condicional: true
+        nota: "Rodada 17: 55–70% de redução de dano canalizando, até 4s (90% no primeiro 0,5s)"
+        linhas:
+        - {tipo: "% Redução de Dano", valor: [55, 60, 65, 70]}
     passiva:
       nome: Ataque Duplo
       tipos: [Passivo]
@@ -5308,6 +5370,12 @@ campeoes:
         linhas:
         - {tipo: "% Penetração de Armadura", ratio: 0.28, ref: "% Taxa de Crítico"}
         - {tipo: "% Velocidade de Ataque", valor: 10, condicional: true}
+      Véu Jubiloso:
+        habilidade: 2
+        condicional: true
+        nota: "Rodada 17: 25% a menos de Dano Mágico por 1,75s (e imune a ataques)"
+        linhas:
+        - {tipo: "% Redução de Dano Mágico", valor: 25}
     passiva:
       nome: Alegria Eterna
       tipos: [Passivo, Cura]
@@ -9035,6 +9103,12 @@ campeoes:
         nota: "inimigo com menos de 50% de Vida"
         linhas:
         - {tipo: "% Velocidade de Ataque", valor: [60, 70, 80, 90]}
+      Uivo Primitivo:
+        habilidade: 3
+        condicional: true
+        nota: "Rodada 17: 35–50% de redução de dano por 2,5s"
+        linhas:
+        - {tipo: "% Redução de Dano", valor: [35, 40, 45, 50]}
     passiva:
       nome: Fome Eterna
       tipos: [Passivo, Cura]

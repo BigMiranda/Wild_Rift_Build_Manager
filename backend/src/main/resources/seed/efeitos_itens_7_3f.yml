@@ -33,6 +33,9 @@
 #   % Redução de Recarga das     Rodada 17: o que um corte da recarga restante faz em média com a recarga das básicas /
 #   Básicas / da Ultimate / da   da ultimate / de uma habilidade; vem depois da Aceleração e as fontes se multiplicam
 #   Habilidade N                 (precos_status.yml)
+#   % Redução de Dano / de Dano  Rodada 17, parte 2: dano sofrido a menos depois da Armadura e da RM (todo o dano, um
+#   Físico / Mágico / de Ataques tipo, ataques de Campeões, acertos críticos); as fontes se multiplicam
+#   / Crítico
 #   Estase                      segundos invulnerável em que as recargas correm sem risco: numa luta de ~20s,
 #                                1s ≈ 5 de AH
 # Valores de Campeões corpo a corpo quando o texto diferencia (os de ataque à distância ficam na nota).
@@ -246,7 +249,18 @@ itens:
       linhas:
       - {tipo: Escudo Mágico, valor: 0, valor_por_opcao: 20, valor_por_opcao_nv15: 140}
       - {tipo: Escudo Mágico, ratio: 0, ratio_por_opcao: 0.05, ref: Vida Máxima, escopo: total}
+  Botas Galvanizadas de Aço:
+    Bloqueio:
+      passiva: Bloqueio
+      nota: "Rodada 17: 10% a menos de dano de ataques de Campeões"
+      linhas:
+      - {tipo: "% Redução de Dano de Ataques", valor: 10}
   Mobilização Blindada:
+    Bloqueio:
+      passiva: Bloqueio
+      nota: "Rodada 17: 10% a menos de dano de ataques de Campeões"
+      linhas:
+      - {tipo: "% Redução de Dano de Ataques", valor: 10}
     Tolerância Noxiana:
       passiva: Tolerância Noxiana
       condicional: true
@@ -510,12 +524,17 @@ itens:
       - {tipo: Velocidade de Movimento, valor: 20}
       - {tipo: "% Velocidade de Ataque", valor: 30}
   Presságio de Randuin:
+    Resiliência:
+      passiva: Resiliência
+      nota: "Rodada 17: Acertos Críticos causam 30% a menos de Dano Físico"
+      linhas:
+      - {tipo: "% Redução de Dano Crítico", valor: 30}
     Contracorrente:
       passiva: Contracorrente
       condicional: true
       padrao: false
       opcao: {nome: Acúmulos, min: 0, max: 4, padrao: 4}
-      nota: "ao sofrer Acertos Críticos (a redução de dano crítico fica para o simulador)"
+      nota: "ao sofrer Acertos Críticos"
       linhas:
       - {tipo: "% Velocidade de Movimento", valor: 0, valor_por_opcao: 5}
   Couraça do Defunto:

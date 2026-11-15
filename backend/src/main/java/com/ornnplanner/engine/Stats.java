@@ -47,9 +47,33 @@ public final class Stats {
 
     public static final List<String> CDR_STATS = List.of(BASIC_CDR, ULT_CDR, abilityCdr("1"), abilityCdr("2"), abilityCdr("3"));
 
+    /**
+     * Damage reduction in % (Rodada 17, part 2): less damage taken, after armor / magic resistance. Of all damage
+     * (Alistar's ultimate, Garen's Coragem...), of one damage type (Galio's Escudo de Durand, Nilah), of champions'
+     * attacks (Botas Galvanizadas de Aço) and of critical strikes (Presságio de Randuin). Sources multiply.
+     */
+    public static final String DAMAGE_REDUCTION = "% Damage Reduction";
+    public static final String PHYSICAL_DR = "% Physical Damage Reduction";
+    public static final String MAGIC_DR = "% Magic Damage Reduction";
+    public static final String ATTACK_DR = "% Attack Damage Reduction";
+    public static final String CRIT_DR = "% Critical Damage Reduction";
+    public static final List<String> DR_STATS = List.of(DAMAGE_REDUCTION, PHYSICAL_DR, MAGIC_DR, ATTACK_DR, CRIT_DR);
+
+    /**
+     * Share of the damage of a type ("fisico", "magico", "verdadeiro") cut by the % reductions of all damage and of that
+     * type (0..1; attacks and critical strikes apart).
+     */
+    public static double damageCut(java.util.function.ToDoubleFunction<String> stat, String type) {
+        double all = Math.max(0, Math.min(100, stat.applyAsDouble(DAMAGE_REDUCTION)));
+        String own = "fisico".equals(type) ? PHYSICAL_DR : "magico".equals(type) ? MAGIC_DR : null;
+        double typed = own == null ? 0 : Math.max(0, Math.min(100, stat.applyAsDouble(own)));
+        return combine(DAMAGE_REDUCTION, all, typed) / 100;
+    }
+
     /** Stats whose sources each cut what is left (see {@link #combine}). */
     private static final java.util.Set<String> MULTIPLICATIVE = java.util.stream.Stream.concat(
-            java.util.stream.Stream.of(TENACITY), CDR_STATS.stream()).collect(java.util.stream.Collectors.toUnmodifiableSet());
+            java.util.stream.Stream.of(TENACITY), java.util.stream.Stream.concat(CDR_STATS.stream(), DR_STATS.stream()))
+            .collect(java.util.stream.Collectors.toUnmodifiableSet());
 
     /** Whether a stat's sources each cut what is left instead of adding up. */
     public static boolean multiplicative(String stat) {
@@ -57,7 +81,7 @@ public final class Stats {
     }
 
     /**
-     * Two amounts of one stat together. Every stat adds up, except Tenacity and the cooldown reductions: each source
+     * Two amounts of one stat together. Every stat adds up, except Tenacity and the cooldown / damage reductions: each source
      * cuts what is left, so 10% + 30% = 37%, + 20% = 50%, + 20% = 60% (Tenacity measured in the game's shop).
      */
     public static double combine(String stat, double a, double b) {

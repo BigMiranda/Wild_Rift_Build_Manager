@@ -363,3 +363,7 @@ gatilhos:
   Arcanista do Axioma: {quando: modelado, nota: "o abate corta 7% da recarga restante da ultimate"}
   # ------------------------------------------------------------- campeões (Rodada 17)
   Investida no pilar: {quando: modelado, nota: "a ficha do Ornn corta 25% da recarga da Investida que destrói um pilar"}
+  # Rodada 17, parte 2: reduções de dano que a ficha do campeão já faz na luta (as dos campeões sem ficha seguem a build)
+  Coragem (ativo): {quando: modelado, nota: "a ficha do Garen reduz 30% do dano por 4s ao conjurar"}
+  Dança Desafiadora (segurar): {quando: modelado, nota: "a ficha da Irelia reduz o dano enquanto segura"}
+  Criador de Caminhos (carga): {quando: modelado, nota: "a ficha do K'Sante reduz o dano enquanto carrega"}

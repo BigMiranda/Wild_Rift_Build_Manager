@@ -5165,6 +5165,13 @@ public class Arena {
         if (now < t.damageReductionUntil) {
             prevented += (dmg - prevented) * t.damageReduction;
         }
+        // Rodada 17: the % damage reductions of the defender's sheet (all damage and its type). Those the fight plays
+        // itself (Garen's Coragem, Irelia's and K'Sante's holds) stay off the sheet; attacks and critical strikes are
+        // the items' reduz_dano above.
+        double sheetCut = Stats.damageCut(t.f::stat, type);
+        if (sheetCut > 0) {
+            prevented += (dmg - prevented) * sheetCut;
+        }
         if ((kind == ATTACK || kind == ABILITY) && t.flatCutLeft > 0 && now < t.flatCutUntil) {
             double cut = Math.min(Math.max(0, dmg - prevented), t.flatCut);
             prevented += cut;

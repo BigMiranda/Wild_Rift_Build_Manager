@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useEffectValues } from '../effectValues.js';
 import { statLabel, t } from '../i18n.js';
-import { DERIVED_STATS, EFFECTIVE_STATS, PERCENT_STATS, SHEET_STATS, abilityCdr, cooldownCut, extraStats, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
+import { DERIVED_STATS, EFFECTIVE_STATS, PERCENT_STATS, SHEET_STATS, abilityCdr, cooldownCut, damageCut, extraStats, mmss, n0, n1, pct, statOf, statValue } from '../format.js';
 import ItemIcon from './ItemIcon.jsx';
 import { useItemReader } from './BuildDock.jsx';
 import RichText from './RichText.jsx';
@@ -76,6 +76,16 @@ function EffectiveSheet({ total }) {
   if (eff > v('Max Health') || v('Magic Shield') + v('Physical Shield') > 0) {
     rows.unshift({ key: 'eff', stat: 'Max Health', label: t('sheet.effHealth'), value: n0(eff), strong: true });
   }
+  // Damage taken cut by the resistance and the % reductions together, for the kinds a held reduction reaches.
+  const dr = (key, kind, opts, label) => {
+    const c = damageCut(total, kind, opts);
+    rows.push({ key, stat: kind === 'physical' ? 'Physical Reduction' : 'Magic Reduction', label, value: pct(c.total),
+      title: t('sheet.drTitle', { res: n1(c.res), pct: n1(c.pct) }) });
+  };
+  if (v('% Damage Reduction') > 0 || v('% Physical Damage Reduction') > 0) dr('drP', 'physical', {}, t('sheet.drPhysical'));
+  if (v('% Damage Reduction') > 0 || v('% Magic Damage Reduction') > 0) dr('drM', 'magic', {}, t('sheet.drMagic'));
+  if (v('% Attack Damage Reduction') > 0) dr('drA', 'physical', { attack: true }, t('sheet.drAttack'));
+  if (v('% Critical Damage Reduction') > 0) dr('drC', 'physical', { attack: true, crit: true }, t('sheet.drCrit'));
   if (v('Ultimate Haste') > 0) rows.push({ key: 'ult', stat: 'Ability Haste', label: t('sheet.ultHaste'), value: n0(v('Ability Haste') + v('Ultimate Haste')) });
   if (v('Basic Ability Haste') > 0) rows.push({ key: 'basic', stat: 'Ability Haste', label: t('sheet.basicHaste'), value: n0(v('Ability Haste') + v('Basic Ability Haste')) });
   // Every kind of cooldown cut together (haste, then the % reductions), for the abilities a held kind reaches.

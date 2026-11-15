@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { statLabel, t } from '../i18n.js';
-import { CHART_STATS, PERCENT_STATS, SERIES_COLORS, abilityCdr, cooldownCut, mmss, n0, n1, statOf } from '../format.js';
+import { CHART_STATS, PERCENT_STATS, SERIES_COLORS, abilityCdr, cooldownCut, damageCut, mmss, n0, n1, statOf } from '../format.js';
 import { PASSIVES_VIEW, acquiredPassives, passiveColor, pointItemIds } from '../passives.js';
 import ItemIcon from './ItemIcon.jsx';
 import PassiveCompare, { PassiveLight } from './PassiveCompare.jsx';
@@ -157,7 +157,7 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
             selectedX={selectedMinute != null ? x(selectedMinute) : null}
           />
         ))}
-        {extra.length > 0 && stat === 'Ability Haste' && <small className="muted chart-note">{t('chart.hasteHint')}<br /></small>}
+        {extra.length > 0 && EXTRA_HINT[stat] && <small className="muted chart-note">{t(EXTRA_HINT[stat])}<br /></small>}
         <small className="muted">{t('chart.clickHint')}</small>
       </div>
     </div>
@@ -345,11 +345,25 @@ const has = (total, stat) => (total[stat] ?? 0) > 0.05;
  * Lines of a chart's subtypes, dashed / dotted in the build's color, only for the builds that ever have that subtype:
  * - Shield: besides the shield against any damage, the shield against physical damage (shield + physical shield) and
  *   against magic damage (shield + magic shield);
+ * - Physical / Magic Reduction: the damage cut with the % damage reductions of effects too (of all damage and of
+ *   that type), and for physical damage against champions' attacks and critical strikes;
  * - Ability Haste (the cooldown chart): the haste of the ultimate and of the basic abilities (Ability Haste + Ultimate /
  *   Basic Ability Haste) with the % cooldown reductions in it (the haste that alone would cut as much), and an ability
  *   with a reduction of its own (Ornn's Investida on a pillar).
  */
 const EXTRA_LINES = {
+  'Physical Reduction': [
+    { prefix: 'dr', dash: '6 3', label: () => t('chart.drAll'),
+      has: (x) => has(x, '% Damage Reduction') || has(x, '% Physical Damage Reduction'), value: (x) => damageCut(x, 'physical').total },
+    { prefix: 'at', dash: '2 3', label: () => t('chart.drAttack'),
+      has: (x) => has(x, '% Attack Damage Reduction'), value: (x) => damageCut(x, 'physical', { attack: true }).total },
+    { prefix: 'cr', dash: '8 3 2 3', label: () => t('chart.drCrit'),
+      has: (x) => has(x, '% Critical Damage Reduction'), value: (x) => damageCut(x, 'physical', { attack: true, crit: true }).total },
+  ],
+  'Magic Reduction': [
+    { prefix: 'dr', dash: '6 3', label: () => t('chart.drAll'),
+      has: (x) => has(x, '% Damage Reduction') || has(x, '% Magic Damage Reduction'), value: (x) => damageCut(x, 'magic').total },
+  ],
   Shield: [
     { prefix: 'ad', dash: '6 3', label: () => t('chart.shieldVsAd'), has: (x) => has(x, 'Physical Shield'),
       value: (x) => (x.Shield ?? 0) + (x['Physical Shield'] ?? 0) },
@@ -367,6 +381,9 @@ const EXTRA_LINES = {
     })),
   ],
 };
+
+/** The note under a chart that has subtype lines. */
+const EXTRA_HINT = { 'Ability Haste': 'chart.hasteHint', 'Physical Reduction': 'chart.drHint', 'Magic Reduction': 'chart.drHint' };
 
 function extraLines(lines, stat) {
   return lines.flatMap((s) => (EXTRA_LINES[stat] ?? [])

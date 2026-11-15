@@ -149,7 +149,9 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   reductions (`Stats.CDR_STATS`, multiplicative like Tenacity; `Stats.cooldownFactor` = `format.js › cooldownCut`),
   drawn as lines of the Ability Haste chart. The arena reads the % reductions from the fighter's sheet only; the cuts a
   fight plays itself (Ímpeto Gradual, Transcendência, Navori, Arcanista's takedown, Ornn's pillar) stay off that sheet
-  (their triggers are fight-made or `modelado`).
+  (their triggers are fight-made or `modelado`). Part 2: % damage reductions (`Stats.DR_STATS`: all, physical, magic,
+  attacks, critical strikes; `Stats.damageCut` = `format.js › damageCut`), lines of the Physical / Magic Reduction
+  charts; the arena reads all / per-type from the sheet, attacks and crits stay the items' `reduz_dano`.
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.

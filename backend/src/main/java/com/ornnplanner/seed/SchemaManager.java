@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 30;
+    static final int VERSION = 31;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -165,6 +165,9 @@ public class SchemaManager {
         }
         if (version < 30 && tableExists("stat_def")) {
             catalogReimportNeeded = true;   // v30 (Rodada 17): cooldown reduction in % (new stat prices)
+        }
+        if (version < 31 && tableExists("stat_def")) {
+            catalogReimportNeeded = true;   // v31 (Rodada 17, part 2): damage reduction in % (new stat prices)
         }
         // v27 (Rodada 11, part 4): community_guide is a new table, created by schema.sql
         // v28 (proposta-macro-treinada.md, Parte 4): macro_policy is a new table, created by schema.sql

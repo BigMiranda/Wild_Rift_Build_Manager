@@ -123,6 +123,7 @@ preço próprio em `precos_status.yml` (`alias` × `factor`, editável no Admin)
 | Aceleração da Ultimate | soma-se à AH só na ultimate (medido: Ornn nível 15, ult de 70s; 10 AH + 10 da Zeke = 58,3s, igual a 20 AH) | 1/4 da AH (1 de 4 habilidades) |
 | Aceleração de Habilidade Básica | Lança de Shojin, Mandato Imperial, Ímpeto Gradual | 3/4 da AH |
 | % Redução de Recarga das Básicas / da Ultimate / da Habilidade N | cortes da recarga restante, em média: Ímpeto Gradual (20%), Transcendência (8% no nível 9), Navori (14% por ataque), Arcanista do Axioma (7% da ult no abate), Investida do Ornn no pilar (25% na 3), Bumerangue apanhado do Gnar (40% na 1), Desintegrar com abate da Annie (50% na 1) | 1% ≈ 1,25 de AH, pela parte das habilidades (3/4, 1/4, 1/4) |
+| % Redução de Dano (todo dano / Físico / Mágico / de Ataques / Crítico) | dano sofrido a menos depois da Armadura e da RM: Botas Galvanizadas de Aço e Mobilização Blindada (10% dos ataques), Presságio de Randuin (30% dos críticos) e habilidades condicionais (Alistar, Garen, Braum, Galio, Gragas, Irelia, Master Yi, Warwick, Nilah, Ambessa, Jarvan IV, K'Sante) | todo dano = a Armadura; um tipo = metade; ataques = a Armadura; críticos = 0,4 da Armadura |
 | Estase | segundos invulnerável em que as recargas correm (Zhonya, Armaguarda, Anjo Guardião) | 5× a AH (1s numa luta de ~20s) |
 | Vampirismo Universal | Hemodrenário, Grevas Vorazes, Conquistador, Lenda: Linhagem... | o do Roubo de Vida |
 
@@ -143,7 +144,14 @@ corta o que sobrou, como a Tenacidade). O gráfico de Aceleração de Habilidade
 básicas e a de uma habilidade com redução própria, já com as reduções em % convertidas na AH que cortaria o mesmo; as
 habilidades do campeão no modo "momento" mostram a recarga efetiva. Na Arena, os cortes que a luta faz de verdade
 (Ímpeto Gradual, Transcendência, Navori, abate do Arcanista, pilar do Ornn) ficam fora da ficha e só as escolhas da
-build (Gnar apanhando o bumerangue) entram como redução em %. Dano, redução de
+build (Gnar apanhando o bumerangue) entram como redução em %.
+
+**Redução de dano** (Rodada 17, parte 2): reduções em % do dano sofrido, depois da Armadura e da RM, de todo o dano, de
+um tipo, dos ataques de Campeões e dos acertos críticos; as fontes se multiplicam. Os gráficos de Redução de Dano Físico
+e Mágico desenham, além da redução pela resistência, a redução com os efeitos (e, no físico, contra ataques e contra
+críticos), e a ficha do momento mostra quanto dano de cada tipo a build sofre a menos. Na Arena, a redução de todo o dano
+e a de um tipo valem pela ficha do lutador; as de ataques e de críticos são os efeitos de combate dos itens, e as que a
+ficha do campeão já faz (Coragem do Garen, Irelia e K'Sante segurando) ficam fora da ficha. Dano, redução de
 resistências, Feridas Dolorosas, corte de escudo e redução de dano sofrido dependem do inimigo e ficam para as
 lutas da Arena.
 

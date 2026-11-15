@@ -158,6 +158,24 @@ class ChampionEffectsTest {
     }
 
     @Test
+    void damageReductionsAreConditionalAndMultiply() {
+        // Rodada 17, part 2: Alistar's ultimate, on, at level 15 (rank 3): 75% less damage; off, nothing.
+        assertEquals(75.0, stats("ALISTAR", List.of(1, 2, 3), Map.of("Vontade Indestrutível", true), 15, Map.of(), 0)
+                .getOrDefault(Stats.DAMAGE_REDUCTION, 0.0), EPS);
+        assertEquals(0.0, stats("ALISTAR", List.of(1, 2, 3), Map.of(), 15, Map.of(), 0)
+                .getOrDefault(Stats.DAMAGE_REDUCTION, 0.0), EPS);
+        // Galio's Defender: a cut per damage type; all damage and the type's own cut what is left.
+        Map<String, Double> galio = stats("GALIO", List.of(2, 1, 3), Map.of("Escudo de Durand (Defender)", true), 15, Map.of(), 0);
+        assertEquals(40.0, galio.get(Stats.MAGIC_DR), EPS);
+        assertEquals(20.0, galio.get(Stats.PHYSICAL_DR), EPS);
+        Map<String, Double> m = Map.of(Stats.DAMAGE_REDUCTION, 30.0, Stats.MAGIC_DR, 50.0);
+        assertEquals(0.65, Stats.damageCut(s -> m.getOrDefault(s, 0.0), "magico"), EPS);
+        assertEquals(0.30, Stats.damageCut(s -> m.getOrDefault(s, 0.0), "fisico"), EPS);
+        assertEquals(0.30, Stats.damageCut(s -> m.getOrDefault(s, 0.0), "verdadeiro"), EPS);
+        assertEquals(51.0, Stats.combine(Stats.DAMAGE_REDUCTION, 30, 30), EPS);
+    }
+
+    @Test
     void cooldownReductionsMultiply() {
         // Rodada 17: % cooldown reductions cut what is left, like Tenacity; the cooldown applies haste, then the cuts.
         assertEquals(36.0, Stats.combine(Stats.BASIC_CDR, 20, 20), EPS);
