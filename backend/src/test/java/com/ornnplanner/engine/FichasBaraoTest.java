@@ -28,7 +28,8 @@ class FichasBaraoTest {
     static final List<String> PARTE_2 = List.of("Ahri", "Akshan", "Alistar", "Annie", "Ashe", "Aurelion Sol", "Bardo", "Blitzcrank",
             "Brand", "Braum", "Caitlyn", "Corki",
             "Draven", "Evelynn", "Ezreal", "Fiddlesticks", "Galio", "Hecarim", "Heimerdinger", "Hwei", "Janna", "Jhin", "Jinx", "Kai'Sa", "Kalista", "Karma",
-            "Katarina", "Kayn", "Kha'Zix", "Kindred", "Kog'Maw", "Lee Sin", "Leona", "Lillia", "Lissandra", "Lucian", "Lulu", "Lux", "Master Yi", "Mel", "Milio");
+            "Katarina", "Kayn", "Kha'Zix", "Kindred", "Kog'Maw", "Lee Sin", "Leona", "Lillia", "Lissandra", "Lucian", "Lulu", "Lux", "Master Yi", "Mel", "Milio",
+            "Miss Fortune", "Morgana", "Nami", "Nidalee", "Nilah", "Nocturne", "Norra", "Nunu e Willump", "Orianna", "Pyke", "Rakan", "Rammus", "Rell", "Rengar", "Ryze", "Samira");
 
     private static List<String> all() {
         List<String> out = new java.util.ArrayList<>(RODADA_18);
