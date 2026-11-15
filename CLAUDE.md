@@ -161,6 +161,8 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   Part 2: sheets for the other 87 champions (every champion of `campeoes_7_3f.yml` now has one, 143), quality C (D for
   10), geometry mostly `EST` (PC values, to check in Practice); `FichasBaraoTest.PARTE_2`. Screen Admin › Fichas
   (`pages/KitsReview.jsx`, `GET /api/arena/kits/review` and `/api/arena/kits/duel`, local only) to review and fix them.
+  The user's "revisar" flags and notes per champion / ability live in `backend/data/revisao-fichas.json`
+  (`arena/KitReviewMarks`, `/api/arena/kits/marks`), read first by the next sheet review.
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.

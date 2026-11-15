@@ -227,6 +227,30 @@ function preview(champion, code, kit, slots, label) {
   });
 }
 
+// ------------------------------------------------------------------ review marks
+
+/** A champion or one of its abilities is flagged for the next sheet review. */
+const flagged = (m) => !!m && (m.revisar || Object.values(m.habilidades ?? {}).some((h) => h?.revisar));
+
+/** The "revisar" box and its note; the note is saved when the field loses focus. */
+function ReviewMark({ value, onChange, label, cls = '' }) {
+  const [note, setNote] = useState(value?.nota ?? '');
+  useEffect(() => setNote(value?.nota ?? ''), [value?.nota]);
+  const on = !!value?.revisar;
+  return (
+    <div className={`kit-mark ${cls} ${on ? 'on' : ''}`}>
+      <label>
+        <input type="checkbox" checked={on} onChange={(e) => onChange({ revisar: e.target.checked, nota: note })} />
+        🚩 {label ?? t('kits.mark.flag')}
+      </label>
+      {(on || note) && (
+        <textarea rows={2} value={note} placeholder={t('kits.mark.note')} onChange={(e) => setNote(e.target.value)}
+          onBlur={() => note !== (value?.nota ?? '') && onChange({ revisar: on, nota: note })} />
+      )}
+    </div>
+  );
+}
+
 // ------------------------------------------------------------------ cards
 
 function CardHead({ slot, title, sub, right }) {
@@ -239,12 +263,12 @@ function CardHead({ slot, title, sub, right }) {
   );
 }
 
-function AbilityCard({ slot, a, kit, game, onPreview }) {
+function AbilityCard({ slot, a, kit, game, onPreview, mark }) {
   const est = String(a.fontes ?? '').includes('EST');
   const sub = [a.forma, a.origem === 'ponto' ? 'no ponto' : null, a.conjuracao ? `conjura ${ranks(a.conjuracao)} s` : null, a.atraso ? `atraso ${ranks(a.atraso)} s` : null]
     .filter(Boolean).join(' · ');
   return (
-    <div className="kit-card">
+    <div className={`kit-card ${mark?.props.value?.revisar ? 'flagged' : ''}`}>
       <CardHead slot={slot} title={a.nome} sub={sub} right={<span className="kit-cd" title={t('kits.col.cooldown')}>⟳ {ranks(a.recarga)} s</span>} />
       <ShapeSketch a={a} kit={kit} />
       <div className="kit-dims">
@@ -258,14 +282,15 @@ function AbilityCard({ slot, a, kit, game, onPreview }) {
       <div className="kit-src">{est && <span className="kit-tag est">EST</span>} {a.fontes}</div>
       {game && <details className="kit-game"><summary>{t('kits.gameText')}</summary>{game.texto}</details>}
       <button className="kit-play" onClick={onPreview}>▶ {t('kits.preview.one')}</button>
+      {mark}
     </div>
   );
 }
 
-function AttackCard({ kit, onPreview }) {
+function AttackCard({ kit, onPreview, mark }) {
   const ranged = kit.velocidade_projetil != null;
   return (
-    <div className="kit-card">
+    <div className={`kit-card ${mark?.props.value?.revisar ? 'flagged' : ''}`}>
       <CardHead slot="AA" title={t('kits.attack')} sub={ranged ? t('kits.ranged') : t('kits.melee')} />
       <ShapeSketch a={{ forma: 'ataque' }} kit={kit} />
       <div className="kit-dims">
@@ -275,13 +300,14 @@ function AttackCard({ kit, onPreview }) {
         <span>corpo <b>{kit.raio ?? 65}</b></span>
       </div>
       <button className="kit-play" onClick={onPreview}>▶ {t('kits.preview.attack')}</button>
+      {mark}
     </div>
   );
 }
 
-function PassiveCard({ row, game }) {
+function PassiveCard({ row, game, mark }) {
   return (
-    <div className="kit-card passive">
+    <div className={`kit-card passive ${mark?.props.value?.revisar ? 'flagged' : ''}`}>
       <CardHead slot="P" title={game?.nome ?? t('kits.passive')} sub={t('kits.passive')} />
       {row.note && <div className="kit-note">{row.note}</div>}
       {row.gaps.length > 0 && (
@@ -291,6 +317,7 @@ function PassiveCard({ row, game }) {
         </>
       )}
       {game?.texto && <details className="kit-game" open><summary>{t('kits.gameText')}</summary>{game.texto}</details>}
+      {mark}
     </div>
   );
 }
@@ -340,7 +367,11 @@ function Duel({ champion }) {
   );
 }
 
-function Detail({ row, code }) {
+function Detail({ row, code, mark, onMark }) {
+  const markOf = (slot) => (
+    <ReviewMark value={mark?.habilidades?.[slot]}
+      onChange={(v) => onMark({ ...mark, habilidades: { ...mark?.habilidades, [slot]: v } })} />
+  );
   const [game, setGame] = useState(null);
   const ref = useRef(null);
   useEffect(() => {
@@ -363,6 +394,8 @@ function Detail({ row, code }) {
             {row.problems.length ? row.problems.map((p) => <span key={p} className="kit-tag cc">{p}</span>) : <span className="kit-tag self">✓ {t('kits.validatorOk')}</span>}
             {row.estimated > 0 && <span className="kit-tag est">{t('kits.estCount', { n: row.estimated })}</span>}
           </div>
+          <ReviewMark cls="champion" label={t('kits.mark.champion')} value={mark}
+            onChange={(v) => onMark({ ...mark, revisar: v.revisar, nota: v.nota })} />
         </div>
         <div className="kit-detail-actions">
           <button className="kit-play big" onClick={() => preview(row.champion, code, kit, have, t('kits.preview.all'))} disabled={!code}>▶ {t('kits.preview.all')}</button>
@@ -370,15 +403,16 @@ function Detail({ row, code }) {
         </div>
       </div>
       <div className="kit-cards">
-        <PassiveCard row={row} game={game?.passiva} />
-        <AttackCard kit={kit} onPreview={() => preview(row.champion, code, kit, [], t('kits.attack'))} />
+        <PassiveCard row={row} game={game?.passiva} mark={markOf('P')} />
+        <AttackCard kit={kit} onPreview={() => preview(row.champion, code, kit, [], t('kits.attack'))} mark={markOf('AA')} />
         {SLOTS.map((s, i) => (kit.habilidades?.[s]
-          ? <AbilityCard key={s} slot={s} a={kit.habilidades[s]} kit={kit} game={game?.habilidades?.[i]}
+          ? <AbilityCard key={s} slot={s} a={kit.habilidades[s]} kit={kit} game={game?.habilidades?.[i]} mark={markOf(s)}
               onPreview={() => preview(row.champion, code, kit, [s], `${s} · ${kit.habilidades[s].nome}`)} />
           : (
-            <div key={s} className="kit-card missing">
+            <div key={s} className={`kit-card missing ${mark?.habilidades?.[s]?.revisar ? 'flagged' : ''}`}>
               <CardHead slot={s} title={game?.habilidades?.[i]?.nome ?? '—'} sub={t('kits.missing')} />
               {game?.habilidades?.[i] && <details className="kit-game" open><summary>{t('kits.gameText')}</summary>{game.habilidades[i].texto}</details>}
+              {markOf(s)}
             </div>
           )))}
       </div>
@@ -394,7 +428,15 @@ export default function KitsReview() {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState({ text: '', quality: '', only: '' });
   const [open, setOpen] = useState(null);
-  const load = () => api.get('/api/arena/kits/review').then(setRows).catch((e) => setError(e.message));
+  const [marks, setMarks] = useState({});
+  const load = () => {
+    api.get('/api/arena/kits/review').then(setRows).catch((e) => setError(e.message));
+    api.get('/api/arena/kits/marks').then(setMarks).catch(() => {});
+  };
+  const saveMark = (champion, m) => {
+    setMarks((prev) => ({ ...prev, [champion]: m }));
+    api.put(`/api/arena/kits/marks/${encodeURIComponent(champion)}`, m).then(setMarks).catch((e) => setError(e.message));
+  };
   useEffect(() => {
     load();
     api.get('/api/champions').then((l) => setCodes(Object.fromEntries(l.map((c) => [c.nome, c.code])))).catch(() => {});
@@ -405,8 +447,10 @@ export default function KitsReview() {
     if (filter.only === 'problems' && !r.problems.length) return false;
     if (filter.only === 'gaps' && !r.gaps.length) return false;
     if (filter.only === 'est' && !r.estimated) return false;
+    if (filter.only === 'marked' && !flagged(marks[r.champion])) return false;
     return true;
-  }), [rows, filter]);
+  }), [rows, filter, marks]);
+  const markedCount = (rows ?? []).filter((r) => flagged(marks[r.champion])).length;
   const qualities = useMemo(() => [...new Set((rows ?? []).map((r) => r.quality).filter(Boolean))].sort(), [rows]);
   const current = rows?.find((r) => r.champion === open);
 
@@ -428,17 +472,23 @@ export default function KitsReview() {
           <option value="problems">{t('kits.onlyProblems')}</option>
           <option value="gaps">{t('kits.onlyGaps')}</option>
           <option value="est">{t('kits.onlyEst')}</option>
+          <option value="marked">🚩 {t('kits.onlyMarked')} · {markedCount}</option>
         </select>
         <button onClick={load}>{t('kits.reload')}</button>
       </div>
-      {current && <Detail row={current} code={codes[current.champion]} />}
+      <p className="muted small">🚩 {t('kits.mark.hint')}</p>
+      {current && <Detail row={current} code={codes[current.champion]} mark={marks[current.champion]}
+        onMark={(m) => saveMark(current.champion, m)} />}
       <div className="kit-grid">
         {shown.map((r) => (
-          <button key={r.champion} className={`kit-tile ${open === r.champion ? 'active' : ''}`} onClick={() => setOpen(open === r.champion ? null : r.champion)}
-            title={r.gaps.join(', ')}>
+          <button key={r.champion} className={`kit-tile ${open === r.champion ? 'active' : ''} ${flagged(marks[r.champion]) ? 'flagged' : ''}`}
+            onClick={() => setOpen(open === r.champion ? null : r.champion)}
+            title={[marks[r.champion]?.nota, ...Object.entries(marks[r.champion]?.habilidades ?? {}).filter(([, h]) => h.nota).map(([s, h]) => `${s}: ${h.nota}`)]
+              .filter(Boolean).join('\n') || r.gaps.join(', ')}>
             <ChampionAvatar name={r.champion} size={36} />
             <span className="kit-tile-name">{r.champion}</span>
             <span className="kit-quality" style={{ background: QUALITY_COLOR[r.quality] ?? 'var(--muted)' }}>{r.quality ?? '?'}</span>
+            {flagged(marks[r.champion]) && <span className="kit-dot flag">🚩</span>}
             {r.problems.length > 0 && <span className="kit-dot cc" title={r.problems.join('; ')}>!</span>}
             {r.estimated > 0 && <span className="kit-dot est" title={t('kits.estCount', { n: r.estimated })}>{r.estimated}</span>}
           </button>

@@ -200,3 +200,17 @@ cenário. A tela da Arena aceita esse lutador ("Ficha Malphite (sem itens, não 
 
 Feito numa worktree (`fichas-visual`) para não recompilar `backend/target/classes`, de onde o backend da campanha
 estava rodando.
+
+## Parte 2d: assinalar o que revisar
+
+Cada cartão da tela Admin › Fichas (passiva, ataque básico, 1, 2, 3, R, também os que faltam na ficha) e o próprio
+campeão, no topo, têm uma caixa "🚩 Revisar" com uma observação ("O que está estranho?"). A observação é salva quando o
+campo perde o foco. Os campeões assinalados ganham a bandeira e a borda laranja na grade, o filtro "Assinalados para
+revisar" os separa e o mouse sobre o campeão mostra as observações.
+
+As marcas ficam num arquivo, não no banco: `backend/data/revisao-fichas.json` (`planner.kit-review-path`;
+`arena/KitReviewMarks`, `GET /api/arena/kits/marks`, `PUT /api/arena/kits/marks/{campeão}`, só na versão local). Assim
+as marcas feitas numa cópia de teste do app (outro banco) caem no mesmo arquivo, e a revisão agendada para domingo,
+22/11 (tarefa `revisao-fichas-arena-domingo`, Fable 5.2, até 12:59: reconjurações e formas na tela, na prévia e na
+Arena, e depois todas as habilidades de todos os campeões), começa por elas. Formato:
+`{"campeoes": {"Ornn": {"revisar": true, "nota": "...", "habilidades": {"R": {"revisar": true, "nota": "..."}}}}}`.

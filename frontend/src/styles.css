@@ -1551,6 +1551,15 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .kit-dot { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; border-radius: 9px; font-size: 11px; font-weight: 700; }
 .kit-dot.est { background: var(--warn-bg); color: var(--gold-bright); border: 1px solid var(--warn-border); }
 .kit-dot.cc { background: #4a1d1d; color: var(--error); border: 1px solid var(--error); }
+.kit-dot.flag { background: #3a2410; color: #ff9d4d; border: 1px solid #ff9d4d; }
+.kit-tile.flagged { border-color: #ff9d4d; }
+.kit-mark { margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 4px; }
+.kit-mark label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; color: var(--muted); }
+.kit-mark.on label { color: #ff9d4d; font-weight: 700; }
+.kit-mark textarea { width: 100%; box-sizing: border-box; font-size: 12px; resize: vertical; min-height: 34px; }
+.kit-mark.on textarea { border-color: #ff9d4d; }
+.kit-card.flagged { border-color: #ff9d4d; box-shadow: 0 0 0 1px #ff9d4d55; }
+.kit-mark.champion { border-top: none; margin-top: 4px; padding-top: 0; max-width: 340px; }
 .kit-detail { margin-top: 14px; padding: 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); }
 .kit-detail-head { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 .kit-detail-head h3 { margin: 0; }
