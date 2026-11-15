@@ -367,3 +367,6 @@ gatilhos:
   Coragem (ativo): {quando: modelado, nota: "a ficha do Garen reduz 30% do dano por 4s ao conjurar"}
   Dança Desafiadora (segurar): {quando: modelado, nota: "a ficha da Irelia reduz o dano enquanto segura"}
   Criador de Caminhos (carga): {quando: modelado, nota: "a ficha do K'Sante reduz o dano enquanto carrega"}
+  # Rodada 18, parte 2: reduções de dano que as fichas novas fazem na luta
+  Vontade Indestrutível: {quando: modelado, nota: "a ficha do Alistar reduz o dano por 7s ao conjurar a ultimate"}
+  Inquebrável: {quando: modelado, nota: "a ficha do Braum reduz o dano por 4s ao erguer o escudo"}

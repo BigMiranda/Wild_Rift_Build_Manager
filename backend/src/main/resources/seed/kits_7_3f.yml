@@ -3343,3 +3343,228 @@ campeoes:
         recarga: [20]
         troca_forma: mega
         fontes: "texto do jogo"
+
+  # ---- Rodada 18, parte 2 (docs/rodada-18.md): os demais campeões. Geometria EST (valores do PC, a conferir no Treino)
+  Ahri:
+    qualidade: C
+    raio: 65                 # EST
+    alcance: 550
+    espera_ataque: 0.25      # EST
+    velocidade_projetil: 1750   # EST
+    lacunas: [ida_e_volta, furto_de_essencia, reconjura_avanco]
+    nota: "o orbe acerta uma vez (mágico); a ultimate é um avanço com o dano de um raio, sem as reconjurações"
+    mobilidade: {"R": avanco}
+    habilidades:
+      "1": {nome: Orbe da Ilusão, forma: linha, recarga: [7], conjuracao: 0.25, alcance: 880, largura: 100, velocidade: 1550, atravessa: true,
+            dano: {tipo: magico, base: [80, 150, 220, 290], pdh: 0.9}, nota: "ida (mágico) e volta (verdadeiro) somadas num golpe mágico", fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Fogo de Raposa, forma: zonas, recarga: [8, 7, 6, 5], zonas: [{forma: circulo, raio: 550}],
+            dano: {tipo: magico, base: [76.5, 136, 195.5, 255], pdh: 0.595}, velocidade_movimento: 0.25, duracao_velocidade: 1.5,
+            nota: "3 fogos num alvo: 100% + 2 × 35%", fontes: "texto do jogo; raio: EST"}
+      "3": {nome: Encanto, forma: linha, recarga: [12], conjuracao: 0.25, alcance: 975, largura: 120, velocidade: 1550,
+            dano: {tipo: magico, base: [60, 100, 140, 180], pdh: 0.5}, efeitos: {encanta: [1.4, 1.6, 1.8, 2]}, fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Ímpeto Espiritual, forma: avanco, recarga: [75, 65, 55], alcance: 450, velocidade: 1500, ate_ponto: true, raio: 500,
+            dano: {tipo: magico, base: [60, 90, 120], pdh: 0.35}, nota: "um dos 3 avanços", fontes: "texto do jogo; geometria: EST"}
+
+  Akshan:
+    qualidade: C
+    raio: 65
+    alcance: 500
+    espera_ataque: 0.25
+    velocidade_projetil: 2000
+    lacunas: [ataque_duplo_da_passiva, balanco_no_terreno, canalhas]
+    nota: "sem a passiva (3 golpes e o ataque duplo); o Impulso Heroico é um avanço com o dano dos disparos"
+    mobilidade: {"3": avanco}
+    habilidades:
+      "1": {nome: Bumerangue Vingativo, forma: linha, recarga: [8, 7, 6, 5], conjuracao: 0.25, alcance: 850, largura: 120, velocidade: 1500, atravessa: true,
+            dano: {tipo: fisico, base: [60, 110, 160, 210], dda_bonus: 0.7}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Rebeldia, forma: proprio, recarga: [14, 10, 6, 2], duracao: 1.75, velocidade_movimento: [0.8, 0.9, 1.0, 1.1],
+            invisivel: {duracao: 1.75, revela_dano: true}, fontes: "texto do jogo"}
+      "3": {nome: Impulso Heroico, forma: avanco, recarga: [18, 16, 14, 12], alcance: 600, velocidade: 900, raio: 400,
+            dano: {tipo: fisico, base: [90, 210, 330, 450], dda_bonus: 0.45}, nota: "3 disparos num golpe, num avanço", fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Punição, forma: alvo, recarga: [65, 60, 55], conjuracao: 3, alcance: 2500,
+            dano: {tipo: fisico, base: [125, 175, 225], dda: 0.75, vida_perdida_alvo: 0.6},
+            nota: "5 balas no dano mínimo; o máximo pela Vida perdida é aproximado; a carga de 3 s fica como conjuração", fontes: "texto do jogo; alcance: EST"}
+
+  Alistar:
+    qualidade: C
+    raio: 80
+    alcance: 175
+    espera_ataque: 0.25
+    lacunas: [combo_w_q, cura_da_passiva, atordoamento_no_ataque]
+    nota: "sem a passiva (cura) e sem o ataque que atordoa do Atropelar"
+    mobilidade: {"2": avanco}
+    habilidades:
+      "1": {nome: Pulverizar, forma: zonas, recarga: [13.5, 12, 10.5, 9], conjuracao: 0.25, zonas: [{forma: circulo, raio: 365}],
+            dano: {tipo: magico, base: [60, 110, 160, 210], pdh: 0.5}, efeitos: {arremessa: 1}, fontes: "texto do jogo; raio: EST"}
+      "2": {nome: Cabeçada, forma: alvo, recarga: [13.5, 12, 10.5, 9], alcance: 650, salta: true,
+            dano: {tipo: magico, base: [50, 120, 190, 260], pdh: 0.6}, efeitos: {afasta: 650, atordoa: 0.75}, fontes: "texto do jogo; alcance, distância: EST"}
+      "3": {nome: Atropelar, forma: canal, recarga: [11.5, 11, 10.5, 10], duracao: 5, intervalo: 0.5, zonas: [{forma: circulo, raio: 350}],
+            dano: {tipo: magico, base: [100, 150, 200, 250], pdh: 0.4}, fontes: "texto do jogo; raio: EST"}
+      "R": {nome: Vontade Indestrutível, forma: proprio, recarga: [75, 65, 55], duracao: 7, reducao_dano: {pct: [0.55, 0.65, 0.75], duracao: 7},
+            nota: "sem a remoção de controles", fontes: "texto do jogo"}
+
+  Annie:
+    qualidade: C
+    raio: 65
+    alcance: 625
+    espera_ataque: 0.25
+    velocidade_projetil: 1200
+    lacunas: [atordoamento_da_passiva, comando_do_tibbers, reembolso_no_abate]
+    nota: "sem a passiva (atordoar a cada 4 habilidades)"
+    habilidades:
+      "1": {nome: Desintegrar, forma: alvo, recarga: [4], conjuracao: 0.25, alcance: 625, dano: {tipo: magico, base: [80, 130, 180, 230], pdh: 0.85}, fontes: "texto do jogo; alcance: EST"}
+      "2": {nome: Incinerar, forma: cone, recarga: [8], conjuracao: 0.25, alcance: 600, angulo: 50, dano: {tipo: magico, base: [70, 130, 190, 250], pdh: 0.7}, fontes: "texto do jogo; cone: EST"}
+      "3": {nome: Escudo Fundido, forma: proprio, recarga: [14], duracao: 3, escudo: {base: [50, 100, 150, 200], pdh: 0.4}, velocidade_movimento: [0.25, 0.3, 0.35, 0.4], fontes: "texto do jogo"}
+      "R":
+        nome: "Invocar: Tibbers"
+        forma: invocacao
+        origem: ponto
+        recarga: [70, 65, 60]
+        conjuracao: 0.25
+        alcance: 600
+        zonas: [{forma: circulo, raio: 290}]
+        dano: {tipo: magico, base: [130, 230, 330], pdh: 0.6}
+        invoca: {nome: Tibbers, comportamento: ataca, vida: 1200, dda: 50, armadura: 60, rm: 60, velocidade: 450, velocidade_ataque: 1.0, alcance: 150, raio: 80, duracao: 20,
+                 dano: {tipo: magico, base: [70, 100, 130], pdh: 0.2}}
+        nota: "o Tibbers ataca o alvo mais próximo; vida e resistências EST"
+        fontes: "texto do jogo; raio, Tibbers: EST"
+
+  Ashe:
+    qualidade: C
+    raio: 65
+    alcance: 600
+    espera_ataque: 0.2
+    velocidade_projetil: 2000
+    lacunas: [lentidao_dos_ataques, foco_acumulado, rajada_de_flechas]
+    nota: "sem a Lentidão dos ataques (passiva); Concentração é Velocidade de Ataque sem a rajada"
+    habilidades:
+      "1": {nome: Concentração, forma: proprio, recarga: [8], duracao: 6, velocidade_ataque: [0.2, 0.3, 0.4, 0.5], nota: "pronta a cada 4 ataques (EST: 8 s)", fontes: "texto do jogo"}
+      "2": {nome: Rajada, forma: cone, recarga: [15, 12, 9, 6], conjuracao: 0.25, alcance: 1100, angulo: 40,
+            dano: {tipo: fisico, base: [70, 110, 150, 190], dda_bonus: 1.0}, efeitos: {lentidao: 0.5, duracao: 2}, fontes: "texto do jogo; cone, lentidão: EST"}
+      "R": {nome: Flecha de Cristal Encantada, forma: linha, recarga: [80, 70, 60], conjuracao: 0.25, alcance: 2500, largura: 130, velocidade: 1600,
+            dano: {tipo: magico, base: [200, 350, 500], pdh: 0.4}, efeitos: {atordoa: 2}, nota: "atordoamento médio (1,5 a 3,5 s pela distância)", fontes: "texto do jogo; geometria: EST"}
+
+  Aurelion Sol:
+    qualidade: C
+    raio: 80
+    alcance: 550
+    espera_ataque: 0.25
+    velocidade_projetil: 1500
+    lacunas: [poeira_estelar, voo_astral, execucao_da_singularidade]
+    nota: "sem os acúmulos de Poeira Estelar; o Voo Astral é só movimento"
+    mobilidade: {"2": avanco}
+    habilidades:
+      "1": {nome: Sopro de Luz, forma: canal, recarga: [3], duracao: 3.25, intervalo: 0.25, zonas: [{forma: retangulo, comprimento: 750, largura: 100}],
+            dano: {tipo: magico, base: [188, 237, 286, 335], pdh: 1.95}, nota: "dano total do canal; sem a explosão", fontes: "texto do jogo; feixe: EST"}
+      "2": {nome: Voo Astral, forma: avanco, recarga: [18, 17, 16, 15], alcance: 1500, velocidade: 650, ate_ponto: true, fontes: "texto do jogo; alcance: EST"}
+      "3": {nome: Singularidade, forma: campo, origem: ponto, recarga: [12], conjuracao: 0.25, alcance: 750, duracao: 5, intervalo: 1, zonas: [{forma: circulo, raio: 275}],
+            dano: {tipo: magico, base: [20, 27.5, 35, 42.5], pdh: 0.15}, efeitos: {lentidao: 0.25, duracao: 1}, nota: "o arrasto vira Lentidão", fontes: "texto do jogo; raio: EST"}
+      "R": {nome: Estrela Cadente, forma: zonas, origem: ponto, recarga: [85, 80, 75], conjuracao: 0.25, atraso: 1, alcance: 1250, zonas: [{forma: circulo, raio: 325}],
+            dano: {tipo: magico, base: [150, 250, 350], pdh: 0.65}, efeitos: {atordoa: 1}, nota: "sem Os Céus Caem", fontes: "texto do jogo; geometria: EST"}
+
+  Bardo:
+    qualidade: C
+    raio: 65
+    alcance: 500
+    espera_ataque: 0.25
+    velocidade_projetil: 1600
+    lacunas: [carrilhoes, meeps, jornada_magica, estase_em_aliados]
+    nota: "sem a passiva (Meeps); a Têmpera do Destino põe só os inimigos em estase (atordoamento)"
+    habilidades:
+      "1": {nome: Prisão Cósmica, forma: linha, recarga: [10, 9, 8, 7], conjuracao: 0.25, alcance: 950, largura: 120, velocidade: 1500,
+            dano: {tipo: magico, base: [80, 130, 180, 230], pdh: 0.8}, efeitos: {lentidao: 0.6, duracao: 1.1}, nota: "sem o atordoamento na parede ou no 2º alvo", fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Santuário do Protetor, forma: proprio, recarga: [15, 14.5, 14, 13.5], alvo: aliado, alcance: 800, cura: {base: [50, 80, 110, 140], pdh: 0.3},
+            velocidade_movimento: [0.225, 0.25, 0.275, 0.3], duracao: 1.5, fontes: "texto do jogo"}
+      "R": {nome: Têmpera do Destino, forma: zonas, origem: ponto, recarga: [75, 65, 55], conjuracao: 0.5, atraso: 0.5, alcance: 3000, zonas: [{forma: circulo, raio: 350}],
+            efeitos: {atordoa: 2.5}, fontes: "texto do jogo; raio: EST"}
+
+  Blitzcrank:
+    qualidade: C
+    raio: 80
+    alcance: 175
+    espera_ataque: 0.25
+    lacunas: [escudo_da_passiva, marca_do_campo_estatico]
+    nota: "sem a passiva (escudo de Mana) e sem a marca do Campo Estático"
+    habilidades:
+      "1": {nome: Puxão Biônico, forma: linha, recarga: [18, 17, 16, 15], conjuracao: 0.25, alcance: 1050, largura: 140, velocidade: 1800,
+            dano: {tipo: magico, base: [110, 175, 240, 305], pdh: 1.0}, efeitos: {puxa: 900, atordoa: 0.65}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Turbo, forma: proprio, recarga: [10], duracao: 2.5, velocidade_movimento: [0.35, 0.4, 0.45, 0.5], velocidade_ataque: [0.3, 0.4, 0.5, 0.6], fontes: "texto do jogo; Velocidade de Ataque: EST"}
+      "3": {nome: Punho do Poder, forma: ataque, recarga: [8, 7, 6, 5], janela: 5, reinicia_ataque: true, dano: {tipo: fisico, dda: [0.8, 1.0, 1.2, 1.4]}, efeitos: {arremessa: 1}, fontes: "texto do jogo"}
+      "R": {nome: Campo Estático, forma: zonas, recarga: [55, 35, 15], conjuracao: 0.25, zonas: [{forma: circulo, raio: 600}],
+            dano: {tipo: magico, base: [275, 400, 525], pdh: 0.8}, efeitos: {silencia: 0.5}, fontes: "texto do jogo; raio: EST"}
+
+  Brand:
+    qualidade: C
+    raio: 65
+    alcance: 550
+    espera_ataque: 0.25
+    velocidade_projetil: 2000
+    lacunas: [labareda, ricochete]
+    nota: "sem a passiva (Labareda): o atordoamento do Cauterizar vale sempre; o Piroclasma acerta uma vez"
+    habilidades:
+      "1": {nome: Cauterizar, forma: linha, recarga: [7.5, 7, 6.5, 6], conjuracao: 0.25, alcance: 1050, largura: 120, velocidade: 1600,
+            dano: {tipo: magico, base: [80, 120, 160, 200], pdh: 0.55}, efeitos: {atordoa: 1.75}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Pilar de Chamas, forma: zonas, origem: ponto, recarga: [9.5, 9, 8.5, 8], conjuracao: 0.25, atraso: 0.6, alcance: 900, zonas: [{forma: circulo, raio: 260}],
+            dano: {tipo: magico, base: [70, 120, 170, 220], pdh: 0.55}, fontes: "texto do jogo; geometria: EST"}
+      "3": {nome: Conflagração, forma: alvo, recarga: [11, 10, 9, 8], conjuracao: 0.25, alcance: 675, dano: {tipo: magico, base: [60, 90, 120, 150], pdh: 0.45}, fontes: "texto do jogo; alcance: EST"}
+      "R": {nome: Piroclasma, forma: alvo, recarga: [70, 65, 60], conjuracao: 0.25, alcance: 750,
+            dano: {tipo: magico, base: [200, 400, 600], pdh: 0.6}, efeitos: {lentidao: [0.3, 0.4, 0.5], duracao: 0.25}, nota: "2 dos 5 ricochetes no mesmo alvo", fontes: "texto do jogo; alcance: EST"}
+
+  Braum:
+    qualidade: C
+    raio: 80
+    alcance: 175
+    espera_ataque: 0.25
+    lacunas: [golpes_concussivos, bloqueia_projeteis, salto_ao_aliado]
+    nota: "sem a passiva (atordoar com 4 acúmulos)"
+    habilidades:
+      "1": {nome: Mordida do Inverno, forma: linha, recarga: [9, 8, 7, 6], conjuracao: 0.25, alcance: 1000, largura: 120, velocidade: 1700,
+            dano: {tipo: magico, base: [60, 120, 180, 240], vida_max: 0.03}, efeitos: {lentidao: 0.7, duracao: 2}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Eu Te Protejo, forma: proprio, recarga: [11, 10, 9, 8], duracao: 3, status: {"Armor": [10, 15, 20, 25], "Magic Resistance": [10, 15, 20, 25]}, nota: "sem o salto", fontes: "texto do jogo"}
+      "3": {nome: Inquebrável, forma: proprio, recarga: [16, 14, 12, 10], duracao: 4, reducao_dano: {pct: [0.35, 0.4, 0.45, 0.5], duracao: 4}, velocidade_movimento: 0.15, fontes: "texto do jogo"}
+      "R": {nome: Fissura Glacial, forma: linha, recarga: [75, 70, 65], conjuracao: 0.5, alcance: 1250, largura: 230, velocidade: 1400, atravessa: true,
+            dano: {tipo: magico, base: [150, 250, 350], pdh: 0.6}, efeitos: {arremessa: [1, 1.25, 1.5]}, fontes: "texto do jogo; geometria: EST"}
+
+  Caitlyn:
+    qualidade: C
+    raio: 65
+    alcance: 650
+    espera_ataque: 0.2
+    velocidade_projetil: 2500
+    lacunas: [bem_na_mira, armadilhas_em_cargas, recuo_da_rede]
+    nota: "sem a passiva (tiro na cabeça); a Rede não recua a Caitlyn"
+    habilidades:
+      "1": {nome: Pacificadora de Piltover, forma: linha, recarga: [9, 8, 7, 6], conjuracao: 0.6, alcance: 1300, largura: 120, velocidade: 2200, atravessa: true,
+            dano: {tipo: fisico, base: [50, 100, 150, 200], dda: [1.25, 1.45, 1.65, 1.85]}, fontes: "texto do jogo; geometria: EST"}
+      "2":
+        nome: Armadilha Mecânica Yordle
+        forma: invocacao
+        origem: ponto
+        recarga: [20, 16, 12, 8]
+        alcance: 800
+        invoca: {nome: Armadilha, comportamento: mina, raio_disparo: 70, raio_explosao: 70, arma_em: 0.75, duracao: 30, dano: {tipo: fisico, base: [40, 90, 140, 190], dda_bonus: 0.3}, efeitos: {enraiza: 1.5}}
+        nota: "uma armadilha por recarga média das cargas"
+        fontes: "texto do jogo; raios: EST"
+      "3": {nome: Rede Calibre 90, forma: linha, recarga: [16, 14, 12, 10], conjuracao: 0.15, alcance: 750, largura: 140, velocidade: 1600,
+            dano: {tipo: magico, base: [70, 120, 170, 220], pdh: 0.8}, efeitos: {lentidao: 0.5, duracao: 1}, fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Ás na Manga, forma: alvo, recarga: [65, 55, 45], conjuracao: 1, alcance: 2250,
+            dano: {tipo: fisico, base: [250, 450, 650], dda_bonus: 1.0, vida_perdida_alvo: 0.2}, fontes: "texto do jogo"}
+
+  Corki:
+    qualidade: C
+    raio: 65
+    alcance: 550
+    espera_ataque: 0.2
+    velocidade_projetil: 2000
+    lacunas: [ataques_mistos, cargas_dos_misseis, rastro_da_valquiria]
+    nota: "sem a passiva (ataques mágicos em parte); a Barragem tem 1 míssil por 4 s"
+    mobilidade: {"2": avanco}
+    habilidades:
+      "1": {nome: Bomba de Fósforo, forma: zonas, origem: ponto, recarga: [9, 8, 7, 6], conjuracao: 0.25, atraso: 0.4, alcance: 825, zonas: [{forma: circulo, raio: 250}],
+            dano: {tipo: magico, base: [60, 120, 180, 240], dda_bonus: 1.1, pdh: 1.0}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Valquíria, forma: avanco, recarga: [18, 16, 14, 12], alcance: 600, velocidade: 650, ate_ponto: true, raio: 200,
+            dano: {tipo: magico, base: [75, 125, 175, 225], dda_bonus: 0.3, pdh: 0.3}, nota: "metade do rastro de 2,5 s", fontes: "texto do jogo; geometria: EST"}
+      "3": {nome: Metralhadora, forma: canal, recarga: [12], duracao: 4, intervalo: 0.25, zonas: [{forma: setor, angulo: 35, raio: 600}],
+            dano: {tipo: fisico, base: [80, 140, 200, 260], dda_bonus: 2.2}, efeitos: {reduz_arm: {pct: 0.1, duracao: 2}}, fontes: "texto do jogo; cone: EST"}
+      "R": {nome: Barragem de Mísseis, forma: linha, recarga: [4], cargas: 4, recarga_carga: 16, conjuracao: 0.15, alcance: 1300, largura: 80, velocidade: 2000,
+            dano: {tipo: magico, base: [70, 140, 210], dda_bonus: 0.65}, nota: "sem o Grandão; as cargas em 16 s, menos com ataques", fontes: "texto do jogo; geometria: EST"}

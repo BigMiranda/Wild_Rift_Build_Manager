@@ -24,6 +24,16 @@ class FichasBaraoTest {
             "Yasuo", "Yone", "Akali", "Sylas", "Ambessa", "Diana", "Fizz", "Vladimir", "Zed", "Kassadin", "Ekko", "Graves",
             "Skarner", "Aurora", "Viego", "Jayce", "Gnar");
 
+    /** Rodada 18, part 2: the other champions (every lane), in the order they were written. */
+    static final List<String> PARTE_2 = List.of("Ahri", "Akshan", "Alistar", "Annie", "Ashe", "Aurelion Sol", "Bardo", "Blitzcrank",
+            "Brand", "Braum", "Caitlyn", "Corki");
+
+    private static List<String> all() {
+        List<String> out = new java.util.ArrayList<>(RODADA_18);
+        out.addAll(PARTE_2);
+        return out;
+    }
+
     private static Result duel(String name) {
         Arena.Input a = ArenaScenarios.champion(name, 0, 1000, 0, 3000, 150, 90);
         Arena.Input b = ArenaScenarios.champion("Ornn", 1, 1900, 0, 3000, 150, 90);
@@ -33,7 +43,7 @@ class FichasBaraoTest {
     @Test
     void everyNewSheetFightsWithItsAbilities() {
         StringBuilder report = new StringBuilder();
-        for (String name : RODADA_18) {
+        for (String name : all()) {
             assertNotNull(ArenaScenarios.KITS.get(name), name + " has no sheet");
             FighterStats f = duel(name).fighters.get(0);
             report.append(name).append(": ").append(f.damageBySource).append('\n');
@@ -46,7 +56,7 @@ class FichasBaraoTest {
 
     @Test
     void theNewSheetsAreDeterministic() {
-        for (String name : RODADA_18) {
+        for (String name : all()) {
             Map<String, Double> one = duel(name).fighters.get(0).damageBySource;
             assertEquals(one, duel(name).fighters.get(0).damageBySource, name);
         }
