@@ -12,7 +12,7 @@ const LOCAL_ROUTES = {
   build: ['loja', 'sequencia', 'grafico', 'status', 'comparar-itens', 'comparar-runas', 'runas', 'habilidades', 'guias'],
   relatorios: ['analise', 'campeao', 'efetividade', 'relevancia', 'ouro', 'ranking', 'comparar-builds'],
   simulacoes: ['arena', 'laboratorio', 'partida', 'calculadora', 'descoberta', 'atlas'],
-  admin: ['catalogo', 'efetividade', 'campanhas', 'sobre'],
+  admin: ['catalogo', 'fichas', 'efetividade', 'campanhas', 'sobre'],
 };
 
 /**

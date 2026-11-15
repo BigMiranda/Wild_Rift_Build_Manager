@@ -155,6 +155,9 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
 - Rodada 18 (`docs/rodada-18.md`): kit sheets for the other 34 Baron lane champions (56 sheets in `kits_7_3f.yml`;
   quality C, D for Sylas, Zed, Viego, Jayce, Gnar), same method as `docs/fichas/lote-1.md`, gaps in `lacunas`.
   New mechanic `nao_morre: s` (health stays at 1 or more; Tryndamere's R). `FichasBaraoTest` duels each new sheet.
+  Part 2: sheets for the other 87 champions (every champion of `campeoes_7_3f.yml` now has one, 143), quality C (D for
+  10), geometry mostly `EST` (PC values, to check in Practice); `FichasBaraoTest.PARTE_2`. Screen Admin › Fichas
+  (`pages/KitsReview.jsx`, `GET /api/arena/kits/review` and `/api/arena/kits/duel`, local only) to review and fix them.
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.

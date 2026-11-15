@@ -99,3 +99,42 @@ usurpar a ultimate, sombras que repetem habilidades, possessão, alcance de ataq
 passos naturais: conferir no Treino os números EST mais sensíveis (alcances de avanço, raios), as passivas mais comuns
 como mecânica genérica (o 3º golpe no mesmo alvo serve a Gnar, Ekko, Diana, Kennen e Vayne) e o `minimo` de dano na
 fórmula (Dr. Mundo Q).
+
+## Parte 2: os demais campeões (todas as rotas)
+
+Pedido de 15/11/2026, às 11:55: "faça de todos os campeões restantes até 12h59" e, sobrando tempo, "uma tela de
+revisão de cada campeão modelado na admin, para facilitar melhorias e correções na arena".
+
+**As fichas.** Os 87 campeões de `campeoes_7_3f.yml` que ainda não tinham ficha ganharam uma: agora todos os 143 têm.
+Seis commits de 12 a 16 campeões, em ordem alfabética. 77 ficaram com qualidade C e 10 com D (Heimerdinger, Hwei,
+Katarina, Kayn, Nidalee, Norra, Orianna, Shyvana, Yunara, Yuumi: torres, temas, Adagas, formas, Esfera, Conexão).
+
+O método foi o mesmo da parte 1, com uma diferença: o dano, as razões, as recargas, as durações e os % vêm do texto do
+jogo, mas a **geometria** (alcance, largura, raio, ângulo, velocidade, conjuração) quase toda é `EST`: valores
+próximos aos do PC, sem conferir no rascunho da wiki por falta de tempo. Cada habilidade diz em `fontes` o que é
+estimado, e a tela de revisão conta e filtra essas habilidades. As simplificações mais comuns:
+
+- **passivas** de fora (como na parte 1);
+- **aliados**: escudos, curas e fortalecimentos que no jogo vão para um aliado ficam no próprio campeão;
+- **reconjurações, cargas e acúmulos** (Ahri R, Akshan, Kindred, Varus, Twitch, Kog'Maw) viram uma conjuração média;
+- **controles condicionais** (o atordoamento do Brand com Labareda, o Florescer Mortal do Jhin, a Bomba-Relógio do
+  Zilean) valem sempre;
+- **habilidades com dano por tempo**: `canal` leva o dano total (repartido nos golpes), `campo` e `aura` o dano por
+  pulso, como na Arena.
+
+Reduções de dano que as fichas novas fazem na luta (Alistar R, Braum 3, Master Yi 2) passaram a `modelado` em
+`combate_7_3f.yml`, para não contar duas vezes com a condicional da build (Rodada 17).
+
+`FichasBaraoTest.PARTE_2` põe cada ficha nova no duelo de 30 s contra o Ornn, como a parte 1. A bateria inteira (`./mvnw test`) passou, e os goldens da Arena não mudaram.
+
+**A tela de revisão (Admin › Fichas).** Lista as 143 fichas com qualidade, lacunas, quantas habilidades têm números
+`EST` e o que o `SheetValidator` acusa, com filtros por nome, qualidade e "só com avisos / lacunas / EST". Clicar num
+campeão abre as habilidades campo a campo (forma, recarga, dano, efeitos, os demais campos, nota e fontes, com as
+fontes estimadas destacadas) e um **duelo de teste**: 30 s no piloto automático contra um rival à escolha (o Ornn por
+padrão), os dois com os mesmos status, e o dano por fonte de cada lado. Isso mostra se cada habilidade sai e acerta.
+As correções continuam no YAML. Endpoints `GET /api/arena/kits/review` e `GET /api/arena/kits/duel?champion=&rival=`,
+só na versão local (fora de `PublicApi`).
+
+Próximos passos: conferir no Treino a geometria `EST`, começando pelos campeões mais jogados de cada rota. Também dá
+para tirar dos D as mecânicas que mais mudam a luta (as torres do Heimerdinger, a Esfera da Orianna, as formas de
+Nidalee, Shyvana e Kayn).

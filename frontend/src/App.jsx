@@ -24,6 +24,7 @@ import Calculator from './pages/Calculator.jsx';
 import Discovery from './pages/Discovery.jsx';
 import Atlas from './pages/Atlas.jsx';
 import Campaigns from './pages/Campaigns.jsx';
+import KitsReview from './pages/KitsReview.jsx';
 import Guides from './pages/Guides.jsx';
 import Ranking from './pages/Ranking.jsx';
 import Effectiveness from './pages/Effectiveness.jsx';
@@ -243,6 +244,7 @@ function Shell({ meta, items, reload, error, settingsBox }) {
       {pane('simulacoes/atlas', () => <Atlas />)}
 
       {pane('admin/catalogo', () => <Admin meta={meta} items={items} onChanged={reload} />)}
+      {pane('admin/fichas', () => <KitsReview />)}
       {pane('admin/efetividade', () => <Effectiveness items={items} />)}
       {pane('admin/campanhas', () => <Campaigns />)}
       {pane('builds/comunidade', () => main(<Community />))}

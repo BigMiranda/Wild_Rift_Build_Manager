@@ -106,6 +106,104 @@ public class ArenaService {
         return out;
     }
 
+    /**
+     * Admin › Fichas (Rodada 18): every sheet with what the validator says about it and how many of its numbers are
+     * estimates, for reviewing and fixing the sheets champion by champion.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> kitReview() {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map.Entry<String, Object> e : kits.entrySet()) {
+            Map<String, Object> kit = (Map<String, Object>) e.getValue();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("champion", e.getKey());
+            row.put("quality", kit.get("qualidade"));
+            row.put("gaps", kit.getOrDefault("lacunas", List.of()));
+            row.put("note", kit.get("nota"));
+            row.put("problems", com.ornnplanner.arena.fight.SheetValidator.check(e.getKey(), kit));
+            int abilities = 0;
+            int estimated = 0;
+            Object habs = kit.get("habilidades");
+            if (habs instanceof Map) {
+                for (Object a : ((Map<String, Object>) habs).values()) {
+                    abilities++;
+                    Object src = a instanceof Map ? ((Map<String, Object>) a).get("fontes") : null;
+                    if (src != null && String.valueOf(src).contains("EST")) {
+                        estimated++;
+                    }
+                }
+            }
+            row.put("abilities", abilities);
+            row.put("estimated", estimated);
+            row.put("kit", kit);
+            out.add(row);
+        }
+        return out;
+    }
+
+    /**
+     * A test duel of a sheet (Admin › Fichas): 30 s on autopilot on the single lane against a rival with a sheet, both
+     * with the same plain stats (level 13, 3000 health, 150 AD, 90 armor), as in FichasBaraoTest. What each source dealt
+     * tells whether the abilities fire and hit.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> kitDuel(String champion, String rival) {
+        String other = rival == null || rival.isBlank() ? "Ornn" : rival;
+        if (!kits.containsKey(champion) || !kits.containsKey(other)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "sem ficha: " + (kits.containsKey(champion) ? other : champion));
+        }
+        List<Arena.Input> inputs = new ArrayList<>();
+        inputs.add(duelist(champion, 0, 1000, (Map<String, Object>) kits.get(champion)));
+        inputs.add(duelist(other, 1, 1900, (Map<String, Object>) kits.get(other)));
+        ArenaModel.Result r = new Arena(catalog, map).withoutFrames().run(inputs, List.of(), 30);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("champion", champion);
+        out.put("rival", other);
+        List<Map<String, Object>> sides = new ArrayList<>();
+        for (ArenaModel.FighterStats f : r.fighters) {
+            Map<String, Object> s = new LinkedHashMap<>();
+            s.put("champion", f.champion);
+            s.put("dealt", f.dealt);
+            s.put("taken", f.taken);
+            s.put("healed", f.healed);
+            s.put("shield", f.shieldAbsorbed);
+            s.put("health", f.health);
+            s.put("maxHealth", f.maxHealth);
+            s.put("deathTime", f.deathTime);
+            s.put("bySource", f.damageBySource);
+            sides.add(s);
+        }
+        out.put("sides", sides);
+        return out;
+    }
+
+    private static Arena.Input duelist(String name, int team, double x, Map<String, Object> kit) {
+        Fighter f = new Fighter();
+        f.name = name + (team == 0 ? " (azul)" : " (vermelho)");
+        f.champion = name;
+        f.team = team;
+        f.level = 13;
+        f.minute = 14;
+        for (Map<String, Double> m : List.of(f.total, f.base)) {
+            m.put(com.ornnplanner.engine.Stats.MAX_HEALTH, 3000.0);
+            m.put(com.ornnplanner.engine.Stats.ATTACK_DAMAGE, 150.0);
+            m.put(com.ornnplanner.engine.Stats.ARMOR, 90.0);
+            m.put(com.ornnplanner.engine.Stats.MAGIC_RESIST, 63.0);
+            m.put(com.ornnplanner.engine.Stats.MOVE_SPEED, 350.0);
+        }
+        f.total.put(com.ornnplanner.engine.Stats.ABILITY_HASTE, 20.0);
+        f.total.put("% Attack Speed", 30.0);
+        f.ranks = new int[] {4, 3, 2, 2};
+        Arena.Input in = new Arena.Input();
+        in.f = f;
+        in.build = name;
+        in.kit = kit;
+        in.x = x;
+        in.y = 0;
+        in.baseAttackSpeed = 0.63;
+        return in;
+    }
+
     public ArenaModel.Result run(Scenario sc) {
         return run(sc, "tela");
     }

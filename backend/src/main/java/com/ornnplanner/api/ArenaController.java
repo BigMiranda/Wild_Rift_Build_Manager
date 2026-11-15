@@ -316,6 +316,18 @@ public class ArenaController {
         return arena.kits();
     }
 
+    /** Admin › Fichas: every sheet with the validator's problems (local only: not in PublicApi). */
+    @GetMapping("/kits/review")
+    public List<Map<String, Object>> kitReview() {
+        return arena.kitReview();
+    }
+
+    /** Admin › Fichas: a 30 s test duel of a sheet against a rival (Ornn by default). */
+    @GetMapping("/kits/duel")
+    public Map<String, Object> kitDuel(@RequestParam String champion, @RequestParam(required = false) String rival) {
+        return arena.kitDuel(champion, rival);
+    }
+
     @PostMapping("/run")
     public ArenaModel.Result run(@RequestBody ArenaModel.Scenario scenario) {
         if (guard.publicMode()) {
