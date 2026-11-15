@@ -370,3 +370,4 @@ gatilhos:
   # Rodada 18, parte 2: reduções de dano que as fichas novas fazem na luta
   Vontade Indestrutível: {quando: modelado, nota: "a ficha do Alistar reduz o dano por 7s ao conjurar a ultimate"}
   Inquebrável: {quando: modelado, nota: "a ficha do Braum reduz o dano por 4s ao erguer o escudo"}
+  Meditar: {quando: modelado, nota: "a ficha do Master Yi reduz o dano enquanto canaliza"}

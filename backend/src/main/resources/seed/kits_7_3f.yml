@@ -3830,3 +3830,259 @@ campeoes:
       "3": {nome: Inspiração, forma: proprio, recarga: [10, 9, 8, 7], duracao: 3, escudo: {base: [60, 90, 120, 150], pdh: 0.65}, velocidade_movimento: 0.3, duracao_velocidade: 1.5, fontes: "texto do jogo"}
       "R": {nome: Abraço Transcendente, forma: zonas, origem: ponto, recarga: [70, 65, 60], atraso: 1, alcance: 800, zonas: [{forma: circulo, raio: 350}],
             dano: {tipo: magico, base: [170, 280, 390], pdh: 0.8}, efeitos: {lentidao: 0.35, duracao: 1}, fontes: "texto do jogo; geometria: EST"}
+
+  Katarina:
+    qualidade: D
+    raio: 65
+    alcance: 175
+    espera_ataque: 0.25
+    lacunas: [adagas_no_chao, voracidade, shunpo_ate_adaga]
+    nota: "sem as Adagas (a passiva Voracidade e o dano ao pegá-las); Shunpo salta no alvo"
+    mobilidade: {"3": salto}
+    habilidades:
+      "1": {nome: Lâmina Saltitante, forma: alvo, recarga: [10, 9, 8, 7], alcance: 625, dano: {tipo: magico, base: [75, 115, 155, 195], pdh: 0.3}, fontes: "texto do jogo; alcance: EST"}
+      "2": {nome: Preparação, forma: proprio, recarga: [14, 13, 12, 11], duracao: 1.25, velocidade_movimento: [0.5, 0.6, 0.7, 0.8], fontes: "texto do jogo"}
+      "3": {nome: Shunpo, forma: alvo, recarga: [11, 10, 9, 8], alcance: 725, salta: true, dano: {tipo: magico, base: [20, 50, 80, 110], dda: 0.5, pdh: 0.3}, fontes: "texto do jogo; alcance: EST"}
+      "R": {nome: Lótus da Morte, forma: canal, recarga: [60, 50, 40], duracao: 2.6, intervalo: 0.13, interrompivel: true, zonas: [{forma: circulo, raio: 550}],
+            dano: {tipo: magico, base: [400, 600, 800], dda_bonus: 2.6, pdh: 2.9}, nota: "o total dos 20 golpes num alvo; sem as Feridas Dolorosas", fontes: "texto do jogo; raio: EST"}
+
+  Kayn:
+    qualidade: D
+    raio: 65
+    alcance: 175
+    espera_ataque: 0.25
+    lacunas: [formas_darkin_e_assassino, atravessa_terreno, infestar]
+    nota: "só a forma base; a Transgressão do Umbral é um golpe com 2,5 s inalvejável"
+    mobilidade: {"1": avanco}
+    habilidades:
+      "1": {nome: Corte Ceifador, forma: avanco, recarga: [6.5, 6, 5.5, 5], alcance: 350, velocidade: 1200, raio: 250,
+            dano: {tipo: fisico, base: [140, 200, 260, 320], dda_bonus: [1.2, 1.3, 1.4, 1.5]}, nota: "avanço e giro somados", fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Alcance da Lâmina, forma: linha, recarga: [12, 11, 10, 9], conjuracao: 0.55, alcance: 700, largura: 175, velocidade: 6000, atravessa: true,
+            dano: {tipo: fisico, base: [105, 165, 225, 285], dda_bonus: 1.2}, efeitos: {lentidao: 0.6, duracao: 1.5}, fontes: "texto do jogo; geometria: EST"}
+      "3": {nome: Passo das Sombras, forma: proprio, recarga: [18, 16, 14, 12], duracao: [5, 5.5, 6, 6.5], velocidade_movimento: 0.35, cura: {base: [100, 120, 140, 160], dda_bonus: 0.5}, fontes: "texto do jogo"}
+      "R": {nome: Transgressão do Umbral, forma: alvo, recarga: [80, 70, 60], alcance: 550, conjuracao: 2.5, nao_selecionavel: 2.5,
+            dano: {tipo: fisico, base: [200, 300, 400], dda_bonus: 1.65}, fontes: "texto do jogo; alcance: EST"}
+
+  Kha'Zix:
+    qualidade: C
+    raio: 65
+    alcance: 175
+    espera_ataque: 0.25
+    lacunas: [alvo_isolado, evolucoes, ameaca_invisivel]
+    nota: "o Sabor de Medo com metade do bônus de alvo isolado; sem as evoluções"
+    mobilidade: {"3": salto}
+    habilidades:
+      "1": {nome: Sabor de Medo, forma: alvo, recarga: [5, 4.5, 4, 3.5], alcance: 325, dano: {tipo: fisico, base: [116, 171, 226, 279], dda_bonus: 2.0},
+            nota: "média entre isolado (×2,1) e não isolado", fontes: "texto do jogo; alcance: EST"}
+      "2": {nome: Espinho do Vazio, forma: linha, recarga: [9], conjuracao: 0.25, alcance: 1000, largura: 140, velocidade: 1700,
+            dano: {tipo: fisico, base: [70, 110, 150, 190], dda_bonus: 1.0}, cura: {base: [40, 75, 110, 145], pdh: 0.5}, fontes: "texto do jogo; geometria: EST"}
+      "3": {nome: Pulo, forma: avanco, recarga: [18, 16, 14, 12], alcance: 700, velocidade: 1000, ate_ponto: true, atravessa_parede: true, raio: 250,
+            dano: {tipo: fisico, base: [65, 110, 155, 200], dda_bonus: 0.2}, fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Massacre do Vazio, forma: proprio, recarga: [75, 65, 55], duracao: 1.25, velocidade_movimento: 0.4, invisivel: {duracao: 1.25, revela_dano: true}, fontes: "texto do jogo"}
+
+  Kindred:
+    qualidade: C
+    raio: 65
+    alcance: 500
+    espera_ataque: 0.2
+    velocidade_projetil: 2000
+    lacunas: [marca_familiar, territorio_do_lobo, refugio_para_aliados]
+    nota: "sem a Marca Familiar; o Refúgio da Ovelha é não morrer por 3 s (só os Kindred)"
+    mobilidade: {"1": avanco}
+    habilidades:
+      "1": {nome: Dança de Flechas, forma: avanco, recarga: [9], alcance: 300, velocidade: 1000, ate_ponto: true, raio: 500,
+            dano: {tipo: fisico, base: [50, 75, 100, 125], dda_bonus: 0.7}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Frenesi do Lobo, forma: campo, recarga: [17, 16, 15, 14], duracao: 6, intervalo: 1.5, zonas: [{forma: circulo, raio: 500}],
+            dano: {tipo: fisico, base: [25, 30, 35, 40], dda_bonus: 0.2}, nota: "as mordidas do Lobo como pulsos", fontes: "texto do jogo; raio: EST"}
+      "3": {nome: Pesar Crescente, forma: alvo, recarga: [13, 12, 11, 10], alcance: 500, dano: {tipo: fisico, base: [90, 115, 140, 165], dda_bonus: 0.8, vida_perdida_alvo: 0.08},
+            efeitos: {lentidao: 0.5, duracao: 1}, nota: "o salto do Lobo sai junto", fontes: "texto do jogo"}
+      "R": {nome: Refúgio da Ovelha, forma: proprio, recarga: [105, 90, 75], nao_morre: 3, cura: {base: [150, 200, 250]}, fontes: "texto do jogo"}
+
+  Kog'Maw:
+    qualidade: C
+    raio: 65
+    alcance: 500
+    espera_ataque: 0.2
+    velocidade_projetil: 1650
+    lacunas: [icathiano_surpresa, dano_pela_vida_perdida, custo_crescente]
+    nota: "sem a passiva; a Artilharia Viva sai a cada 4 s (o custo cresce)"
+    habilidades:
+      "1": {nome: Cusparada Cáustica, forma: linha, recarga: [6], conjuracao: 0.25, alcance: 1200, largura: 140, velocidade: 1650,
+            dano: {tipo: magico, base: [90, 150, 210, 270], pdh: 0.65}, efeitos: {reduz_arm: {pct: [0.2, 0.24, 0.28, 0.32], duracao: 4}, reduz_rm: {pct: [0.2, 0.24, 0.28, 0.32], duracao: 4}}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Barragem Bio-Arcana, forma: proprio, recarga: [16], duracao: 8, alcance_extra: [90, 120, 150, 180], fontes: "texto do jogo"}
+      "3": {nome: Gosma do Vazio, forma: linha, recarga: [11], conjuracao: 0.25, alcance: 1300, largura: 240, velocidade: 1400, atravessa: true,
+            dano: {tipo: magico, base: [80, 130, 180, 230], pdh: 0.55}, efeitos: {lentidao: [0.45, 0.5, 0.55, 0.6], duracao: 1.5}, fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Artilharia Viva, forma: zonas, origem: ponto, recarga: [4], conjuracao: 0.25, atraso: 0.8, alcance: 1300, zonas: [{forma: circulo, raio: 240}],
+            dano: {tipo: magico, base: [80, 120, 160], dda_bonus: 0.75, pdh: 0.25}, fontes: "texto do jogo; geometria: EST"}
+
+  Lee Sin:
+    qualidade: C
+    raio: 65
+    alcance: 175
+    espera_ataque: 0.25
+    lacunas: [segunda_conjuracao, fluxo, chute_em_outros]
+    nota: "a Onda Sônica e o Ataque Ressonante juntos; sem a passiva (Fluxo)"
+    mobilidade: {"1": salto}
+    habilidades:
+      "1": {nome: Onda Sônica, forma: linha, recarga: [8, 7, 6, 5], conjuracao: 0.25, alcance: 1100, largura: 120, velocidade: 1800,
+            dano: {tipo: fisico, base: [120, 200, 280, 360], dda_bonus: 2.0}, nota: "o Ataque Ressonante sem o bônus pela Vida perdida", fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Proteger, forma: proprio, recarga: [15, 14.5, 14, 13.5], duracao: 2, escudo: {base: [100, 160, 220, 280], pdh: 1.0}, vampirismo: [0.2, 0.3, 0.4, 0.5], fontes: "texto do jogo"}
+      "3": {nome: Tempestade, forma: zonas, recarga: [8], conjuracao: 0.25, zonas: [{forma: circulo, raio: 400}],
+            dano: {tipo: magico, base: [35, 70, 105, 140], dda: 0.9}, efeitos: {lentidao: [0.3, 0.4, 0.5, 0.6], duracao: 4}, fontes: "texto do jogo; raio: EST"}
+      "R": {nome: Fúria do Dragão, forma: alvo, recarga: [70, 60, 50], conjuracao: 0.25, alcance: 375,
+            dano: {tipo: fisico, base: [150, 375, 600], dda_bonus: 1.9}, efeitos: {afasta: 800}, nota: "sem os 12% da Vida adicional do alvo", fontes: "texto do jogo; alcance: EST"}
+
+  Leona:
+    qualidade: C
+    raio: 80
+    alcance: 175
+    espera_ataque: 0.25
+    lacunas: [luz_do_sol, eclipse_prolongado]
+    nota: "sem a passiva (Luz do Sol dos aliados)"
+    mobilidade: {"3": avanco}
+    habilidades:
+      "1": {nome: Proteção da Aurora, forma: ataque, recarga: [5], janela: 6, reinicia_ataque: true, dano: {tipo: magico, base: [15, 50, 85, 120], pdh: 0.3}, efeitos: {atordoa: 1}, fontes: "texto do jogo"}
+      "2": {nome: Eclipse, forma: proprio, recarga: [13, 12, 11, 10], duracao: 3, status: {"Armor": [30, 50, 70, 90], "Magic Resistance": [30, 50, 70, 90]},
+            aura: {raio: 450, intervalo: 3, dano: {tipo: magico, base: [80, 115, 150, 185], pdh: 0.4}}, fontes: "texto do jogo; raio: EST"}
+      "3": {nome: Lâmina Zênite, forma: linha, recarga: [12, 10, 8, 6], conjuracao: 0.25, alcance: 900, largura: 140, velocidade: 2000,
+            dano: {tipo: magico, base: [60, 115, 170, 225], pdh: 0.4}, efeitos: {enraiza: 0.5}, nota: "sem o avanço até o alvo", fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Labareda Solar, forma: zonas, origem: ponto, recarga: [55, 45, 35], conjuracao: 0.25, atraso: 0.6, alcance: 1200,
+            zonas: [{nome: centro, forma: circulo, raio: 125, efeitos: {atordoa: 1.75}}, {forma: circulo, raio: 325, efeitos: {lentidao: 0.8, duracao: 1.75}}],
+            dano: {tipo: magico, base: [150, 225, 300], pdh: 0.8}, fontes: "texto do jogo; geometria: EST"}
+
+  Lillia:
+    qualidade: C
+    raio: 65
+    alcance: 325
+    espera_ataque: 0.25
+    velocidade_projetil: 1600
+    lacunas: [po_dos_sonhos, velocidade_acumulada, semente_que_rola]
+    nota: "sem a passiva (Pó dos Sonhos); a Cadência de Ninar adormece quem está perto"
+    habilidades:
+      "1": {nome: Golpes Florescentes, forma: zonas, recarga: [5.5, 5, 4.5, 4],
+            zonas: [{nome: borda, forma: anel, raio_interno: 225, raio: 485, dano: {tipo: magico, base: [70, 110, 150, 190], pdh: 0.8}}, {forma: circulo, raio: 225}],
+            dano: {tipo: magico, base: [35, 55, 75, 95], pdh: 0.4}, velocidade_movimento: 0.2, duracao_velocidade: 6, fontes: "texto do jogo; raios: EST"}
+      "2": {nome: Cuidado! Iiip!, forma: zonas, origem: ponto, recarga: [14, 13, 12, 11], conjuracao: 0.75, alcance: 500,
+            zonas: [{nome: centro, forma: circulo, raio: 120, dano: {tipo: magico, base: [140, 220, 300, 380], pdh: 0.7}}, {forma: circulo, raio: 250}],
+            dano: {tipo: magico, base: [70, 110, 150, 190], pdh: 0.35}, fontes: "texto do jogo; geometria: EST"}
+      "3": {nome: Semente Espiral, forma: zonas, origem: ponto, recarga: [15], conjuracao: 0.4, atraso: 0.8, alcance: 750, zonas: [{forma: circulo, raio: 150}],
+            dano: {tipo: magico, base: [70, 105, 140, 175], pdh: 0.45}, efeitos: {lentidao: 0.4, duracao: 3}, fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Cadência de Ninar, forma: zonas, recarga: [100, 85, 70], zonas: [{forma: circulo, raio: 900}], efeitos: {lentidao: 0.5, duracao: 1.5, adormece: [2, 2.3, 2.5]},
+            nota: "sem exigir o Pó dos Sonhos (todos os campeões perto)", fontes: "texto do jogo; raio: EST"}
+
+  Lissandra:
+    qualidade: C
+    raio: 65
+    alcance: 550
+    espera_ataque: 0.25
+    velocidade_projetil: 2000
+    lacunas: [teleporte_na_garra, tumulo_em_si, servos_congelados]
+    nota: "sem a passiva; o Túmulo Congelado só no inimigo"
+    habilidades:
+      "1": {nome: Estilhaço de Gelo, forma: linha, recarga: [7, 6, 5, 4], conjuracao: 0.25, alcance: 750, largura: 150, velocidade: 2200,
+            dano: {tipo: magico, base: [70, 110, 150, 190], pdh: 0.7}, efeitos: {lentidao: [0.2, 0.25, 0.3, 0.35], duracao: 1.5}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Círculo Ártico, forma: zonas, recarga: [11, 10, 9, 8], zonas: [{forma: circulo, raio: 450}],
+            dano: {tipo: magico, base: [55, 100, 145, 190], pdh: 0.55}, efeitos: {enraiza: [1.25, 1.35, 1.45, 1.55]}, fontes: "texto do jogo; raio: EST"}
+      "3": {nome: Caminho Glacial, forma: linha, recarga: [20, 17, 14, 11], conjuracao: 0.25, alcance: 1050, largura: 250, velocidade: 850, atravessa: true,
+            dano: {tipo: magico, base: [50, 95, 140, 185], pdh: 0.4}, nota: "sem o teleporte", fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Túmulo Congelado, forma: alvo, recarga: [80, 70, 60], conjuracao: 0.25, alcance: 550,
+            dano: {tipo: magico, base: [150, 250, 350], pdh: 0.75}, efeitos: {atordoa: 1.5, lentidao: [0.3, 0.45, 0.6], duracao: 3}, fontes: "texto do jogo; alcance: EST"}
+
+  Lucian:
+    qualidade: C
+    raio: 65
+    alcance: 500
+    espera_ataque: 0.2
+    velocidade_projetil: 2800
+    lacunas: [disparo_iluminado, recarga_pela_passiva]
+    nota: "sem a passiva (o 2º tiro depois de cada habilidade)"
+    mobilidade: {"3": avanco}
+    habilidades:
+      "1": {nome: Luz Perfurante, forma: linha, recarga: [9.5, 8, 6.5, 5], conjuracao: 0.35, alcance: 900, largura: 120, velocidade: 8000, atravessa: true,
+            dano: {tipo: fisico, base: [75, 125, 175, 225], dda_bonus: 1.2}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Chama Ardente, forma: linha, recarga: [13, 11.5, 10, 8.5], conjuracao: 0.25, alcance: 900, largura: 160, velocidade: 1600,
+            dano: {tipo: magico, base: [75, 125, 175, 225], pdh: 0.9}, fontes: "texto do jogo; geometria: EST"}
+      "3": {nome: Perseguição Implacável, forma: avanco, recarga: [20.5, 18, 15.5, 13], alcance: 425, velocidade: 1350, ate_ponto: true, reinicia_ataque: true, fontes: "texto do jogo; alcance: EST"}
+      "R": {nome: O Expurgo, forma: canal, recarga: [70, 65, 60], duracao: 3, intervalo: 0.15, zonas: [{forma: retangulo, comprimento: 1200, largura: 110}],
+            dano: {tipo: fisico, base: [400, 500, 600], dda: 5, pdh: 3}, nota: "os 20 disparos num alvo; sem o aumento pela Taxa de Crítico", fontes: "texto do jogo; geometria: EST"}
+
+  Lulu:
+    qualidade: C
+    raio: 65
+    alcance: 550
+    espera_ataque: 0.25
+    velocidade_projetil: 1450
+    lacunas: [pix, fortalece_aliado, ultimate_em_aliado]
+    nota: "sem a passiva (Pix); Crescimento Virente em si"
+    habilidades:
+      "1": {nome: Lança-Purpurina, forma: linha, recarga: [7], conjuracao: 0.25, alcance: 950, largura: 120, velocidade: 1450, atravessa: true,
+            dano: {tipo: magico, base: [50, 85, 120, 155], pdh: 0.3}, efeitos: {lentidao: 0.8, duracao: 1}, nota: "um dos dois projéteis; a lentidão que decai em 2 s vira 1 s", fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Caprichos, forma: alvo, recarga: [17, 16, 15, 14], conjuracao: 0.25, alcance: 650, efeitos: {polimorfa: [1, 1.25, 1.5, 1.75], lentidao_polimorfo: 0.6}, fontes: "texto do jogo; alcance: EST"}
+      "3": {nome: "Socorro, Pix!", forma: proprio, recarga: [10], duracao: 2.5, escudo: {base: [60, 100, 140, 180], pdh: 0.6}, nota: "o escudo em si", fontes: "texto do jogo"}
+      "R": {nome: Crescimento Virente, forma: proprio, recarga: [80, 70, 60], duracao: 7, vida_extra: {base: [250, 400, 550], pdh: 0.5}, fontes: "texto do jogo"}
+
+  Lux:
+    qualidade: C
+    raio: 65
+    alcance: 550
+    espera_ataque: 0.25
+    velocidade_projetil: 1600
+    lacunas: [iluminacao, barreira_em_aliados]
+    nota: "sem a passiva (Iluminação)"
+    habilidades:
+      "1": {nome: Ligação da Luz, forma: linha, recarga: [9], conjuracao: 0.25, alcance: 1175, largura: 140, velocidade: 1200,
+            dano: {tipo: magico, base: [60, 120, 180, 240], pdh: 0.7}, efeitos: {enraiza: 2}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Barreira Prismática, forma: proprio, recarga: [12, 11, 10, 9], duracao: 3, escudo: {base: [65, 120, 175, 230], pdh: 0.38}, nota: "os dois escudos em si", fontes: "texto do jogo"}
+      "3": {nome: Singularidade Lucente, forma: zonas, origem: ponto, recarga: [9.5, 9, 8.5, 8], conjuracao: 0.25, atraso: 0.6, alcance: 1000, zonas: [{forma: circulo, raio: 310}],
+            dano: {tipo: magico, base: [65, 130, 195, 260], pdh: 0.55}, efeitos: {lentidao: [0.3, 0.35, 0.4, 0.45], duracao: 1.5}, fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Centelha Final, forma: linha, recarga: [55, 45, 40], conjuracao: 1, alcance: 3400, largura: 200, velocidade: 8000, atravessa: true,
+            dano: {tipo: magico, base: [300, 400, 500], pdh: 0.75}, fontes: "texto do jogo; geometria: EST"}
+
+  Master Yi:
+    qualidade: C
+    raio: 65
+    alcance: 175
+    espera_ataque: 0.25
+    lacunas: [golpe_duplo, alpha_reduzido_por_ataques, highlander_no_abate]
+    nota: "sem a passiva (Golpe Duplo); o Ataque Alpha é um golpe no alvo, inalvejável"
+    mobilidade: {"1": salto}
+    habilidades:
+      "1": {nome: Ataque Alpha, forma: alvo, recarga: [17, 16, 15, 14], alcance: 600, salta: true, nao_selecionavel: 0.6,
+            dano: {tipo: fisico, base: [20, 60, 100, 140], dda: 0.6}, nota: "a recarga cai 1 s por ataque (fora)", fontes: "texto do jogo; alcance: EST"}
+      "2": {nome: Meditar, forma: canal, recarga: [25], duracao: 4, intervalo: 0.5, interrompivel: true, reducao_dano: {pct: [0.55, 0.6, 0.65, 0.7], duracao: 4},
+            cura: {base: [160, 240, 320, 400], pdh: 1.0}, nota: "a cura dos 4 s; sem o aumento pela Vida perdida", fontes: "texto do jogo"}
+      "3": {nome: Estilo Wuju, forma: proprio, recarga: [17, 16, 15, 14], duracao: 5, status: {"Attack Damage": [10, 15, 20, 25]}, nota: "o dano verdadeiro por ataque vira DdA", fontes: "texto do jogo"}
+      "R": {nome: Highlander, forma: proprio, recarga: [70, 65, 60], duracao: 7, velocidade_movimento: [0.35, 0.45, 0.55], velocidade_ataque: [0.3, 0.6, 0.9], fontes: "texto do jogo"}
+
+  Mel:
+    qualidade: C
+    raio: 65
+    alcance: 550
+    espera_ataque: 0.25
+    velocidade_projetil: 1800
+    lacunas: [deslumbrar, reflete_projeteis, execucao_do_eclipse]
+    nota: "sem a passiva (Deslumbrar); a Refutação só torna invulnerável; o Eclipse Dourado acerta quem está perto"
+    habilidades:
+      "1": {nome: Rajada Radiante, forma: zonas, origem: ponto, recarga: [9, 8, 7, 6], conjuracao: 0.25, atraso: 0.5, alcance: 950, zonas: [{forma: circulo, raio: 260}],
+            dano: {tipo: magico, base: [77, 112, 153, 200], pdh: 0.42}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Refutação, forma: proprio, recarga: [38, 36, 34, 32], duracao: 1, invulneravel: 1, velocidade_movimento: 0.3, fontes: "texto do jogo"}
+      "3": {nome: Armadilha Solar, forma: linha, recarga: [11.5, 11, 10.5, 10], conjuracao: 0.25, alcance: 1050, largura: 180, velocidade: 1000,
+            dano: {tipo: magico, base: [55, 110, 165, 220], pdh: 0.5}, efeitos: {enraiza: [1.2, 1.3, 1.4, 1.5]}, fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Eclipse Dourado, forma: zonas, recarga: [95, 80, 65], conjuracao: 0.25, zonas: [{forma: circulo, raio: 1100}],
+            dano: {tipo: magico, base: [140, 220, 300], pdh: 0.35}, nota: "com 10 acúmulos de Deslumbrar (EST)", fontes: "texto do jogo; raio: EST"}
+
+  Milio:
+    qualidade: C
+    raio: 65
+    alcance: 525
+    espera_ataque: 0.25
+    velocidade_projetil: 1500
+    lacunas: [aliados, fogo_tranquilizante, remove_controles]
+    nota: "sem os efeitos em aliados (ele mesmo recebe)"
+    habilidades:
+      "1": {nome: Ultramega Chute Flamejante, forma: linha, recarga: [10], conjuracao: 0.25, alcance: 1000, largura: 120, velocidade: 1200,
+            dano: {tipo: magico, base: [80, 160, 240, 320], pdh: 0.85}, efeitos: {afasta: 300, lentidao: [0.4, 0.45, 0.5, 0.55], duracao: 1.5}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Fogueira Aconchegante, forma: proprio, recarga: [24, 22, 20, 18], duracao: 6, cura: {base: [70, 95, 120, 145], pdh: 0.15}, fontes: "texto do jogo"}
+      "3": {nome: Abraços Quentinhos, forma: proprio, recarga: [8], duracao: 2.5, escudo: {base: [60, 100, 140, 180], pdh: 0.3}, velocidade_movimento: [0.1, 0.13, 0.16, 0.19],
+            nota: "2 cargas a cada 16 s: uma a cada 8 s", fontes: "texto do jogo"}
+      "R": {nome: Sopro de Vida, forma: proprio, recarga: [100, 90, 80], cura: {base: [150, 250, 350], pdh: 0.5}, fontes: "texto do jogo"}
