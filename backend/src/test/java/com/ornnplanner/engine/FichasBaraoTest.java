@@ -20,7 +20,8 @@ class FichasBaraoTest {
 
     /** The champions sheeted in Rodada 18, in the order they were written. */
     static final List<String> RODADA_18 = List.of("Dr. Mundo", "Volibear", "Pantheon", "Urgot", "Cho'Gath", "Kennen", "Poppy",
-            "Olaf", "Tryndamere", "Wukong", "Singed");
+            "Olaf", "Tryndamere", "Wukong", "Singed", "Jarvan IV", "Warwick", "Nautilus", "Gragas", "Maokai", "Amumu",
+            "Yasuo", "Yone", "Akali", "Sylas", "Ambessa");
 
     private static Result duel(String name) {
         Arena.Input a = ArenaScenarios.champion(name, 0, 1000, 0, 3000, 150, 90);

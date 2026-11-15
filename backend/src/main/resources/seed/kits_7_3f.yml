@@ -2028,3 +2028,633 @@ campeoes:
         status: {"Ability Power": [30, 55, 80], "Armor": [30, 55, 80], "Magic Resistance": [30, 55, 80], "Move Speed": [30, 55, 80]}
         nota: "sem a regeneração (15–25), sem os 30% num aliado e sem as Feridas Dolorosas"
         fontes: "texto do jogo"
+
+  Jarvan IV:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [combo_estandarte, arena_de_terreno, golpe_por_alvo_com_recarga]
+    nota: "a passiva (8% da Vida atual do alvo no 1º ataque, 5 s por alvo) e o passivo da E (+25–40% de Velocidade de Ataque) não estão na ficha"
+    mobilidade: {"R": salto}
+    habilidades:
+      "1":
+        nome: Ataque do Dragão
+        forma: zonas
+        recarga: [9, 8, 7, 6]
+        conjuracao: 0.45
+        alcance: 785
+        zonas: [{forma: retangulo, comprimento: 785, largura: 140}]
+        dano: {tipo: fisico, base: [80, 140, 200, 260], dda_bonus: 1.3}
+        efeitos: {reduz_arm: {pct: [0.1, 0.15, 0.2, 0.25], duracao: 3}}
+        lacuna: combo_estandarte
+        nota: "sem o puxão até o Estandarte com o arremesso de 0,75 s"
+        fontes: "texto do jogo; conjuração 0,45: WR; alcance 785, largura 140: PC"
+      "2":
+        nome: Égide de Ouro
+        forma: area
+        recarga: [10]
+        raio: 600
+        escudo: {base: [100, 140, 180, 220], vida_max: 0.05}
+        duracao_escudo: 5
+        efeitos: {lentidao: [0.3, 0.35, 0.4, 0.45], duracao: 2}
+        nota: "sem o escudo a mais por campeão inimigo próximo (1,6–2,5% da Vida)"
+        fontes: "texto do jogo; raio 600: PC"
+      "3":
+        nome: Estandarte Demaciano
+        forma: zonas
+        origem: ponto
+        recarga: [11, 10.5, 10, 9.5]
+        alcance: 860
+        zonas: [{forma: circulo, raio: 200}]
+        dano: {tipo: magico, base: [85, 140, 195, 250], pdh: 0.8}
+        nota: "o Estandarte não fica no mapa (sem a Velocidade de Ataque aos aliados e sem a Q até ele)"
+        fontes: "texto do jogo; alcance 860, raio 200: PC"
+      "R":
+        nome: Cataclisma
+        forma: alvo
+        recarga: [70, 65, 60]
+        alcance: 650
+        salta: true
+        dano: {tipo: fisico, base: [200, 350, 500], dda_bonus: 1.7}
+        lacuna: arena_de_terreno
+        nota: "sem a arena de terreno de 3,5 s e sem os 12–20% de redução de dano dentro dela"
+        fontes: "texto do jogo; alcance 650: PC"
+
+  Warwick:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [cura_pelo_dano, bonus_contra_vida_baixa, temor_no_fim]
+    nota: "a passiva (12 + 15% do DdA adicional + 10% do PdH mágico nos ataques, cura abaixo de 50%) e a W (velocidade contra alvos abaixo de 50%) não estão na ficha"
+    mobilidade: {"1": salto, "R": salto}
+    habilidades:
+      "1":
+        nome: Presas da Fera
+        forma: alvo
+        recarga: [6]
+        alcance: 350
+        salta: true
+        dano: {tipo: magico, dda: 1.2, pdh: 0.85, vida_max_alvo: [0.06, 0.07, 0.08, 0.09]}
+        lacuna: cura_pelo_dano
+        nota: "sem a cura de 42,5–80% do dano causado"
+        fontes: "texto do jogo; alcance 350: WR"
+      "2":
+        nome: Caçada Sangrenta
+        forma: proprio
+        recarga: [70, 60, 50, 40]
+        duracao: 8
+        velocidade_ataque: [0.6, 0.7, 0.8, 0.9]
+        velocidade_movimento: [0.4, 0.45, 0.5, 0.55]
+        lacuna: bonus_contra_vida_baixa
+        nota: "o passivo (velocidades contra quem está abaixo de 50%) vira 8 s de velocidades ao usar; sem o rastreio"
+        fontes: "texto do jogo; tempo do ativo como janela: EST"
+      "3":
+        nome: Uivo Primitivo
+        forma: proprio
+        recarga: [14, 13, 12, 11]
+        duracao: 2.5
+        reducao_dano: {pct: [0.35, 0.4, 0.45, 0.5], duracao: 2.5}
+        reconjurar:
+          apos: 1.5
+          janela: 1
+          versoes:
+            - {nome: Uivo Primitivo (uivo), forma: area, raio: 375, efeitos: {amedronta: 1, lentidao: 0.9, duracao: 1}}
+        lacuna: temor_no_fim
+        nota: "o uivo do fim é uma reconjuração a partir de 1,5 s (no jogo, sai sozinho aos 2,5 s)"
+        fontes: "texto do jogo; raio 375: WR"
+      "R":
+        nome: Coerção Infinita
+        forma: avanco
+        recarga: [100, 90, 80]
+        conjuracao: 0.1
+        alcance: 875
+        velocidade: 1800
+        raio: 155
+        dano: {tipo: magico, base: [100, 275, 450], dda_bonus: 1.67}
+        efeitos: {suprime: 1}
+        lacuna: cura_pelo_dano
+        nota: "salto de 2,5× a velocidade (875 com 350) que suprime quem acerta; sem os 4 golpes com efeitos de contato e sem a cura de 100%"
+        fontes: "texto do jogo; raio 155, conjuração 0,1: WR; alcance (2,5 × 350), velocidade: EST"
+
+  Nautilus:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [enraiza_no_ataque, ataque_com_area, puxao_mutuo]
+    nota: "a passiva (o ataque enraíza 1 s, 6 s por alvo) não está na ficha"
+    habilidades:
+      "1":
+        nome: Lançar Âncora
+        forma: linha
+        recarga: [12, 11, 10, 9]
+        conjuracao: 0.25
+        alcance: 925
+        largura: 130
+        velocidade: 2000
+        dano: {tipo: magico, base: [90, 150, 210, 270], pdh: 0.75}
+        efeitos: {puxa: 150}
+        lacuna: puxao_mutuo
+        nota: "o alvo é puxado até 150 do Nautilus (no jogo, os dois se puxam); sem o terreno"
+        fontes: "texto do jogo; alcance 925, largura 130, velocidade 2000, conjuração 0,25: WR"
+      "2":
+        nome: Ira do Titã
+        forma: proprio
+        recarga: [11]
+        duracao: 6
+        escudo: {base: [70, 80, 90, 100], vida_max: [0.11, 0.12, 0.13, 0.14]}
+        lacuna: ataque_com_area
+        nota: "só o escudo; sem o dano mágico em área dos ataques enquanto ele dura"
+        fontes: "texto do jogo"
+      "3":
+        nome: Correnteza
+        forma: area
+        recarga: [6.5, 6, 5.5, 5]
+        conjuracao: 0.25
+        raio: 450
+        dano: {tipo: magico, base: [70, 110, 150, 190], pdh: 0.5}
+        efeitos: {lentidao: [0.35, 0.4, 0.45, 0.5], duracao: 1.5}
+        nota: "uma onda (no jogo, 3, com 50% nas seguintes)"
+        fontes: "texto do jogo; raio 450, conjuração 0,25: WR"
+      "R":
+        nome: Carga de Profundidade
+        forma: alvo
+        recarga: [70, 60, 50]
+        conjuracao: 0.46
+        alcance: 725
+        atraso: 1
+        dano: {tipo: magico, base: [150, 275, 400], pdh: 0.7}
+        efeitos: {arremessa: 1, atordoa: [1, 1.5, 2]}
+        nota: "a carga chega em 1 s (EST); sem os inimigos no caminho"
+        fontes: "texto do jogo; alcance 725, conjuração 0,46: WR; tempo até chegar: EST"
+
+  Gragas:
+    qualidade: C
+    raio: 90                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [cura_ao_conjurar, ataque_com_area, carga_pelo_tempo_no_chao]
+    nota: "a passiva (8,5% da Vida ao usar uma habilidade) não está na ficha"
+    mobilidade: {"3": avanco}
+    habilidades:
+      "1":
+        nome: Jogar o Barril
+        forma: zonas
+        origem: ponto
+        recarga: [9, 8, 7, 6]
+        conjuracao: 0.25
+        alcance: 850
+        atraso: 1.5
+        zonas: [{forma: circulo, raio: 250}]
+        dano: {tipo: magico, base: [97.5, 180, 262.5, 345], pdh: 1.05}
+        efeitos: {lentidao: [0.45, 0.525, 0.6, 0.675], duracao: 2}
+        lacuna: carga_pelo_tempo_no_chao
+        nota: "explode aos 1,5 s, já com os 150% de dano e de lentidão (no jogo, explode quando quiser até 3 s)"
+        fontes: "texto do jogo; alcance 850, raio 250: PC; conjuração 0,25: WR"
+      "2":
+        nome: Fúria da Bebedeira
+        forma: ataque
+        recarga: [5]
+        janela: 5
+        dano: {tipo: magico, base: [35, 70, 105, 140], pdh: 0.7, vida_max_alvo: 0.08}
+        lacuna: ataque_com_area
+        nota: "só o alvo do ataque (no jogo, os inimigos próximos); sem os 11–17% de redução de dano por 2,5 s"
+        fontes: "texto do jogo"
+      "3":
+        nome: Barrigada
+        forma: avanco
+        recarga: [15, 14, 13, 12]
+        alcance: 600
+        velocidade: 910
+        raio: 180
+        dano: {tipo: magico, base: [70, 135, 200, 265], pdh: 0.7}
+        efeitos: {atordoa: 1}
+        ao_acertar: {devolve_recarga: 0.2}
+        nota: "os −3 s ao colidir viram 20% da recarga restante; acerta todos no caminho (no jogo, para no primeiro)"
+        fontes: "texto do jogo; alcance 600, velocidade 910, raio 180: PC"
+      "R":
+        nome: Barril Explosivo
+        forma: zonas
+        origem: ponto
+        recarga: [85, 70, 55]
+        conjuracao: 0.25
+        alcance: 1000
+        atraso: 0.5
+        zonas: [{forma: circulo, raio: 400}]
+        dano: {tipo: magico, base: [200, 300, 400], pdh: 0.7}
+        efeitos: {afasta: 400}
+        nota: "o empurrão é para longe do Gragas (no jogo, para longe do centro da explosão)"
+        fontes: "texto do jogo; alcance 1000, raio 400: PC; conjuração 0,25: WR; voo, distância do empurrão: EST"
+
+  Maokai:
+    qualidade: C
+    raio: 90                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [inalvejavel_no_avanco, enraiza_pela_distancia]
+    nota: "a passiva (cura no ataque a cada 24 s, −3 s por habilidade) não está na ficha"
+    mobilidade: {"2": salto}
+    habilidades:
+      "1":
+        nome: Esmagamento Espinhoso
+        forma: zonas
+        recarga: [8, 7, 6, 5]
+        conjuracao: 0.3
+        alcance: 600
+        zonas: [{forma: retangulo, comprimento: 600, largura: 220}]
+        dano: {tipo: magico, base: [60, 115, 170, 225], pdh: 0.5, vida_max_alvo: [0.025, 0.03, 0.035, 0.04]}
+        efeitos: {lentidao: 0.99, duracao: 0.25}
+        nota: "sem o empurrão de quem está perto"
+        fontes: "texto do jogo; alcance 600, conjuração 0,3: WR; largura: EST; lentidão de 99%: PC"
+      "2":
+        nome: Avanço Retorcido
+        forma: alvo
+        recarga: [14, 13, 12, 11]
+        alcance: 525
+        salta: true
+        dano: {tipo: magico, base: [60, 95, 130, 165], pdh: 0.5}
+        efeitos: {enraiza: [0.8, 0.95, 1.1, 1.25]}
+        lacuna: inalvejavel_no_avanco
+        nota: "sem ficar inalvejável durante o avanço"
+        fontes: "texto do jogo; alcance 525: WR"
+      "3":
+        nome: Atirar Mudas
+        forma: invocacao
+        origem: ponto
+        recarga: [14]
+        conjuracao: 0.25
+        alcance: 1100
+        invoca:
+          nome: Muda
+          comportamento: mina
+          raio_disparo: 350
+          raio_explosao: 175
+          arma_em: 0.5
+          duracao: 20
+          dano: {tipo: magico, base: [60, 90, 120, 150], pdh: 0.25, vida_bonus: 0.06}
+          efeitos: {lentidao: 0.3, duracao: 2}
+        nota: "a muda espera e explode quando um inimigo chega a 350 (no jogo, corre atrás dele); sem a muda maior na moita"
+        fontes: "texto do jogo; alcance 1100, raios 350 / 175, conjuração 0,25: WR; armar: EST"
+      "R":
+        nome: Garras da Natureza
+        forma: linha
+        recarga: [80, 75, 70]
+        conjuracao: 0.5
+        alcance: 3000
+        largura: 240
+        velocidade: 500
+        atravessa: true
+        dano: {tipo: magico, base: [175, 250, 325], pdh: 0.65}
+        efeitos: {enraiza: 1.5}
+        lacuna: enraiza_pela_distancia
+        nota: "enraíza 1,5 s (EST; no jogo, 0,8 s a mais pela distância percorrida); sem a velocidade ao acertar"
+        fontes: "texto do jogo; alcance 3000, largura 240, conjuração 0,5: WR; velocidade 500 (a onda acelera de 100 a 750): EST"
+
+  Amumu:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [maldicao_verdadeira, puxar_a_si_mesmo, reducao_fixa_de_dano]
+    nota: "a passiva (10% do dano mágico sofrido vira dano verdadeiro a mais) e o passivo da E (−1–7 de dano físico) não estão na ficha"
+    mobilidade: {"1": avanco}
+    habilidades:
+      "1":
+        nome: Lançar Bandagens
+        forma: linha
+        recarga: [3]
+        cargas: 2
+        recarga_carga: 12.5
+        conjuracao: 0.25
+        alcance: 900
+        largura: 160
+        velocidade: 2000
+        dano: {tipo: magico, base: [60, 95, 130, 165], pdh: 0.7}
+        efeitos: {atordoa: 1}
+        lacuna: puxar_a_si_mesmo
+        nota: "sem o Amumu se puxar até o alvo; carga a cada 12,5 s (média dos ranks)"
+        fontes: "texto do jogo; alcance 900, conjuração 0,25: WR; largura 160, velocidade 2000: PC"
+      "2":
+        nome: Desespero
+        forma: proprio
+        recarga: [8]
+        duracao: 8
+        aura: {raio: 350, intervalo: 1, dano: {tipo: magico, base: [25, 30, 35, 40], vida_max_alvo: [0.012, 0.015, 0.018, 0.021]}}
+        nota: "ligado 8 s por vez e religado ao acabar; sem os +0,4% por 100 de PdH"
+        fontes: "texto do jogo; raio 350: PC"
+      "3":
+        nome: Chilique
+        forma: area
+        recarga: [9, 8, 7, 6]
+        conjuracao: 0.25
+        raio: 350
+        dano: {tipo: magico, base: [90, 120, 150, 180], pdh: 0.5}
+        efeitos: {lentidao: 0.1, duracao: 0.5}
+        nota: "sem o −0,5 s de recarga por ataque sofrido"
+        fontes: "texto do jogo; conjuração 0,25: WR; raio 350: PC"
+      "R":
+        nome: A Maldição da Múmia Triste
+        forma: area
+        recarga: [105, 95, 85]
+        conjuracao: 0.25
+        raio: 550
+        dano: {tipo: magico, base: [150, 250, 350], pdh: 0.7}
+        efeitos: {atordoa: 1.5}
+        fontes: "texto do jogo; conjuração 0,25: WR; raio 550: PC"
+
+  Yasuo:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.22      # EST
+    lacunas: [critico_dobrado, escudo_do_fluxo, exige_arremessado, bloqueia_projeteis, recarga_pela_velocidade_de_ataque]
+    nota: "a passiva (Taxa de Crítico dobrada, escudo do Fluxo) não está na ficha; a W (Parede de Vento) fica de fora: o motor não bloqueia projéteis"
+    mobilidade: {"3": avanco}
+    habilidades:
+      "1":
+        nome: Tempestade de Aço
+        forma: zonas
+        recarga: [4]
+        conjuracao: 0.35
+        alcance: 400
+        zonas: [{forma: retangulo, comprimento: 400, largura: 120}]
+        dano: {tipo: fisico, base: [20, 50, 80, 110], dda: 1.05}
+        reconjurar:
+          apos: 1.5
+          janela: 6
+          versoes:
+            - {nome: Tempestade de Aço (2º acúmulo), forma: zonas, alcance: 400, zonas: [{forma: retangulo, comprimento: 400, largura: 120}], dano: {tipo: fisico, base: [20, 50, 80, 110], dda: 1.05}}
+            - {nome: Tempestade de Aço (redemoinho), forma: linha, alcance: 930, largura: 180, velocidade: 1150, atravessa: true, dano: {tipo: fisico, base: [20, 50, 80, 110], dda: 1.05}, efeitos: {arremessa: 1}}
+        lacuna: recarga_pela_velocidade_de_ataque
+        nota: "os acúmulos viram reconjurações (o 3º uso é o redemoinho), mesmo sem acertar; sem o crítico e sem a recarga menor pela Velocidade de Ataque"
+        fontes: "texto do jogo; alcance 400 / 930, larguras 120 / 180, velocidade 1150, conjuração 0,35: WR; janela: EST"
+      "3":
+        nome: Espada Ágil
+        forma: avanco
+        recarga: [7]
+        alcance: 400
+        velocidade: 1000
+        raio: 100
+        dano: {tipo: magico, base: [70, 90, 110, 130], dda_bonus: 0.2, pdh: 0.6}
+        nota: "a recarga é a de 7 s por inimigo (no duelo, o único alvo); sem os +25% por uso"
+        fontes: "texto do jogo; alcance 400: WR; velocidade 900 + VdM (WR) arredondada: EST"
+      "R":
+        nome: Último Suspiro
+        forma: alvo
+        recarga: [50, 40, 30]
+        alcance: 1000
+        salta: true
+        dano: {tipo: fisico, base: [200, 350, 500], dda_bonus: 1.5}
+        efeitos: {arremessa: 1.3}
+        lacuna: exige_arremessado
+        nota: "pode ser usada sem o alvo estar no ar; sem a Penetração de Armadura dos críticos por 15 s"
+        fontes: "texto do jogo; alcance 1000: WR"
+
+  Yone:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.22      # EST
+    lacunas: [critico_dobrado, forma_espiritual, teleporte_atras_do_alvo, recarga_pela_velocidade_de_ataque]
+    nota: "a passiva (2º ataque mágico, Taxa de Crítico dobrada) não está na ficha"
+    mobilidade: {"3": avanco}
+    habilidades:
+      "1":
+        nome: Aço Mortal
+        forma: zonas
+        recarga: [3.8]
+        conjuracao: 0.35
+        alcance: 450
+        zonas: [{forma: retangulo, comprimento: 450, largura: 80}]
+        dano: {tipo: fisico, base: [30, 50, 70, 90], dda: 1.0}
+        reconjurar:
+          apos: 1.5
+          janela: 6
+          versoes:
+            - {nome: Aço Mortal (2º acúmulo), forma: zonas, alcance: 450, zonas: [{forma: retangulo, comprimento: 450, largura: 80}], dano: {tipo: fisico, base: [30, 50, 70, 90], dda: 1.0}}
+            - {nome: Aço Mortal (corrente de vento), forma: avanco, alcance: 450, velocidade: 1500, raio: 100, dano: {tipo: fisico, base: [30, 50, 70, 90], dda: 1.0}, efeitos: {arremessa: 1}}
+        lacuna: recarga_pela_velocidade_de_ataque
+        nota: "os acúmulos viram reconjurações (o 3º uso é o avanço que arremessa), mesmo sem acertar; sem o crítico"
+        fontes: "texto do jogo; alcance 450, largura 80, velocidade 1500, conjuração 0,35: WR; janela: EST"
+      "2":
+        nome: Fenda Espiritual
+        forma: zonas
+        recarga: [13.4]
+        conjuracao: 0.5
+        alcance: 550
+        danos:
+          fisico: {tipo: fisico, base: [10, 17.5, 25, 32.5], vida_max_alvo: [0.045, 0.05, 0.055, 0.06]}
+          magico: {tipo: magico, base: [10, 17.5, 25, 32.5], vida_max_alvo: [0.045, 0.05, 0.055, 0.06]}
+        zonas:
+          - {nome: físico, forma: setor, angulo: 80, raio: 550, dano: fisico, acumula: true}
+          - {nome: mágico, forma: setor, angulo: 80, raio: 550, dano: magico, acumula: true}
+        escudo: {base: [80, 110, 140, 170], dda_bonus: 1.2}
+        duracao_escudo: 1.5
+        nota: "metade física e metade mágica; o escudo vem sempre dobrado (o do 1º campeão atingido); duração do escudo: EST"
+        fontes: "texto do jogo; raio 550, ângulo 80, conjuração 0,5: WR"
+      "3":
+        nome: Desatar da Alma
+        forma: avanco
+        recarga: [20, 17, 14, 11]
+        conjuracao: 0.225
+        alcance: 300
+        velocidade: 1200
+        sem_dano: true
+        lacuna: forma_espiritual
+        nota: "só o avanço; sem os 5 s de Forma Espiritual (27,5–35% do dano como verdadeiro no fim) e sem a volta ao corpo"
+        fontes: "texto do jogo; alcance 300, velocidade 1200, conjuração 0,225: WR"
+      "R":
+        nome: Destino Selado
+        forma: zonas
+        recarga: [80, 70, 60]
+        conjuracao: 0.75
+        alcance: 950
+        danos:
+          fisico: {tipo: fisico, base: [100, 187.5, 275], dda: 0.3}
+          magico: {tipo: magico, base: [100, 187.5, 275], dda: 0.3}
+        zonas:
+          - {nome: físico, forma: retangulo, comprimento: 950, largura: 250, dano: fisico, efeitos: {arremessa: 1}, acumula: true}
+          - {nome: mágico, forma: retangulo, comprimento: 950, largura: 250, dano: magico, acumula: true}
+        lacuna: teleporte_atras_do_alvo
+        nota: "metade física e metade mágica; sem o teleporte para trás do último campeão atingido"
+        fontes: "texto do jogo; alcance 950, largura 250, conjuração 0,75: WR; arremesso de 1 s: EST"
+
+  Akali:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    recurso: {tipo: energia, max: 200, por_s: 10}   # EST: só a Q paga
+    lacunas: [marca_do_assassino, invisivel_so_na_fumaca, salto_para_tras, dano_pela_vida_perdida_ate_limite]
+    nota: "a passiva (círculo que fortalece o ataque) não está na ficha; só a Q gasta Energia (200, 10 por s: EST)"
+    mobilidade: {"3": salto, "R": avanco}
+    habilidades:
+      "1":
+        nome: Golpe dos Cinco Pontos
+        forma: zonas
+        recarga: [1.5]
+        custo: [105, 90, 75, 60]
+        conjuracao: 0.25
+        alcance: 450
+        zonas: [{forma: setor, angulo: 40, raio: 450}]
+        dano: {tipo: magico, base: [35, 70, 105, 140], dda: 0.65, pdh: 0.6}
+        efeitos: {lentidao: 0.5, duracao: 0.5}
+        nota: "a lentidão vale para todos (no jogo, só no alcance máximo)"
+        fontes: "texto do jogo; alcance 450, conjuração 0,25: WR; ângulo: EST; Energia: EST"
+      "2":
+        nome: Proteção do Crepúsculo
+        forma: proprio
+        recarga: [18, 17, 16, 15]
+        conjuracao: 0.25
+        duracao: 6
+        invisivel: {duracao: 6, revela_dano: false, revela_ao_atacar: true}
+        velocidade_movimento: [0.35, 0.4, 0.45, 0.5]
+        duracao_velocidade: 2
+        lacuna: invisivel_so_na_fumaca
+        nota: "invisível 6 s onde estiver (no jogo, só dentro da fumaça de 5,5–7 s), revelada ao atacar; velocidade por 2 s (EST)"
+        fontes: "texto do jogo; conjuração 0,25: WR; duração média e tempo da velocidade: EST"
+      "3":
+        nome: Investida Shuriken
+        forma: linha
+        recarga: [15, 13, 11, 9]
+        conjuracao: 0.4
+        alcance: 900
+        largura: 70
+        velocidade: 1800
+        dano: {tipo: magico, base: [30, 60, 90, 120], dda: 0.25, pdh: 0.3}
+        reconjurar:
+          apos: 0.5
+          janela: 3
+          versoes:
+            - {nome: Investida Shuriken (avanço), forma: alvo, alcance: 1500, salta: true, dano: {tipo: magico, base: [60, 125, 190, 255], dda: 0.5, pdh: 0.8}}
+        lacuna: salto_para_tras
+        nota: "sem o salto para trás da 1ª conjuração; a reconjuração vai até o alvo mesmo sem a marca"
+        fontes: "texto do jogo; alcance 900, velocidade 1800, conjuração 0,4: WR; largura: EST"
+      "R":
+        nome: Execução Perfeita
+        forma: avanco
+        recarga: [85, 65, 45]
+        conjuracao: 0.25
+        alcance: 500
+        velocidade: 1500
+        raio: 110
+        dano: {tipo: magico, base: [80, 200, 320], dda_bonus: 0.5, pdh: 0.3}
+        reconjurar:
+          apos: 2.5
+          janela: 7
+          versoes:
+            - {nome: Execução Perfeita (2º avanço), forma: avanco, alcance: 750, velocidade: 3000, raio: 110, dano: {tipo: magico, base: [140, 280, 420], pdh: 0.6}}
+        lacuna: dano_pela_vida_perdida_ate_limite
+        nota: "o 2º avanço com o dano médio (70–210 + 30–90% do PdH pela Vida perdida do alvo)"
+        fontes: "texto do jogo; alcance 500, velocidades 1500 / 3000, conjuração 0,25: WR; raio 110: PC; alcance do 2º: EST"
+
+  Sylas:
+    qualidade: D
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [usurpar_ultimate, cargas_da_passiva, puxar_a_si_mesmo, cura_pela_vida_perdida_propria]
+    nota: "D: a R (usar a ultimate do inimigo) não existe no motor e fica de fora; a passiva (3 cargas de giro das correntes) também não está na ficha"
+    mobilidade: {"2": salto, "3": avanco}
+    habilidades:
+      "1":
+        nome: Correntes-Chicote
+        forma: zonas
+        origem: ponto
+        recarga: [9, 8, 7, 6]
+        conjuracao: 0.4
+        alcance: 775
+        zonas: [{forma: circulo, raio: 200}]
+        dano: {tipo: magico, base: [120, 210, 300, 390], pdh: 1.2}
+        efeitos: {lentidao: [0.15, 0.2, 0.25, 0.3], duracao: 1.5}
+        nota: "as correntes e a explosão de 0,6 s depois saem juntas"
+        fontes: "texto do jogo; alcance 775, raio 200, conjuração 0,4: PC"
+      "2":
+        nome: Regicida
+        forma: alvo
+        recarga: [12, 10, 8, 6]
+        alcance: 400
+        salta: true
+        dano: {tipo: magico, base: [75, 125, 175, 225], pdh: 0.6}
+        efeitos: {cura_por_campeao: {base: [30, 60, 90, 120], pdh: 0.3, vida_bonus: 0.05}}
+        lacuna: cura_pela_vida_perdida_propria
+        nota: "a cura mínima (no jogo, até o dobro pela Vida perdida do Sylas)"
+        fontes: "texto do jogo; alcance 400: PC"
+      "3":
+        nome: Evasão
+        forma: avanco
+        recarga: [12, 11, 10, 9]
+        alcance: 400
+        velocidade: 1450
+        sem_dano: true
+        reconjurar:
+          apos: 0.3
+          janela: 3.5
+          versoes:
+            - {nome: Evasão (correntes), forma: linha, alcance: 800, largura: 120, velocidade: 1800, dano: {tipo: magico, base: [80, 150, 220, 290], pdh: 0.8}, efeitos: {atordoa: 0.5, arremessa: 0.5}}
+        lacuna: puxar_a_si_mesmo
+        nota: "a reconjuração não puxa o Sylas até o alvo"
+        fontes: "texto do jogo; alcance 800, largura 120, velocidade 1800: PC; avanço 400, velocidade: EST"
+
+  Ambessa:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [finta_da_passiva, vampirismo_de_habilidade, teleporte_ate_o_alvo, energia]
+    nota: "a passiva (Finta: avanço curto após habilidade e ataque fortalecido) e o passivo da R (Penetração e Vampirismo de Habilidade) não estão na ficha; sem Energia"
+    mobilidade: {"R": avanco}
+    habilidades:
+      "1":
+        nome: Golpe Ardiloso
+        forma: zonas
+        recarga: [12, 11, 10, 9]
+        conjuracao: 0.25
+        alcance: 400
+        danos:
+          borda: {tipo: fisico, base: [60, 80, 100, 120], dda_bonus: 0.6, vida_max_alvo: [0.04, 0.05, 0.06, 0.07]}
+          caes: {tipo: fisico, base: [30, 40, 50, 60], dda_bonus: 0.3, vida_max_alvo: [0.02, 0.025, 0.03, 0.035]}
+        zonas:
+          - {nome: borda, forma: setor, angulo: 180, raio: 400, raio_interno: 275, dano: borda}
+          - {nome: cães, forma: setor, angulo: 180, raio: 275, dano: caes}
+        reconjurar:
+          apos: 0.5
+          janela: 3.5
+          versoes:
+            - {nome: Pancada Cortante, forma: zonas, alcance: 600, zonas: [{forma: retangulo, comprimento: 600, largura: 120}], dano: {tipo: fisico, base: [70, 100, 130, 160], dda_bonus: 0.9, vida_max_alvo: [0.04, 0.05, 0.06, 0.07]}}
+        nota: "a Pancada Cortante fica disponível mesmo sem acertar; sem os +0,02% por DdA adicional"
+        fontes: "texto do jogo; raios 275 / 400, ângulo 180: WR; comprimento e largura da Pancada, conjuração: EST"
+      "2":
+        nome: Repúdio
+        forma: proprio
+        recarga: [17, 16, 15, 14]
+        duracao: 1.5
+        escudo: {base_nivel: 50, base_nivel_nv15: 120, dda_bonus: 1.2}
+        imparavel_por: 0.5
+        aura: {raio: 325, intervalo: 1.5, dano: {tipo: fisico, base: [70, 100, 130, 160], dda_bonus: 0.8}}
+        nota: "a onda de choque sai uma vez aos 1,5 s; sem o dano maior ao bloquear um controle; escudo de 50 no nível 1 a 120 no 15 (EST)"
+        fontes: "texto do jogo; raio 325: WR; escudo pelo nível: EST"
+      "3":
+        nome: Lancinar
+        forma: area
+        recarga: [12, 11, 10, 9]
+        raio: 325
+        dano: {tipo: fisico, base: [40, 80, 120, 160], dda_bonus: [0.5, 0.55, 0.6, 0.65]}
+        efeitos: {lentidao: 0.5, duracao: 1}
+        nota: "lentidão média (99% decaindo em 1 s); sem a reconjuração no fim da Finta"
+        fontes: "texto do jogo; raio 325: WR"
+      "R":
+        nome: Execução Pública
+        forma: linha
+        recarga: [80, 70, 60]
+        conjuracao: 0.55
+        alcance: 1250
+        largura: 65
+        velocidade: 3000
+        dano: {tipo: fisico, base: [200, 300, 400], vida_perdida_alvo: 0.1}
+        efeitos: {suprime: 1, atordoa: 0.4}
+        lacuna: teleporte_ate_o_alvo
+        nota: "sem o teleporte até o alvo, sem a redução de dano e a imunidade no meio; sem os +0,05% por DdA adicional e PdH"
+        fontes: "texto do jogo; alcance 1250, largura 65, conjuração 0,55: WR; velocidade: EST"
