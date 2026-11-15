@@ -26,7 +26,8 @@ class FichasBaraoTest {
 
     /** Rodada 18, part 2: the other champions (every lane), in the order they were written. */
     static final List<String> PARTE_2 = List.of("Ahri", "Akshan", "Alistar", "Annie", "Ashe", "Aurelion Sol", "Bardo", "Blitzcrank",
-            "Brand", "Braum", "Caitlyn", "Corki");
+            "Brand", "Braum", "Caitlyn", "Corki",
+            "Draven", "Evelynn", "Ezreal", "Fiddlesticks", "Galio", "Hecarim", "Heimerdinger", "Hwei", "Janna", "Jhin", "Jinx", "Kai'Sa", "Kalista", "Karma");
 
     private static List<String> all() {
         List<String> out = new java.util.ArrayList<>(RODADA_18);

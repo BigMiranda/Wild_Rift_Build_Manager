@@ -3568,3 +3568,265 @@ campeoes:
             dano: {tipo: fisico, base: [80, 140, 200, 260], dda_bonus: 2.2}, efeitos: {reduz_arm: {pct: 0.1, duracao: 2}}, fontes: "texto do jogo; cone: EST"}
       "R": {nome: Barragem de Mísseis, forma: linha, recarga: [4], cargas: 4, recarga_carga: 16, conjuracao: 0.15, alcance: 1300, largura: 80, velocidade: 2000,
             dano: {tipo: magico, base: [70, 140, 210], dda_bonus: 0.65}, nota: "sem o Grandão; as cargas em 16 s, menos com ataques", fontes: "texto do jogo; geometria: EST"}
+
+  Draven:
+    qualidade: C
+    raio: 65
+    alcance: 550
+    espera_ataque: 0.2
+    velocidade_projetil: 1600
+    lacunas: [pegar_o_machado, adoracao, execucao_da_reta]
+    nota: "a Revolução do Machado é um próximo ataque com recarga (sem pegar o machado no chão)"
+    habilidades:
+      "1": {nome: Revolução do Machado, forma: ataque, recarga: [5, 4.5, 4, 3.5], janela: 6, dano: {tipo: fisico, base: [45, 50, 55, 60], dda_bonus: [0.9, 1.0, 1.1, 1.2]},
+            nota: "pego de volta a cada 2 ataques: metade da recarga", fontes: "texto do jogo"}
+      "2": {nome: Adrenalina, forma: proprio, recarga: [10], duracao: 3, velocidade_ataque: [0.25, 0.3, 0.35, 0.4], velocidade_movimento: [0.5, 0.55, 0.6, 0.65], duracao_velocidade: 1.5, fontes: "texto do jogo"}
+      "3": {nome: Sai da Frente, forma: linha, recarga: [15, 14, 13, 12], conjuracao: 0.25, alcance: 1050, largura: 260, velocidade: 1400, atravessa: true,
+            dano: {tipo: fisico, base: [75, 120, 165, 210], dda_bonus: 0.5}, efeitos: {lentidao: [0.25, 0.3, 0.35, 0.4], duracao: 2, afasta: 150}, fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Reta da Morte, forma: linha, recarga: [70, 65, 60], conjuracao: 0.5, alcance: 3000, largura: 320, velocidade: 2000, atravessa: true,
+            dano: {tipo: fisico, base: [200, 300, 400], dda_bonus: 1.5}, nota: "só a ida", fontes: "texto do jogo; geometria: EST"}
+
+  Evelynn:
+    qualidade: C
+    raio: 65
+    alcance: 175
+    espera_ataque: 0.25
+    lacunas: [sombra_demoniaca, fascinacao_com_atraso, recuo_da_ultimate]
+    nota: "sem a passiva (camuflagem e cura); a Fascinação encanta na hora"
+    mobilidade: {"3": avanco}
+    habilidades:
+      "1": {nome: Espinho de Ódio, forma: linha, recarga: [4], conjuracao: 0.25, alcance: 800, largura: 60, velocidade: 2400,
+            dano: {tipo: magico, base: [80, 95, 110, 125], pdh: 1.0}, nota: "as duas fileiras", fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Fascinação, forma: alvo, recarga: [14, 13, 12, 11], alcance: 1200, efeitos: {encanta: [1, 1.25, 1.5, 1.75], reduz_rm: {pct: [0.2, 0.24, 0.28, 0.32], duracao: 4}},
+            nota: "o encanto sai sem os 2,5 s de espera", fontes: "texto do jogo; alcance: EST"}
+      "3": {nome: Chicotada, forma: alvo, recarga: [8], alcance: 225, salta: true, dano: {tipo: magico, base: [55, 75, 95, 115], vida_max_alvo: 0.04}, velocidade_movimento: 0.3, duracao_velocidade: 2, fontes: "texto do jogo"}
+      "R": {nome: Última Carícia, forma: cone, recarga: [90, 75, 60], conjuracao: 0.35, alcance: 500, angulo: 180,
+            dano: {tipo: magico, base: [150, 260, 370], pdh: 0.75}, nota: "sem o dano ×2,3 abaixo de 35% e sem o recuo", fontes: "texto do jogo; cone: EST"}
+
+  Ezreal:
+    qualidade: C
+    raio: 65
+    alcance: 550
+    espera_ataque: 0.2
+    velocidade_projetil: 2000
+    lacunas: [q_reduz_recargas, fluxo_detonado, raio_da_translocacao]
+    nota: "sem a passiva (Velocidade de Ataque) e sem o corte de recargas do Disparo Místico"
+    mobilidade: {"3": salto}
+    habilidades:
+      "1": {nome: Disparo Místico, forma: linha, recarga: [5.5, 5, 4.5, 4], conjuracao: 0.25, alcance: 1150, largura: 120, velocidade: 2000,
+            dano: {tipo: fisico, base: [25, 55, 85, 115], dda: 1.35, pdh: 0.3}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Fluxo Essencial, forma: linha, recarga: [10], conjuracao: 0.25, alcance: 1150, largura: 160, velocidade: 1700,
+            dano: {tipo: magico, base: [80, 155, 230, 305], dda_bonus: 0.6, pdh: [0.75, 0.8, 0.85, 0.9]}, nota: "detona na hora", fontes: "texto do jogo; geometria: EST"}
+      "3": {nome: Translocação Arcana, forma: piscar, recarga: [24, 20.5, 17, 13.5], alcance: 475, nota: "sem o raio", fontes: "texto do jogo; alcance: EST"}
+      "R": {nome: Barragem Incendiária, forma: linha, recarga: [80, 70, 60], conjuracao: 1, alcance: 3000, largura: 320, velocidade: 2000, atravessa: true,
+            dano: {tipo: magico, base: [300, 500, 700], dda_bonus: 1.0, pdh: 1.0}, fontes: "texto do jogo; geometria: EST"}
+
+  Fiddlesticks:
+    qualidade: C
+    raio: 65
+    alcance: 480
+    espera_ataque: 0.25
+    velocidade_projetil: 1750
+    lacunas: [efigies, temor_furtivo, canal_interrompido_pela_distancia]
+    nota: "sem a passiva (Efígies); o teleporte da ultimate é um teleporte de 1,5 s"
+    habilidades:
+      "1": {nome: Aterrorizar, forma: alvo, recarga: [13.5, 13, 12.5, 12], conjuracao: 0.25, alcance: 575,
+            dano: {tipo: magico, base: [45, 70, 95, 120], vida_atual_alvo: [0.04, 0.05, 0.06, 0.07]}, efeitos: {amedronta: [1.2, 1.4, 1.6, 1.8]}, fontes: "texto do jogo; alcance: EST"}
+      "2": {nome: Colheita Farta, forma: canal, recarga: [11, 10, 9, 8], duracao: 2, intervalo: 0.25, zonas: [{forma: circulo, raio: 650}],
+            dano: {tipo: magico, base: [120, 180, 240, 300], pdh: 0.6, vida_perdida_alvo: [0.1, 0.115, 0.13, 0.145]}, nota: "sem a cura de 40%", fontes: "texto do jogo; raio: EST"}
+      "3": {nome: Ceifar, forma: zonas, origem: ponto, recarga: [9, 8, 7, 6], conjuracao: 0.4, alcance: 850,
+            zonas: [{nome: centro, forma: circulo, raio: 120, efeitos: {silencia: 1.25, lentidao: [0.35, 0.4, 0.45, 0.5], duracao: 1.25}}, {forma: circulo, raio: 300, efeitos: {lentidao: [0.35, 0.4, 0.45, 0.5], duracao: 1.25}}],
+            dano: {tipo: magico, base: [70, 120, 170, 220], pdh: 0.5}, fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Tempestade de Corvos, forma: teleporte, recarga: [100, 80, 60], alcance: 800, canaliza: 1.5,
+            aura: {raio: 600, intervalo: 0.25, dano: {tipo: magico, base: [30, 50, 70], pdh: 0.1}}, duracao: 5, fontes: "texto do jogo; geometria: EST"}
+
+  Galio:
+    qualidade: C
+    raio: 80
+    alcance: 175
+    espera_ataque: 0.25
+    lacunas: [escudo_passivo, golpe_colossal, defender_segurado, entrada_heroica_em_aliado]
+    nota: "sem a passiva (Golpe Colossal); o Escudo de Durand provoca ao soltar, sem a redução por tipo (que segue a build)"
+    mobilidade: {"3": avanco}
+    habilidades:
+      "1": {nome: Ventos de Guerra, forma: zonas, origem: ponto, recarga: [11.5, 10, 8.5, 7], conjuracao: 0.25, atraso: 0.6, alcance: 825, zonas: [{forma: circulo, raio: 235}],
+            dano: {tipo: magico, base: [70, 115, 160, 205], pdh: 0.75, vida_max_alvo: 0.08}, nota: "rajada e tornado juntos", fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Escudo de Durand, forma: zonas, recarga: [18, 17, 16, 15], conjuracao: 0.5, zonas: [{forma: circulo, raio: 275}],
+            dano: {tipo: magico, base: [40, 80, 120, 160], pdh: 0.9}, efeitos: {provoca: 1}, fontes: "texto do jogo; raio, provocação: EST"}
+      "3": {nome: Soco Justiceiro, forma: avanco, recarga: [10, 9, 8, 7], conjuracao: 0.4, alcance: 650, velocidade: 2300, raio: 160,
+            dano: {tipo: magico, base: [90, 140, 190, 240], pdh: 0.8}, efeitos: {arremessa: 0.75}, fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Entrada Heroica, forma: zonas, origem: ponto, recarga: [90, 80, 70], atraso: 2.5, alcance: 4000, zonas: [{forma: circulo, raio: 500}],
+            dano: {tipo: magico, base: [150, 250, 350], pdh: 0.7}, efeitos: {arremessa: 0.75}, nota: "cai no ponto, sem precisar de aliado", fontes: "texto do jogo; raio: EST"}
+
+  Hecarim:
+    qualidade: C
+    raio: 80
+    alcance: 175
+    espera_ataque: 0.25
+    lacunas: [furia_acumulada, avanco_do_ataque_devastador, cura_do_espirito]
+    nota: "sem a passiva (DdA pela Velocidade de Movimento)"
+    mobilidade: {"R": avanco}
+    habilidades:
+      "1": {nome: Fúria, forma: zonas, recarga: [4.5, 4, 3.5, 3], conjuracao: 0.75, zonas: [{forma: circulo, raio: 375}],
+            dano: {tipo: fisico, base: [6, 18, 30, 42], dda: 1.32}, nota: "o crítico de 120% em campeões", fontes: "texto do jogo; raio: EST"}
+      "2": {nome: Espírito do Pavor, forma: proprio, recarga: [16, 15, 14, 13], duracao: 4, status: {"Armor": [6, 12, 18, 24], "Magic Resistance": [6, 12, 18, 24]},
+            aura: {raio: 525, intervalo: 0.5, dano: {tipo: magico, base: [12, 18, 24, 30], pdh: 0.2}}, nota: "sem a cura", fontes: "texto do jogo; raio: EST"}
+      "3": {nome: Ataque Devastador, forma: ataque, recarga: [18, 17, 16, 15], janela: 5, alcance_extra: 250, dano: {tipo: fisico, base: [5, 10, 15, 20], dda_bonus: 0.3},
+            efeitos: {afasta: 300}, velocidade_movimento: 0.4, duracao_velocidade: 4, fontes: "texto do jogo; alcance extra: EST"}
+      "R": {nome: Massacre das Sombras, forma: avanco, recarga: [100, 85, 70], alcance: 1000, velocidade: 1100, ate_ponto: true, raio: 300,
+            dano: {tipo: magico, base: [150, 250, 350], pdh: 1.0}, efeitos: {amedronta: 1.1}, fontes: "texto do jogo; geometria: EST"}
+
+  Heimerdinger:
+    qualidade: D
+    raio: 65
+    alcance: 550
+    espera_ataque: 0.25
+    velocidade_projetil: 1500
+    lacunas: [tres_torres, carga_das_torres, melhoria]
+    nota: "uma torre por conjuração (sem o raio carregado); a MELHORIA!!! fica de fora"
+    habilidades:
+      "1":
+        nome: Torre Evolutiva H-28G
+        forma: invocacao
+        origem: ponto
+        recarga: [8]
+        alcance: 250
+        invoca: {nome: Torre H-28G, comportamento: parada, vida: [150, 200, 250, 300], armadura: 10, rm: 25, velocidade_ataque: 0.8, alcance: 525, raio: 50, duracao: 24,
+                 dano: {tipo: magico, base: [5, 10, 15, 20], pdh: 0.25}}
+        nota: "as cargas viram uma torre a cada 8 s (até 3 vivas); vida EST"
+        fontes: "texto do jogo; Torre: EST"
+      "2": {nome: Micro-Mísseis Hextec, forma: linha, recarga: [10, 9, 8, 7], conjuracao: 0.25, alcance: 1100, largura: 100, velocidade: 2000,
+            dano: {tipo: magico, base: [108, 153, 198, 243], pdh: 1.08}, nota: "5 mísseis num alvo: 100% + 4 × 20%", fontes: "texto do jogo; geometria: EST"}
+      "3": {nome: Granada de Tempestade de Elétrons CH-2, forma: zonas, origem: ponto, recarga: [11], conjuracao: 0.25, atraso: 0.5, alcance: 950,
+            zonas: [{nome: centro, forma: circulo, raio: 135, efeitos: {atordoa: 1.25}}, {forma: circulo, raio: 250, efeitos: {lentidao: 0.35, duracao: 2}}],
+            dano: {tipo: magico, base: [70, 120, 170, 220], pdh: 0.6}, fontes: "texto do jogo; geometria: EST"}
+
+  Hwei:
+    qualidade: D
+    raio: 65
+    alcance: 550
+    espera_ataque: 0.25
+    velocidade_projetil: 2000
+    lacunas: [dez_habilidades, tema_escolhido, passiva_assinatura]
+    nota: "um feitiço por tema: Fogo Devastador, Lagoa da Reflexão, Semblante Sinistro"
+    habilidades:
+      "1": {nome: Fogo Devastador, forma: linha, recarga: [9.5, 8.5, 7.5, 6.5], conjuracao: 0.25, alcance: 1000, largura: 140, velocidade: 1500,
+            dano: {tipo: magico, base: [50, 85, 120, 155], pdh: 0.7, vida_max_alvo: [0.04, 0.05, 0.06, 0.07]}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Lagoa da Reflexão, forma: proprio, recarga: [17, 16.5, 16, 15.5], duracao: 3, escudo: {base: [50, 70, 90, 110], pdh: 0.3}, fontes: "texto do jogo"}
+      "3": {nome: Semblante Sinistro, forma: linha, recarga: [13, 12, 11, 10], conjuracao: 0.25, alcance: 900, largura: 120, velocidade: 1400,
+            dano: {tipo: magico, base: [70, 120, 170, 220], pdh: 0.7}, efeitos: {amedronta: [1, 1.125, 1.25, 1.375]}, fontes: "texto do jogo; geometria: EST"}
+      "R": {nome: Desespero Vertiginoso, forma: linha, recarga: [70, 60, 50], conjuracao: 0.25, alcance: 1100, largura: 140, velocidade: 1400,
+            dano: {tipo: magico, base: [230, 360, 490], pdh: 0.85}, efeitos: {lentidao: 0.6, duracao: 3}, nota: "os 3 s e a explosão num golpe; lentidão média", fontes: "texto do jogo; geometria: EST"}
+
+  Janna:
+    qualidade: C
+    raio: 65
+    alcance: 550
+    espera_ataque: 0.25
+    velocidade_projetil: 1200
+    lacunas: [carga_da_ventania, escudo_em_torre, cura_em_aliados]
+    nota: "sem a passiva (Velocidade de Movimento); a Monção afasta e cura a si"
+    habilidades:
+      "1": {nome: Ventania Uivante, forma: linha, recarga: [7], conjuracao: 0.75, alcance: 1100, largura: 240, velocidade: 2200, atravessa: true,
+            dano: {tipo: magico, base: [50, 90, 130, 170], pdh: 0.5}, efeitos: {arremessa: 0.75}, nota: "2 cargas em 14 s: uma a cada 7 s", fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Zéfiro, forma: zonas, recarga: [9, 8.5, 8, 7.5], zonas: [{forma: circulo, raio: 600}], dano: {tipo: magico, base: [50, 90, 130, 170], pdh: 0.5},
+            velocidade_movimento: [0.1, 0.15, 0.2, 0.25], duracao_velocidade: 2, fontes: "texto do jogo; raio: EST"}
+      "3": {nome: Olho da Tempestade, forma: proprio, alvo: aliado, alcance: 800, recarga: [16, 14, 12, 10], duracao: 3, escudo: {base: [80, 120, 160, 200], pdh: 0.5}, fontes: "texto do jogo"}
+      "R": {nome: Monção, forma: zonas, recarga: [80, 75, 70], zonas: [{forma: circulo, raio: 725}], efeitos: {afasta: 600}, cura: {base: [150, 225, 300], pdh: 0.9},
+            nota: "3 s de cura num golpe", fontes: "texto do jogo; raio: EST"}
+
+  Jhin:
+    qualidade: C
+    raio: 65
+    alcance: 550
+    espera_ataque: 0.2
+    velocidade_projetil: 3000
+    lacunas: [quatro_balas, quarto_tiro_critico, ricochete, enraiza_so_marcado]
+    nota: "sem a passiva (4 balas e o 4º crítico); Florescer Mortal enraíza sempre"
+    habilidades:
+      "1": {nome: Granada Dançante, forma: alvo, recarga: [6.5, 6, 5.5, 5], conjuracao: 0.25, alcance: 550, dano: {tipo: fisico, base: [45, 80, 115, 150], dda: [0.35, 0.45, 0.55, 0.65], pdh: 0.6}, fontes: "texto do jogo"}
+      "2": {nome: Florescer Mortal, forma: linha, recarga: [12], conjuracao: 0.75, alcance: 2550, largura: 90, velocidade: 5000,
+            dano: {tipo: fisico, base: [60, 100, 140, 180], dda: 0.4}, efeitos: {enraiza: [1.25, 1.5, 1.75, 2]}, fontes: "texto do jogo; geometria: EST"}
+      "3":
+        nome: Audiência Cativa
+        forma: invocacao
+        origem: ponto
+        recarga: [20, 18, 16, 14]
+        alcance: 750
+        invoca: {nome: Armadilha de Lótus, comportamento: mina, raio_disparo: 100, raio_explosao: 260, arma_em: 1, duracao: 60, dano: {tipo: magico, base: [20, 100, 180, 260], dda: 1.2, pdh: 1.0}, efeitos: {lentidao: 0.3, duracao: 2}}
+        fontes: "texto do jogo; raios: EST"
+      "R": {nome: Aclamação, forma: canal, recarga: [80, 70, 60], duracao: 3, intervalo: 0.75, zonas: [{forma: setor, angulo: 60, raio: 3000}],
+            dano: {tipo: fisico, base: [375, 750, 1125], dda: 1.25}, nota: "4 disparos (o 4º ×2), sem o aumento pela Vida perdida", fontes: "texto do jogo; cone: EST"}
+
+  Jinx:
+    qualidade: C
+    raio: 65
+    alcance: 525
+    espera_ataque: 0.2
+    velocidade_projetil: 2000
+    lacunas: [troca_de_arma, fishbones, entusiasmo]
+    nota: "só a Pow-Pow (Velocidade de Ataque acumulada); sem a passiva"
+    habilidades:
+      "1": {nome: Trocando!, forma: proprio, recarga: [2.5], duracao: 2.5, velocidade_ataque: [0.35, 0.6, 0.85, 1.1], nota: "os acúmulos da Pow-Pow cheios", fontes: "texto do jogo"}
+      "2": {nome: Zap!, forma: linha, recarga: [8, 7, 6, 5], conjuracao: 0.6, alcance: 1450, largura: 120, velocidade: 3300,
+            dano: {tipo: fisico, base: [10, 80, 150, 220], dda: 1.6}, efeitos: {lentidao: [0.3, 0.4, 0.5, 0.6], duracao: 2}, fontes: "texto do jogo; geometria: EST"}
+      "3":
+        nome: Mordidinha Flamejante!
+        forma: invocacao
+        origem: ponto
+        recarga: [15, 13, 11, 9]
+        alcance: 900
+        invoca: {nome: Mordidinha, comportamento: mina, raio_disparo: 120, raio_explosao: 200, arma_em: 0.5, duracao: 5, dano: {tipo: magico, base: [70, 140, 210, 280], pdh: 1.0}, efeitos: {enraiza: [1.45, 1.55, 1.65, 1.75]}}
+        nota: "uma das 3"
+        fontes: "texto do jogo; raios: EST"
+      "R": {nome: Super Mega Míssil da Morte!, forma: linha, recarga: [60, 50, 40], conjuracao: 0.6, alcance: 3500, largura: 280, velocidade: 2000,
+            dano: {tipo: fisico, base: [250, 350, 450], dda_bonus: 1.2, vida_perdida_alvo: [0.25, 0.3, 0.35]}, nota: "o dano máximo (depois de 1 s de voo)", fontes: "texto do jogo; geometria: EST"}
+
+  Kai'Sa:
+    qualidade: C
+    raio: 65
+    alcance: 525
+    espera_ataque: 0.2
+    velocidade_projetil: 2000
+    lacunas: [plasma, arma_viva, invisivel_na_sobrecarga]
+    nota: "sem a passiva (Plasma) e sem as evoluções"
+    mobilidade: {"R": salto}
+    habilidades:
+      "1": {nome: Chuva Icathiana, forma: alvo, recarga: [9, 8, 7, 6], alcance: 600, dano: {tipo: fisico, base: [90, 135, 180, 225], dda_bonus: 1.125, pdh: 0.675},
+            nota: "6 projéteis num alvo: 100% + 5 × 25%", fontes: "texto do jogo; alcance: EST"}
+      "2": {nome: Exploradora do Vazio, forma: linha, recarga: [20, 18, 16, 14], conjuracao: 0.4, alcance: 3000, largura: 200, velocidade: 1750,
+            dano: {tipo: magico, base: [30, 60, 90, 120], dda: 1.3, pdh: 0.5}, fontes: "texto do jogo; geometria: EST"}
+      "3": {nome: Sobrecarga, forma: proprio, recarga: [16, 14, 12, 10], duracao: 4, velocidade_ataque: [0.4, 0.5, 0.6, 0.7], velocidade_movimento: [0.5, 0.55, 0.6, 0.65], duracao_velocidade: 1, fontes: "texto do jogo"}
+      "R": {nome: Instinto Assassino, forma: alvo, recarga: [80, 70, 60], alcance: 1500, salta: true, escudo: {base: [100, 125, 150], dda: [0.8, 1.2, 1.6], pdh: 1.0}, duracao_escudo: 2,
+            nota: "salta até o alvo, sem exigir o Plasma", fontes: "texto do jogo; alcance: EST"}
+
+  Kalista:
+    qualidade: C
+    raio: 65
+    alcance: 525
+    espera_ataque: 0.2
+    velocidade_projetil: 2000
+    lacunas: [aprumo_marcial, juramento, lancas_acumuladas]
+    nota: "sem a passiva (salto após atacar); Lacerar conta 4 lanças; sem o aliado Em Juramento"
+    habilidades:
+      "1": {nome: Perfurar, forma: linha, recarga: [8, 7.5, 7, 6.5], conjuracao: 0.25, alcance: 1150, largura: 80, velocidade: 2400,
+            dano: {tipo: fisico, base: [30, 110, 190, 270], dda: 1.1}, fontes: "texto do jogo; geometria: EST"}
+      "3": {nome: Lacerar, forma: zonas, recarga: [10, 9, 8, 7], zonas: [{forma: circulo, raio: 1100}],
+            dano: {tipo: fisico, base: [66, 111, 156, 201], dda: [1.78, 1.99, 2.2, 2.41]}, efeitos: {lentidao: [0.15, 0.25, 0.35, 0.45], duracao: 2}, fontes: "texto do jogo"}
+
+  Karma:
+    qualidade: C
+    raio: 65
+    alcance: 525
+    espera_ataque: 0.25
+    velocidade_projetil: 1500
+    lacunas: [mantra, corrente_que_quebra, escudo_em_aliado]
+    nota: "sem o Mantra (só a forma simples); a ultimate é a área com lentidão"
+    habilidades:
+      "1": {nome: Chama Interior, forma: linha, recarga: [9, 8, 7, 6], conjuracao: 0.25, alcance: 950, largura: 120, velocidade: 1700,
+            dano: {tipo: magico, base: [60, 100, 140, 180], pdh: 0.4}, efeitos: {lentidao: 0.35, duracao: 1.5}, fontes: "texto do jogo; geometria: EST"}
+      "2": {nome: Decisão Absorta, forma: alvo, recarga: [15], alcance: 675, dano: {tipo: magico, base: [70, 120, 170, 220], pdh: 0.85}, efeitos: {enraiza: [1, 1.25, 1.5, 1.75]},
+            nota: "a corrente não quebra: o enraizamento sai na hora", fontes: "texto do jogo; alcance: EST"}
+      "3": {nome: Inspiração, forma: proprio, recarga: [10, 9, 8, 7], duracao: 3, escudo: {base: [60, 90, 120, 150], pdh: 0.65}, velocidade_movimento: 0.3, duracao_velocidade: 1.5, fontes: "texto do jogo"}
+      "R": {nome: Abraço Transcendente, forma: zonas, origem: ponto, recarga: [70, 65, 60], atraso: 1, alcance: 800, zonas: [{forma: circulo, raio: 350}],
+            dano: {tipo: magico, base: [170, 280, 390], pdh: 0.8}, efeitos: {lentidao: 0.35, duracao: 1}, fontes: "texto do jogo; geometria: EST"}
