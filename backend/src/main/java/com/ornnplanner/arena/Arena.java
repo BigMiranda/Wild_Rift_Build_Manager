@@ -339,6 +339,8 @@ public class Arena {
         U walkFrom;
         // states of the sheets
         double invulnerableUntil = -1;
+        /** Rodada 18: until then its health does not go below 1 (`nao_morre`, Tryndamere's Undying Rage). */
+        double undyingUntil = -1;
         double untargetableUntil = -1;
         double nextTrail = 1;
         /** The invisibility on, with what reveals it (null = none, or Vayne's own). */
@@ -5241,6 +5243,10 @@ public class Arena {
         if (t.hp < 1 && (t.in.dummy != null && t.in.dummy.immortal || holdAtOne != null && holdAtOne == t.idx)) {
             t.hp = 1;   // a test attacker: the fight goes on until the build tested dies
         }
+        if (t.hp < 1 && t.undyingUntil > now) {
+            t.hp = 1;   // `nao_morre`: it cannot die for a while
+            count(t, "nao_morreu");
+        }
         if (t.hp <= 0 && !revive(t)) {
             t.dead = true;
             t.r.deathTime = now;
@@ -8833,7 +8839,7 @@ public class Arena {
 
     /** The fields of {@link #selfStates}. */
     private static final List<String> SELF_STATES = List.of("invisivel", "invulneravel", "nao_selecionavel", "imparavel_por", "reducao_dano",
-            "status", "status_pct");
+            "status", "status_pct", "nao_morre");
 
     /** Invisible, invulnerable, untargetable or unstoppable for a while, by the sheet. */
     private void selfStates(U u, Map<String, Object> ab, double duration, int rank) {
@@ -8861,6 +8867,9 @@ public class Arena {
         }
         if (ab.get("invulneravel") != null) {
             u.invulnerableUntil = now + num(ab.get("invulneravel"), duration);
+        }
+        if (ab.get("nao_morre") != null) {
+            u.undyingUntil = now + num(ab.get("nao_morre"), duration);
         }
         if (ab.get("nao_selecionavel") != null) {
             u.untargetableUntil = now + num(ab.get("nao_selecionavel"), duration);

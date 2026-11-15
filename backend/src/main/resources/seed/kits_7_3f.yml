@@ -96,6 +96,8 @@
 #                 true (no mapa inteiro só começa numa moita; a rota única não tem moitas) | fora_da_moita: s (no mapa
 #                 inteiro, acaba depois de s fora da moita) | revela_ao_atacar: true | ao_revelar: {velocidade_ataque, duracao}
 #   lacunas       por campeão: as mecânicas que o motor ainda não tem, aproximadas (a `nota` diz como)
+# Rodada 18 (docs/rodada-18.md):
+#   nao_morre     s: a Vida não cai abaixo de 1 por s segundos (Fúria Sem Fim do Tryndamere); em `proprio` ou como estado de outra forma
 #
 # As fichas passam pelo validador (arena/fight/SheetValidator): campo desconhecido, unidade estranha ou habilidade que não faz nada.
 mapa:
@@ -1668,3 +1670,361 @@ campeoes:
         lacuna: execucao_reconjurada
         nota: "a execução abaixo de 25% vale no acerto (no jogo, ao reconjurar ou no fim dos 4 s, com 1,5 s de puxão e o Temor em volta); lentidão média (até 75% pela Vida perdida)"
         fontes: "texto do jogo; alcance 2500, largura 160, velocidade 3200, conjuração 0,5: WR"
+
+  Cho'Gath:
+    qualidade: C
+    raio: 80                 # EST (cresce com o Banquete no jogo)
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    acumulos_permanentes: {por_minuto: 0.6, max: 12, desde_min: 5, vida: 120}   # EST: acúmulos de Banquete pelo minuto
+    lacunas: [ataque_com_area, porcentagem_por_acumulo, tamanho_por_acumulo]
+    nota: "a passiva (cura ao abater) não está na ficha; os acúmulos de Banquete só dão Vida (120 por acúmulo, média dos ranks)"
+    habilidades:
+      "1":
+        nome: Ruptura
+        forma: zonas
+        origem: ponto
+        recarga: [6]
+        conjuracao: 0.5
+        alcance: 950
+        atraso: 0.625
+        zonas: [{forma: circulo, raio: 250}]
+        dano: {tipo: magico, base: [80, 135, 190, 245], pdh: 1.0}
+        efeitos: {arremessa: 1, lentidao: 0.6, duracao: 1.5}
+        fontes: "texto do jogo; alcance 950, conjuração 0,5: PC; raio 250, atraso 0,625: PC (EST)"
+      "2":
+        nome: Grito Selvagem
+        forma: zonas
+        recarga: [12, 11, 10, 9]
+        conjuracao: 0.5
+        alcance: 650
+        zonas: [{forma: setor, angulo: 60, raio: 650}]
+        dano: {tipo: magico, base: [80, 130, 180, 230], pdh: 0.7}
+        efeitos: {silencia: [1.4, 1.6, 1.8, 2]}
+        fontes: "texto do jogo; alcance 650, ângulo 60, conjuração 0,5: PC"
+      "3":
+        nome: Espinhos Vorpais
+        forma: ataque
+        recarga: [7, 6, 5, 4]
+        janela: 6
+        ataques: 3
+        dano: {tipo: magico, base: [20, 45, 70, 95], pdh: 0.3, vida_max_alvo: [0.023, 0.027, 0.031, 0.035]}
+        efeitos: {lentidao: [0.3, 0.35, 0.4, 0.45], duracao: 1.5}
+        lacuna: ataque_com_area
+        nota: "só no alvo do ataque (no jogo, um cone de espinhos de 650); sem os +0,6% da Vida máxima por acúmulo de Banquete"
+        fontes: "texto do jogo; janela: EST"
+      "R":
+        nome: Banquete
+        forma: alvo
+        recarga: [70, 60, 50]
+        conjuracao: 0.25
+        alcance: 175
+        dano: {tipo: verdadeiro, base: [300, 450, 600], pdh: 0.5, vida_bonus: 0.1}
+        nota: "o acúmulo ganho ao abater não volta para a luta (vem do minuto ou do cenário)"
+        fontes: "texto do jogo; alcance 175, conjuração 0,25: PC"
+
+  Kennen:
+    qualidade: C
+    raio: 65                 # EST
+    alcance: 550             # PC
+    espera_ataque: 0.25      # EST
+    velocidade_projetil: 1600   # EST
+    lacunas: [marca_da_tormenta, energia]
+    nota: "a Marca da Tormenta (3 acúmulos de habilidades atordoam por 1,25 s) vira o atordoamento da W ativa; sem a Energia e sem o 5º ataque da W"
+    mobilidade: {"3": corrida}
+    habilidades:
+      "1":
+        nome: Shuriken Trovejante
+        forma: linha
+        recarga: [7, 6, 5, 4]
+        conjuracao: 0.25
+        alcance: 1050
+        largura: 100
+        velocidade: 1700
+        dano: {tipo: magico, base: [75, 140, 205, 270], pdh: 0.75}
+        fontes: "texto do jogo; conjuração 0,25: WR; alcance 1050, largura 100, velocidade 1700: PC"
+      "2":
+        nome: Surto Elétrico
+        forma: area
+        recarga: [12, 10, 8, 6]
+        conjuracao: 0.25
+        raio: 775
+        dano: {tipo: magico, base: [70, 100, 130, 160], pdh: 0.8}
+        efeitos: {atordoa: 1.25}
+        lacuna: marca_da_tormenta
+        nota: "acerta todos a até 775 (no jogo, só os marcados) e atordoa como se fechasse as 3 Marcas"
+        fontes: "texto do jogo; conjuração 0,25: WR; raio 775: PC"
+      "3":
+        nome: Investida Relâmpago
+        forma: avanco
+        recarga: [7.5, 7, 6.5, 6]
+        alcance: 700
+        velocidade: 900
+        raio: 100
+        dano: {tipo: magico, base: [70, 120, 170, 220], pdh: 0.7}
+        nota: "os 2 s de esfera (100% de velocidade, sem atacar) viram um avanço de 700 (EST); sem os 50–80% de Velocidade de Ataque ao sair"
+        fontes: "texto do jogo; raio 200 (PC) não usado; alcance e velocidade: EST"
+      "R":
+        nome: Turbilhão Cortante
+        forma: proprio
+        recarga: [80, 75, 70]
+        conjuracao: 0.25
+        duracao: 3
+        status: {"Armor": [20, 40, 60], "Magic Resistance": [20, 40, 60]}
+        aura: {raio: 550, intervalo: 0.5, dano: {tipo: magico, base: [20, 55, 90], pdh: 0.13}}
+        nota: "6 raios iguais (sem os +10% por raio repetido e sem as Marcas)"
+        fontes: "texto do jogo; conjuração 0,25: WR; raio 550: PC"
+
+  Poppy:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [bloqueia_avancos, broquel_da_passiva, resistencias_passivas]
+    nota: "a passiva (broquel a cada 12 s com escudo de 13% da Vida) e o passivo da W (+12% de Armadura e RM) não estão na ficha"
+    mobilidade: {"3": avanco}
+    habilidades:
+      "1":
+        nome: Choque do Martelo
+        forma: zonas
+        recarga: [7, 6, 5, 4]
+        conjuracao: 0.25
+        alcance: 460
+        zonas: [{forma: retangulo, comprimento: 460, largura: 160}]
+        dano: {tipo: fisico, base: [100, 140, 180, 220], dda_bonus: 1.8, vida_max_alvo: 0.18}
+        efeitos: {lentidao: [0.25, 0.3, 0.35, 0.4], duracao: 1}
+        nota: "as duas batidas (o golpe e a explosão 1 s depois) saem juntas"
+        fontes: "texto do jogo; alcance 460, largura 160: PC; conjuração 0,25: WR"
+      "2":
+        nome: Presença Inabalável
+        forma: proprio
+        recarga: [19, 16.5, 14, 11.5]
+        duracao: 2
+        velocidade_movimento: 0.4
+        lacuna: bloqueia_avancos
+        nota: "só a velocidade; sem o campo que para avanços (95–230 de dano, enraíza e deixa lento quem avança)"
+        fontes: "texto do jogo; raio 325 (WR) não usado"
+      "3":
+        nome: Investida Heroica
+        forma: alvo
+        recarga: [13, 12, 11, 10]
+        alcance: 475
+        salta: true
+        dano: {tipo: fisico, base: [75, 100, 125, 150], dda_bonus: 0.5}
+        efeitos: {afasta: 300, afasta_velocidade: 1800, afasta_parede: {atordoa: [1.7, 1.8, 1.9, 2]}}
+        nota: "sem o dano de colisão na parede (+75–150)"
+        fontes: "texto do jogo; alcance 475: WR; velocidade 1800: PC; distância do empurrão: EST"
+      "R":
+        nome: Veredito da Guardiã
+        forma: zonas
+        recarga: [90, 80, 70]
+        conjuracao: 0.25
+        alcance: 500
+        carregar: {min: 0, max: 1, alcance_de: 500, alcance_ate: 1200, dano_de: 0.5, dano_ate: 1}
+        zonas: [{forma: retangulo, comprimento: 500, largura: 180}]
+        dano: {tipo: fisico, base: [200, 300, 400], dda_bonus: 0.9}
+        efeitos: {arremessa: 1}
+        nota: "carga até 1 s (no jogo, até 4 s); o empurrão longo até o Nexus vira 1 s no ar"
+        fontes: "texto do jogo; alcance 500→1200, largura 180: PC; conjuração 0,25: WR; tempo da carga: EST"
+
+  Olaf:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [escala_vida_perdida_propria, pegar_o_machado, dano_em_si_mesmo, prolonga_com_ataques]
+    nota: "a passiva (Velocidade de Ataque e Vampirismo pela Vida perdida) e o passivo da R (+15–35 de Armadura e RM) não estão na ficha"
+    mobilidade: {"3": salto}
+    habilidades:
+      "1":
+        nome: Ressaca
+        forma: linha
+        recarga: [7]
+        conjuracao: 0.25
+        alcance: 1000
+        largura: 180
+        velocidade: 1600
+        dano: {tipo: fisico, base: [50, 115, 180, 245], dda_bonus: 1.05}
+        efeitos: {lentidao: [0.2, 0.275, 0.35, 0.425], duracao: 2, reduz_arm: {pct: 0.2, duracao: 4}}
+        lacuna: pegar_o_machado
+        nota: "sem os −4,5 s de recarga ao recolher o machado"
+        fontes: "texto do jogo; conjuração 0,25: WR; alcance 1000, largura 180, velocidade 1600: PC"
+      "2":
+        nome: Golpes Nefastos
+        forma: proprio
+        recarga: [15, 14, 13, 12]
+        duracao: 4
+        velocidade_ataque: [0.35, 0.5, 0.65, 0.8]
+        escudo: {base: [35, 70, 105, 140]}
+        nota: "o escudo dura os 4 s da velocidade (no jogo, 2,5 s) e não soma os 15% da Vida perdida"
+        fontes: "texto do jogo"
+      "3":
+        nome: Balanço Temerário
+        forma: alvo
+        recarga: [10, 9, 8, 7]
+        conjuracao: 0.25
+        alcance: 300
+        salta: true
+        dano: {tipo: verdadeiro, base: [45, 95, 145, 195], dda: 0.55}
+        lacuna: dano_em_si_mesmo
+        nota: "sem o dano verdadeiro no próprio Olaf (18 + 15% do DdA) e sem o −1 s de recarga por ataque"
+        fontes: "texto do jogo; alcance 300: WR; conjuração: EST"
+      "R":
+        nome: Ragnarok
+        forma: proprio
+        recarga: [60, 55, 50]
+        duracao: 4
+        imparavel_por: 4
+        status: {"Attack Damage": [5, 15, 25]}
+        status_pct: {"Attack Damage": 0.2}
+        velocidade_movimento: [0.2, 0.45, 0.7]
+        duracao_velocidade: 1
+        lacuna: prolonga_com_ataques
+        nota: "4 s sem os +2,5 s por ataque em campeão; a velocidade vale em qualquer direção"
+        fontes: "texto do jogo"
+
+  Tryndamere:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # PC
+    espera_ataque: 0.25      # EST
+    lacunas: [furia_em_critico, escala_vida_perdida_propria, reduz_dano_de_ataque]
+    nota: "a passiva (Taxa de Crítico pela Fúria) e o DdA passivo da Q pela Vida perdida não estão na ficha; o crítico é o da build"
+    mobilidade: {"3": avanco}
+    habilidades:
+      "1":
+        nome: Sanguinário
+        forma: proprio
+        recarga: [12]
+        cura: {base: [130, 170, 210, 250], pdh: 0.9}
+        nota: "cura com 50 de Fúria (EST): 55–85 + 30% do PdH, mais 1,5–3,3 + 1,2% do PdH por ponto de Fúria"
+        fontes: "texto do jogo; Fúria consumida: EST"
+      "2":
+        nome: Grito Zombador
+        forma: area
+        recarga: [12]
+        conjuracao: 0.3
+        raio: 850
+        efeitos: {lentidao: [0.25, 0.3, 0.35, 0.4], duracao: 3}
+        lacuna: reduz_dano_de_ataque
+        nota: "a lentidão vale para todos (no jogo, só para quem se afasta); sem os −20–80 de DdA dos atingidos"
+        fontes: "texto do jogo; conjuração 0,3: WR; raio 850: PC"
+      "3":
+        nome: Corte Giratório
+        forma: avanco
+        recarga: [11, 10, 9, 8]
+        alcance: 660
+        velocidade: 1300
+        raio: 225
+        dano: {tipo: fisico, base: [80, 130, 180, 230], dda_bonus: 1.1, pdh: 0.8}
+        nota: "sem o −1 s (−2 s em campeão) de recarga por crítico"
+        fontes: "texto do jogo; alcance 660, raio 225: PC; velocidade: EST"
+      "R":
+        nome: Fúria Sem Fim
+        forma: proprio
+        recarga: [90, 80, 70]
+        duracao: 5
+        nao_morre: 5
+        nota: "a Vida não cai abaixo de 1 por 5 s (Rodada 18: `nao_morre`); a Fúria ganha não entra"
+        fontes: "texto do jogo"
+
+  Wukong:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [clone_imita_habilidades, invisivel_no_avanco]
+    nota: "a passiva (até 3 acúmulos de 10 de Armadura e cura de 0,35% da Vida por s) não está na ficha"
+    mobilidade: {"3": salto}
+    habilidades:
+      "1":
+        nome: Cajado Dourado
+        forma: ataque
+        recarga: [8, 7.5, 7, 6.5]
+        janela: 4
+        alcance_extra: 100
+        reinicia_ataque: true
+        dano: {tipo: fisico, base: [60, 90, 120, 150], dda: [0.35, 0.4, 0.45, 0.5]}
+        nota: "sem o passivo (+50% a cada 10,5 s) e sem o −0,5 s de recarga por ataque"
+        fontes: "texto do jogo; janela, alcance extra: EST"
+      "2":
+        nome: Guerreiro Trapaceiro
+        forma: invocacao
+        recarga: [14, 13.5, 13, 12.5]
+        invoca: {nome: Clone, comportamento: clone, fracao: 0.3, duracao: 3.5}
+        lacuna: clone_imita_habilidades
+        nota: "um clone com 30% do Wukong (o dano do texto: 20–50%) que ataca; sem o avanço de 300 com 1 s invisível e sem imitar as habilidades"
+        fontes: "texto do jogo; fração e duração: média dos ranks (EST)"
+      "3":
+        nome: Resplendor das Nuvens
+        forma: alvo
+        recarga: [8]
+        alcance: 625
+        salta: true
+        dano: {tipo: fisico, base: [70, 110, 150, 190], dda_bonus: 0.8}
+        nota: "sem os clones em até 2 inimigos próximos e sem os 25–55% de Velocidade de Ataque"
+        fontes: "texto do jogo; alcance 625: WR"
+      "R":
+        nome: Ciclone
+        forma: area
+        recarga: [80, 70, 60]
+        raio: 225
+        dano: {tipo: fisico, dda: 2.2, vida_max_alvo: [0.1, 0.14, 0.18]}
+        efeitos: {arremessa: 1}
+        reconjurar:
+          apos: 2
+          janela: 6
+          versoes:
+            - {nome: Ciclone (2º giro), forma: area, raio: 225, dano: {tipo: fisico, dda: 2.2, vida_max_alvo: [0.1, 0.14, 0.18]}, efeitos: {arremessa: 1}}
+        nota: "o dano dos 2 s do giro sai de uma vez; sem os 20% de velocidade"
+        fontes: "texto do jogo; raio 225: WR"
+
+  Singed:
+    qualidade: C
+    raio: 80                 # EST
+    alcance: 175             # EST
+    espera_ataque: 0.25      # EST
+    lacunas: [rastro_no_chao, impede_avancos, enraiza_no_adesivo]
+    nota: "a passiva (velocidade ao passar por campeões) não está na ficha"
+    habilidades:
+      "1":
+        nome: Rastro de Veneno
+        forma: proprio
+        recarga: [8]
+        duracao: 8
+        aura: {raio: 250, intervalo: 0.5, dano: {tipo: magico, base: [10, 14, 18, 22], pdh: 0.15}}
+        lacuna: rastro_no_chao
+        nota: "o rastro vira uma aura de 250 (EST) em volta do Singed, ligada 8 s por vez e religada ao acabar (a recarga de 1 s do liga/desliga empilharia auras); dano por segundo do texto em pulsos de 0,5 s"
+        fontes: "texto do jogo; raio 180 (WR) alargado para o rastro: EST"
+      "2":
+        nome: Mega Adesivo
+        forma: zonas
+        origem: ponto
+        recarga: [14, 13, 12, 11]
+        conjuracao: 0.25
+        alcance: 1000
+        zonas: [{forma: circulo, raio: 265}]
+        dano: {tipo: magico, base: [50, 70, 90, 110], pdh: 0.25}
+        efeitos: {lentidao: [0.35, 0.4, 0.45, 0.5], duracao: 3}
+        lacuna: impede_avancos
+        nota: "a área não fica no chão: a lentidão dura os 3 s do adesivo; sem impedir avanços"
+        fontes: "texto do jogo; alcance 1000, raio 265, conjuração 0,25: WR"
+      "3":
+        nome: Lançar
+        forma: alvo
+        recarga: [13]
+        conjuracao: 0.25
+        alcance: 300
+        dano: {tipo: magico, base: [40, 60, 80, 100], pdh: 0.5, vida_max_alvo: [0.05, 0.06, 0.07, 0.08]}
+        efeitos: {arremessa: 0.5}
+        lacuna: enraiza_no_adesivo
+        nota: "o arremesso por cima do Singed vira 0,5 s no ar (EST), sem mudar de lado; sem o enraizar de 1,25–2 s no Mega Adesivo"
+        fontes: "texto do jogo; alcance 300, conjuração 0,25: WR; tempo no ar: EST"
+      "R":
+        nome: Poção da Insanidade
+        forma: proprio
+        recarga: [70, 65, 60]
+        duracao: 20
+        status: {"Ability Power": [30, 55, 80], "Armor": [30, 55, 80], "Magic Resistance": [30, 55, 80], "Move Speed": [30, 55, 80]}
+        nota: "sem a regeneração (15–25), sem os 30% num aliado e sem as Feridas Dolorosas"
+        fontes: "texto do jogo"

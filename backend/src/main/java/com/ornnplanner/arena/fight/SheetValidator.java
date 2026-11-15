@@ -29,7 +29,9 @@ public final class SheetValidator {
             "custo", "alvo", "cura", "invisivel", "invulneravel", "nao_selecionavel", "imparavel_por", "canaliza", "invoca", "perpendicular",
             "segundos", "ate_ponto", "ate_alvo", "atravessa_parede", "interrompivel", "troca_forma",
             // Rodada das fichas, lote 1
-            "ao_acertar", "reducao_dano", "consome_armazenado", "deixa_marco", "linha_entre", "ataques", "lacuna", "status", "status_pct");
+            "ao_acertar", "reducao_dano", "consome_armazenado", "deixa_marco", "linha_entre", "ataques", "lacuna", "status", "status_pct",
+            // Rodada 18
+            "nao_morre");
     private static final Set<String> ZONE = Set.of("nome", "forma", "raio", "raio_interno", "angulo", "comprimento", "largura", "centro",
             "vertices", "pontos", "dano", "efeitos", "acumula");
     private static final Set<String> EFFECTS = Set.of("lentidao", "duracao", "atordoa", "atordoa_max", "arremessa", "arremessa_demais", "puxa",
@@ -49,7 +51,7 @@ public final class SheetValidator {
     private static final Set<String> DOES_SOMETHING = Set.of("dano", "danos", "efeitos", "zonas", "escudo", "cura", "proximo_ataque", "aura",
             "velocidade_movimento", "velocidade_ataque", "vampirismo", "dda", "vida_extra", "invisivel", "invulneravel", "nao_selecionavel",
             "imparavel_por", "invoca", "terreno", "pilar", "troca_forma", "alcance_extra", "fortalecido", "reconjurar",
-            "linha_entre", "deixa_marco", "reducao_dano", "status", "status_pct");
+            "linha_entre", "deixa_marco", "reducao_dano", "status", "status_pct", "nao_morre");
     /** Shapes that do something by moving the champion or the map. */
     private static final Set<String> ACTS_ALONE = Set.of("avanco", "piscar", "teleporte", "parede", "anexar", "volta_no_tempo", "elemental",
             "tudo_ou_nada", "empurrao");

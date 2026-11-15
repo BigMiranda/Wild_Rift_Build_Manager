@@ -321,3 +321,7 @@ fichas:
     <<: *base
     habilidades:
       "1": {nome: Coragem, forma: proprio, recarga: 30, reducao_dano: {pct: 0.5, duracao: 4}}
+  nao_morre:
+    <<: *base
+    habilidades:
+      "1": {nome: Fúria Sem Fim, forma: proprio, recarga: 30, nao_morre: 6}

@@ -249,6 +249,23 @@ class MecanicasTest {
     }
 
     @Test
+    void anUndyingChampionKeepsOneHealth() {
+        assertTrue(fight(frail("nao_morre"), 5).fighters.get(0).deathTime != null);
+        Result r = fight(frail("nao_morre"), 5, cast(0.1));
+        assertEquals(null, r.fighters.get(0).deathTime);
+        assertEquals(1, r.fighters.get(0).health, 1e-6);
+        assertTrue(ev(r, 0, "nao_morreu") >= 1);
+    }
+
+    /** Attacked, with little health: the attacker kills it in a couple of seconds. */
+    private static List<Arena.Input> frail(String sheet) {
+        List<Arena.Input> in = attacked(sheet, 150);
+        in.get(0).f.total.put(Stats.MAX_HEALTH, 150.0);
+        in.get(0).f.base.put(Stats.MAX_HEALTH, 150.0);
+        return in;
+    }
+
+    @Test
     void anUntargetableChampionIsNotAttacked() {
         Result r = fight(attacked("nao_selecionavel", 150), 1.8, cast(0.1));
         assertEquals(0, r.fighters.get(0).taken, 1e-6);
