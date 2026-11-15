@@ -64,6 +64,9 @@ Opt-in tests, gated by system properties (skipped by default):
 - `-Dmacro.report=data/ornn-planner.db` (+ `-Dmacro.generations=30 -Dmacro.population=24 -Dmacro.episodes=4`) —
   `MacroReportTest`: on a copy, trains the whole match's macro against the script and validates it on unseen seeds.
 - `-Dcalc.report=data/ornn-planner.db` — `CalculatorReportTest`: the calculator's measured examples on a copy.
+- `-Dclassai.db=data/ornn-planner.db` (+ `-Dclassai.generations=80 -Dclassai.classes=Mago,…`) — `ClassAiTrainTest`: on a copy
+  (`target/classai/copy.db`), an AI per main class (3 champions each, 1 x 1 at minute 15); then
+  `python tools/importar_ias_de_classe.py` copies the good ones into the real database, live (no restart needed).
 - `-Darena.golden.write=true` — **re-records** the golden files in `src/test/resources/arena/`
   (`ArenaRegressionTest`: SHA-256 fingerprints of full fight results for ~35 scenarios; `ArenaPolicyMigrationTest`:
   `golden-ai-v2.txt`). Only re-record when a behavior change is intended, and say so; a golden mismatch otherwise

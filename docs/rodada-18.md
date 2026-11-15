@@ -138,3 +138,32 @@ só na versão local (fora de `PublicApi`).
 Próximos passos: conferir no Treino a geometria `EST`, começando pelos campeões mais jogados de cada rota. Também dá
 para tirar dos D as mecânicas que mais mudam a luta (as torres do Heimerdinger, a Esfera da Orianna, as formas de
 Nidalee, Shyvana e Kayn).
+
+## Parte 2b: IAs de classe para a campanha
+
+Pedido de 15/11/2026, às 13:15: "garanta que IAs bem treinadas de cada campeão sejam usadas para a campanha".
+
+A campanha usa o cérebro Automático (`AutoBrain`) nos duelos de confronto (passo 3: a build contra os representantes
+de cada classe). Para cada campeão, ele escolhe a IA do próprio campeão; sem ela, a da classe dele (`class:<Classe>`);
+sem nenhuma, o cérebro Tático. O banco tinha IAs só de Ornn, Darius, Rumble, Mordekaiser e Yasuo, e nenhuma de classe:
+os outros 138 campeões lutavam com o Tático.
+
+Treinei uma IA para cada uma das 7 classes principais (`ClassAiTrainTest`, numa cópia do banco, para não parar a
+campanha que já rodava). Cada uma joga, em turnos, 3 campeões da classe com 4 itens típicos dela, num 1x1 aos 15
+minutos contra o Darius do cenário 2. Depois, `tools/importar_ias_de_classe.py` copiou para o banco real só as
+aprovadas pelo treino. Como o backend lê as IAs do banco a cada escolha, a campanha passou a usá-las na hora, sem
+reiniciar.
+
+| classe | campeões do treino | gerações | melhor que o Roteiro | melhor que o Tático | aceita |
+|---|---|---|---|---|---|
+| Tanque | Ornn, Malphite, K'Sante | 80 | 88% | 88% | sim |
+| Lutador | Darius, Garen, Aatrox | 80 | 100% | 94% | sim |
+| Assassino | Kha'Zix, Akali, Diana | 80 | 75% | 100% | sim |
+| Controlador | Thresh, Morgana, Nami | 80 | 100% | 88% | sim |
+| Especialista | Teemo, Singed, Kennen | 80 | 100% | 100% | sim |
+| Atirador | Caitlyn, Jinx, Ezreal | 200 (com 80: 25% / 56%, recusada) | 94% | 94% | sim |
+| Mago | Ahri, Lux, Annie | 200 (com 80: 50% / 69%, recusada) | 81% | 75% | sim |
+
+Os 143 campeões têm uma classe principal, então todos agora lutam com uma IA treinada: a própria (os 5 acima) ou a da
+classe. Conferido no backend da campanha: o Automático escolhe a IA da classe Lutador (`kind: classe`) para o Renekton.
+O Aatrox, primeiro da fila, terminou antes das IAs entrarem e fez os confrontos com o Tático.
