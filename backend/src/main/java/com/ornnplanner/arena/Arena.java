@@ -7194,8 +7194,8 @@ public class Arena {
      * it. Not on minions, monsters or structures.
      */
     private void itemExecute(U a, U t, int kind) {
-        if (t.dead || t.npc || a.team() == t.team() || kind == REFLECT) {
-            return;
+        if (t.dead || t.npc || a.team() == t.team() || kind == REFLECT || t.undyingUntil > now) {
+            return;   // under `nao_morre` the execute would only hit it again at 1 health, forever
         }
         for (ItemEffect e : a.f.effects) {
             if ("executa".equals(e.kind()) && t.hp > 0 && t.hp < num(e.p.get("abaixo"), 0.05) * t.maxHp) {
