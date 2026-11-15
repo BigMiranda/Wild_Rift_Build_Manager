@@ -175,7 +175,7 @@ export default function Arena({ forcedTab = null }) {
   }, [sc]);
 
   // Runs the scenario on every change (the engine is fast): debounced.
-  const ready = sc.fighters.length > 1 && sc.fighters.every((f) => f.buildId != null || f.dummy)
+  const ready = sc.fighters.length > 1 && sc.fighters.every((f) => f.buildId != null || f.dummy || f.build)
     && sc.fighters.some((f) => f.team === 0) && sc.fighters.some((f) => f.team === 1)
     && (!PUBLIC || sc.id != null);   // the public version runs only its scenarios, as they were saved
   const seq = useRef(0);
@@ -331,7 +331,7 @@ export default function Arena({ forcedTab = null }) {
   const cardBars = useMemo(() => cooldownBars(result), [result]);
   useEffect(() => setCard(null), [result]);
   const nameList = sc.fighters.map((f, i) => result?.fighters?.[i]?.champion ?? (f.dummy ? f.dummy.name ?? 'Boneco de pano'
-    : builds.find((b) => b.id === f.buildId)?.unitCode) ?? `#${i + 1}`);
+    : f.build?.unitCode ?? builds.find((b) => b.id === f.buildId)?.unitCode) ?? `#${i + 1}`);
   const names = useMemo(() => nameList, [nameList.join('|')]);
 
   const tabs = forcedTab ? null : (
@@ -1351,10 +1351,17 @@ function FighterSlot({ index, slot, builds, names, fighters, planned, stats, onC
     <div className="arena-slot" style={{ borderLeftColor: TEAM[slot.team] }}>
       <div className="row">
         <strong className="arena-idx">{index + 1}</strong>
-        <select value={slot.buildId ?? ''} onChange={(e) => onChange({ buildId: e.target.value ? Number(e.target.value) : null })} aria-label={t('report.build')}>
-          <option value="">{t('report.pickBuild')}</option>
-          {builds.map((b) => <option key={b.id} value={b.id}>{b.name} · {b.unitCode}</option>)}
-        </select>
+        {slot.build ? (
+          // a build that is not saved (Admin › Fichas opens one: the champion with no items); never stored
+          <span className="arena-inline-build" title={t('arena.inlineBuildTitle')}>
+            {slot.build.name ?? slot.build.unitCode} <span className="muted small">{t('arena.inlineBuild')}</span>
+          </span>
+        ) : (
+          <select value={slot.buildId ?? ''} onChange={(e) => onChange({ buildId: e.target.value ? Number(e.target.value) : null, build: null })} aria-label={t('report.build')}>
+            <option value="">{t('report.pickBuild')}</option>
+            {builds.map((b) => <option key={b.id} value={b.id}>{b.name} · {b.unitCode}</option>)}
+          </select>
+        )}
         {build && <BuildLink id={build.id} name={build.name} minute={slot.minute ?? undefined}>{t('preview.short')}</BuildLink>}
         <label className="inline slot-minute" title={t('arena.slotMinuteTitle')}>{t('arena.slotMinute')}
           <MinuteInput value={slot.minute} placeholder={t('report.minuteAuto')} onChange={(minute) => onChange({ minute })} />

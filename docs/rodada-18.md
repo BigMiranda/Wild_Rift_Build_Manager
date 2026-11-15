@@ -167,3 +167,36 @@ reiniciar.
 Os 143 campeões têm uma classe principal, então todos agora lutam com uma IA treinada: a própria (os 5 acima) ou a da
 classe. Conferido no backend da campanha: o Automático escolhe a IA da classe Lutador (`kind: classe`) para o Renekton.
 O Aatrox, primeiro da fila, terminou antes das IAs entrarem e fez os confrontos com o Tático.
+
+## Parte 2c: a tela Admin › Fichas visual, com prévia na Arena
+
+Pedidos de 15/11/2026: "uma prévia visual do campeão de cada skill, AA e passiva vs um boneco de pano na arena para
+checar se o formato das skills estaria certo" e "deixe essa tela mais visual, está muito difícil de ler com puro texto".
+
+**A tela.** Os campeões viram uma grade de retratos, com a qualidade em cor (A verde, B azul, C dourado, D vermelho), um
+ponto com o número de habilidades `EST` e um "!" quando o validador acusa algo. Os filtros são botões. Clicar num
+campeão abre, acima da grade, um cartão por parte do kit:
+
+- **Passiva**: o texto do jogo, a nota da ficha e as lacunas em etiquetas (as passivas quase todas ficam fora das fichas);
+- **Ataque básico**: o alcance desenhado em volta do campeão, o projétil e a espera;
+- **1, 2, 3 e R**: a forma desenhada em escala (`ShapeSketch`: o campeão dourado olhando para a direita, o alcance, a
+  área de acerto de cada zona — círculo, anel, setor, retângulo, cápsula, polígono —, a linha, o cone, o avanço até o
+  ponto final, o alvo; uma barra de 500 dá a escala), as medidas, o dano numa linha colorida pelo tipo
+  ("MÁGICO 80/150/220/290 + 90% PdH"), os controles e os efeitos em etiquetas (atordoar e cia. em vermelho, lentidão em
+  azul, deslocamentos em amarelo, marcas e reduções em roxo, o que vai no próprio campeão em verde), a nota, as fontes
+  com `EST` destacado e o texto do jogo para comparar. Uma habilidade que falta na ficha aparece tracejada, com o texto
+  do jogo.
+
+O duelo de teste virou barras: a Vida no fim e o dano de cada fonte.
+
+**A prévia na Arena.** Cada cartão tem "Ver na Arena", e o topo tem "Ver o kit inteiro na Arena": abre a Arena com o
+campeão sem itens, no minuto 15, contra um boneco de pano parado (20000 de Vida, 60 de Armadura e RM). Ele usa a
+habilidade (ou as quatro, uma a cada 2,5 s) no boneco e ataca entre elas. A reprodução desenha cada área de acerto no
+instante em que sai; pausando, o mouse sobre a forma diz o que é. O boneco fica a 80% do alcance do que é mostrado.
+
+Para isso, o campo `build` de um lutador do cenário (a build que não é salva) passou de `@JsonIgnore` a
+`@JsonProperty(access = WRITE_ONLY)`: é lido do pedido e nunca escrito, então continua sem ir para o banco com o
+cenário. A tela da Arena aceita esse lutador ("Ficha Malphite (sem itens, não salva)" no lugar da escolha de build).
+
+Feito numa worktree (`fichas-visual`) para não recompilar `backend/target/classes`, de onde o backend da campanha
+estava rodando.

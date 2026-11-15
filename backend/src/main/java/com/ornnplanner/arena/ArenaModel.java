@@ -53,8 +53,11 @@ public final class ArenaModel {
         public Integer matchSteps;
         public Integer matchLevel;
         public Double startHealth;
-        /** A build that is not saved (the planner's draft), used instead of {@link #buildId}; never stored. */
-        @JsonIgnore
+        /**
+         * A build that is not saved (the planner's draft, or Admin › Fichas' champion with no items), used instead of
+         * {@link #buildId}: read from a request, never written back (so it is never stored with a scenario).
+         */
+        @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
         public com.ornnplanner.repo.BuildRepository.Build build;
         /**
          * Items of the build held as other items (original id -> a synthetic item: only its flat stats, or the same gold
