@@ -146,10 +146,10 @@ export function RelevanceReport({ point, prices, itemsById, draft, overlay }) {
         <p><strong>{t('objectives.title')}</strong>: {n0(objectiveGold)} ({n0(share(objectiveGold))}%)
           {(point.objectiveParts ?? []).length > 1 && ' — ' + point.objectiveParts.map((p) => {
             const g = Object.entries(p.delta).reduce((sum, [k, v]) => sum + v * (prices[k] ?? 0), 0);
-            const name = p.source === 'baron' ? t('objectives.baron') : `${t(`objectives.${p.source}`)} ×${p.stacks}`;
+            const name = objectiveName(p);
             return `${name}: ${n0(g)}`;
           }).join(' · ')}
-          {(point.objectiveParts ?? []).length === 1 && ` — ${point.objectiveParts[0].source === 'baron' ? t('objectives.baron') : `${t(`objectives.${point.objectiveParts[0].source}`)} ×${point.objectiveParts[0].stacks}`}`}
+          {(point.objectiveParts ?? []).length === 1 && ` — ${objectiveName(point.objectiveParts[0])}`}
         </p>
       )}
       {draft && rows.length > 0 && (
@@ -488,4 +488,14 @@ export function PassivesPanel({ point, series, itemsById, builds = [], draft }) 
       {values && <p className="muted small">{t('passives.valuesHelp')}</p>}
     </section>
   );
+}
+
+/** A source of the objectives by name: Baron, a soul (fight-only ones say so), or a drake. */
+function objectiveName(p) {
+  if (p.source === 'baron') return t('objectives.baron');
+  if (p.source.startsWith('soul:')) {
+    const name = t('objectives.soulOf', { element: t(`objectives.${p.source.slice(5)}`) });
+    return p.fightOnly ? `${name} (${t('objectives.fightOnly')})` : name;
+  }
+  return t(`objectives.${p.source}`);
 }

@@ -81,6 +81,8 @@ public class BuildRepository {
     public static class OptionStep {
         public double start;
         public int value;
+        /** Seconds between one count and the next (Arcanista do Axioma's takedowns); null = the rune's default. */
+        public Double gap;
     }
 
     /** Gold earned at a game minute. */

@@ -43,6 +43,8 @@ export const STAT_META = {
   'Ability Haste': { icon: 'hourglass', color: 'var(--stat-ah)' },
   '% Attack Speed': { icon: 'arrows', color: 'var(--stat-as)' },
   'Move Speed': { icon: 'boot', color: 'var(--stat-ms)' },
+  'Total Move Speed': { icon: 'boot', color: 'var(--stat-ms)' },
+  'Applied Slow': { icon: 'boot', color: 'var(--stat-mr)' },
   '% Move Speed': { icon: 'boot', color: 'var(--stat-ms)' },
   '% Critical Rate': { icon: 'crit', color: 'var(--stat-crit)' },
   '% Lifesteal': { icon: 'drop', color: 'var(--stat-crit)' },

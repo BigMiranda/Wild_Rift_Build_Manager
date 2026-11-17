@@ -380,10 +380,15 @@ const rateLabel = (rate) => (rate.stat ? statLabel(rate.stat) : rate.fight);
 
 /**
  * An option that changes with the match's minute (Inabalável: 1 enemy in the lane, 2 in the ganks, 3 in the team
- * fights): steps {start, value}, each until the next one; without the build's own, the rune's defaults.
+ * fights): steps {start, value}, each until the next one; without the build's own, the rune's defaults. An option with
+ * `gapName` (Arcanista do Axioma: takedowns after each ultimate) also gives each step the seconds between one and the
+ * next (`gap`).
  */
 function OptionSteps({ option, steps, onChange }) {
-  const list = Array.isArray(steps) && steps.length ? steps : option.periods.map((p) => ({ start: p.start, value: p.value }));
+  const list = Array.isArray(steps) && steps.length ? steps
+    : option.periods.map((p) => (option.gapName ? { start: p.start, value: p.value, gap: p.gap ?? option.gapDefault }
+      : { start: p.start, value: p.value }));
+  const gapOf = (p) => p.gap ?? option.gapDefault ?? 0;
   const clamp = (v) => Math.max(option.min, Math.min(option.max, Math.round(Number(v) || 0)));
   return (
     <span className="rune-periods" title={t('runes.optionByMinute')}>
@@ -397,10 +402,17 @@ function OptionSteps({ option, steps, onChange }) {
                 onChange={(m) => onChange(list.map((x, k) => (k === i ? { ...x, start: m ?? 0 } : x)))} />}
           <input type="number" min={option.min} max={option.max} value={p.value} aria-label={option.name}
             onChange={(e) => onChange(list.map((x, k) => (k === i ? { ...x, value: clamp(e.target.value) } : x)))} />
+          {option.gapName && p.value > 1 && (
+            <>
+              <input type="number" min={0} max={60} step={1} value={gapOf(p)} aria-label={option.gapName} title={option.gapName}
+                onChange={(e) => onChange(list.map((x, k) => (k === i ? { ...x, gap: Math.max(0, Number(e.target.value) || 0) } : x)))} />
+              <small>{t('runes.gapSeconds')}</small>
+            </>
+          )}
           {i > 0 && <button className="icon danger" onClick={() => onChange(list.filter((_, k) => k !== i))} aria-label={t('runes.periodRemove')}>✕</button>}
         </span>
       ))}
-      <button className="link" onClick={() => onChange([...list, { start: (list[list.length - 1].start ?? 0) + 5, value: clamp(list[list.length - 1].value + 1) }])}>
+      <button className="link" onClick={() => onChange([...list, { ...list[list.length - 1], start: (list[list.length - 1].start ?? 0) + 5, value: clamp(list[list.length - 1].value + 1) }])}>
         {t('runes.stepAdd')}
       </button>
     </span>

@@ -95,8 +95,58 @@ public final class Model {
         public Double heldEvery;
         public Double heldMax;
         public Double heldFrom;
+        /**
+         * Cut of the ultimate's cooldown left per takedown (Arcanista do Axioma: 0.07), as a % of the ultimate's cooldown
+         * (the line's type) worked out at each moment by the engine: {@link #takedownSteps} say how many takedowns follow
+         * each ultimate and how many seconds apart, the ultimate's cooldown then says how much of it is still left at
+         * each one. Null = not such a line.
+         */
+        public Double takedownCut;
+        /** {from minute, takedowns after each ultimate, seconds between them}, each until the next. */
+        public List<double[]> takedownSteps;
 
         public StatLine() {
+        }
+
+        /** The takedown step at a minute: {takedowns, seconds between them} ({0, 0} before the first step). */
+        public double[] takedownsAt(double minute) {
+            double[] at = {0, 0};
+            if (takedownSteps != null) {
+                for (double[] s : takedownSteps) {
+                    if (minute >= s[0] - 1e-9) {
+                        at = new double[] {s[1], s.length > 2 ? s[2] : 0};
+                    }
+                }
+            }
+            return at;
+        }
+
+        /**
+         * Share of a cooldown of {@code cooldown} seconds that {@code takedowns} cuts of {@code cut} of what is left take
+         * away, the first right after the cast and the others {@code gap} seconds apart (the cooldown keeps running in
+         * between, so each later cut finds less left: 7% three times at once is 19.6%, 7 s apart on 60 s is 17.2%). A
+         * cooldown not known (NaN or not positive) counts them all at once.
+         */
+        public static double takedownShare(double cut, int takedowns, double gap, double cooldown) {
+            if (takedowns <= 0 || cut <= 0) {
+                return 0;
+            }
+            if (!(cooldown > 0) || Double.isInfinite(cooldown)) {
+                return 1 - Math.pow(1 - cut, takedowns);
+            }
+            double left = cooldown;
+            double saved = 0;
+            for (int k = 0; k < takedowns; k++) {
+                if (k > 0) {
+                    left -= Math.max(0, gap);
+                }
+                if (left <= 1e-9) {
+                    break;   // the ultimate is back: the next takedowns find nothing to cut
+                }
+                saved += cut * left;
+                left *= 1 - cut;
+            }
+            return saved / cooldown;
         }
 
         /** The share of the line's value after {@code heldMinutes} with the item (1 when not by the time held). */
@@ -166,6 +216,8 @@ public final class Model {
             c.heldEvery = heldEvery;
             c.heldMax = heldMax;
             c.heldFrom = heldFrom;
+            c.takedownCut = takedownCut;
+            c.takedownSteps = takedownSteps;
             return c;
         }
 
@@ -236,7 +288,7 @@ public final class Model {
 
         /** Line that contributes a fixed amount (flat stat, or a ratio line we must fall back to its static value). */
         public boolean countsAsFlat() {
-            return !marker() && !hasRatio()
+            return !marker() && !hasRatio() && takedownCut == null
                     && (value != null || perMinute != null || stepValues != null || levelValues != null);
         }
 
@@ -504,6 +556,11 @@ public final class Model {
         public List<ItemDef> runes = new ArrayList<>();
         /** Per rune (same order): count its conditional effects. */
         public List<Boolean> runeConditional = new ArrayList<>();
+        /**
+         * The ultimate's base cooldown (s) at each champion level 1..15, by the build's skill order (0 = not learned
+         * yet); null = not known. Read by the takedown cuts of the cooldown left (Arcanista do Axioma).
+         */
+        public List<Double> ultCooldowns;
         /** Per entry of itemIds (same order): true = the build sells one held copy of that item there. */
         public List<Boolean> sells = new ArrayList<>();
         /**
@@ -837,9 +894,30 @@ public final class Model {
         public Map<String, Double> forge = new LinkedHashMap<>();
         public double forgePct;
         public List<ItemContribution> contributions = new ArrayList<>();
+        /** Estimated slow put on the enemies at this point (lentidao_<patch>.yml), null when not worked out. */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public SlowEstimate slow;
         /** Where the values of this point come from (relevance report with passed-on passives). */
         @JsonIgnore
         public Attribution attribution;
+    }
+
+    /** Average slow applied on enemies (in %, summed over the expected targets) and each source's part. */
+    public static class SlowEstimate {
+        public double total;
+        public List<SlowSource> sources = new ArrayList<>();
+    }
+
+    /** One slow source: kind habilidade | item | runa; value = 100 x slow x min(duration, interval) / interval x targets x share. */
+    public static class SlowSource {
+        public String name;
+        public String kind;
+        public double slow;
+        public double duration;
+        public double interval;
+        public double targets;
+        public double share = 1;
+        public double value;
     }
 
     public static class TimelineResult {

@@ -1,0 +1,53 @@
+# Lentidão média aplicada (gráfico da aba Build › Gráfico, "Lentidão aplicada"): uma ESTIMATIVA de quanta lentidão a
+# build põe nos inimigos ao longo de uma luta, para comparar builds e momentos (não é a Arena, que joga as lentidões de
+# verdade). Para cada fonte:
+#
+#   valor (%) = 100 × potência × min(duração, intervalo) / intervalo × alvos esperados
+#
+#   potência   a % de lentidão (0,30 = 30%): pesa direto, uma lentidão de 60% vale o dobro de uma de 30%
+#   duração    quanto ela dura em cada alvo (não passa do intervalo: a mesma fonte não se sobrepõe a si mesma)
+#   intervalo  de quanto em quanto tempo ela sai: a recarga da habilidade com a Aceleração / reduções do momento, a
+#              recarga do item ou da runa, ou uma estimativa (intervalo) quando o jogo não dá uma
+#   alvos      1 para alvo único; numa área, a área dela dividida pela de um círculo de raio `raio_referencia`, entre 1
+#              e `alvos_max` (luta em equipe)
+#
+# As habilidades vêm das fichas da Arena (kits_<patch>.yml: efeitos.lentidao + duracao, também nas zonas); a forma dá
+# a área (círculo, setor, anel, retângulo, linha que atravessa, zonas). Itens e runas abaixo, do texto da loja.
+#
+# Campos de uma fonte:
+#   lentidao, duracao            potência e duração
+#   raio                         área (círculo); sem raio = alvo único (ou a área da habilidade, com a_cada)
+#   intervalo                    segundos entre aplicações (recarga ou estimativa)
+#   a_cada: ultimate             sai a cada ultimate (a recarga dela no momento)
+#   a_cada: habilidade           sai a cada habilidade aprendida (básicas e ultimate), cada uma pela sua recarga
+#   a_cada: habilidade_dano      idem, só as habilidades que causam dano
+#   intervalo_min                o menor intervalo (recarga interna do item)
+#   fracao                       parte das aplicações que vale (condição do item: vida baixa, tempo na área...)
+#   so_corpo_a_corpo             só para campeões corpo a corpo
+#   lentidao_por_vida_bonus      potência a mais por ponto de Vida adicional
+#   exige_imobilizar             só se a ficha do campeão tem algum controle que imobiliza
+patch: "7.3f"
+raio_referencia: 250
+alvos_max: 3
+
+itens:
+  Convergência de Zeke:       # usar a ultimate: tempestade de 5s, 30% a até 350; fracao: tempo do inimigo na área
+    {lentidao: 0.30, duracao: 5, raio: 350, a_cada: ultimate, fracao: 0.6}
+  Couraça do Defunto:         # ataque corpo a corpo com Embalo máximo: 75% por 1s; intervalo: estimativa de recarregar o Embalo
+    {lentidao: 0.75, duracao: 1, intervalo: 12, so_corpo_a_corpo: true}
+  Manopla dos Glacinatas:     # o ataque depois de cada habilidade: campo de 2s com 30% (1,5s de recarga); raio: estimativa
+    {lentidao: 0.30, duracao: 2, raio: 250, a_cada: habilidade, intervalo_min: 1.5}
+  Quebrapassos:               # ativo: 40% por 3s a inimigos próximos (25s); raio: estimativa
+    {lentidao: 0.40, duracao: 3, raio: 300, intervalo: 25}
+  Espada do Rei Destruído:    # 3 ataques ou habilidades num Campeão: 30% por 1,5s (30s)
+    {lentidao: 0.30, duracao: 1.5, intervalo: 30}
+  Rancor de Serylda:          # habilidades de dano: 30% por 1s em quem está abaixo de 60% de Vida (fracao: metade da luta)
+    {lentidao: 0.30, duracao: 1, a_cada: habilidade_dano, fracao: 0.5}
+  Crepúsculo de Draktharr:    # primeiro ataque num Campeão: 99% por 0,35s (10s)
+    {lentidao: 0.99, duracao: 0.35, intervalo: 10}
+  Cetro de Cristal de Rylai:  # habilidades de dano: 30% por 0,75s, nos alvos da habilidade
+    {lentidao: 0.30, duracao: 0.75, a_cada: habilidade_dano}
+
+runas:
+  Suserano do Gelo:           # imobilizar: campo de raio 300, (15 + 1 por 100 de Vida adicional)% por 1,5s (20s)
+    {lentidao: 0.15, lentidao_por_vida_bonus: 0.0001, duracao: 1.5, raio: 300, intervalo: 20, exige_imobilizar: true}

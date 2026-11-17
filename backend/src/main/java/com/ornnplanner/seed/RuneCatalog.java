@@ -37,12 +37,20 @@ public class RuneCatalog {
          * until the next; the build may give its own. Null = one value for the whole match.
          */
         public List<Step> periods;
+        /**
+         * Each step also carries seconds between one count and the next (Arcanista do Axioma: takedowns after each
+         * ultimate, so many seconds apart): the field's name and its default. Null = steps of the value only.
+         */
+        public String gapName;
+        public Double gapDefault;
     }
 
     /** From a game minute on (until the next step), an option's value. */
     public static class Step {
         public double start;
         public int value;
+        /** Seconds between one count and the next (options with {@code gapName}); null = the option's default. */
+        public Double gap;
     }
 
     /**
@@ -175,6 +183,11 @@ public class RuneCatalog {
             r.option.min = ((Number) o.get("min")).intValue();
             r.option.max = ((Number) o.get("max")).intValue();
             r.option.defaultValue = ((Number) o.get("padrao")).intValue();
+            Map<String, Object> gap = (Map<String, Object>) o.get("intervalo");
+            if (gap != null) {
+                r.option.gapName = str(gap.get("nome"));
+                r.option.gapDefault = num(gap.get("padrao"));
+            }
             List<Map<String, Object>> steps = (List<Map<String, Object>>) o.get("por_tempo");
             if (steps != null) {
                 r.option.periods = new ArrayList<>();
@@ -182,6 +195,7 @@ public class RuneCatalog {
                     Step p = new Step();
                     p.start = num(s.get("inicio"));
                     p.value = ((Number) s.get("valor")).intValue();
+                    p.gap = s.get("intervalo") == null ? null : num(s.get("intervalo"));
                     r.option.periods.add(p);
                 }
             }
@@ -244,6 +258,15 @@ public class RuneCatalog {
      * changes over the match: the build's steps, else the rune's default ones when no fixed option is given.
      */
     public Optional<ItemDef> toItem(String name, Integer option, long id, List<double[]> periods, List<double[]> optionSteps) {
+        return toItem(name, option, id, periods, optionSteps, false);
+    }
+
+    /**
+     * Same, for a ranged champion when {@code ranged}: lines with {@code valor_distancia} (and {@code
+     * valor_distancia_nv15}) take those values instead (Ímpeto Gradual: 40–60% speed melee, 20–35% ranged).
+     */
+    public Optional<ItemDef> toItem(String name, Integer option, long id, List<double[]> periods, List<double[]> optionSteps,
+                                    boolean ranged) {
         Rune r = byName.get(name);
         if (r == null) {
             return Optional.empty();
@@ -274,7 +297,20 @@ public class RuneCatalog {
                 l.minLevel = ((Number) e.get("nivel_min")).intValue();
             }
             Map<String, Object> steps = (Map<String, Object>) e.get("por_tempo");
-            if (steps != null) {
+            if (e.get("corte_por_participacao") != null) {
+                // a cut of the ultimate's cooldown left per takedown: the engine turns the option's steps (takedowns
+                // after each ultimate, seconds apart) into a % of the ultimate's cooldown at each moment
+                l.takedownCut = num(e.get("corte_por_participacao"));
+                l.takedownSteps = new ArrayList<>();
+                double gap = r.option != null && r.option.gapDefault != null ? r.option.gapDefault : 0;
+                if (optSteps != null) {
+                    for (double[] s : optSteps) {
+                        l.takedownSteps.add(new double[] {s[0], s[1], s.length > 2 && !Double.isNaN(s[2]) ? s[2] : gap});
+                    }
+                } else {
+                    l.takedownSteps.add(new double[] {0, opt, gap});
+                }
+            } else if (steps != null) {
                 l.value = 0.0;
                 l.stepStart = num(steps.get("inicio"));
                 l.stepEvery = num(steps.get("a_cada"));
@@ -294,11 +330,13 @@ public class RuneCatalog {
                 l.refScope = "bonus".equals(e.get("escopo")) ? RefScope.BONUS
                         : "base".equals(e.get("escopo")) ? RefScope.BASE : RefScope.TOTAL;
             } else {
-                double base = num(e.get("valor"));
+                boolean far = ranged && e.get("valor_distancia") != null;
+                double base = num(e.get(far ? "valor_distancia" : "valor"));
                 double per = orZero(e.get("valor_por_opcao"));
                 l.value = base + per * opt;
-                if (e.get("valor_nv15") != null) {
-                    l.valueMax = num(e.get("valor_nv15")) + per * opt;
+                Object top = e.get(far ? "valor_distancia_nv15" : "valor_nv15");
+                if (top != null) {
+                    l.valueMax = num(top) + per * opt;
                 }
             }
             item.stats.add(l);
@@ -345,12 +383,13 @@ public class RuneCatalog {
         if (given != null && !given.isEmpty()) {
             for (double[] s : given) {
                 if (s != null && s.length >= 2 && s[0] >= 0) {
-                    out.add(new double[] {s[0], Math.max(r.option.min, Math.min(r.option.max, Math.round(s[1])))});
+                    out.add(new double[] {s[0], Math.max(r.option.min, Math.min(r.option.max, Math.round(s[1]))),
+                            s.length > 2 ? s[2] : Double.NaN});
                 }
             }
         } else if (option == null && r.option.periods != null) {
             for (Step s : r.option.periods) {
-                out.add(new double[] {s.start, s.value});
+                out.add(new double[] {s.start, s.value, s.gap == null ? Double.NaN : s.gap});
             }
         }
         if (out.isEmpty()) {

@@ -382,10 +382,12 @@ export function BuildProvider({ meta, items, children }) {
   });
 
   const buildName = (id) => builds.find((b) => b.id === id)?.name ?? `#${id}`;
-  const chartSeries = draft ? [
-    { key: 'active', name: draft.name + (dirty ? t('chart.unsaved') : ''), result, colorIndex: 0 },
-    ...compareIds.map((id, i) => ({ key: id, name: buildName(id), result: compareResults[id], colorIndex: i + 1 })),
-  ] : [];
+  // memoized: the charts work their bars out again only when a build's result changes
+  const activeName = draft ? draft.name + (dirty ? t('chart.unsaved') : '') : null;
+  const chartSeries = useMemo(() => (activeName != null ? [
+    { key: 'active', name: activeName, result, colorIndex: 0 },
+    ...compareIds.map((id, i) => ({ key: id, name: builds.find((b) => b.id === id)?.name ?? `#${id}`, result: compareResults[id], colorIndex: i + 1 })),
+  ] : []), [activeName, result, compareIds, compareResults, builds]);
 
   // Moment inspected by the stat sheet and the relevance report: the clicked one, or the last purchase.
   const lastStep = result?.steps[result.steps.length - 1];

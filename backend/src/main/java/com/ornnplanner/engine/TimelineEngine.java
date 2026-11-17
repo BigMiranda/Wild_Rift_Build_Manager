@@ -162,6 +162,8 @@ public class TimelineEngine {
     private final List<Owned> runes = new ArrayList<>();
     /** Extra gold events of the run in progress, by minute. */
     private final List<double[]> extraGold = new ArrayList<>();
+    /** The ultimate's base cooldown by level of the run in progress (null = not known). */
+    private List<Double> ultCooldowns;
 
     public TimelineResult run(EngineInput in) {
         TimelineResult result = new TimelineResult();
@@ -189,6 +191,7 @@ public class TimelineEngine {
             }
         }
         extraGold.sort(java.util.Comparator.comparingDouble(e -> e[0]));
+        ultCooldowns = in.ultCooldowns;
         runes.clear();
         for (int k = 0; k < in.runes.size(); k++) {
             boolean cond = k >= in.runeConditional.size() || !Boolean.FALSE.equals(in.runeConditional.get(k));
@@ -803,12 +806,68 @@ public class TimelineEngine {
             double v = Stats.combine(k, s.base.getOrDefault(k, 0.0), bonusOf(s, k));
             s.total.put(k, v);
         }
+        takedownCuts(s, inventory, level, minute);
         // Regen: items give % of base regen.
         s.total.put(Stats.HEALTH_REGEN, s.base.getOrDefault(Stats.HEALTH_REGEN, 0.0)
                 * (1 + bonusOf(s, Stats.PCT_HEALTH_REGEN) / 100.0));
         s.total.put(Stats.MANA_REGEN, s.base.getOrDefault(Stats.MANA_REGEN, 0.0)
                 * (1 + bonusOf(s, Stats.PCT_MANA_REGEN) / 100.0));
         return s;
+    }
+
+    /**
+     * Takedown cuts of the ultimate's cooldown left (Arcanista do Axioma), as the % of the ultimate's cooldown they take
+     * away in each fight: the step's takedowns after each ultimate, the given seconds apart, on the ultimate's cooldown
+     * now (base at the rank x the haste and the other % cuts, worked out before this one). Added after the totals, since
+     * it reads them; its rune's contribution and the passives' breakdown get it too.
+     */
+    private void takedownCuts(StatSnapshot s, List<Owned> inventory, int level, double minute) {
+        for (int i = 0; i < inventory.size(); i++) {
+            Owned o = inventory.get(i);
+            for (StatLine l : o.stats(minute)) {
+                if (l.takedownCut == null || !o.counts(l)) {
+                    continue;
+                }
+                double[] at = l.takedownsAt(minute);
+                int takedowns = (int) Math.round(at[0]);
+                double base = ultCooldowns == null ? Double.NaN
+                        : ultCooldowns.get(Math.max(1, Math.min(ultCooldowns.size(), level)) - 1);
+                if (takedowns <= 0 || base == 0) {
+                    continue;   // no takedowns in this phase, or the ultimate not learned yet
+                }
+                double cooldown = base * Stats.cooldownFactor(k -> s.total.getOrDefault(k, 0.0), "R");
+                double pct = 100 * StatLine.takedownShare(l.takedownCut, takedowns, at[1], cooldown);
+                if (pct <= 0) {
+                    continue;
+                }
+                Stats.merge(s.itemPassives, l.type, pct);
+                s.total.put(l.type, Stats.combine(l.type, s.base.getOrDefault(l.type, 0.0), bonusOf(s, l.type)));
+                PassiveDetail d = new PassiveDetail();
+                d.purchaseIndex = o.purchaseIndex;
+                d.buildIndex = o.buildIndex;
+                d.number = o.number;
+                d.rune = o.purchaseIndex < 0;
+                d.champion = CHAMPION_SECTION.equals(o.item.section);
+                d.implied = o.implied;
+                d.itemName = o.item.name;
+                d.passive = l.passive;
+                d.stat = l.type;
+                d.conditional = l.conditional;
+                d.value = pct;
+                d.formula = takedowns + " participações " + (takedowns > 1 ? "com " + fmt(at[1]) + "s entre elas " : "")
+                        + "x " + fmt(100 * l.takedownCut) + "% da recarga restante, "
+                        + (cooldown > 0 ? "na ultimate de " + fmt(cooldown) + "s" : "de uma vez (recarga da ultimate não conhecida)")
+                        + " = " + fmt(pct) + "% " + l.type + (l.conditional ? " (condicional)" : "");
+                s.passives.add(d);
+                if (i < s.contributions.size()) {
+                    Model.ItemContribution c = s.contributions.get(i);
+                    Model.PassivePart p = part(l.passive, l.type, pct, l.conditional);
+                    c.passiveParts.add(p);
+                    Stats.merge(c.passives, p.stat, p.amount);
+                    c.passiveGold += p.gold;
+                }
+            }
+        }
     }
 
     /** Whether a flat line of an owned item counts now (level ranges, conditional ones only when enabled). */

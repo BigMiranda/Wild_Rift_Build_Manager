@@ -195,10 +195,12 @@ export function usePassiveValues({ build, result, compareIds, compareResults, it
     return out;
   }, [mode, estimates, measuredNow, itemsById]);
 
+  // stable while the overlays are: the charts memoize their bars on it
+  const overlayAt = useCallback((seriesKey, minute) => overlays[seriesKey]?.(minute), [overlays]);
   return {
     mode, setMode, scenario, setScenario, busy, error, measured: measuredNow, runMeasure, stopMeasure: () => { stop.current = true; },
     /** overlay of a series at a minute (undefined: effective.js alone, as by tier). */
-    overlayAt: (seriesKey, minute) => overlays[seriesKey]?.(minute),
+    overlayAt,
     overlayOf: (seriesKey) => overlays[seriesKey],
   };
 }

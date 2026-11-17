@@ -149,6 +149,10 @@ fundamentais:
     - {passiva: Ímpeto Gradual, tipo: Aceleração de Habilidade Básica, valor: 10, condicional: true}
     # Rodada 17: corta 20% das recargas restantes das básicas ao acionar (a Arena faz o corte; na linha do tempo, 20%)
     - {passiva: Ímpeto Gradual, tipo: "% Redução de Recarga das Básicas", valor: 20, condicional: true}
+    # a Velocidade de Movimento enquanto dura (3s): 40–60% (nível) corpo a corpo, 20–35% à distância (alcance_ataque
+    # da ficha do campeão acima de 300). No gráfico, a média numa luta pesa os 3s pela recarga (21s → 7s pelo nível)
+    - {passiva: Ímpeto Gradual, tipo: "% Velocidade de Movimento", valor: 40, valor_nv15: 60, valor_distancia: 20,
+       valor_distancia_nv15: 35, condicional: true}
   Primeiro Ataque:
     tags: Iniciação, Amplificação de Dano, ouro adicional
     ouro_extra: true
@@ -452,9 +456,20 @@ runas:
     texto: >-
       Sua ultimate causa/concede 10% a mais de dano, cura e Escudo (o aumento do dano em área de ação é reduzido a
       5%). Eliminar um Campeão inimigo reduz o Tempo de Recarga restante da sua ultimate em 7%.
+    # Rodada 17: cada participação em abate (abate ou assistência) corta 7% da recarga restante da ultimate. A Arena faz
+    # o corte na luta; na linha do tempo, como no Inabalável, degraus pelo minuto da partida dizem quantas participações
+    # vêm depois de cada ultimate e quantos segundos separam uma da outra (a recarga corre nesse meio-tempo, então cada
+    # corte acha menos recarga: 3 de uma vez cortam 19,6%; 3 com 7s entre elas, numa ultimate de 60s, 17,2%). O % vem
+    # da recarga da ultimate naquele minuto (posto, Aceleração e os outros cortes), a primeira logo depois de lançá-la.
+    opcao:
+      nome: Participações por ultimate
+      min: 0
+      max: 5
+      padrao: 1
+      intervalo: {nome: Segundos entre elas, padrao: 7}
+      por_tempo: [{inicio: 0, valor: 1, intervalo: 0}, {inicio: 5, valor: 2, intervalo: 5}, {inicio: 14, valor: 3, intervalo: 7}]
     efeitos:
-    # Rodada 17: o abate corta 7% da recarga restante da ultimate (a Arena faz o corte; na linha do tempo, 7%)
-    - {passiva: Arcanista do Axioma, tipo: "% Redução de Recarga da Ultimate", valor: 7, condicional: true}
+    - {passiva: Arcanista do Axioma, tipo: "% Redução de Recarga da Ultimate", corte_por_participacao: 0.07, condicional: true}
   Faixa de Fluxo de Mana:
     arvore: Feitiçaria
     linha: 1

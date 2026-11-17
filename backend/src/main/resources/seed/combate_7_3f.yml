@@ -199,8 +199,9 @@ ativacao:
 #   misericordia       +`pct` em Campeões abaixo de `vida_alvo_abaixo`
 #   chamuscar          habilidade que causa dano queima: dano depois de `atraso` s (recarga)
 #   arcanista          só a própria ultimate: +`pct` de dano (acertos e dano ao longo do tempo), cura e escudo; passivas
-#                      de itens que a ultimate aciona (Virtude Radiante, Hexoplaca) não; `abate_recarga_ult`: o abate
-#                      corta essa fração da recarga restante da ultimate
+#                      de itens que a ultimate aciona (Virtude Radiante, Hexoplaca) não; `pct_area`: o dano de uma
+#                      ultimate em área (pela forma da ficha, ou `dano_em_area` nela); `abate_recarga_ult`: a
+#                      participação no abate (abate ou assistência) corta essa fração da recarga restante da ultimate
 #   transcendencia     a partir do `nivel_min`: habilidade básica que acerta reduz a própria recarga em `pct` (recarga)
 #   nimbus             depois de um feitiço: +`pct` de Velocidade de Movimento por `duracao` s
 #   revitalizar        curas e escudos em alvos abaixo de `vida_abaixo`: +`pct`
@@ -227,7 +228,7 @@ runas:
   Dilacerar: [{tipo: dilacerar, pct: 0.065, vida_alvo_acima: 0.6}]
   Golpe de Misericórdia: [{tipo: misericordia, pct: 0.08, vida_alvo_abaixo: 0.4}]
   Chamuscar: [{tipo: chamuscar, dano: 21, dano_nv15: 49, atraso: 1, recarga: 8, dano_tipo: magico}]
-  Arcanista do Axioma: [{tipo: arcanista, pct: 0.10, abate_recarga_ult: 0.07}]   # Rodada 17: o abate corta 7% da recarga restante da ult
+  Arcanista do Axioma: [{tipo: arcanista, pct: 0.10, pct_area: 0.05, abate_recarga_ult: 0.07}]   # Rodada 17: a participação no abate corta 7% da recarga restante da ult; ult em área: 5% de dano
   Transcendência: [{tipo: transcendencia, nivel_min: 9, pct: 0.08, recarga: 8}]
   Manto de Nimbus: [{tipo: nimbus, pct: 0.25, duracao: 3}]   # 10–40% pela recarga do feitiço: 25% (EST)
   Revitalizar: [{tipo: revitalizar, pct: 0.10, vida_abaixo: 0.4}]

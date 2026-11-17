@@ -227,4 +227,46 @@ class ItemEffectsTest {
         uh.factor = 0.25;
         assertEquals(15, GoldPricing.computePrices(List.of(ah, uh), List.of()).asMap().get("Ultimate Haste"), EPS);
     }
+
+    @Test
+    void arcanistaCutsTheUltimateByTakedownsSecondsApart() {
+        // 7% of what is left, 3 times: at once 19.6%; 7 s apart on a 60 s ultimate, less (the cooldown runs in between)
+        assertEquals(1 - Math.pow(0.93, 3), StatLine.takedownShare(0.07, 3, 0, 60), EPS);
+        double apart = StatLine.takedownShare(0.07, 3, 7, 60);
+        assertEquals(0.07 + 0.07 * (0.93 * 60 - 7) / 60 + 0.07 * (0.93 * (0.93 * 60 - 7) - 7) / 60, apart, EPS);
+        assertTrue(apart < 0.18 && apart > 0.17);
+        // the shorter the ultimate, the more the gap costs; past the cooldown, nothing left to cut
+        assertTrue(StatLine.takedownShare(0.07, 3, 7, 30) < apart);
+        assertEquals(0.07, StatLine.takedownShare(0.07, 3, 20, 15), EPS);
+
+        RuneCatalog runes = new RuneCatalog(new ClassPathResource("seed/runas_7_3f.yml"),
+                new ClassPathResource("seed/feiticos_7_3f.yml"), new ClassPathResource("seed/precos_status.yml"));
+        ItemDef arcanist = runes.toItem("Arcanista do Axioma", null, -1, null,
+                List.of(new double[] {0, 0, Double.NaN}, new double[] {10, 3, 7})).orElseThrow();
+        ReferenceData ref = new ReferenceData();
+        ref.xpTable.put(1, 0.0);
+        EngineInput in = new EngineInput();
+        in.unit = unit();
+        in.goldPerMin = 1e6;
+        in.matchEnd = 12.0;
+        in.runes.add(arcanist);
+        in.runeConditional.add(true);
+        in.ultCooldowns = new ArrayList<>(java.util.Collections.nCopies(15, 60.0));
+        Model.TimelineResult r = new TimelineEngine(ref).run(in);
+        java.util.function.DoubleFunction<Double> at = (m) -> r.series.stream().filter(p -> Math.abs(p.minute - m) < 1e-9)
+                .findFirst().orElseThrow().total.getOrDefault(Stats.ULT_CDR, 0.0);
+        assertEquals(0, at.apply(5), EPS);
+        assertEquals(100 * apart, at.apply(11), EPS);
+        // the ultimate's damage in an area (Ornn's elemental, zones, a line passing through) gets 5%, not 10%
+        assertTrue(com.ornnplanner.arena.Arena.areaDamage(Map.of("forma", "elemental")));
+        assertTrue(com.ornnplanner.arena.Arena.areaDamage(Map.of("forma", "linha", "atravessa", true)));
+        assertFalse(com.ornnplanner.arena.Arena.areaDamage(Map.of("forma", "linha")));
+        assertFalse(com.ornnplanner.arena.Arena.areaDamage(Map.of("forma", "alvo")));
+        assertFalse(com.ornnplanner.arena.Arena.areaDamage(Map.of("forma", "zonas", "dano_em_area", false)));
+        // off when the rune's conditional is off
+        in.runeConditional.set(0, false);
+        Model.TimelineResult off = new TimelineEngine(ref).run(in);
+        assertEquals(0, off.series.stream().filter(p -> Math.abs(p.minute - 11) < 1e-9).findFirst().orElseThrow()
+                .total.getOrDefault(Stats.ULT_CDR, 0.0), EPS);
+    }
 }

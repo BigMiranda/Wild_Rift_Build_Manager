@@ -455,6 +455,9 @@ tr.moment-row td { padding: 2px 8px; background: rgba(200, 170, 110, .08); borde
 .passive-entry { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 6px 6px; }
 .passive-block { width: 12px; height: 18px; border-radius: 2px; flex: none; margin-top: 2px; }
 .passive-text { margin: 2px 0 0; font-size: 12px; color: var(--text-2); }
+/* legend of the bar charts (effective gold, passives): fixed under the event lanes, the marked minute's breakdown */
+.chart-legend { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
+  font-size: 13px; overflow-x: auto; }
 /* tooltip of the bar charts: light summary following the mouse, details pinned by a click */
 .sticky-host { position: relative; }
 .light-tip, .details-tip { position: absolute; top: 4px; z-index: 30; box-shadow: 0 6px 18px rgba(0, 0, 0, .5); }

@@ -187,7 +187,7 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
 **Data lives in YAML seeds, not code** (`backend/src/main/resources/seed/`, patch-suffixed; current patch **7.3f**,
 suffix `_7_3f` for the seven files the notes touch, `_7_3d` for the rest): `loja_7_3f.yml` (171 shop items; header documents each field), `precos_status.yml`,
 `efeitos_itens_7_3f.yml`, `campeoes_7_3f.yml`, `runas_7_3f.yml` (+ `runas/` icons), `feiticos_7_3f.yml`,
-`combate_7_3f.yml`, `kits_7_3f.yml`, `mapa_7_3d.yml`, `objetivos_7_3d.yml`, `macro_7_3d.yml`, `efetividade_7_3d.yml`, `classificacao_7_3d.yml`, `ia_automatica_7_3d.yml`, `regras_loja.yml`. `application.properties` and the `@Value` defaults point at
+`combate_7_3f.yml`, `kits_7_3f.yml`, `lentidao_7_3f.yml` (the chart's slow estimate, `service/SlowEstimator`), `mapa_7_3d.yml`, `objetivos_7_3d.yml`, `macro_7_3d.yml`, `efetividade_7_3d.yml`, `classificacao_7_3d.yml`, `ia_automatica_7_3d.yml`, `regras_loja.yml`. `application.properties` and the `@Value` defaults point at
 the current patch; older `_7_3`, `_7_3b` and (for those seven) `_7_3d` files stay as history. New game data or modeled effects usually mean editing these
 files plus a test, not Java. `LojaCatalogTest` enforces catalog consistency (components exist and cost less, every
 stat has a price).

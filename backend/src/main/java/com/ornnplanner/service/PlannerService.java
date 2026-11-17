@@ -41,9 +41,13 @@ public class PlannerService {
     private final com.ornnplanner.seed.ItemEffectCatalog itemEffects;
     private final com.ornnplanner.seed.ShopRules shopRules;
 
+    private final SlowEstimator slows;
+
     public PlannerService(CatalogRepository catalog, ReferenceRepository reference,
                           com.ornnplanner.seed.RuneCatalog runes, com.ornnplanner.seed.ChampionCatalog champions,
-                          com.ornnplanner.seed.ItemEffectCatalog itemEffects, com.ornnplanner.seed.ShopRules shopRules) {
+                          com.ornnplanner.seed.ItemEffectCatalog itemEffects, com.ornnplanner.seed.ShopRules shopRules,
+                          SlowEstimator slows) {
+        this.slows = slows;
         this.shopRules = shopRules;
         this.catalog = catalog;
         this.reference = reference;
@@ -186,6 +190,9 @@ public class PlannerService {
         applyItemEffects(build, ref);
         EngineInput in = input(build);
         TimelineResult result = new TimelineEngine(ref).run(in);
+        if (!ReferenceSeeder.RAGDOLL.equals(in.unit.code)) {
+            slows.apply(build, in.unit.name, ranged(in.unit.code), result.series);
+        }
         if (ReferenceSeeder.RAGDOLL.equals(in.unit.code)) {
             boolean anyFilled = build.ragdollStats != null && build.ragdollStats.values().stream()
                     .anyMatch(s -> s != null && (s.base != null || s.growth != null));
@@ -363,6 +370,7 @@ public class PlannerService {
         }
         if (build.runePage != null) {
             long id = -1;
+            boolean ranged = ranged(in.unit.code);
             for (String name : build.runePage.chosen()) {
                 Integer opt = build.runePage.options == null ? null : build.runePage.options.get(name);
                 if (runes.find(name).map(r -> r.option != null && r.option.periods != null).orElse(false)) {
@@ -383,10 +391,10 @@ public class PlannerService {
                 if (build.runePage.optionSteps != null && build.runePage.optionSteps.get(name) != null) {
                     steps = new java.util.ArrayList<>();
                     for (com.ornnplanner.repo.BuildRepository.OptionStep s : build.runePage.optionSteps.get(name)) {
-                        steps.add(new double[] {s.start, s.value});
+                        steps.add(new double[] {s.start, s.value, s.gap == null ? Double.NaN : s.gap});
                     }
                 }
-                runes.toItem(name, opt, id--, periods, steps).ifPresent(item -> {
+                runes.toItem(name, opt, id--, periods, steps, ranged).ifPresent(item -> {
                     in.runes.add(item);
                     in.runeConditional.add(build.runePage.conditional == null
                             || !Boolean.FALSE.equals(build.runePage.conditional.get(name)));
@@ -394,6 +402,7 @@ public class PlannerService {
             }
         }
         addChampionEffects(build, in);
+        in.ultCooldowns = ultCooldowns(build, in.unit.code);
         return in;
     }
 
@@ -436,6 +445,50 @@ public class PlannerService {
             in.runes.add(e.item);
             in.runeConditional.add(e.conditional);
         }
+    }
+
+    /** Whether the champion attacks from range (its sheet's {@code alcance_ataque} above 300; unknown = melee). */
+    private boolean ranged(String code) {
+        Object range = champions.find(code).map(c -> c.get("alcance_ataque")).orElse(null);
+        return range instanceof Number && ((Number) range).doubleValue() > 300;
+    }
+
+    /**
+     * The ultimate's base cooldown at each level 1..15 by the build's skill order (0 before it is learned), from the
+     * champion's sheet (its fourth ability, "Tempo de Recarga" by rank, else its "recarga"); null when not known.
+     */
+    @SuppressWarnings("unchecked")
+    private List<Double> ultCooldowns(Build build, String code) {
+        Map<String, Object> champion = champions.find(code).orElse(null);
+        List<Map<String, Object>> abilities = champion == null ? null
+                : (List<Map<String, Object>>) champion.get("habilidades");
+        if (abilities == null || abilities.size() < 4) {
+            return null;
+        }
+        Map<String, Object> r = abilities.get(3);
+        Map<String, Object> ranks = (Map<String, Object>) r.get("niveis");
+        List<Double> byRank = new ArrayList<>();
+        if (ranks != null && ranks.get("Tempo de Recarga") instanceof List) {
+            for (Object x : (List<Object>) ranks.get("Tempo de Recarga")) {
+                if (x instanceof Number) {
+                    byRank.add(((Number) x).doubleValue());
+                }
+            }
+        }
+        if (byRank.isEmpty() && r.get("recarga") instanceof Number) {
+            byRank.add(((Number) r.get("recarga")).doubleValue());
+        }
+        if (byRank.isEmpty()) {
+            return null;
+        }
+        com.ornnplanner.repo.BuildRepository.ChampionSetup setup = build.championSetup != null ? build.championSetup
+                : new com.ornnplanner.repo.BuildRepository.ChampionSetup();
+        List<Double> out = new ArrayList<>();
+        for (int level = 1; level <= 15; level++) {
+            int rank = com.ornnplanner.seed.ChampionCatalog.ranks(setup.skillOrder, setup.skillLevels, level)[3];
+            out.add(rank <= 0 ? 0.0 : byRank.get(Math.min(byRank.size(), rank) - 1));
+        }
+        return out;
     }
 
     private UnitProfile resolveUnit(Build build) {

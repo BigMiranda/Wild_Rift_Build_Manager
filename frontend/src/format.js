@@ -15,6 +15,8 @@ export const damageReduction = (res) => (res >= 0 ? (res / (100 + res)) * 100 : 
 export const DERIVED_STATS = {
   'Physical Reduction': (totals) => damageReduction(totals.Armor ?? 0),
   'Magic Reduction': (totals) => damageReduction(totals['Magic Resistance'] ?? 0),
+  // the speed the champion runs at: the flat speed times 1 + the % (as the Arena reads it)
+  'Total Move Speed': (totals) => (totals['Move Speed'] ?? 0) * (1 + (totals['% Move Speed'] ?? 0) / 100),
 };
 
 /** Value of a stat from a totals map, including derived ones. */
@@ -22,7 +24,13 @@ export const statOf = (totals, stat) => (DERIVED_STATS[stat] ? DERIVED_STATS[sta
 
 /** Stats selectable in the chart. */
 export const CHART_STATS = [...TABLE_STATS.slice(0, 3), 'Physical Reduction', 'Magic Reduction', ...TABLE_STATS.slice(3),
-  'Shield', 'Heal'];
+  'Shield', 'Heal', 'Total Move Speed', 'Applied Slow'];
+
+/**
+ * The chart's estimate of the slow the build puts on the enemies (backend SlowEstimator, lentidao_<patch>.yml): not a
+ * stat of the sheet, read from each point's `slow.total`.
+ */
+export const SLOW_STAT = 'Applied Slow';
 
 /** Stats of the champion sheet (in-game stats tab order). */
 export const SHEET_STATS = [
@@ -108,7 +116,7 @@ export const PERCENT_STATS = new Set(['Physical Reduction', 'Magic Reduction', '
   '% Lifesteal', '% Omnivamp', '% Tenacity', '% Heal and shield strength', '% Move Speed', '% Health Regen', '% Mana Regeneration',
   '% Basic Cooldown Reduction', '% Ultimate Cooldown Reduction', '% Ability 1 Cooldown Reduction', '% Ability 2 Cooldown Reduction',
   '% Ability 3 Cooldown Reduction', '% Damage Reduction', '% Physical Damage Reduction', '% Magic Damage Reduction',
-  '% Attack Damage Reduction', '% Critical Damage Reduction']);
+  '% Attack Damage Reduction', '% Critical Damage Reduction', 'Applied Slow']);
 
 const fmt = (digits) => (v) => {
   if (v == null || Number.isNaN(v)) return '—';

@@ -26,7 +26,7 @@ tempos de recarga.
 |---|---|---|
 | Ímpeto Gradual | % das básicas | 20 (corta 20% das recargas restantes ao acionar) |
 | Transcendência | % das básicas | 8 a partir do nível 9 (a básica que acerta corta 8% da própria recarga) |
-| Arcanista do Axioma | % da ultimate | 7 (o abate corta 7% da recarga restante) |
+| Arcanista do Axioma | % da ultimate | pelos degraus da runa (abaixo) |
 | Adagas Rápidas Navori | % das básicas | 14 por ataque (antes 19 de AH básica por ataque) |
 | Ornn: Investida no pilar | % da habilidade 3 | 25 |
 | Gnar: Bumerangue apanhado | % da habilidade 1 | 40 |
@@ -85,3 +85,23 @@ mágico, de ataques e de críticos a build sofre a menos ao todo (resistência +
 
 Migração v31: reimporta o catálogo (preços novos). Na Arena, só mudam lutas com uma dessas condicionais ligada num
 campeão sem ficha que a faça.
+
+### Arcanista do Axioma: participações com intervalo e ult em área
+
+Toda participação em abate (abate ou assistência) corta 7% da recarga restante da ultimate; a Arena já contava as
+assistências (quem acertou nos últimos 3s). Na linha do tempo o 7% fixo virou degraus pelo minuto, como no Inabalável:
+participações depois de cada ultimate e os segundos entre elas (padrão: 1 de 0:00; 2 com 5s de 5:00; 3 com 7s de
+14:00). O % sai da recarga da ultimate naquele minuto (posto pela ordem de habilidades, Aceleração e os outros cortes),
+a primeira participação logo depois de lançá-la; a recarga corre entre uma e outra, então cada corte acha menos:
+3 de uma vez = 19,6%; 3 com 7s numa ult de 60s = 17,2%. No Ornn (90/80/70s), os padrões dão 7% → 13% → 17,1%.
+O dano de uma ultimate em área ganha 5% em vez de 10% (`pct_area`): pela forma da ficha (área, cone, campo, elemental,
+zonas, avanço, linha que atravessa) ou por `dano_em_area` nela; cura e escudo seguem com 10%.
+
+### Lentidão aplicada (gráfico)
+
+Nova visão "Lentidão aplicada" em Build › Gráfico: uma estimativa (não a Arena) de quanta lentidão a build põe nos
+inimigos numa luta, em % médio somado pelos alvos. Por fonte: potência × min(duração, intervalo) / intervalo × alvos
+esperados. O intervalo é a recarga da habilidade no momento (Aceleração e reduções da ficha) ou a do item / runa; os
+alvos vêm da área da forma contra um círculo de raio 250, entre 1 e 3. As habilidades saem das fichas
+(`kits_7_3f.yml`); itens e runas, com o que o jogo não diz marcado como estimativa, de `lentidao_7_3f.yml`
+(`service/SlowEstimator`, cada ponto da série traz `slow`). Abaixo do gráfico, a tabela das fontes no minuto marcado.

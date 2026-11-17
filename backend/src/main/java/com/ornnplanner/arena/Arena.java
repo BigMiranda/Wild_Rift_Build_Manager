@@ -2991,6 +2991,24 @@ public class Arena {
 
     /** The sheet of an ability, or one made from the game's text (targeted, 550 range) when there is no sheet. */
     @SuppressWarnings("unchecked")
+    /** Shapes whose damage reaches every enemy in it (area of effect), for the Arcanista do Axioma's 5%. */
+    static final Set<String> AREA_SHAPES = Set.of("area", "cone", "campo", "elemental", "zonas", "avanco");
+
+    /**
+     * Whether an ability's damage is area of effect: the sheet's {@code dano_em_area} when written, else by its shape
+     * (a line only when it passes through: {@code atravessa}).
+     */
+    public static boolean areaDamage(Map<String, Object> ab) {
+        if (ab == null) {
+            return false;
+        }
+        if (ab.get("dano_em_area") != null) {
+            return Boolean.TRUE.equals(ab.get("dano_em_area")) || "s".equals(ab.get("dano_em_area"));
+        }
+        String shape = String.valueOf(ab.get("forma"));
+        return AREA_SHAPES.contains(shape) || "linha".equals(shape) && Boolean.TRUE.equals(ab.get("atravessa"));
+    }
+
     private Map<String, Object> ability(U u, String slot) {
         Map<String, Object> abs = map(u.kit("habilidades"));
         if (u.kitForm != null) {
@@ -6199,8 +6217,10 @@ public class Arena {
                     break;
                 case "arcanista":
                     // only the ultimate's own damage (its hits and its damage over time), never an item's passive
-                    // that the ultimate sets off (Virtude Radiante, Hexoplaca...)
-                    pct = ult && (kind == ABILITY || kind == DOT) ? num(e.p.get("pct"), 0.1) : 0;
+                    // that the ultimate sets off (Virtude Radiante, Hexoplaca...); an area ultimate gets `pct_area`
+                    pct = !ult || kind != ABILITY && kind != DOT ? 0
+                            : areaDamage(ability(a, "R")) ? num(e.p.get("pct_area"), num(e.p.get("pct"), 0.1))
+                            : num(e.p.get("pct"), 0.1);
                     break;
                 case "fortalecimento":
                     pct = now < a.buff("fortalecimento") ? num(e.p.get("amplifica"), 0.08) : 0;

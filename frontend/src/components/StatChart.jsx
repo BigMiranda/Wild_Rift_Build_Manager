@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { statLabel, t } from '../i18n.js';
-import { CHART_STATS, PERCENT_STATS, SERIES_COLORS, abilityCdr, cooldownCut, damageCut, mmss, n0, n1, statOf } from '../format.js';
+import { CHART_STATS, PERCENT_STATS, SERIES_COLORS, SLOW_STAT, abilityCdr, cooldownCut, damageCut, mmss, n0, n1, statOf } from '../format.js';
 import { PASSIVES_VIEW, acquiredPassives, passiveColor, pointItemIds } from '../passives.js';
 import ItemIcon from './ItemIcon.jsx';
-import PassiveCompare, { PassiveLight } from './PassiveCompare.jsx';
-import EffectiveBreakdown, { AlignToggle, EffectiveLight } from './EffectiveBreakdown.jsx';
+import PassiveCompare from './PassiveCompare.jsx';
+import EffectiveBreakdown, { AlignToggle } from './EffectiveBreakdown.jsx';
 import PassiveValueBar from './PassiveValueBar.jsx';
 import { ALIGN_SLOT, EFFECTIVE_VIEW, FORGE_COLOR, effectiveGold, itemColor, itemPassiveColor } from '../effective.js';
 import { StatIcon, statColor } from './StatIcon.jsx';
@@ -30,7 +31,9 @@ export function levelUps(xpTable, xpPerMin, untilMinute) {
  * stack per build.
  */
 export default function StatChart({ series, stat, onStatChange, xpTable, selectedMinute, onSelectMinute, itemsById, align, onAlignChange, passiveValues }) {
-  const lines = series.filter((s) => s.result && s.result.series.length > 0);
+  const lines = useMemo(() => series.filter((s) => s.result && s.result.series.length > 0), [series]);
+  // the bar charts' legend is drawn here, under the event lanes (they stay lined up with the plot)
+  const [legendHost, setLegendHost] = useState(null);
   const maxMinute = Math.ceil(Math.max(1, ...lines.map((s) => s.result.series[s.result.series.length - 1].minute)));
   const wrapRef = useRef(null);
   const [width, setWidth] = useState(0);
@@ -79,13 +82,14 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
             <EffectiveBars
               lines={lines} itemsById={itemsById} maxMinute={maxMinute} plotWidth={plotWidth} align={align}
               selectedMinute={selectedMinute} onSelectMinute={onSelectMinute} overlayAt={passiveValues?.overlayAt}
+              legendHost={legendHost}
             />
             {passiveValues && <PassiveValueBar pv={passiveValues} />}
           </>
         ) : stat === PASSIVES_VIEW ? (
           <PassiveBars
             lines={lines} itemsById={itemsById} maxMinute={maxMinute} plotWidth={plotWidth}
-            selectedMinute={selectedMinute} onSelectMinute={onSelectMinute}
+            selectedMinute={selectedMinute} onSelectMinute={onSelectMinute} legendHost={legendHost}
           />
         ) : (
         <div style={{ width: '100%', height: 300 }} role="img" aria-label={t('chart.aria', { stat: statLabel(stat) })}>
@@ -158,7 +162,10 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
           />
         ))}
         {extra.length > 0 && EXTRA_HINT[stat] && <small className="muted chart-note">{t(EXTRA_HINT[stat])}<br /></small>}
+        {stat === SLOW_STAT && <small className="muted chart-note">{t('chart.slowHint')}<br /></small>}
         <small className="muted">{t('chart.clickHint')}</small>
+        {stat === SLOW_STAT && <SlowLegend lines={lines} selectedMinute={selectedMinute} />}
+        {(stat === EFFECTIVE_VIEW || stat === PASSIVES_VIEW) && <div ref={setLegendHost} />}
       </div>
     </div>
   );
@@ -166,180 +173,157 @@ export default function StatChart({ series, stat, onStatChange, xpTable, selecte
 
 /**
  * Passives held over time as stacked bars on the same time axis as the stat chart (so the event lanes still line up):
- * a bar per series point and build, a block per passive, every block worth its gold estimate.
+ * a bar per series point and build, a block per passive, every block worth its gold estimate. A click marks the minute
+ * (like the line charts); what the builds hold there is listed below the chart, so nothing follows the mouse.
  */
-function PassiveBars({ lines, itemsById, maxMinute, plotWidth, selectedMinute, onSelectMinute }) {
-  // Rows: every minute any build has a point; each build's state is its last point at or before that minute.
-  const minutes = [...new Set(lines.flatMap((s) => s.result.series.map((p) => p.minute)))].sort((a, b) => a - b);
-  const held = new Map();   // `${build}|${minute}` -> passives
-  const order = new Map();  // build -> passive keys in order of acquisition
-  for (const s of lines) {
-    const keys = [];
-    let k = 0;
-    for (const m of minutes) {
-      while (k + 1 < s.result.series.length && s.result.series[k + 1].minute <= m + 1e-9) k++;
-      const p = s.result.series[k];
-      const list = p.minute <= m + 1e-9 ? acquiredPassives(pointItemIds(p), itemsById) : [];
-      held.set(`${s.key}|${m}`, list);
-      for (const x of list) if (!keys.includes(x.key)) keys.push(x.key);
-    }
-    order.set(s.key, keys);
-  }
-  const data = minutes.map((m) => {
-    const row = { minute: m };
+function PassiveBars({ lines, itemsById, maxMinute, plotWidth, selectedMinute, onSelectMinute, legendHost }) {
+  const model = useMemo(() => {
+    // Rows: every minute any build has a point; each build's state is its last point at or before that minute.
+    const minutes = [...new Set(lines.flatMap((s) => s.result.series.map((p) => p.minute)))].sort((a, b) => a - b);
+    const held = new Map();   // `${build}|${minute}` -> passives
+    const order = new Map();  // build -> passive keys in order of acquisition
     for (const s of lines) {
-      for (const x of held.get(`${s.key}|${m}`)) row[`${s.key}|${x.key}`] = x.gold;
+      const keys = [];
+      let k = 0;
+      for (const m of minutes) {
+        while (k + 1 < s.result.series.length && s.result.series[k + 1].minute <= m + 1e-9) k++;
+        const p = s.result.series[k];
+        const list = p.minute <= m + 1e-9 ? acquiredPassives(pointItemIds(p), itemsById) : [];
+        held.set(`${s.key}|${m}`, list);
+        for (const x of list) if (!keys.includes(x.key)) keys.push(x.key);
+      }
+      order.set(s.key, keys);
     }
-    return row;
-  });
-  const names = new Map();
-  for (const list of held.values()) for (const x of list) names.set(x.key, x);
+    const data = minutes.map((m) => {
+      const row = { minute: m };
+      for (const s of lines) {
+        for (const x of held.get(`${s.key}|${m}`)) row[`${s.key}|${x.key}`] = x.gold;
+      }
+      return row;
+    });
+    const names = new Map();
+    for (const list of held.values()) for (const x of list) names.set(x.key, x);
+    return { minutes, held, order, data, names };
+  }, [lines, itemsById]);
+  const { minutes, held, order, data, names } = model;
   const barSize = Math.max(2, Math.min(18, (plotWidth / Math.max(1, minutes.length) / lines.length) * 0.75));
-  const tip = useChartTip(onSelectMinute);
-  const columns = (label) => lines.map((s) => ({
+  const label = markedMinute(minutes, selectedMinute);
+  const columns = lines.map((s) => ({
     key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length],
     list: held.get(`${s.key}|${label}`) ?? [],
   }));
+  const chart = useMemo(() => (
+    <BarChart
+      data={data} margin={MARGIN} barGap={1} barSize={barSize}
+      onClick={(e) => { if (e && e.activeLabel != null) onSelectMinute(Number(e.activeLabel)); }}
+      style={{ cursor: 'crosshair' }}
+    >
+      <CartesianGrid stroke="var(--grid)" vertical={false} />
+      <XAxis
+        dataKey="minute" type="number" domain={[0, maxMinute]} padding={{ left: barSize, right: barSize }}
+        tickFormatter={(v) => `${v}m`} stroke="var(--muted)" tick={{ fill: 'var(--text-2)', fontSize: 12 }}
+      />
+      <YAxis stroke="var(--muted)" tick={{ fill: 'var(--gold)', fontSize: 12 }} width={Y_AXIS_WIDTH} tickFormatter={(v) => n0(v)} />
+      {selectedMinute != null && <ReferenceLine x={selectedMinute} stroke="var(--gold)" strokeWidth={1.5} />}
+      {lines.flatMap((s) => order.get(s.key).map((key) => (
+        <Bar
+          key={`${s.key}|${key}`} dataKey={`${s.key}|${key}`} stackId={String(s.key)} name={names.get(key)?.name}
+          fill={passiveColor(key)} stroke="var(--surface)" strokeWidth={1} isAnimationActive={false}
+        />
+      )))}
+    </BarChart>
+  ), [data, barSize, maxMinute, selectedMinute, lines, order, names, onSelectMinute]);
 
   return (
-    <div ref={tip.host} className="sticky-host" style={{ width: '100%', height: 300 }} role="figure" aria-label={t('chart.passivesAria')}>
-      <ResponsiveContainer>
-        <BarChart
-          data={data} margin={MARGIN} barGap={1} barSize={barSize}
-          onClick={tip.onClick} onMouseMove={tip.onMove} onMouseLeave={tip.onLeave}
-          style={{ cursor: 'crosshair' }}
-        >
-          <CartesianGrid stroke="var(--grid)" vertical={false} />
-          <XAxis
-            dataKey="minute" type="number" domain={[0, maxMinute]} padding={{ left: barSize, right: barSize }}
-            tickFormatter={(v) => `${v}m`} stroke="var(--muted)" tick={{ fill: 'var(--text-2)', fontSize: 12 }}
-          />
-          <YAxis stroke="var(--muted)" tick={{ fill: 'var(--gold)', fontSize: 12 }} width={Y_AXIS_WIDTH} tickFormatter={(v) => n0(v)} />
-          <Tooltip cursor={{ fill: 'rgba(200, 170, 110, .08)' }} content={() => null} />
-          {tip.state?.detailed && <ReferenceLine x={tip.state.label} stroke="var(--gold-bright)" strokeDasharray="3 3" />}
-          {selectedMinute != null && <ReferenceLine x={selectedMinute} stroke="var(--gold)" strokeWidth={1.5} />}
-          {lines.flatMap((s) => order.get(s.key).map((key) => (
-            <Bar
-              key={`${s.key}|${key}`} dataKey={`${s.key}|${key}`} stackId={String(s.key)} name={names.get(key)?.name}
-              fill={passiveColor(key)} stroke="var(--surface)" strokeWidth={1} isAnimationActive={false}
-            />
-          )))}
-        </BarChart>
-      </ResponsiveContainer>
-      <ChartTip
-        tip={tip} wide={lines.length > 1}
-        light={(label) => <PassiveLight columns={columns(label)} />}
-        details={(label) => <PassiveCompare compact columns={columns(label)} />}
-      />
-    </div>
+    <>
+      <div style={{ width: '100%', height: 300 }} role="figure" aria-label={t('chart.passivesAria')}>
+        <ResponsiveContainer>{chart}</ResponsiveContainer>
+      </div>
+      <ChartLegend label={label} host={legendHost}>
+        <PassiveCompare compact={lines.length > 1} columns={columns} />
+      </ChartLegend>
+    </>
   );
 }
 
-/**
- * Tooltip of the bar charts, in two modes:
- * - light: a small summary that follows the bar under the mouse and disappears when the mouse leaves the chart (it
- *   cannot be hovered);
- * - details: opened by clicking a bar. It stays (the chart no longer moves it) until "see fewer details" or a click
- *   outside it. While the mouse is inside it, the wheel only scrolls it: the page stays still.
- */
-function useChartTip(onSelectMinute) {
-  const host = useRef(null);
-  const panel = useRef(null);
-  const [state, setState] = useState(null);  // { label, x, detailed }
-  const detailed = useRef(false);
-  const skipClick = useRef(false);
-  detailed.current = !!state?.detailed;
-
-  // Details close on a click anywhere outside them (a click on the chart then does not reopen them).
-  useEffect(() => {
-    if (!state?.detailed) return undefined;
-    const onDown = (e) => {
-      if (panel.current?.contains(e.target)) return;
-      skipClick.current = !!host.current?.contains(e.target);
-      setState(null);
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [state?.detailed]);
-
-  // Mouse inside the details: the wheel scrolls them only, and the page is held where it is (wheel, keys, touchpad).
-  useEffect(() => {
-    const el = panel.current;
-    if (!state?.detailed || !el) return undefined;
-    let lockedY = null;
-    const hold = () => { if (lockedY != null && window.scrollY !== lockedY) window.scrollTo(window.scrollX, lockedY); };
-    const onWheel = (e) => {
-      e.preventDefault();
-      el.scrollTop += e.deltaY;
-    };
-    const onEnter = () => { lockedY = window.scrollY; window.addEventListener('scroll', hold); };
-    const onLeave = () => { lockedY = null; window.removeEventListener('scroll', hold); };
-    el.addEventListener('wheel', onWheel, { passive: false });
-    el.addEventListener('mouseenter', onEnter);
-    el.addEventListener('mouseleave', onLeave);
-    if (el.matches(':hover')) onEnter();
-    return () => {
-      onLeave();
-      el.removeEventListener('wheel', onWheel);
-      el.removeEventListener('mouseenter', onEnter);
-      el.removeEventListener('mouseleave', onLeave);
-    };
-  }, [state?.detailed]);
-
-  return {
-    host,
-    panel,
-    state,
-    onMove: (e) => {
-      if (detailed.current || !e || e.activeLabel == null) return;
-      setState({ label: Number(e.activeLabel), x: e.chartX, detailed: false });
-    },
-    onLeave: () => { if (!detailed.current) setState(null); },
-    onClick: (e) => {
-      if (skipClick.current) { skipClick.current = false; return; }
-      if (!e || e.activeLabel == null) return;
-      onSelectMinute(Number(e.activeLabel));
-      setState({ label: Number(e.activeLabel), x: e.chartX, detailed: true });
-    },
-    // Back to the light summary; it goes away as soon as the mouse is somewhere else than the chart.
-    lessDetails: () => {
-      setState((st) => (st ? { ...st, detailed: false } : st));
-      const onMove = (e) => {
-        if (!host.current?.contains(e.target)) setState((st) => (st && !st.detailed ? null : st));
-        document.removeEventListener('mousemove', onMove);
-      };
-      document.addEventListener('mousemove', onMove);
-    },
-  };
-}
-
-function ChartTip({ tip, wide, light, details }) {
-  const st = tip.state;
-  if (!st) return null;
-  const width = tip.host.current?.clientWidth ?? 0;
-  const side = st.x > width / 2 ? { right: Math.max(0, width - st.x + 12) } : { left: st.x + 12 };
-  if (!st.detailed) {
+/** The slow sources of each build at the marked minute (else the last), under the slow chart. */
+function SlowLegend({ lines, selectedMinute }) {
+  const cols = t('chart.slowCols').split('|');
+  return lines.map((s) => {
+    const series = s.result.series;
+    let p = series[series.length - 1];
+    if (selectedMinute != null) {
+      p = series[0];
+      for (const q of series) { if (q.minute <= selectedMinute + 1e-9) p = q; else break; }
+    }
+    const sources = p.slow?.sources ?? [];
     return (
-      <div className={`chart-tip light-tip${wide ? ' wide' : ''}`} style={side}>
-        <strong>{t('chart.minute', { time: mmss(st.label) })}</strong>
-        {light(st.label)}
-        <small className="tip-more">{t('chart.tipClick')}</small>
+      <div key={s.key} className="chart-legend">
+        <strong style={{ color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length] }}>{s.name}</strong>
+        <small className="muted"> · {t('chart.minute', { time: mmss(p.minute) })} · {n1(p.slow?.total ?? 0)}%</small>
+        {sources.length === 0 ? <div className="muted">{t('chart.slowNone')}</div> : (
+          <table className="data">
+            <thead><tr>{cols.map((c, i) => <th key={c} className={i === 0 ? 'l' : undefined}>{c}</th>)}</tr></thead>
+            <tbody>
+              {[...sources].sort((a, b) => b.value - a.value).map((x) => (
+                <tr key={x.name}>
+                  <td className="l">{x.name} <small className="muted">({t(`chart.slowKind.${x.kind}`)})</small></td>
+                  <td>{n0(100 * x.slow)}%{x.share < 1 ? ` × ${n0(100 * x.share)}%` : ''}</td>
+                  <td>{n1(x.duration)}s</td>
+                  <td>{n1(x.interval)}s</td>
+                  <td>{n1(x.targets)}</td>
+                  <td>{n1(x.value)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     );
+  });
+}
+
+/** The chart's minute whose state the legend shows: the marked one (the last point at or before it), else the last. */
+function markedMinute(minutes, selected) {
+  if (!minutes.length) return null;
+  if (selected == null) return minutes[minutes.length - 1];
+  let at = minutes[0];
+  for (const m of minutes) {
+    if (m <= selected + 1e-9) at = m; else break;
   }
-  return (
-    <div ref={tip.panel} className={`chart-tip details-tip${wide ? ' wide' : ''}`} style={side} role="dialog"
-      aria-label={t('chart.minute', { time: mmss(st.label) })}>
-      <div className="details-tip-head">
-        <strong>{t('chart.minute', { time: mmss(st.label) })}</strong>
-        <button className="link" onClick={tip.lessDetails}>{t('chart.tipLess')}</button>
-      </div>
-      {details(st.label)}
-    </div>
+  return at;
+}
+
+/** The fixed legend under a bar chart (in `host`, below the event lanes): what the builds have at the marked minute. */
+function ChartLegend({ label, host, children }) {
+  if (label == null || !host) return null;
+  return createPortal(
+    <div className="chart-legend">
+      <strong>{t('chart.minute', { time: mmss(label) })}</strong>
+      <small className="muted"> · {t('chart.legendHint')}</small>
+      {children}
+    </div>,
+    host,
   );
 }
 
 const has = (total, stat) => (total[stat] ?? 0) > 0.05;
+
+/** Conditional parts of a stat at a point (the passives a build switched on), by passive: [{ passive, amount }]. */
+const conditionalParts = (point, stat) => (point?.contributions ?? []).flatMap((c) => (c.passiveParts ?? [])
+  .filter((p) => p.conditional && p.stat === stat && p.amount > 0));
+
+/** Total move speed with the conditional % and flat parts scaled by `keep(part)` (1 = as is, 0 = off). */
+function speedWith(total, point, keep) {
+  const scaled = (stat) => conditionalParts(point, stat).reduce((s, p) => s - p.amount * (1 - keep(p)), total[stat] ?? 0);
+  return scaled('Move Speed') * (1 + scaled('% Move Speed') / 100);
+}
+
+/**
+ * Share of a fight Ímpeto Gradual's speed is on: 3s each time it is ready (21s at level 1 to 7s at 15, as in
+ * combate_<patch>.yml), taken as soon as it is back.
+ */
+const momentumUptime = (level) => Math.min(1, 3 / (21 - (14 * (Math.max(1, Math.min(15, level)) - 1)) / 14));
 
 /**
  * Lines of a chart's subtypes, dashed / dotted in the build's color, only for the builds that ever have that subtype:
@@ -370,6 +354,14 @@ const EXTRA_LINES = {
     { prefix: 'ap', dash: '2 3', label: () => t('chart.shieldVsAp'), has: (x) => has(x, 'Magic Shield'),
       value: (x) => (x.Shield ?? 0) + (x['Magic Shield'] ?? 0) },
   ],
+  'Total Move Speed': [
+    { prefix: 'nc', dash: '6 3', label: () => t('chart.msNoCond'),
+      has: (x, p) => conditionalParts(p, '% Move Speed').length > 0 || conditionalParts(p, 'Move Speed').length > 0,
+      value: (x, p) => speedWith(x, p, () => 0) },
+    { prefix: 'fa', dash: '2 3', label: () => t('chart.msFight'),
+      has: (x, p) => conditionalParts(p, '% Move Speed').some((c) => c.passive === 'Ímpeto Gradual'),
+      value: (x, p) => speedWith(x, p, (c) => (c.passive === 'Ímpeto Gradual' ? momentumUptime(p?.level ?? 1) : 1)) },
+  ],
   'Ability Haste': [
     { prefix: 'ul', dash: '6 3', label: () => t('chart.hasteUlt'),
       has: (x) => has(x, 'Ultimate Haste') || has(x, '% Ultimate Cooldown Reduction'), value: (x) => cooldownCut(x, 'R').effHaste },
@@ -383,11 +375,12 @@ const EXTRA_LINES = {
 };
 
 /** The note under a chart that has subtype lines. */
-const EXTRA_HINT = { 'Ability Haste': 'chart.hasteHint', 'Physical Reduction': 'chart.drHint', 'Magic Reduction': 'chart.drHint' };
+const EXTRA_HINT = { 'Ability Haste': 'chart.hasteHint', 'Physical Reduction': 'chart.drHint', 'Magic Reduction': 'chart.drHint',
+  'Total Move Speed': 'chart.msHint' };
 
 function extraLines(lines, stat) {
   return lines.flatMap((s) => (EXTRA_LINES[stat] ?? [])
-    .filter((vs) => s.result.series.some((p) => vs.has(p.total)))
+    .filter((vs) => s.result.series.some((p) => vs.has(p.total, p)))
     .map((vs) => ({ s, vs })));
 }
 
@@ -407,9 +400,9 @@ function lineData(lines, stat) {
         if (q.minute <= m + 1e-9) p = q; else break;
       }
       if (p) {
-        row[`v${s.key}`] = statOf(p.total, stat);
+        row[`v${s.key}`] = stat === SLOW_STAT ? (p.slow?.total ?? 0) : statOf(p.total, stat);
         row[`lv${s.key}`] = p.level;
-        for (const vs of EXTRA_LINES[stat] ?? []) row[`${vs.prefix}${s.key}`] = vs.value(p.total);
+        for (const vs of EXTRA_LINES[stat] ?? []) row[`${vs.prefix}${s.key}`] = vs.value(p.total, p);
       }
     }
     return row;
@@ -434,74 +427,78 @@ function statesByMinute(lines, fn) {
 /**
  * Effective gold over time as stacked bars, one stack per build: one block per item held -- as many as the inventory
  * slots in use -- (gold of its stats, its passives in a lighter tone on top of the same block), plus one block for the
- * champion's passive (Ornn's Living Forge) at the top.
+ * champion's passive (Ornn's Living Forge) at the top. A click marks the minute; its breakdown is listed below the chart.
+ * The bars are worked out once per build set (not on every mouse move: that made the screen crawl).
  */
-function EffectiveBars({ lines, itemsById, maxMinute, plotWidth, align, selectedMinute, onSelectMinute, overlayAt }) {
-  const { minutes, at } = statesByMinute(lines, (s, p) => effectiveGold(p, itemsById, s.result.statPrices, p ? overlayAt?.(s.key, p.minute) : undefined));
-  // Stack order (bottom to top): purchase order; in build order the boots go last, right below the champion's passive.
-  const order = new Map();  // build -> [{ key, name }]
-  for (const s of lines) {
-    const seen = new Map();
-    for (const m of minutes) for (const x of at.get(`${s.key}|${m}`).items) seen.set(x.purchaseIndex, x);
-    const rank = (x) => (align === ALIGN_SLOT && x.boots ? 1 : 0);
-    order.set(s.key, [...seen.values()]
-      .sort((a, b) => rank(a) - rank(b) || a.purchaseIndex - b.purchaseIndex)
-      .map((x) => ({ key: x.key, name: x.itemName })));
-  }
-  const data = minutes.map((m) => {
-    const row = { minute: m };
+function EffectiveBars({ lines, itemsById, maxMinute, plotWidth, align, selectedMinute, onSelectMinute, overlayAt, legendHost }) {
+  const model = useMemo(() => {
+    const { minutes, at } = statesByMinute(lines, (s, p) => effectiveGold(p, itemsById, s.result.statPrices, p ? overlayAt?.(s.key, p.minute) : undefined));
+    // Stack order (bottom to top): purchase order; in build order the boots go last, right below the champion's passive.
+    const order = new Map();  // build -> [{ key, name }]
     for (const s of lines) {
-      const e = at.get(`${s.key}|${m}`);
-      // Only values above zero: a zero-height segment would still draw a line and look like an extra block.
-      for (const x of e.items) {
-        if (x.statGold > 0) row[`${s.key}|${x.key}|s`] = x.statGold;
-        if (x.passiveGold > 0) row[`${s.key}|${x.key}|p`] = x.passiveGold;
-      }
-      if (e.forge.gold > 0) row[`${s.key}|forge`] = e.forge.gold;
+      const seen = new Map();
+      for (const m of minutes) for (const x of at.get(`${s.key}|${m}`).items) seen.set(x.purchaseIndex, x);
+      const rank = (x) => (align === ALIGN_SLOT && x.boots ? 1 : 0);
+      order.set(s.key, [...seen.values()]
+        .sort((a, b) => rank(a) - rank(b) || a.purchaseIndex - b.purchaseIndex)
+        .map((x) => ({ key: x.key, name: x.itemName })));
     }
-    return row;
-  });
+    const data = minutes.map((m) => {
+      const row = { minute: m };
+      for (const s of lines) {
+        const e = at.get(`${s.key}|${m}`);
+        // Only values above zero: a zero-height segment would still draw a line and look like an extra block.
+        for (const x of e.items) {
+          if (x.statGold > 0) row[`${s.key}|${x.key}|s`] = x.statGold;
+          if (x.passiveGold > 0) row[`${s.key}|${x.key}|p`] = x.passiveGold;
+        }
+        if (e.forge.gold > 0) row[`${s.key}|forge`] = e.forge.gold;
+      }
+      return row;
+    });
+    return { minutes, at, order, data };
+  }, [lines, itemsById, align, overlayAt]);
+  const { minutes, at, order, data } = model;
   const barSize = Math.max(2, Math.min(18, (plotWidth / Math.max(1, minutes.length) / lines.length) * 0.75));
-  const tip = useChartTip(onSelectMinute);
-  const columns = (label) => lines.map((s) => ({
+  const label = markedMinute(minutes, selectedMinute);
+  const columns = label == null ? [] : lines.map((s) => ({
     key: s.key, name: s.name, color: SERIES_COLORS[s.colorIndex % SERIES_COLORS.length],
     eff: at.get(`${s.key}|${label}`),
   }));
+  const chart = useMemo(() => (
+    <BarChart
+      data={data} margin={MARGIN} barGap={1} barSize={barSize}
+      onClick={(e) => { if (e && e.activeLabel != null) onSelectMinute(Number(e.activeLabel)); }}
+      style={{ cursor: 'crosshair' }}
+    >
+      <CartesianGrid stroke="var(--grid)" vertical={false} />
+      <XAxis
+        dataKey="minute" type="number" domain={[0, maxMinute]} padding={{ left: barSize, right: barSize }}
+        tickFormatter={(v) => `${v}m`} stroke="var(--muted)" tick={{ fill: 'var(--text-2)', fontSize: 12 }}
+      />
+      <YAxis stroke="var(--muted)" tick={{ fill: 'var(--gold)', fontSize: 12 }} width={Y_AXIS_WIDTH} tickFormatter={(v) => n0(v)} />
+      {selectedMinute != null && <ReferenceLine x={selectedMinute} stroke="var(--gold)" strokeWidth={1.5} />}
+      {lines.flatMap((s) => [
+        ...order.get(s.key).flatMap((x) => [
+          <Bar key={`${s.key}|${x.key}|s`} dataKey={`${s.key}|${x.key}|s`} stackId={String(s.key)} name={x.name}
+            fill={itemColor(x.name)} isAnimationActive={false} />,
+          <Bar key={`${s.key}|${x.key}|p`} dataKey={`${s.key}|${x.key}|p`} stackId={String(s.key)} name={x.name}
+            fill={itemPassiveColor(x.name)} isAnimationActive={false} />,
+        ]),
+        <Bar key={`${s.key}|forge`} dataKey={`${s.key}|forge`} stackId={String(s.key)} fill={FORGE_COLOR} isAnimationActive={false} />,
+      ])}
+    </BarChart>
+  ), [data, barSize, maxMinute, selectedMinute, lines, order, onSelectMinute]);
 
   return (
-    <div ref={tip.host} className="sticky-host" style={{ width: '100%', height: 340 }} role="figure" aria-label={t('chart.effectiveAria')}>
-      <ResponsiveContainer>
-        <BarChart
-          data={data} margin={MARGIN} barGap={1} barSize={barSize}
-          onClick={tip.onClick} onMouseMove={tip.onMove} onMouseLeave={tip.onLeave}
-          style={{ cursor: 'crosshair' }}
-        >
-          <CartesianGrid stroke="var(--grid)" vertical={false} />
-          <XAxis
-            dataKey="minute" type="number" domain={[0, maxMinute]} padding={{ left: barSize, right: barSize }}
-            tickFormatter={(v) => `${v}m`} stroke="var(--muted)" tick={{ fill: 'var(--text-2)', fontSize: 12 }}
-          />
-          <YAxis stroke="var(--muted)" tick={{ fill: 'var(--gold)', fontSize: 12 }} width={Y_AXIS_WIDTH} tickFormatter={(v) => n0(v)} />
-          <Tooltip cursor={{ fill: 'rgba(200, 170, 110, .08)' }} content={() => null} />
-          {tip.state?.detailed && <ReferenceLine x={tip.state.label} stroke="var(--gold-bright)" strokeDasharray="3 3" />}
-          {selectedMinute != null && <ReferenceLine x={selectedMinute} stroke="var(--gold)" strokeWidth={1.5} />}
-          {lines.flatMap((s) => [
-            ...order.get(s.key).flatMap((x) => [
-              <Bar key={`${s.key}|${x.key}|s`} dataKey={`${s.key}|${x.key}|s`} stackId={String(s.key)} name={x.name}
-                fill={itemColor(x.name)} isAnimationActive={false} />,
-              <Bar key={`${s.key}|${x.key}|p`} dataKey={`${s.key}|${x.key}|p`} stackId={String(s.key)} name={x.name}
-                fill={itemPassiveColor(x.name)} isAnimationActive={false} />,
-            ]),
-            <Bar key={`${s.key}|forge`} dataKey={`${s.key}|forge`} stackId={String(s.key)} fill={FORGE_COLOR} isAnimationActive={false} />,
-          ])}
-        </BarChart>
-      </ResponsiveContainer>
-      <ChartTip
-        tip={tip} wide={lines.length > 1}
-        light={(label) => <EffectiveLight columns={columns(label)} align={align} />}
-        details={(label) => <EffectiveBreakdown compact align={align} columns={columns(label)} />}
-      />
-    </div>
+    <>
+      <div style={{ width: '100%', height: 340 }} role="figure" aria-label={t('chart.effectiveAria')}>
+        <ResponsiveContainer>{chart}</ResponsiveContainer>
+      </div>
+      <ChartLegend label={label} host={legendHost}>
+        <EffectiveBreakdown compact={lines.length > 1} align={align} columns={columns} />
+      </ChartLegend>
+    </>
   );
 }
 

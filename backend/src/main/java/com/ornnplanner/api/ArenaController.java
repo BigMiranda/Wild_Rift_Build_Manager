@@ -307,6 +307,7 @@ public class ArenaController {
     public Map<String, Object> riftRules() {
         Map<String, Object> m = new java.util.LinkedHashMap<>();
         m.put("elementos", arena.riftRules().map("objetivos", "dragao", "elementos"));
+        m.put("almas", arena.riftRules().map("objetivos", "dragao", "almas"));
         m.put("mao_do_barao", arena.riftRules().map("objetivos", "mao_do_barao"));
         return m;
     }
