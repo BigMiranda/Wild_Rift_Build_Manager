@@ -60,6 +60,9 @@ public class BuildScore {
         public String champion;
         public String championClass;
         public String archetype;
+        /** The archetype as read (its shares and effects), for a distance to an asked one; not sent to the screen. */
+        @com.fasterxml.jackson.annotation.JsonIgnore
+        public BuildArchetypes.Archetype archetypeRead;
         /** The weights used, normalized (class + archetype). */
         public Map<String, Double> weights = new LinkedHashMap<>();
         public Map<String, Double> parts = new LinkedHashMap<>();
@@ -226,6 +229,7 @@ public class BuildScore {
         s.championClass = classOf(build);
         BuildArchetypes.Archetype a = archetypes.of(build, minute);
         s.archetype = a == null ? null : a.key;
+        s.archetypeRead = a;
         s.weights = weights(s.championClass, s.archetype);
         Map<String, Object> supportRules = supportRules(s.champion, s.championClass, s.archetype);
         if (supportRules != null) {

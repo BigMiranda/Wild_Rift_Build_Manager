@@ -302,7 +302,7 @@ export default function Discovery() {
                     <tr key={i}>
                       <td>{i + 1}</td>
                       <td><KitIcons kit={k} /><br /><small className="muted">{[...k.names, k.bootsName].filter(Boolean).join(', ')}</small></td>
-                      <td><b>{num(k.score)}</b></td><td>{num(k.mean)}</td><td>{num(k.p20)}</td><td>{num(k.confirmed)}</td>
+                      <td><b>{num(k.score)}</b>{k.archetypePenalty != null && <small className="muted" title={t('disc.archPenaltyHelp')}> −{num(k.archetypePenalty)}</small>}</td><td>{num(k.mean)}</td><td>{num(k.p20)}</td><td>{num(k.confirmed)}</td>
                       <td>{num(k.versatile)}</td>
                       <td>{k.novelty == null ? '—' : pct(k.novelty * 100)}</td><td>{pct(k.beatsKnown)}</td>
                       <td><small>{k.niche}</small></td><td><small>{t(`disc.origin.${k.origin}`)}</small></td>

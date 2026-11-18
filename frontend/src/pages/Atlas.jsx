@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import ItemIcon from '../components/ItemIcon.jsx';
+import ItemPicker from '../components/ShopPicker.jsx';
 import { useBuild } from '../buildContext.jsx';
 import { interactions, note1, sideView } from '../atlasMath.js';
 import { archetypeOptions } from '../archetypes.js';
@@ -432,7 +433,7 @@ function OptionRow({ o, onPick, perGold }) {
 
 function SideGuide({ side, m, g, fixed, setFixed, itemsList }) {
   const s = side === 'A' ? m.a : m.b;
-  const [add, setAdd] = useState('');
+  const allowed = useMemo(() => new Set(itemsList.map((it) => it.id)), [itemsList]);
   const fix = (patch) => setFixed({ ...fixed, ...patch });
   const keystones = s.conditions.filter((c) => c.source === 'fundamental');
   const runes = s.conditions.filter((c) => c.source === 'runa');
@@ -454,10 +455,9 @@ function SideGuide({ side, m, g, fixed, setFixed, itemsList }) {
           })}
         </div>
         <div className="row">
-          <select value={add} onChange={(e) => { const id = Number(e.target.value); setAdd(''); if (id) fix({ items: [...fixed.items, id] }); }}>
-            <option value="">+ item…</option>
-            {itemsList.filter((it) => !fixed.items.includes(it.id)).map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}
-          </select>
+          <ItemPicker value={fixed.items} onChange={(v) => fix({ items: v })} max={6} label="+ itens…"
+            title="Os itens fixados (itens finais e botas), na loja como na Calculadora"
+            filter={(it) => allowed.has(it.id)} />
           <select value={fixed.keystone ?? ''} onChange={(e) => fix({ keystone: e.target.value || null })}>
             <option value="">{s.keystone} (base)</option>
             {keystones.map((c) => <option key={c.key} value={c.rune}>{c.name}</option>)}

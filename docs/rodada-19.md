@@ -424,11 +424,33 @@ Ornn × Rumble (execução 11, minuto 15):
 A build livre do Ornn, pelo ouro dos itens, é de Crítico (dois itens com 25% de crítico). Pedir Tanque ou Lutador
 custa só 3 a 4 pontos de nota prevista.
 
-**Achado:** o seletor de arquétipo da Descoberta não faz nada hoje. `DiscoveryModel.Request.archetype` chega ao
-backend, mas nenhum código o lê.
+**O seletor de arquétipo da Descoberta passou a valer.** Antes ele não fazia nada: `DiscoveryModel.Request.archetype`
+chegava ao backend, mas nenhum código o lia. Agora:
 
-**Teste:** `AtlasArchetypeTest` (uma build de tanque é Tanque e longe de Crítico e de Lutador; itens de crítico chegam
-ao Crítico; a penalidade por unidade de distância).
+- **Na ordem do funil**, um conjunto perde `penalidade_arquetipo_pedido` (100, em `classificacao_7_3d.yml`) pontos por
+  unidade de distância ao arquétipo pedido. É a distância do Atlas, lida no mesmo arquétipo que a coluna da Descoberta
+  mostra (o da nota: a build no minuto, com os status dos itens e das passivas, como a do Ornn). Vale nas lutas rápidas,
+  na bateria inteira, na elite de cada geração, no modelo substituto, no ranking e nos finalistas a confirmar. Quem
+  chega no arquétipo não perde nada. A penalidade é alta de propósito: as notas diferem por poucos pontos, e com 25 um
+  conjunto de Tanque ainda ficava em 1º num pedido de Lutador.
+- **A nota mostrada continua a medida.** A perda aparece ao lado, em cinza ("−X"), e uma nota da descoberta diz quantos
+  dos 10 primeiros chegam no arquétipo.
+- A comparação das descobertas com a melhor build conhecida segue pela nota medida.
+
+Ornn (Big Carry v1), descoberta reduzida (população 8, 3 gerações, sem runas nem ordem; 5 a 6 min):
+- **livre e Tanque:** os 10 primeiros são todos de Tanque nos dois casos. A busca livre já sai Tanque, então o pedido
+  não muda nada.
+- **Lutador:** em 1º, Armadilha de Yordle, Virtude Radiante, Manopla dos Glacinatas, Furacão de Runaan, Foice da
+  Névoa Negra + Grevas Vorazes, Lutador na coluna (49,5, sem perda). Os seguintes perdem de 21 a 48 pontos (Híbrido, Ao
+  acertar). Só 1 dos 10 chegou em Lutador com esse orçamento mínimo.
+
+**Seletor de itens fixados no Atlas:** o mesmo da Calculadora (a loja com abas, busca e grade, `ShopPicker`), só com os
+itens que o Atlas mede (itens finais e botas), até 6. Os dois seletores de arquétipo mostram os nomes ("Mago contínuo")
+em vez das chaves.
+
+**Testes:** `AtlasArchetypeTest` (uma build de tanque é Tanque e longe de Crítico e de Lutador; itens de crítico chegam
+ao Crítico; a penalidade por unidade de distância) e `FunnelTest` (uma penalidade na ordem desvia a busca do item
+penalizado, e a nota medida fica a mesma).
 
 ## Pendências
 

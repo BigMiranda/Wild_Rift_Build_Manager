@@ -32,7 +32,10 @@ public final class DiscoveryModel {
         public long seed = 1;
         /** The niches' axes: arquetipo | dano | durabilidade | passivas. */
         public List<String> axes = new ArrayList<>(List.of("arquetipo", "dano", "durabilidade"));
-        /** Target archetype ("deixar livre" = null): only kits whose archetype matches rank first. */
+        /**
+         * Target archetype ("deixar livre" = null): kits whose items reach it rank first; the others lose points in the
+         * ranking by their distance to it (DiscoveryService.Evaluator#archetypePenalty).
+         */
         public String archetype;
         /** Search the runes and the order of the finalists (part 4). */
         public boolean runes = true;
@@ -96,6 +99,8 @@ public final class DiscoveryModel {
         /** The order the kit is bought in (ids), as the planner's timeline reads it. */
         public List<Long> order = new ArrayList<>();
         public double score;
+        /** Points the kit lost in the ranking for its distance to the archetype asked for (null = none). */
+        public Double archetypePenalty;
         public Double mean;
         public Double p20;
         public Double confirmed;

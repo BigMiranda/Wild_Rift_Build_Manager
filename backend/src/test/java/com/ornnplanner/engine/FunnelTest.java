@@ -33,7 +33,7 @@ class FunnelTest {
         return i == 7 ? 40 : 10 + (i * 37 % 11);
     }
 
-    static final class World implements Funnel.Evaluator {
+    static class World implements Funnel.Evaluator {
         int quick;
         int full;
 
@@ -103,6 +103,29 @@ class FunnelTest {
         assertEquals(11L, s.get(0).a);
         assertEquals(12L, s.get(0).b);
         assertEquals(45, s.get(0).value, 1e-9);
+    }
+
+    @Test
+    void aPenaltyInTheRankingSteersAwayWhileTheMeasuredScoreStays() {
+        // an asked archetype that the best item (7) is far from: kits with it lose 50 points in the ranking only
+        World w = new World() {
+            @Override
+            public double quick(Funnel.Kit k) {
+                return super.quick(k) - (k.items.contains(7L) ? 50 : 0);
+            }
+
+            @Override
+            public Funnel.Eval full(Funnel.Kit k) {
+                Funnel.Eval e = super.full(k);
+                e.penalty = k.items.contains(7L) ? 50 : 0;
+                return e;
+            }
+        };
+        Funnel.Result r = Funnel.search(w, ITEMS, BOOTS, List.of(), config(3));
+        Funnel.Entry best = r.ranked.get(0);
+        assertFalse(best.kit.items.contains(7L), "steered away: " + best.kit);
+        assertEquals(best.full.score, w.value(best.kit), 1e-9);
+        assertEquals(best.full.score - best.full.penalty, best.score(), 1e-9);
     }
 
     @Test

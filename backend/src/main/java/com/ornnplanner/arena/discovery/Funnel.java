@@ -66,6 +66,11 @@ public final class Funnel {
         public List<String> niche = new ArrayList<>();
         /** Anything the service wants to keep (the minutes' scores, the archetype...). */
         public Map<String, Object> extra = new LinkedHashMap<>();
+        /**
+         * Points off the score in the funnel's ranking only (the archetype asked for: its distance times the penalty); the
+         * score shown stays the measured one.
+         */
+        public double penalty;
     }
 
     /** How a kit is measured, from the cheap to the dear. */
@@ -171,7 +176,7 @@ public final class Funnel {
         public int generation;
 
         public double score() {
-            return full == null ? Double.NEGATIVE_INFINITY : full.score;
+            return full == null ? Double.NEGATIVE_INFINITY : full.score - full.penalty;
         }
     }
 
@@ -320,7 +325,7 @@ public final class Funnel {
             full(ev, fulls, res);
             if (model != null) {
                 for (Entry e : fulls) {
-                    real.add(e.full == null ? Double.NaN : e.full.score);
+                    real.add(e.full == null ? Double.NaN : e.score());
                 }
             }
             archive(fulls, res);
@@ -480,7 +485,7 @@ public final class Funnel {
         List<Double> y = new ArrayList<>();
         for (Entry e : measured) {
             sets.add(e.kit.all());
-            y.add(e.full.score);
+            y.add(e.score());
         }
         return new Ridge(feats, pairs, lambda).fit(sets, y);
     }

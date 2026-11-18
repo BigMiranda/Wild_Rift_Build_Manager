@@ -77,3 +77,11 @@ arquetipos:
 - {chave: letalidade, nome: Letalidade, se: ["letalidade >= 0.08"]}
 - {chave: lutador, nome: Lutador, se: ["ataque >= 0.12", "defesa >= 0.2"]}
 - {chave: hibrido, nome: Híbrido}
+
+# Arquétipo pedido na Descoberta (o seletor "Arquétipo"): na ordem do funil, um conjunto perde estes pontos por unidade de
+# distância ao arquétipo pedido (o que falta em cada condição da regra dele, como parte do limiar, mais o quanto o
+# conjunto está dentro de uma regra anterior que ganharia), lida no arquétipo que a coluna mostra (o da nota: a build no
+# minuto, com os status dos itens e das passivas). Alta de propósito: as notas da Descoberta diferem por poucos pontos, e
+# com 100 quem chega no arquétipo vem antes de quem passa perto (a 0,1 de distância já perde 10). Quem chega não perde
+# nada. A nota mostrada continua a medida. O Atlas tem a sua (atlas_<patch>.yml).
+penalidade_arquetipo_pedido: 100

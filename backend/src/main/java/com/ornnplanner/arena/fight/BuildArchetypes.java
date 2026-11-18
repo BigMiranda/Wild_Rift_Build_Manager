@@ -42,6 +42,7 @@ public class BuildArchetypes {
     private final Map<String, List<String>> families = new LinkedHashMap<>();
     private final Map<String, List<String>> effectGroups = new LinkedHashMap<>();
     private final List<Map<String, Object>> rules;
+    private double requestPenalty = 100;
 
     @SuppressWarnings("unchecked")
     public BuildArchetypes(FighterBuilder combat, PlannerService planner, CombatCatalog catalog,
@@ -54,6 +55,10 @@ public class BuildArchetypes {
             ((Map<String, List<String>>) root.get("familias")).forEach((k, v) -> families.put(k, new ArrayList<>(v)));
             ((Map<String, List<String>>) root.get("efeitos")).forEach((k, v) -> effectGroups.put(k, new ArrayList<>(v)));
             rules = (List<Map<String, Object>>) root.get("arquetipos");
+            Object p = root.get("penalidade_arquetipo_pedido");
+            if (p instanceof Number) {
+                requestPenalty = ((Number) p).doubleValue();
+            }
         } catch (IOException e) {
             throw new IllegalStateException("Cannot read seed file " + file, e);
         }
@@ -117,6 +122,11 @@ public class BuildArchetypes {
                 gold.merge(family, value * price, Double::sum);
             }
         });
+    }
+
+    /** Points per unit of distance a build loses when an archetype is asked for (the Discovery's ranking). */
+    public double requestPenalty() {
+        return requestPenalty;
     }
 
     /** The archetypes in rule order: key -> name (the first rule that passes is a build's). */

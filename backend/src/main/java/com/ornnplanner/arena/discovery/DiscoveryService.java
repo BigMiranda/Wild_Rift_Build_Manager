@@ -288,6 +288,14 @@ public class DiscoveryService {
         for (Funnel.Entry e : fr.ranked.subList(0, Math.min(10, fr.ranked.size()))) {
             res.ranked.add(ev.view(e.kit, e, e.origin));
         }
+        if (r.archetype != null && !r.archetype.isBlank() && !fr.ranked.isEmpty()) {
+            List<Funnel.Entry> top = fr.ranked.subList(0, Math.min(10, fr.ranked.size()));
+            long reached = top.stream().filter(e -> e.full != null && e.full.penalty <= 1e-9).count();
+            String name = archetypes.names().getOrDefault(r.archetype.trim(), r.archetype.trim());
+            res.notes.add(String.format(java.util.Locale.ROOT, "Arquétipo pedido: %s. %d dos %d primeiros conjuntos chegam nele "
+                    + "(o arquétipo da coluna); os outros perdem pontos na ordem pela distância a ele (a nota mostrada é a medida).",
+                    name, reached, top.size()));
+        }
         fr.niches.forEach((k, e) -> res.niches.put(k, ev.view(e.kit, e, e.origin)));
         res.standard = standard(res.ranked);
         // synergies of the best two finalists
@@ -1208,7 +1216,8 @@ public class DiscoveryService {
                 return known;
             }
             long t0 = System.nanoTime();
-            double v = s.scorer.score(build(k), QUICK_MINUTE, BuildScore.Options.quick()).total;
+            BuildScore.Score q = s.scorer.score(build(k), QUICK_MINUTE, BuildScore.Options.quick());
+            double v = q.total - archetypePenalty(q.archetypeRead);
             synchronized (this) {
                 quickSeconds += (System.nanoTime() - t0) / 1e9;
                 quickCount++;
@@ -1239,6 +1248,18 @@ public class DiscoveryService {
             return eval(build(k), BuildScore.Options.confirm());
         }
 
+        /**
+         * The archetype asked for (null = free): points off a kit in the funnel's ranking, by the distance of the archetype
+         * its score read (the one the screen shows) to it ({@link BuildArchetypes#distance}, times the classification's
+         * {@code penalidade_arquetipo_pedido}). A kit that reaches the archetype loses nothing.
+         */
+        double archetypePenalty(BuildArchetypes.Archetype read) {
+            if (r.archetype == null || r.archetype.isBlank() || read == null) {
+                return 0;
+            }
+            return s.archetypes.requestPenalty() * s.archetypes.distance(read, r.archetype.trim());
+        }
+
         /** The robust score as the funnel's reading: the total, each scenario-minute's points and the niche. */
         Funnel.Eval eval(BuildRepository.Build b, BuildScore.Options o) {
             BuildScore.Robust rob = s.scorer.robust(b, null, o);
@@ -1248,6 +1269,7 @@ public class DiscoveryService {
             e.extra.put("p20", rob.p20);
             Map<String, Double> curve = new LinkedHashMap<>();
             String archetype = null;
+            BuildArchetypes.Archetype read = null;
             Double durability = null;
             for (BuildScore.Score sc : rob.minutes) {
                 curve.put(String.valueOf(sc.minute), sc.total);
@@ -1258,10 +1280,12 @@ public class DiscoveryService {
                     }
                 }
                 archetype = sc.archetype;
+                read = sc.archetypeRead;
                 durability = sc.parts.get(BuildScore.DEFENSIVE);
             }
             e.extra.put("curve", curve);
             e.extra.put("archetype", archetype);
+            e.penalty = archetypePenalty(read);
             for (String axis : r.axes) {
                 e.niche.add(axis(axis, b, archetype, durability));
             }
@@ -1338,6 +1362,7 @@ public class DiscoveryService {
                     v.p20 = (Double) e.full.extra.get("p20");
                     v.niche = String.join(" · ", e.full.niche);
                     v.archetype = (String) e.full.extra.get("archetype");
+                    v.archetypePenalty = e.full.penalty > 0 ? e.full.penalty : null;
                     @SuppressWarnings("unchecked")
                     Map<String, Double> curve = (Map<String, Double>) e.full.extra.get("curve");
                     if (curve != null) {
