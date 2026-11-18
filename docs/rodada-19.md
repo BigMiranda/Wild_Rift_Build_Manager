@@ -369,6 +369,32 @@ que os pilotos desta rodada usaram. O que custa é preparar os lutadores (88% do
 3. A build nova é melhor a partir do minuto 20 e pior no 15, na luta de verdade: o próximo passo é pesar os minutos
    (hoje iguais) ou medir o 15 com mais builds, e escolher o Automático do Ornn uma vez para todos os minutos.
 
+## Piloto com a fórmula nova da velocidade de ataque (✅)
+
+A configuração da execução 8 (Parte 3 + 4: Automático, objetivo do papel, contra a progressão natural; preset rápido,
+minutos 10, 15 e 20), rodada de novo com a fórmula do patch 7.3 (execução 11, 18,3 min, numa cópia do banco).
+
+**Build do Ornn:** Ruptor Divino 4,0', Lembrete Mortal 8,3', Grevas Vorazes 9,7', Eclipse 13,9', Presa da Serpente
+17,9', Chuva de Canivete 22,1'; Conquistador, Orbe Anulador, Celeridade, Curar. Nenhum item fora do arquétipo e nenhum
+item só de velocidade de ataque: é uma build de Dano de Ataque, com crítico em dois itens (Lembrete Mortal e Chuva de
+Canivete, junto com DdA e penetração), sem o Desespero e o Terminus da execução 8. Nota 66,0 (média 81,6, robustez
+55,6); o minuto 15 é o fraco (61,2 de média, 37,8 no pior caso).
+
+**Luta de verdade** (cérebros e fórmula da execução 11, contra o Rumble previsto; objetivo do Tanque = 0,35 × duelo +
+0,65 × equipe):
+
+| Build do Ornn | Min 15: duelo / equipe / objetivo | Min 20: duelo / equipe / objetivo |
+|---|---|---|
+| Antiga (execução 3: contra o fixado, troca parada) | 38,6 / 27,3 / **31,3** | 34,5 / 27,8 / 30,2 |
+| Parte 3 + 4, fórmula antiga (execução 8) | 28,7 / 23,7 / 25,5 | 62,0 / 34,3 / 44,0 |
+| Parte 3 + 4, fórmula nova (execução 11) | 30,5 / 29,0 / 29,5 | 71,1 / 44,1 / **53,6** |
+
+- Com a fórmula nova, a build do guia é a melhor no minuto 20 com folga (53,6 contra 44,0 e 30,2) e encosta na antiga
+  no 15 (29,5 contra 31,3, dentro da margem do duelo). Remedida com a fórmula nova, a build da execução 8 ficou igual no 15 (25,5
+  contra 25,4) e subiu no 20 (44,0 contra 41,2): o Rumble também mudou de velocidade de ataque.
+- O guia ainda superestima: prevê 61 a 90 por minuto, e as lutas dão 30 a 54.
+- O minuto 15 segue sendo o ponto fraco do Ornn contra o Rumble em qualquer build medida.
+
 ## Pendências
 
 - ~~A fórmula da velocidade de ataque~~: resolvida pelos prints e pelas notas do patch 7.3 (seção no começo). Falta
