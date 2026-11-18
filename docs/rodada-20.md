@@ -218,3 +218,25 @@ contra os prováveis sem o Darius, o melhor é Cristal de Rubi no estilo cautelo
 `DraftReportTest` (opcional, `-Ddraft.report=data/ornn-planner.db`: o encontro de uma rota em menos de 30 s, com 10 a 12
 inícios).
 
+## Parte 5: builds prováveis durante a partida (✅)
+
+**Painel "Builds prováveis"** (`components/LiveBuildsPanel.jsx`; `POST /api/draft/builds?medir=`; `LiveBuildsService`):
+
+- As **10 builds completas mais prováveis** do campeão selecionado, pelo modelo de progressão da Rodada 19 condicionado
+  aos itens e componentes comprados, às runas (pela build do campeão) e à composição dos dois times. A cadeia sozinha é
+  rápida e acompanha cada compra; as lutas esperam o botão "Medir as lutas".
+- **Ordem:** a importância para o contexto próximo = |o quanto o próximo item muda o duelo com o adversário de rota| (a
+  corrida agora contra a corrida no minuto em que o item fecha) + 0,5 × |o ganho de Efetividade Básica| (a durabilidade
+  média em 4 cenários 1x1 do `efetividade_7_3d.yml`, com e sem o item). A probabilidade fica ao lado; "Ordenar por
+  probabilidade" troca a ordem.
+- **Por build:** cada item com o minuto estimado (pelo ouro informado no cartão: o ritmo é (ouro − 500) / minuto, e cada
+  item espera o que falta pagar descontados os componentes; sem ouro, o ritmo padrão da progressão, 700/min, com a bota
+  aprimorada só depois dos 10:00), o duelo depois de cada um dos 3 primeiros itens (o adversário também cresce, pela
+  continuação mais provável dele) e o que muda ao fechar: "duelo +45,6 · efetividade +3,3 · Ornn passa a ganhar do Darius
+  a partir do 1º item".
+- **O lado aliado:** a mesma lista e a resposta recomendada: para cada aliado com adversário de rota, entre os 3 próximos
+  itens mais prováveis dele, o que vai melhor no duelo contra o adversário com o próximo item provável dele. O Atlas não
+  entra (uma execução do Atlas leva minutos).
+
+**Tempo:** 2,5 a 4,5 s por campeão com as lutas (10 builds; os prefixos iguais lutam uma vez).
+

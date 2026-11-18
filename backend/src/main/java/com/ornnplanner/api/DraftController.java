@@ -5,6 +5,7 @@ import com.ornnplanner.arena.draft.DraftModel;
 import com.ornnplanner.arena.draft.DraftService;
 import com.ornnplanner.arena.draft.DraftTablesService;
 import com.ornnplanner.arena.draft.FirstEncounterService;
+import com.ornnplanner.arena.draft.LiveBuildsService;
 import com.ornnplanner.arena.draft.LiveGameModel;
 import com.ornnplanner.arena.draft.LiveGameRepository;
 import com.ornnplanner.arena.draft.VoiceAliases;
@@ -36,10 +37,12 @@ public class DraftController {
     private final DraftService draft;
     private final DraftTablesService tables;
     private final FirstEncounterService encounter;
+    private final LiveBuildsService builds;
 
     public DraftController(LiveGameRepository games, DraftCatalog catalog, VoiceAliases aliases, DraftService draft, DraftTablesService tables,
-                           FirstEncounterService encounter) {
+                           FirstEncounterService encounter, LiveBuildsService builds) {
         this.encounter = encounter;
+        this.builds = builds;
         this.games = games;
         this.catalog = catalog;
         this.aliases = aliases;
@@ -74,6 +77,19 @@ public class DraftController {
     public FirstEncounterService.Result encounter(@RequestBody PlayerRequest q) {
         try {
             return encounter.run(q.game, q.side, q.index);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    /**
+     * Parte 5: a card's 10 most likely complete builds (the progression model from what it bought), by importance for the
+     * near context ({@code medir=false}: only the chain, no fights).
+     */
+    @PostMapping("/builds")
+    public LiveBuildsService.Result builds(@RequestBody PlayerRequest q, @RequestParam(defaultValue = "true") boolean medir) {
+        try {
+            return builds.run(q.game, q.side, q.index, medir);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }

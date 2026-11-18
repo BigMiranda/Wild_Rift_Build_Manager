@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { t } from '../i18n.js';
 import DraftPanel from './DraftPanel.jsx';
 import EncounterPanel from './EncounterPanel.jsx';
+import LiveBuildsPanel from './LiveBuildsPanel.jsx';
 
-const PANELS = ['draft', 'encontro'];
+const PANELS = ['draft', 'encontro', 'builds'];
 
 /**
  * Rodada 20: the panels under the two teams, one at a time (the screen stays short on a phone): the draft (Parte 3),
@@ -24,6 +25,7 @@ export default function LivePanels(props) {
       </div>
       {panel === 'draft' && <DraftPanel game={props.game} onChange={props.onChange} />}
       {panel === 'encontro' && <EncounterPanel game={props.game} selected={props.selected} />}
+      {panel === 'builds' && <LiveBuildsPanel game={props.game} selected={props.selected} />}
     </div>
   );
 }
