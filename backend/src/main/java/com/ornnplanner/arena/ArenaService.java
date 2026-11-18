@@ -530,6 +530,7 @@ public class ArenaService {
             in.combos = combos.forPolicy(in.f.champion, null);   // the library's active combos, best first
             in.policy = policy(slot.brain, in);
             in.baseAttackSpeed = f.baseAttackSpeed > 0 ? f.baseAttackSpeed : 0.7;
+            in.attackSpeedRatio = f.baseAttackSpeed > 0 ? f.attackSpeedRatio : 0;
             double[] start = sc.rift != null ? riftStart(slot.team, perTeam[slot.team]++) : start(slot.team, perTeam[slot.team]++, ofTeam[slot.team]);
             in.x = slot.x != null ? slot.x : start[0];
             in.y = slot.y != null ? slot.y : start[1];

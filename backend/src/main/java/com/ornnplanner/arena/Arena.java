@@ -95,6 +95,14 @@ public class Arena {
         public Policy policy;
         /** Base attack speed at the fighter's level (attacks / s); bonus % comes from its stats. */
         public double baseAttackSpeed;
+        /** Attack speed each 100% of bonus adds ({@link Fighter#attackSpeedRatio}); 0 = the base (bonus multiplies it). */
+        public double attackSpeedRatio;
+
+        /** Attacks per second with a bonus (%), before slows and the cap: base + ratio x bonus (patch 7.3). */
+        public double attackSpeed(double bonusPct) {
+            return baseAttackSpeed + (attackSpeedRatio > 0 ? attackSpeedRatio : baseAttackSpeed) * bonusPct / 100;
+        }
+
         /** Its side's plan (the same object for every champion of the side; null = no plan, each picks its own). */
         public TeamPlan team;
         /** Takes the target the side's plan picks (see {@link ArenaModel.Slot#followTeam}). */
@@ -145,6 +153,7 @@ public class Arena {
             c.team = team;
             c.followTeam = followTeam;
             c.baseAttackSpeed = baseAttackSpeed;
+            c.attackSpeedRatio = attackSpeedRatio;
             c.activeCooldowns = activeCooldowns;
             c.triggers = triggers;
             c.combos = combos;
@@ -577,7 +586,7 @@ public class Arena {
         }
 
         double attackSpeed() {
-            double as = in.baseAttackSpeed * (1 + stat("% Attack Speed") / 100) * (1 - attackSlow(this));
+            double as = in.attackSpeed(stat("% Attack Speed")) * (1 - attackSlow(this));
             return Math.max(0.2, Math.min(3.0, as));
         }
 
@@ -9237,6 +9246,7 @@ public class Arena {
             in.kit = kit;
             in.policy = (o, m) -> Policy.Decision.of(ActionSpace.IDLE);
             in.baseAttackSpeed = clone ? owner.in.baseAttackSpeed : num(spec.get("velocidade_ataque"), 0.8);
+            in.attackSpeedRatio = clone ? owner.in.attackSpeedRatio : 0;
             boolean aimed = "ponto".equals(ab.get("origem"));
             in.x = clampX(aimed ? tx : owner.x + 120 * (k + 1) * Math.cos(owner.facing));
             in.y = clampY(aimed ? ty : owner.y + 120 * (k + 1) * Math.sin(owner.facing));
@@ -9516,7 +9526,7 @@ public class Arena {
         for (String k : List.of(Stats.MAX_HEALTH, Stats.ARMOR, Stats.MAGIC_RESIST, Stats.ATTACK_DAMAGE, Stats.ABILITY_POWER)) {
             out.put(k, sheet.getOrDefault(k, 0.0));
         }
-        out.put("attackSpeed", u.in.baseAttackSpeed * (1 + sheet.getOrDefault("% Attack Speed", 0.0) / 100));
+        out.put("attackSpeed", u.in.attackSpeed(sheet.getOrDefault("% Attack Speed", 0.0)));
         out.put("moveSpeed", sheet.getOrDefault(Stats.MOVE_SPEED, 0.0) * (1 + sheet.getOrDefault("% Move Speed", 0.0) / 100));
         out.put("shield", sheet.getOrDefault("Shield", 0.0) + sheet.getOrDefault("Magic Shield", 0.0)
                 + sheet.getOrDefault("Physical Shield", 0.0));

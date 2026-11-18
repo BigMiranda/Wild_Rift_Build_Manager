@@ -171,7 +171,8 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   other side sampled at `minutos_progressao`, score = mean and robustness), `objetivo: papel` (`objetivo_por_classe`: a
   small team fight protecting an allied carry from `EffectTestService.allyOf`, `MinuteResult.teamA/teamB` with their own
   model) and `KitUse` ("aproveita o kit?", `aproveita_kit`: out-of-archetype items need a margin). Old runs read as before
-  (fixado + tactical_stand, duel only).
+  (fixado + tactical_stand, duel only). Attack speed follows patch 7.3: `base(level) + multiplier x bonus` (`velocidade_ataque` in
+  `campeoes_7_3f.yml`, `Arena.Input.attackSpeed`; ragdolls and hand-built fighters keep `base x (1 + bonus)`).
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.

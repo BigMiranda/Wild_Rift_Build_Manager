@@ -549,14 +549,36 @@ public class FighterBuilder {
                 if (l1 != null && l1.get("VdA") != null && l15 != null && l15.get("VdA") != null) {
                     double a1 = ((Number) l1.get("VdA")).doubleValue();
                     double a15 = ((Number) l15.get("VdA")).doubleValue();
-                    double baseAs = a1 + (a15 - a1) * (r.level - 1) / 14.0;
-                    f.baseAttackSpeed = baseAs;
+                    f.baseAttackSpeed = a1 + (a15 - a1) * attackSpeedGrowth(r.level) / 14.0;
+                    f.attackSpeedRatio = attackSpeedRatio(champ);
                 }
             }
         }
         f.spells = b.spells == null ? new ArrayList<>() : new ArrayList<>(b.spells);
         f.runes = b.runePage == null ? new ArrayList<>() : b.runePage.chosen();
         return f;
+    }
+
+    /**
+     * The levels' share of attack speed by a level, in "per level" units (patch 7.3: each level gained gives
+     * per_level x (0.7 + 0.04 x the level it leaves), 14 from 1 to 15).
+     */
+    public static double attackSpeedGrowth(double level) {
+        double l = Math.max(1, level) - 1;
+        return 0.7 * l + 0.02 * l * (l + 1);
+    }
+
+    /** The multiplier of most champions in the patch 7.3 table (for those without the field). */
+    public static final double DEFAULT_ATTACK_SPEED_RATIO = 0.625;
+
+    /** The champion's attack speed multiplier (`velocidade_ataque.multiplicador`; 0.625 without the field). */
+    @SuppressWarnings("unchecked")
+    public static double attackSpeedRatio(Map<String, Object> champ) {
+        Object as = champ == null ? null : champ.get("velocidade_ataque");
+        if (as instanceof Map && ((Map<String, Object>) as).get("multiplicador") instanceof Number) {
+            return ((Number) ((Map<String, Object>) as).get("multiplicador")).doubleValue();
+        }
+        return DEFAULT_ATTACK_SPEED_RATIO;
     }
 
     /** Stacks a rune of the build has gathered by the minute (its stack rate, within its limit). */

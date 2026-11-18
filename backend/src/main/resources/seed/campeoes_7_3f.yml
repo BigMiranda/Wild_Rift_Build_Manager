@@ -46,6 +46,14 @@
 #   não estão nos valores. Gnar (Mega-Gnar) e Jayce (Martelo) foram medidos na forma alternativa: a base ficou a da
 #   forma padrão, conferida no jogo, e a outra forma virou um efeito.
 #
+# velocidade_ataque: a fórmula da Velocidade de Ataque das notas do patch 7.3 (apêndice "como a Velocidade de Ataque é
+# calculada", wildrift.leagueoflegends.com/pt-br/news/game-updates/wild-rift-patch-notes-7-3/, lido em 18/11/2026):
+#   VdA total = VdA base + multiplicador x VdA adicional; VdA adicional = adicional_base + o que os níveis deram + itens,
+#   runas e habilidades. Cada nível ganho dá por_nivel x (0,7 + 0,04 x nível atual) (do 1 ao 15, 14 x por_nivel).
+#   Os itens somam multiplicador x o bônus, sem crescer com o nível (conferido em prints: Ornn com +100% de Arcos
+#   Recurvos, 1,36 no nível 2 e 1,46 no 15). A base do nível segue nv1 / nv15 com a curva dos níveis; 131 dos 141
+#   campeões da tabela batem nv1 e nv15 a ±0,006 (docs/rodada-19.md). Sem o campo (Hwei, Sylas): multiplicador 0,625.
+#
 # efeitos: o que muda status e entra no cálculo (o resto da passiva e das habilidades fica só como texto). Por grupo
 # (passiva ou habilidade):
 #   habilidade   P (passiva: desde o nível 1) ou 1, 2, 3, R: só conta com a habilidade aprendida, e listas de valores
@@ -70,6 +78,7 @@ patch: "7.3f"
 campeoes:
   Aatrox:
     titulo: A Espada Darkin
+    velocidade_ataque: {multiplicador: 0.651, adicional_base: 0.13, por_nivel: 0.021}
     classes: [Lutador/Colosso]
     funcoes: [Lutador]
     rotas: [Barão, Selva]
@@ -138,6 +147,7 @@ campeoes:
           VdM: [60%, 75%, 90%]
   Ahri:
     titulo: A Raposa de Nove Caudas
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.02}
     classes: [Mago/Explosivo]
     funcoes: [Mago, Assassino]
     rotas: [Meio]
@@ -204,6 +214,7 @@ campeoes:
           Dano base: [60, 90, 120]
   Akali:
     titulo: A Assassina Renegada
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.02}
     classes: [Assassino/Assassino]
     funcoes: [Assassino]
     rotas: [Meio, Barão]
@@ -264,6 +275,7 @@ campeoes:
           Segundo Dano: [70, 140, 210]
   Akshan:
     titulo: O Sentinela Rebelde
+    velocidade_ataque: {multiplicador: 0.4, adicional_base: 0.67, por_nivel: 0.04}
     classes: [Assassino/Assassino, Atirador]
     funcoes: [Atirador, Assassino]
     rotas: [Meio]
@@ -343,6 +355,7 @@ campeoes:
           Dano Máx.: [75, 105, 135]
   Alistar:
     titulo: O Minotauro
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.012}
     classes: [Tanque/Vanguarda]
     funcoes: [Tanque, Suporte]
     rotas: [Suporte]
@@ -416,6 +429,7 @@ campeoes:
           Redução de Dano: [55%, 65%, 75%]
   Ambessa:
     titulo: A Matriarca da Guerra
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.012}
     classes: [Lutador/Mergulhador, Assassino/Escaramuçador]
     funcoes: [Lutador, Assassino]
     rotas: [Selva, Barão]
@@ -498,6 +512,7 @@ campeoes:
           Vampirismo de Habilidade: [12.5%, 15%, 17.5%]
   Amumu:
     titulo: A Múmia Triste
+    velocidade_ataque: {multiplicador: 0.638, adicional_base: 0.25, por_nivel: 0.024}
     classes: [Tanque/Vanguarda]
     funcoes: [Tanque]
     rotas: [Selva, Suporte, Barão]
@@ -555,6 +570,7 @@ campeoes:
           Dano base: [150, 250, 350]
   Annie:
     titulo: A Criança Sombria
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.006}
     classes: [Mago/Explosivo]
     funcoes: [Mago, Suporte]
     rotas: [Meio]
@@ -617,6 +633,7 @@ campeoes:
           Segundo Dano: [110, 150, 190]
   Ashe:
     titulo: A Arqueira do Gelo
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.23, por_nivel: 0.03}
     classes: [Atirador]
     funcoes: [Atirador, Suporte]
     rotas: [Dragão, Suporte]
@@ -682,6 +699,7 @@ campeoes:
           Dano base: [200, 350, 500]
   Aurelion Sol:
     titulo: O Forjador de Estrelas
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.004}
     classes: [Mago/Mago de Batalha]
     funcoes: [Mago]
     rotas: [Meio]
@@ -754,6 +772,7 @@ campeoes:
           Dano base (3): [150, 250, 350]
   Aurora:
     titulo: A Bruxa Entre Mundos
+    velocidade_ataque: {multiplicador: 0.668, adicional_base: 0.12, por_nivel: 0.02}
     classes: [Mago/Explosivo, Assassino/Assassino]
     funcoes: [Mago, Assassino]
     rotas: [Meio, Barão]
@@ -816,6 +835,7 @@ campeoes:
           Duração da Lentidão da área de convergência: [1.5, 1.75, 2]
   Bardo:
     titulo: O Protetor Andarilho
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.14, por_nivel: 0.015}
     classes: [Controlador/Captor]
     funcoes: [Suporte, Mago]
     rotas: [Suporte]
@@ -881,6 +901,7 @@ campeoes:
           Tempo de Recarga: [75, 65, 55]
   Blitzcrank:
     titulo: O Grande Golem a Vapor
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.006}
     classes: [Controlador/Captor]
     funcoes: [Tanque, Suporte]
     rotas: [Suporte]
@@ -945,6 +966,7 @@ campeoes:
           Dano da Ativa: [275, 400, 525]
   Brand:
     titulo: A Vingança Flamejante
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.0185}
     classes: [Mago/Explosivo]
     funcoes: [Mago]
     rotas: [Meio, Suporte]
@@ -1006,6 +1028,7 @@ campeoes:
           Redução de Velocidade: [30%, 40%, 50%]
   Braum:
     titulo: O Coração de Freljord
+    velocidade_ataque: {multiplicador: 0.644, adicional_base: 0.16, por_nivel: 0.03}
     classes: [Tanque/Guardião]
     funcoes: [Suporte, Tanque]
     rotas: [Suporte]
@@ -1084,6 +1107,7 @@ campeoes:
           Duração do arremesso ao ar: [1, 1.25, 1.5]
   Caitlyn:
     titulo: A Xerife de Piltover
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.04}
     classes: [Atirador]
     funcoes: [Atirador]
     rotas: [Dragão]
@@ -1146,6 +1170,7 @@ campeoes:
           Alcance: [1750, 2250, 2750]
   Camille:
     titulo: A Sombra de Aço
+    velocidade_ataque: {multiplicador: 0.644, adicional_base: 0.24, por_nivel: 0.016}
     classes: [Lutador/Mergulhador]
     funcoes: [Lutador]
     rotas: [Barão, Selva]
@@ -1221,6 +1246,7 @@ campeoes:
           Duração da Zona: [2, 2.5, 3]
   Cho'Gath:
     titulo: O Terror do Vazio
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.008}
     classes: [Especialista]
     funcoes: [Tanque, Mago]
     rotas: [Barão]
@@ -1295,6 +1321,7 @@ campeoes:
           Alcance de Ataque: [4.7, 6.2, 7.7]
   Corki:
     titulo: O Bombardeiro Ousado
+    velocidade_ataque: {multiplicador: 0.644, adicional_base: 0.17, por_nivel: 0.032}
     classes: [Atirador]
     funcoes: [Atirador]
     rotas: [Dragão, Meio]
@@ -1353,6 +1380,7 @@ campeoes:
           Dano Fortalecido: [140, 210, 280]
   Darius:
     titulo: A Mão de Noxus
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.17, por_nivel: 0.008}
     classes: [Lutador/Colosso]
     funcoes: [Lutador]
     rotas: [Barão, Selva]
@@ -1423,6 +1451,7 @@ campeoes:
           Dano base: [125, 250, 375]
   Diana:
     titulo: O Escárnio da Lua
+    velocidade_ataque: {multiplicador: 0.694, adicional_base: 0.15, por_nivel: 0.008}
     classes: [Assassino/Assassino, Lutador/Mergulhador]
     funcoes: [Lutador, Mago]
     rotas: [Meio, Barão, Selva]
@@ -1488,6 +1517,7 @@ campeoes:
           Dano base (2): [200, 320, 440]
   Dr. Mundo:
     titulo: O Louco de Zaun
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.028}
     classes: [Lutador/Colosso]
     funcoes: [Lutador, Tanque]
     rotas: [Barão, Selva]
@@ -1572,6 +1602,7 @@ campeoes:
           Vida: [25%, 30%, 35%]
   Draven:
     titulo: O Carrasco de Noxus
+    velocidade_ataque: {multiplicador: 0.679, adicional_base: 0.11, por_nivel: 0.03}
     classes: [Atirador]
     funcoes: [Atirador]
     rotas: [Dragão]
@@ -1640,6 +1671,7 @@ campeoes:
           Dano base: [200, 300, 400]
   Ekko:
     titulo: O Rapaz que Estilhaçou o Tempo
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.031}
     classes: [Assassino/Assassino]
     funcoes: [Assassino, Mago]
     rotas: [Meio, Selva, Barão]
@@ -1702,6 +1734,7 @@ campeoes:
           Dano base: [200, 350, 500]
   Evelynn:
     titulo: Abraço da Agonia
+    velocidade_ataque: {multiplicador: 0.667, adicional_base: 0.2, por_nivel: 0.012}
     classes: [Assassino/Assassino]
     funcoes: [Assassino]
     rotas: [Selva]
@@ -1763,6 +1796,7 @@ campeoes:
           Dano base: [150, 260, 370]
   Ezreal:
     titulo: O Explorador Pródigo
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.022}
     classes: [Atirador]
     funcoes: [Atirador, Mago]
     rotas: [Dragão]
@@ -1828,6 +1862,7 @@ campeoes:
           Dano base: [300, 500, 700]
   Fiddlesticks:
     titulo: O Terror Ancestral
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.012}
     classes: [Especialista]
     funcoes: [Mago]
     rotas: [Selva]
@@ -1896,6 +1931,7 @@ campeoes:
           Dano base: [30, 50, 70]
   Fiora:
     titulo: A Grande Duelista
+    velocidade_ataque: {multiplicador: 0.69, adicional_base: 0.16, por_nivel: 0.026}
     classes: [Assassino/Escaramuçador]
     funcoes: [Lutador, Assassino]
     rotas: [Barão]
@@ -1965,6 +2001,7 @@ campeoes:
           Redução de tempo por revelar Pontos Vitais: [0.25, 0.5, 0.75]
   Fizz:
     titulo: O Trapaceiro das Marés
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.22, por_nivel: 0.022}
     classes: [Assassino/Assassino]
     funcoes: [Assassino, Mago]
     rotas: [Meio, Barão, Selva]
@@ -2024,6 +2061,7 @@ campeoes:
           Dano Máx.: [300, 400, 500]
   Galio:
     titulo: O Colosso
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.007}
     classes: [Tanque/Guardião]
     funcoes: [Tanque, Mago]
     rotas: [Meio, Suporte]
@@ -2092,6 +2130,7 @@ campeoes:
           Dano base: [150, 250, 350]
   Garen:
     titulo: O Poder de Demacia
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.024}
     classes: [Lutador/Colosso]
     funcoes: [Lutador, Tanque]
     rotas: [Barão]
@@ -2162,6 +2201,7 @@ campeoes:
           Dano base: [150, 250, 350]
   Gnar:
     titulo: O Yordle Pré-Histórico
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.015}
     classes: [Especialista]
     funcoes: [Lutador, Tanque]
     rotas: [Barão]
@@ -2256,6 +2296,7 @@ campeoes:
           Duração de Atordoamento: [1.25, 1.5, 1.75]
   Gragas:
     titulo: O Badernista
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.013}
     classes: [Tanque/Vanguarda]
     funcoes: [Tanque, Mago]
     rotas: [Selva, Barão, Meio]
@@ -2330,6 +2371,7 @@ campeoes:
           Dano base: [200, 300, 400]
   Graves:
     titulo: O Foragido
+    velocidade_ataque: {multiplicador: 0.7, adicional_base: 0, por_nivel: 0.021}
     classes: [Especialista]
     funcoes: [Atirador, Lutador]
     rotas: [Selva, Barão]
@@ -2393,6 +2435,7 @@ campeoes:
           Segundo Dano: [200, 320, 440]
   Gwen:
     titulo: A Costureira Encantada
+    velocidade_ataque: {multiplicador: 0.69, adicional_base: 0.16, por_nivel: 0.026}
     classes: [Assassino/Escaramuçador]
     funcoes: [Lutador]
     rotas: [Barão, Selva]
@@ -2467,6 +2510,7 @@ campeoes:
           Redução de Velocidade: [35%, 40%, 45%]
   Hecarim:
     titulo: A Sombra da Guerra
+    velocidade_ataque: {multiplicador: 0.67, adicional_base: 0.2, por_nivel: 0.016}
     classes: [Lutador/Mergulhador]
     funcoes: [Lutador]
     rotas: [Selva]
@@ -2539,6 +2583,7 @@ campeoes:
           Dano base: [150, 250, 350]
   Heimerdinger:
     titulo: O Inventor Idolatrado
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.01}
     classes: [Especialista]
     funcoes: [Mago, Suporte]
     rotas: [Meio]
@@ -2686,6 +2731,7 @@ campeoes:
           Dano base (2): [200, 300, 400]
   Irelia:
     titulo: A Dançarina das Lâminas
+    velocidade_ataque: {multiplicador: 0.656, adicional_base: 0.22, por_nivel: 0.016}
     classes: [Lutador/Mergulhador]
     funcoes: [Lutador, Assassino]
     rotas: [Meio, Barão]
@@ -2764,6 +2810,7 @@ campeoes:
           Dano adicional: [100, 225, 350]
   Janna:
     titulo: A Fúria da Tormenta
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.022}
     classes: [Controlador/Encantador]
     funcoes: [Suporte, Mago]
     rotas: [Suporte]
@@ -2831,6 +2878,7 @@ campeoes:
           Cura: [50, 75, 100]
   Jarvan IV:
     titulo: O Exemplo de Demacia
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.22, por_nivel: 0.016}
     classes: [Lutador/Mergulhador]
     funcoes: [Tanque, Lutador]
     rotas: [Selva, Barão]
@@ -2905,6 +2953,7 @@ campeoes:
           Redução de Dano: [12%, 16%, 20%]
   Jax:
     titulo: O Grão-Mestre das Armas
+    velocidade_ataque: {multiplicador: 0.638, adicional_base: 0.15, por_nivel: 0.03}
     classes: [Assassino/Escaramuçador]
     funcoes: [Lutador]
     rotas: [Selva, Barão]
@@ -2983,6 +3032,7 @@ campeoes:
           Resistência Mágica (2): [9, 12, 15]
   Jayce:
     titulo: O Defensor do Amanhã
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.22, por_nivel: 0.021}
     classes: [Mago/Artilharia]
     funcoes: [Lutador, Atirador]
     rotas: [Barão, Meio]
@@ -3089,6 +3139,7 @@ campeoes:
             Volta à forma Martelo (corpo a corpo, 125 de alcance), recebendo 16%–30% de Velocidade de Ataque ({nível}) e 5–33 de Armadura e Resistência Mágica ({nível}) (+ 9%{DdA} adicional). O próximo ataque causa 28–140 de Dano Mágico adicional ({nível}) (+ 25%{DdA} adicional) e afeta estruturas.
   Jhin:
     titulo: O Virtuoso
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.06, por_nivel: 0.032}
     classes: [Atirador]
     funcoes: [Atirador, Mago]
     rotas: [Dragão]
@@ -3152,6 +3203,7 @@ campeoes:
           Dano base: [75, 150, 225]
   Jinx:
     titulo: O Gatilho Desenfreado
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.3, por_nivel: 0.02}
     classes: [Atirador]
     funcoes: [Atirador]
     rotas: [Dragão]
@@ -3225,6 +3277,7 @@ campeoes:
           Dano por % de Vida: [25%, 30%, 35%]
   Kai'Sa:
     titulo: A Filha do Vazio
+    velocidade_ataque: {multiplicador: 0.644, adicional_base: 0.17, por_nivel: 0.022}
     classes: [Atirador]
     funcoes: [Atirador, Assassino]
     rotas: [Dragão]
@@ -3297,6 +3350,7 @@ campeoes:
           DdA: [80%, 120%, 160%]
   Kalista:
     titulo: A Lança da Vingança
+    velocidade_ataque: {multiplicador: 0.694, adicional_base: 0.16, por_nivel: 0.046}
     classes: [Atirador]
     funcoes: [Atirador]
     rotas: [Dragão]
@@ -3366,6 +3420,7 @@ campeoes:
           Duração do arremesso ao ar: [1, 1.5, 2]
   Karma:
     titulo: A Iluminada
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.0135}
     classes: [Mago/Explosivo, Controlador/Encantador]
     funcoes: [Mago, Suporte]
     rotas: [Suporte, Meio]
@@ -3427,6 +3482,7 @@ campeoes:
           Dano base: [170, 280, 390]
   Kassadin:
     titulo: O Andarilho do Vazio
+    velocidade_ataque: {multiplicador: 0.64, adicional_base: 0.25, por_nivel: 0.027}
     classes: [Assassino/Assassino]
     funcoes: [Assassino, Mago]
     rotas: [Meio, Barão]
@@ -3492,6 +3548,7 @@ campeoes:
           Dano base: [80, 100, 120]
   Katarina:
     titulo: A Lâmina Sinistra
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.22, por_nivel: 0.018}
     classes: [Assassino/Assassino]
     funcoes: [Assassino, Mago]
     rotas: [Meio]
@@ -3545,6 +3602,7 @@ campeoes:
           Dano base: [400, 600, 800]
   Kayle:
     titulo: A Justa
+    velocidade_ataque: {multiplicador: 0.667, adicional_base: 0.13, por_nivel: 0.028}
     classes: [Especialista]
     funcoes: [Lutador, Suporte]
     rotas: [Barão, Meio]
@@ -3615,6 +3673,7 @@ campeoes:
           Dano base: [150, 225, 300]
   Kayn:
     titulo: O Ceifador das Sombras
+    velocidade_ataque: {multiplicador: 0.67, adicional_base: 0.2, por_nivel: 0.018}
     classes: [Assassino/Escaramuçador]
     funcoes: [Lutador]
     rotas: [Selva]
@@ -3689,6 +3748,7 @@ campeoes:
           Dano base: [200, 300, 400]
   Kennen:
     titulo: O Coração da Tempestade
+    velocidade_ataque: {multiplicador: 0.69, adicional_base: 0.09, por_nivel: 0.028}
     classes: [Especialista]
     funcoes: [Mago, Atirador]
     rotas: [Barão, Meio]
@@ -3762,6 +3822,7 @@ campeoes:
           Dano base: [20, 55, 90]
   Kha'Zix:
     titulo: O Ceifador do Vazio
+    velocidade_ataque: {multiplicador: 0.668, adicional_base: 0.2, por_nivel: 0.0185}
     classes: [Assassino/Assassino]
     funcoes: [Assassino, Lutador]
     rotas: [Selva]
@@ -3819,6 +3880,7 @@ campeoes:
           Tempo de Recarga: [75, 65, 55]
   Kindred:
     titulo: Os Caçadores Eternos
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.032}
     classes: [Atirador]
     funcoes: [Atirador]
     rotas: [Selva]
@@ -3898,6 +3960,7 @@ campeoes:
           Cura: [150, 200, 250]
   Kog'Maw:
     titulo: A Boca do Abismo
+    velocidade_ataque: {multiplicador: 0.665, adicional_base: 0.2, por_nivel: 0.03}
     classes: [Atirador]
     funcoes: [Atirador, Mago]
     rotas: [Dragão]
@@ -3961,6 +4024,7 @@ campeoes:
           VdA: [10%, 20%, 30%]
   K'Sante:
     titulo: O Orgulho de Nazumah
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.021}
     classes: [Tanque/Guardião, Assassino/Escaramuçador]
     funcoes: [Tanque, Lutador]
     rotas: [Barão]
@@ -4063,6 +4127,7 @@ campeoes:
           VdA: [40%, 60%, 80%]
   Lee Sin:
     titulo: O Monge Cego
+    velocidade_ataque: {multiplicador: 0.651, adicional_base: 0.23, por_nivel: 0.02}
     classes: [Lutador/Mergulhador]
     funcoes: [Lutador, Assassino]
     rotas: [Selva]
@@ -4131,6 +4196,7 @@ campeoes:
           Dano por % de Vida: [12%, 15%, 18%]
   Leona:
     titulo: A Alvorada Radiante
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.021}
     classes: [Tanque/Vanguarda]
     funcoes: [Tanque, Suporte]
     rotas: [Suporte]
@@ -4194,6 +4260,7 @@ campeoes:
           Dano base: [150, 225, 300]
   Lillia:
     titulo: O Florir Receoso
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.016}
     classes: [Assassino/Escaramuçador]
     funcoes: [Lutador]
     rotas: [Selva]
@@ -4272,6 +4339,7 @@ campeoes:
           Dano base: [100, 150, 200]
   Lissandra:
     titulo: A Bruxa Gélida
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.01}
     classes: [Mago/Explosivo]
     funcoes: [Mago]
     rotas: [Meio]
@@ -4331,6 +4399,7 @@ campeoes:
           Redução de Velocidade: [30%, 45%, 60%]
   Lucian:
     titulo: O Purificador
+    velocidade_ataque: {multiplicador: 0.638, adicional_base: 0.25, por_nivel: 0.028}
     classes: [Atirador]
     funcoes: [Atirador]
     rotas: [Dragão, Meio]
@@ -4394,6 +4463,7 @@ campeoes:
           Dano base: [20, 25, 30]
   Lulu:
     titulo: A Fada Feiticeira
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.013}
     classes: [Controlador/Encantador]
     funcoes: [Suporte, Mago]
     rotas: [Suporte]
@@ -4461,6 +4531,7 @@ campeoes:
           Vida: [250, 400, 550]
   Lux:
     titulo: A Dama da Luz
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.03}
     classes: [Mago/Explosivo, Mago/Artilharia]
     funcoes: [Mago, Suporte]
     rotas: [Meio, Suporte]
@@ -4517,6 +4588,7 @@ campeoes:
           Dano base: [300, 400, 500]
   Malphite:
     titulo: O Fragmento do Monolito
+    velocidade_ataque: {multiplicador: 0.638, adicional_base: 0.25, por_nivel: 0.04}
     classes: [Tanque/Vanguarda]
     funcoes: [Tanque]
     rotas: [Suporte, Barão, Meio]
@@ -4578,6 +4650,7 @@ campeoes:
           Dano base: [200, 300, 400]
   Maokai:
     titulo: O Ente Sinistro
+    velocidade_ataque: {multiplicador: 0.695, adicional_base: 0.15, por_nivel: 0.029}
     classes: [Tanque/Vanguarda]
     funcoes: [Tanque]
     rotas: [Selva, Barão, Suporte]
@@ -4646,6 +4719,7 @@ campeoes:
           VdM: [40%, 50%, 60%]
   Master Yi:
     titulo: O Espadachim Wuju
+    velocidade_ataque: {multiplicador: 0.679, adicional_base: 0.18, por_nivel: 0.018}
     classes: [Assassino/Escaramuçador]
     funcoes: [Assassino, Lutador]
     rotas: [Selva]
@@ -4724,6 +4798,7 @@ campeoes:
           VdA: [30%, 60%, 90%]
   Mel:
     titulo: O Reflexo da Alma
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.016}
     classes: [Mago/Artilharia]
     funcoes: [Mago]
     rotas: [Meio, Suporte]
@@ -4808,6 +4883,7 @@ campeoes:
           Dano de acúmulo de Eclipse Dourado: [4, 7, 10]
   Milio:
     titulo: A Chama Gentil
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.022}
     classes: [Controlador/Encantador]
     funcoes: [Suporte, Mago]
     rotas: [Suporte]
@@ -4869,6 +4945,7 @@ campeoes:
           Cura: [150, 250, 350]
   Miss Fortune:
     titulo: A Caçadora de Recompensas
+    velocidade_ataque: {multiplicador: 0.656, adicional_base: 0.22, por_nivel: 0.032}
     classes: [Atirador]
     funcoes: [Atirador, Mago]
     rotas: [Dragão]
@@ -4943,6 +5020,7 @@ campeoes:
           Dano base: [20, 30, 40]
   Mordekaiser:
     titulo: O Revenã de Ferro
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.17, por_nivel: 0.008}
     classes: [Lutador/Colosso]
     funcoes: [Lutador, Mago]
     rotas: [Barão, Selva]
@@ -5012,6 +5090,7 @@ campeoes:
           Tempo de Recarga: [105, 90, 75]
   Morgana:
     titulo: O Anjo Caído
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.005}
     classes: [Controlador/Captor]
     funcoes: [Mago, Suporte]
     rotas: [Suporte, Meio, Selva]
@@ -5071,6 +5150,7 @@ campeoes:
           VdM: [10%, 25%, 40%]
   Nami:
     titulo: A Conjuradora das Marés
+    velocidade_ataque: {multiplicador: 0.644, adicional_base: 0.17, por_nivel: 0.02}
     classes: [Controlador/Encantador]
     funcoes: [Suporte, Mago]
     rotas: [Suporte]
@@ -5128,6 +5208,7 @@ campeoes:
           Dano base: [150, 250, 350]
   Nasus:
     titulo: O Curador das Areias
+    velocidade_ataque: {multiplicador: 0.638, adicional_base: 0.25, por_nivel: 0.024}
     classes: [Lutador/Colosso]
     funcoes: [Lutador, Tanque]
     rotas: [Barão]
@@ -5198,6 +5279,7 @@ campeoes:
           Dano base: [3%, 4%, 5%]
   Nautilus:
     titulo: O Titã das Profundezas
+    velocidade_ataque: {multiplicador: 0.612, adicional_base: 0.2, por_nivel: 0.0124}
     classes: [Tanque/Vanguarda]
     funcoes: [Tanque, Suporte]
     rotas: [Suporte, Barão, Selva]
@@ -5260,6 +5342,7 @@ campeoes:
           Duração de Atordoamento: [1, 1.5, 2]
   Nidalee:
     titulo: A Caçadora Bestial
+    velocidade_ataque: {multiplicador: 0.638, adicional_base: 0.18, por_nivel: 0.024}
     classes: [Especialista]
     funcoes: [Assassino, Mago]
     rotas: [Selva]
@@ -5353,6 +5436,7 @@ campeoes:
             Dano base: [70, 130, 190, 250]
   Nilah:
     titulo: A Alegria Irrestrita
+    velocidade_ataque: {multiplicador: 0.67, adicional_base: 0.21, por_nivel: 0.02}
     classes: [Assassino/Escaramuçador]
     funcoes: [Lutador]
     rotas: [Dragão]
@@ -5427,6 +5511,7 @@ campeoes:
           Dano base (2): [125, 225, 325]
   Nocturne:
     titulo: O Eterno Pesadelo
+    velocidade_ataque: {multiplicador: 0.721, adicional_base: 0.11, por_nivel: 0.024}
     classes: [Assassino/Assassino]
     funcoes: [Lutador, Assassino]
     rotas: [Selva]
@@ -5514,6 +5599,7 @@ campeoes:
           Dano base: [150, 275, 400]
   Norra:
     titulo: A Mestra dos Portais
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.012}
     classes: [Mago/Artilharia]
     funcoes: [Mago]
     rotas: [Meio]
@@ -5588,6 +5674,7 @@ campeoes:
           Dano base: [100, 140, 180]
   Nunu e Willump:
     titulo: O Garoto e Seu Yeti
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.0122}
     classes: [Tanque/Vanguarda]
     funcoes: [Tanque, Mago]
     rotas: [Selva]
@@ -5662,6 +5749,7 @@ campeoes:
           Dano Máx.: [915, 1245, 1575]
   Olaf:
     titulo: O Berserker
+    velocidade_ataque: {multiplicador: 0.694, adicional_base: 0.06, por_nivel: 0.0326}
     classes: [Lutador/Mergulhador]
     funcoes: [Lutador]
     rotas: [Selva, Barão]
@@ -5743,6 +5831,7 @@ campeoes:
           VdM: [20%, 45%, 70%]
   Orianna:
     titulo: A Donzela Mecânica
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.14, por_nivel: 0.032}
     classes: [Mago/Explosivo]
     funcoes: [Mago, Suporte]
     rotas: [Meio]
@@ -5811,6 +5900,7 @@ campeoes:
           Dano base: [250, 350, 450]
   Ornn:
     titulo: O Fogo Sob a Montanha
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.17, por_nivel: 0.012}
     classes: [Tanque/Vanguarda]
     funcoes: [Tanque]
     rotas: [Barão]
@@ -5877,6 +5967,7 @@ campeoes:
           Redução de Velocidade: [40, 50, 60]
   Pantheon:
     titulo: A Lança Indestrutível
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.22, por_nivel: 0.02}
     classes: [Tanque/Guardião]
     funcoes: [Lutador, Assassino]
     rotas: [Barão, Selva, Meio]
@@ -5949,6 +6040,7 @@ campeoes:
           Pen. de Armadura: [10%, 20%, 30%]
   Poppy:
     titulo: A Guardiã do Martelo
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.021}
     classes: [Tanque/Guardião]
     funcoes: [Tanque, Lutador]
     rotas: [Barão, Selva]
@@ -6028,6 +6120,7 @@ campeoes:
           Dano base (2): [100, 150, 200]
   Pyke:
     titulo: O Estripador das Águas Sangrentas
+    velocidade_ataque: {multiplicador: 0.667, adicional_base: 0.13, por_nivel: 0.021}
     classes: [Assassino/Assassino, Controlador/Captor]
     funcoes: [Assassino, Suporte]
     rotas: [Suporte]
@@ -6095,6 +6188,7 @@ campeoes:
           Vida: [250, 400, 550]
   Rakan:
     titulo: O Charmoso
+    velocidade_ataque: {multiplicador: 0.635, adicional_base: 0.18, por_nivel: 0.022}
     classes: [Controlador/Captor]
     funcoes: [Suporte, Tanque]
     rotas: [Suporte]
@@ -6162,6 +6256,7 @@ campeoes:
           Duração do Encanto: [1, 1.25, 1.5]
   Rammus:
     titulo: O Tatu Blindado
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.0185}
     classes: [Tanque/Vanguarda]
     funcoes: [Tanque]
     rotas: [Selva]
@@ -6241,6 +6336,7 @@ campeoes:
           Dano: [30, 45, 60]
   Rell:
     titulo: A Dama de Ferro
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.01}
     classes: [Tanque/Vanguarda]
     funcoes: [Tanque, Suporte]
     rotas: [Suporte]
@@ -6303,6 +6399,7 @@ campeoes:
           Dano base: [120, 200, 280]
   Renekton:
     titulo: O Carniceiro das Areias
+    velocidade_ataque: {multiplicador: 0.665, adicional_base: 0.2, por_nivel: 0.024}
     classes: [Lutador/Mergulhador]
     funcoes: [Lutador]
     rotas: [Barão]
@@ -6381,6 +6478,7 @@ campeoes:
           Dano base: [70, 120, 170]
   Rengar:
     titulo: O Acossador da Alcateia
+    velocidade_ataque: {multiplicador: 0.667, adicional_base: 0.2, por_nivel: 0.023}
     classes: [Assassino/Assassino, Lutador/Mergulhador]
     funcoes: [Assassino]
     rotas: [Selva]
@@ -6446,6 +6544,7 @@ campeoes:
           Redução de Armadura: [16, 24, 32]
   Riven:
     titulo: A Exilada
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.022}
     classes: [Assassino/Escaramuçador]
     funcoes: [Lutador, Assassino]
     rotas: [Barão, Selva]
@@ -6510,6 +6609,7 @@ campeoes:
           Dano base: [100, 150, 200]
   Rumble:
     titulo: A Ameaça Mecânica
+    velocidade_ataque: {multiplicador: 0.644, adicional_base: 0.24, por_nivel: 0.016}
     classes: [Mago/Mago de Batalha]
     funcoes: [Lutador, Mago]
     rotas: [Barão]
@@ -6592,6 +6692,7 @@ campeoes:
           Dano base: [800, 1200, 1600]
   Ryze:
     titulo: O Mago Rúnico
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.018}
     classes: [Mago/Mago de Batalha]
     funcoes: [Mago]
     rotas: [Meio]
@@ -6653,6 +6754,7 @@ campeoes:
           Dano de Fluxo: [50%, 75%, 100%]
   Samira:
     titulo: A Rosa do Deserto
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.14, por_nivel: 0.03}
     classes: [Atirador]
     funcoes: [Atirador, Assassino]
     rotas: [Dragão]
@@ -6720,6 +6822,7 @@ campeoes:
           Dano base: [20, 40, 60]
   Senna:
     titulo: A Redentora
+    velocidade_ataque: {multiplicador: 0.4, adicional_base: 0.6, por_nivel: 0.05}
     classes: [Atirador, Controlador/Encantador]
     funcoes: [Atirador, Suporte]
     rotas: [Dragão, Suporte]
@@ -6802,6 +6905,7 @@ campeoes:
           Escudo: [120, 160, 200]
   Seraphine:
     titulo: A Cantora Sonhadora
+    velocidade_ataque: {multiplicador: 0.669, adicional_base: 0.12, por_nivel: 0.017}
     classes: [Mago/Explosivo, Controlador/Encantador]
     funcoes: [Mago, Suporte]
     rotas: [Suporte, Meio]
@@ -6863,6 +6967,7 @@ campeoes:
           Duração do Encanto: [1.25, 1.5, 1.75]
   Sett:
     titulo: O Chefe
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.17, por_nivel: 0.01}
     classes: [Lutador/Colosso]
     funcoes: [Lutador]
     rotas: [Barão]
@@ -6919,6 +7024,7 @@ campeoes:
           Dano por % de Vida: [35%, 45%, 55%]
   Shen:
     titulo: O Olho do Crepúsculo
+    velocidade_ataque: {multiplicador: 0.651, adicional_base: 0.23, por_nivel: 0.0367}
     classes: [Tanque/Guardião]
     funcoes: [Tanque, Suporte]
     rotas: [Barão, Selva]
@@ -6992,6 +7098,7 @@ campeoes:
           Escudo: [160, 260, 360]
   Shyvana:
     titulo: A Meio-Dragão
+    velocidade_ataque: {multiplicador: 0.638, adicional_base: 0.25, por_nivel: 0.012}
     classes: [Lutador/Colosso]
     funcoes: [Lutador, Tanque]
     rotas: [Selva]
@@ -7063,6 +7170,7 @@ campeoes:
           Vida: [350, 475, 600]
   Singed:
     titulo: O Químico Louco
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.016}
     classes: [Especialista]
     funcoes: [Tanque, Mago]
     rotas: [Barão]
@@ -7138,6 +7246,7 @@ campeoes:
           Reg. de Mana: [15, 20, 25]
   Sion:
     titulo: O Colosso Morto-Vivo
+    velocidade_ataque: {multiplicador: 0.679, adicional_base: 0.18, por_nivel: 0.006}
     classes: [Tanque/Vanguarda]
     funcoes: [Tanque, Lutador]
     rotas: [Barão, Selva]
@@ -7209,6 +7318,7 @@ campeoes:
           Dano Máx.: [400, 800, 1200]
   Sivir:
     titulo: A Mestra da Batalha
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.3, por_nivel: 0.01}
     classes: [Atirador]
     funcoes: [Atirador]
     rotas: [Dragão]
@@ -7286,6 +7396,7 @@ campeoes:
           VdM: [15%, 20%, 25%]
   Skarner:
     titulo: O Soberano Primordial
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.005}
     classes: [Tanque, Lutador]
     funcoes: [Tanque, Lutador]
     rotas: [Selva, Barão]
@@ -7361,6 +7472,7 @@ campeoes:
           Dano base: [150, 250, 350]
   Smolder:
     titulo: O Filhote Flamejante
+    velocidade_ataque: {multiplicador: 0.638, adicional_base: 0.25, por_nivel: 0.031}
     classes: [Atirador]
     funcoes: [Atirador, Mago]
     rotas: [Dragão]
@@ -7442,6 +7554,7 @@ campeoes:
           Cura: [100, 135, 170]
   Sona:
     titulo: A Mestra das Cordas
+    velocidade_ataque: {multiplicador: 0.644, adicional_base: 0.17, por_nivel: 0.016}
     classes: [Controlador/Encantador]
     funcoes: [Suporte, Mago]
     rotas: [Suporte]
@@ -7505,6 +7618,7 @@ campeoes:
           Redução de Velocidade: [25%, 30%, 35%]
   Soraka:
     titulo: A Filha das Estrelas
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.012}
     classes: [Controlador/Encantador]
     funcoes: [Suporte, Mago]
     rotas: [Suporte]
@@ -7563,6 +7677,7 @@ campeoes:
           Cura: [150, 225, 300]
   Swain:
     titulo: O Grande General Noxiano
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.012}
     classes: [Mago/Mago de Batalha]
     funcoes: [Mago, Tanque]
     rotas: [Meio, Suporte]
@@ -7712,6 +7827,7 @@ campeoes:
           Custo: [75, 75, 75]
   Syndra:
     titulo: A Soberana Sombria
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.015}
     classes: [Mago/Explosivo]
     funcoes: [Mago]
     rotas: [Meio]
@@ -7783,6 +7899,7 @@ campeoes:
           Dano base: [60, 110, 160]
   Taliyah:
     titulo: A Tecelã de Pedras
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.01}
     classes: [Mago/Mago de Batalha]
     funcoes: [Mago, Suporte]
     rotas: [Selva, Meio]
@@ -7856,6 +7973,7 @@ campeoes:
           Tempo de Recarga: [100, 90, 80]
   Talon:
     titulo: A Sombra da Lâmina
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.025}
     classes: [Assassino/Assassino]
     funcoes: [Assassino]
     rotas: [Meio, Selva]
@@ -7922,6 +8040,7 @@ campeoes:
           VdM: [40%, 55%, 70%]
   Teemo:
     titulo: O Explorador Veloz
+    velocidade_ataque: {multiplicador: 0.69, adicional_base: 0.09, por_nivel: 0.03}
     classes: [Especialista]
     funcoes: [Atirador, Mago]
     rotas: [Barão, Meio]
@@ -7990,6 +8109,7 @@ campeoes:
           Tempo de Recarga: [30, 25, 20]
   Thresh:
     titulo: O Guardião das Correntes
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.028}
     classes: [Controlador/Captor]
     funcoes: [Tanque]
     rotas: [Suporte]
@@ -8056,6 +8176,7 @@ campeoes:
           Dano base: [250, 400, 550]
   Tristana:
     titulo: A Artilheira Yordle
+    velocidade_ataque: {multiplicador: 0.694, adicional_base: 0.17, por_nivel: 0.02}
     classes: [Atirador]
     funcoes: [Atirador]
     rotas: [Dragão]
@@ -8120,6 +8241,7 @@ campeoes:
           Dano base: [300, 350, 400]
   Tryndamere:
     titulo: O Rei Bárbaro
+    velocidade_ataque: {multiplicador: 0.725, adicional_base: 0.1, por_nivel: 0.025}
     classes: [Assassino/Escaramuçador]
     funcoes: [Lutador]
     rotas: [Selva, Barão]
@@ -8188,6 +8310,7 @@ campeoes:
           Reg. de Fúria: [50, 75, 100]
   Twisted Fate:
     titulo: O Mestre das Cartas
+    velocidade_ataque: {multiplicador: 0.651, adicional_base: 0.15, por_nivel: 0.016}
     classes: [Mago/Explosivo]
     funcoes: [Mago, Atirador]
     rotas: [Meio]
@@ -8259,6 +8382,7 @@ campeoes:
           Duração: [6, 7, 8]
   Twitch:
     titulo: O Semeador da Peste
+    velocidade_ataque: {multiplicador: 0.679, adicional_base: 0.18, por_nivel: 0.03}
     classes: [Atirador]
     funcoes: [Atirador]
     rotas: [Dragão, Selva]
@@ -8335,6 +8459,7 @@ campeoes:
           DdA adicional: [30, 45, 60]
   Urgot:
     titulo: O Encouraçado
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.031}
     classes: [Lutador/Colosso]
     funcoes: [Lutador]
     rotas: [Barão]
@@ -8395,6 +8520,7 @@ campeoes:
           Dano base: [100, 225, 350]
   Varus:
     titulo: A Flecha da Vingança
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.22, por_nivel: 0.03}
     classes: [Atirador, Mago/Artilharia]
     funcoes: [Atirador, Mago]
     rotas: [Dragão]
@@ -8463,6 +8589,7 @@ campeoes:
           Dano base: [150, 250, 350]
   Vayne:
     titulo: A Caçadora Noturna
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.23, por_nivel: 0.03}
     classes: [Atirador]
     funcoes: [Atirador, Assassino]
     rotas: [Dragão]
@@ -8524,6 +8651,7 @@ campeoes:
           Duração: [8, 10, 12]
   Veigar:
     titulo: O Pequeno Mestre do Mal
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.014}
     classes: [Mago/Explosivo]
     funcoes: [Mago]
     rotas: [Meio, Suporte]
@@ -8590,6 +8718,7 @@ campeoes:
           Dano base: [185, 250, 315]
   Vel'Koz:
     titulo: O Olho do Vazio
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.01}
     classes: [Mago/Artilharia]
     funcoes: [Mago, Suporte]
     rotas: [Meio, Suporte]
@@ -8653,6 +8782,7 @@ campeoes:
           Dano base: [450, 625, 800]
   Vex:
     titulo: A Melancolista
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.01}
     classes: [Mago/Explosivo]
     funcoes: [Mago]
     rotas: [Meio]
@@ -8719,6 +8849,7 @@ campeoes:
           Alcance de Ataque: [20, 25, 30]
   Vi:
     titulo: A Defensora de Piltover
+    velocidade_ataque: {multiplicador: 0.644, adicional_base: 0.24, por_nivel: 0.012}
     classes: [Lutador/Mergulhador]
     funcoes: [Lutador]
     rotas: [Selva]
@@ -8790,6 +8921,7 @@ campeoes:
           Dano base: [150, 300, 450]
   Viego:
     titulo: O Rei Destruído
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.22, por_nivel: 0.025}
     classes: [Assassino/Escaramuçador]
     funcoes: [Assassino]
     rotas: [Selva, Barão]
@@ -8863,6 +8995,7 @@ campeoes:
           Vida perdida do alvo: [14%, 17%, 20%]
   Viktor:
     titulo: O Arauto do Arcano
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.14, por_nivel: 0.02}
     classes: [Mago/Mago de Batalha]
     funcoes: [Mago]
     rotas: [Meio]
@@ -8939,6 +9072,7 @@ campeoes:
           Dano: [50, 90, 130]
   Vladimir:
     titulo: O Sanguinário Escarlate
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.14, por_nivel: 0.0165}
     classes: [Mago/Mago de Batalha]
     funcoes: [Mago]
     rotas: [Meio, Barão]
@@ -8999,6 +9133,7 @@ campeoes:
           Cura: [150, 250, 350]
   Volibear:
     titulo: A Tempestade Implacável
+    velocidade_ataque: {multiplicador: 0.7, adicional_base: 0.05, por_nivel: 0.014}
     classes: [Lutador/Colosso]
     funcoes: [Lutador, Tanque]
     rotas: [Barão, Selva]
@@ -9076,6 +9211,7 @@ campeoes:
           Dano base: [300, 500, 700]
   Warwick:
     titulo: A Ira Desimpedida de Zaun
+    velocidade_ataque: {multiplicador: 0.638, adicional_base: 0.25, por_nivel: 0.012}
     classes: [Lutador/Mergulhador]
     funcoes: [Lutador]
     rotas: [Selva, Barão]
@@ -9160,6 +9296,7 @@ campeoes:
           Dano base: [100, 275, 450]
   Wukong:
     titulo: O Macaco Rei
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.028}
     classes: [Lutador/Mergulhador]
     funcoes: [Lutador, Tanque]
     rotas: [Selva, Barão]
@@ -9234,6 +9371,7 @@ campeoes:
           Vida Máxima: [10%, 14%, 18%]
   Xayah:
     titulo: A Rebelde
+    velocidade_ataque: {multiplicador: 0.658, adicional_base: 0.22, por_nivel: 0.034}
     classes: [Atirador]
     funcoes: [Atirador, Mago]
     rotas: [Dragão]
@@ -9296,6 +9434,7 @@ campeoes:
           Dano base: [150, 250, 350]
   Xin Zhao:
     titulo: O Senescal de Demacia
+    velocidade_ataque: {multiplicador: 0.645, adicional_base: 0.24, por_nivel: 0.025}
     classes: [Lutador/Mergulhador]
     funcoes: [Lutador, Tanque]
     rotas: [Selva]
@@ -9369,6 +9508,7 @@ campeoes:
           Dano base: [75, 150, 225]
   Yasuo:
     titulo: O Imperdoável
+    velocidade_ataque: {multiplicador: 0.67, adicional_base: 0.2, por_nivel: 0.04}
     classes: [Assassino/Escaramuçador]
     funcoes: [Lutador, Assassino]
     rotas: [Meio, Barão]
@@ -9443,6 +9583,7 @@ campeoes:
           Dano base: [200, 350, 500]
   Yone:
     titulo: O Inesquecido
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.032}
     classes: [Assassino/Assassino, Assassino/Escaramuçador]
     funcoes: [Assassino]
     rotas: [Meio, Barão]
@@ -9513,6 +9654,7 @@ campeoes:
           Dano base: [200, 375, 550]
   Yunara:
     titulo: A Fé Inabalável
+    velocidade_ataque: {multiplicador: 0.65, adicional_base: 0.23, por_nivel: 0.032}
     classes: [Atirador]
     funcoes: [Atirador]
     rotas: [Dragão]
@@ -9590,6 +9732,7 @@ campeoes:
           Tempo de Recarga: [70, 65, 60]
   Yuumi:
     titulo: A Gata Mágica
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.006}
     classes: [Controlador/Encantador]
     funcoes: [Suporte, Mago]
     rotas: [Suporte]
@@ -9683,6 +9826,7 @@ campeoes:
           Dano base das ondas subsequentes: [20, 30, 40]
   Zed:
     titulo: O Mestre das Sombras
+    velocidade_ataque: {multiplicador: 0.651, adicional_base: 0.23, por_nivel: 0.024}
     classes: [Assassino/Assassino]
     funcoes: [Assassino]
     rotas: [Meio, Barão, Selva]
@@ -9741,6 +9885,7 @@ campeoes:
           Dano base: [30%, 42.5%, 55%]
   Zeri:
     titulo: A Faísca de Zaun
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.28, por_nivel: 0.024}
     classes: [Atirador]
     funcoes: [Atirador]
     rotas: [Dragão]
@@ -9804,6 +9949,7 @@ campeoes:
           Dano base: [150, 225, 300]
   Ziggs:
     titulo: O Especialista em Hexplosivos
+    velocidade_ataque: {multiplicador: 0.656, adicional_base: 0.14, por_nivel: 0.014}
     classes: [Mago/Artilharia]
     funcoes: [Mago]
     rotas: [Meio]
@@ -9864,6 +10010,7 @@ campeoes:
           Dano base: [270, 375, 480]
   Zilean:
     titulo: O Guardião do Tempo
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.017}
     classes: [Especialista]
     funcoes: [Suporte, Mago]
     rotas: [Suporte]
@@ -9928,6 +10075,7 @@ campeoes:
           Cura: [600, 850, 1100]
   Zoe:
     titulo: O Aspecto do Crepúsculo
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.021}
     classes: [Mago/Explosivo]
     funcoes: [Mago]
     rotas: [Meio]
@@ -9988,6 +10136,7 @@ campeoes:
           Tempo de Recarga: [11, 8, 5]
   Zyra:
     titulo: A Ascensão dos Espinhos
+    velocidade_ataque: {multiplicador: 0.625, adicional_base: 0.2, por_nivel: 0.02}
     classes: [Controlador/Captor]
     funcoes: [Mago]
     rotas: [Suporte, Meio]

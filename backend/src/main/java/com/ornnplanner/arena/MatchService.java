@@ -402,7 +402,7 @@ public class MatchService {
         @Override
         public double[] stats(int seat, int done, int level, double minute) {
             Arena.Input in = input(seat, done, level, minute);
-            double as = in.baseAttackSpeed * (1 + in.f.stat("% Attack Speed") / 100);
+            double as = in.attackSpeed(in.f.stat("% Attack Speed"));
             return new double[] {in.f.stat(Stats.MAX_HEALTH), in.f.stat(Stats.ATTACK_DAMAGE), as, in.f.stat(Stats.ABILITY_POWER), in.f.stat(Stats.MOVE_SPEED)};
         }
 

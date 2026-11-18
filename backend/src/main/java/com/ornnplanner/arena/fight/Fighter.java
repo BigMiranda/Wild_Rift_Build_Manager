@@ -23,6 +23,11 @@ public class Fighter {
     public int[] ranks = new int[4];
     /** Base attack speed at the level (attacks / s), before the bonus %. */
     public double baseAttackSpeed;
+    /**
+     * Attack speed each 100% of bonus adds (the patch 7.3 multiplier: total = base + ratio x bonus); 0 = the base at the
+     * level (bonus multiplies the base, as for ragdolls and summons).
+     */
+    public double attackSpeedRatio;
     public List<String> spells = new ArrayList<>();
     /** Runes of its page, keystone first (for the report; their fight effects are in {@link #effects}). */
     public List<String> runes = new ArrayList<>();

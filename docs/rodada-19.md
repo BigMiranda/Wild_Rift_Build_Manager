@@ -20,7 +20,7 @@ Prompt de 17/11/2026, a partir do `main` em 5415482. Lê o `docs/rodada-16.md` (
   "a build AD do guia para o Ornn deu 67 real".
 - **O objetivo era só o 1x1 de 60 s no minuto 15**, contra um campeão. O papel do campeão não entrava na nota.
 
-### A fórmula da velocidade de ataque (pendência, sem mudança)
+### A fórmula da velocidade de ataque (pendência na revisão; aplicada abaixo)
 
 A Arena faz `VdA = base(nível) × (1 + bônus% / 100)` (`Arena.java:580`, `MatchService.java:405`), com a base já
 interpolada pelo nível. No LoL de PC o crescimento por nível é bônus, e o total é
@@ -42,6 +42,47 @@ status de campeão com item de velocidade de ataque. **Pedido:** um print da tel
 campeão) **com uma Lâmina Ravenosa ou outro item só de velocidade de ataque**, mostrando o nível e a velocidade de ataque
 total; de preferência dois níveis diferentes com o mesmo item. Com ele dá para decidir entre as duas fórmulas. A fórmula
 não muda sem essa prova.
+
+**Prints recebidos (depois da Parte 5):** Ornn com 5 Arcos Recurvos (+20% cada, **+100%** no total; item confirmado
+pelo usuário), modo de treino. Velocidade de ataque: **1,36 no nível 2** e **1,46 no nível 15**.
+
+| Fórmula | Nível 2 | Nível 15 |
+|---|---|---|
+| Print do jogo | **1,36** | **1,46** |
+| Arena hoje: `base(nível) × (1 + 1,00)` | 0,738 × 2 = 1,48 | 0,84 × 2 = 1,68 |
+| `base(nível) + razão × 1,00` | 0,738 + 0,62 = 1,36 | 0,84 + 0,62 = 1,46 |
+
+- **A multiplicativa da Arena está errada:** do nível 2 ao 15 a base sobe 13,8%, mas o total só sobe 7,4%. O que os
+  itens dão não cresce com o nível.
+- **A forma do PC fecha os dois níveis com a mesma razão:** `VdA = base(nível) + razão × bônus`, com a razão do Ornn
+  entre **0,617 e 0,625** (pelo arredondamento dos dois prints). A razão não é a base de nível 1 (0,73): fica perto da
+  do Ornn no PC (0,625).
+- **Consequência:** a Arena **superestima** os itens de velocidade de ataque, mais do que a estimativa acima (que usava
+  razão = 0,73). No Ornn nível 13 com +40%: a Arena dá +0,33; o jogo, +0,25 (32% a mais na Arena).
+- **A fonte oficial:** o apêndice das notas do patch 7.3 ("como a Velocidade de Ataque é calculada",
+  wildrift.leagueoflegends.com/pt-br/news/game-updates/wild-rift-patch-notes-7-3/) dá a fórmula e a tabela de 141
+  campeões: `VdA total = VdA base + multiplicador × VdA adicional`, com `VdA adicional = adicional_base + o que os
+  níveis deram + itens, runas e habilidades`, e cada nível ganho dá `por_nivel × (0,7 + 0,04 × nível atual)`. O Ornn é
+  base 0,625, multiplicador 0,625, adicional_base 0,17, por_nivel 0,012: 1,362 no nível 2 e 1,461 no 15 com +100%,
+  os dois prints.
+
+### A fórmula da velocidade de ataque (aplicada)
+
+- **Seed:** `velocidade_ataque: {multiplicador, adicional_base, por_nivel}` nos 141 campeões da tabela
+  (`campeoes_7_3f.yml`, cabeçalho com a fonte). Hwei e Sylas não estão na tabela: multiplicador 0,625 (o da maioria).
+- **Conferência contra o seed:** a tabela reproduz `nv1` e `nv15` (lidos no Treino) a ±0,006 em 131 dos 141. Não batem
+  Akali, Caitlyn, Camille, Galio, Gnar, Graves, Jhin, Lee Sin, Senna e Shyvana (passivas, formas, Jhin e Graves com
+  ataque próprio, ou a tabela; a da Caitlyn diverge do próprio exemplo da nota, 0,2 contra 0,28). Por isso a base do
+  nível continua saindo de `nv1` / `nv15` (agora pela curva dos níveis, não em linha reta) e da tabela só sai o
+  multiplicador.
+- **Código:** `Arena.Input.attackSpeed(bônus)` = `base + multiplicador × bônus` (`FighterBuilder.attackSpeedRatio`,
+  `attackSpeedGrowth`), usado na luta, no painel de status da luta e na partida (`MatchService`). Bonecos, invocações e
+  lutadores montados à mão (multiplicador 0) seguem `base × (1 + bônus)`, por isso o golden da Arena não mudou.
+- **Efeito:** no Ornn nível 13 com +40%, os itens davam +0,33 ataques/s e agora dão +0,25. A velocidade de ataque
+  ficou mais fraca para todo campeão cuja base no nível passa do multiplicador (quase todos depois do nível 1). As
+  medidas do Atlas e da efetividade feitas antes desta mudança superestimam os itens de velocidade de ataque.
+- **Teste:** `AttackSpeedFormulaTest` (os dois prints do Ornn, a curva dos níveis, os bonecos com a regra antiga e o
+  multiplicador de todos os campeões).
 
 ## Parte 1: diagnóstico medido (✅)
 
@@ -330,10 +371,9 @@ que os pilotos desta rodada usaram. O que custa é preparar os lutadores (88% do
 
 ## Pendências
 
-- **A fórmula da velocidade de ataque** (`base × (1 + bônus)` contra `base + razão × bônus` do PC): sem print, não muda.
-  **Pedido:** um print da tela de status de um campeão com um item só de velocidade de ataque (Lâmina Ravenosa, por
-  exemplo), mostrando o nível e a velocidade de ataque total, de preferência em dois níveis. Efeito, se for a do PC:
-  ~13% a mais no valor dos itens de velocidade de ataque na Arena (Ornn nível 13 com +40%: 1,154 contra 1,116).
+- ~~A fórmula da velocidade de ataque~~: resolvida pelos prints e pelas notas do patch 7.3 (seção no começo). Falta
+  rodar de novo o piloto Ornn × Rumble com ela (os números da Parte 5 são da fórmula antiga) e conferir em print os 10
+  campeões cuja tabela não bate com o seed.
 - O relatório de condições e a aba Validação continuam lendo só o duelo; a luta de equipe entra no guia contra a
   progressão natural e no "Lutar de verdade".
 - O preparo dos lutadores é numa thread e domina o custo; com o Automático, cada preparo lê a IA do banco de novo.
