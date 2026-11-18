@@ -11,7 +11,7 @@ const LOCAL_ROUTES = {
   builds: ['lista'],
   build: ['loja', 'sequencia', 'grafico', 'status', 'comparar-itens', 'comparar-runas', 'runas', 'habilidades', 'guias'],
   relatorios: ['analise', 'campeao', 'efetividade', 'relevancia', 'ouro', 'ranking', 'comparar-builds'],
-  simulacoes: ['arena', 'laboratorio', 'partida', 'calculadora', 'descoberta', 'atlas'],
+  simulacoes: ['arena', 'laboratorio', 'partida', 'calculadora', 'descoberta', 'atlas', 'draft'],
   admin: ['catalogo', 'fichas', 'efetividade', 'campanhas', 'sobre'],
 };
 

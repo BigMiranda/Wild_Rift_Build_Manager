@@ -1,0 +1,116 @@
+# Rodada 20: formatos de draft da sub aba Simulações › Draft e partida, e os pesos das notas do draft.
+#
+# ORDEM DE BANIMENTOS E ESCOLHAS: EST. É a do LoL de PC (ranqueada solo/duo e o draft de torneio), não a oficial do
+# Wild Rift: não foi conferida no jogo. Pedido ao usuário em docs/rodada-20.md (confirmar a do Wild Rift: quantos
+# banimentos por time, se são simultâneos e a ordem das escolhas). Basta editar `passos`.
+#
+# Por formato:
+#   nome        o que a tela mostra
+#   fonte       de onde veio a ordem (EST enquanto não for conferida)
+#   passos      em ordem: {acao: ban | escolha, time: azul | vermelho, qtd: quantos seguidos (1 se faltar),
+#               simultaneo: true quando os dois times banem ao mesmo tempo (a tela deixa preencher em qualquer ordem)}
+#
+# fearless: série em que os campeões usados nos jogos anteriores ficam indisponíveis.
+#   indisponivel  ambos (ninguém pode escolher de novo) | proprio (só o time que usou não pode). Cada partida
+#                 acompanhada guarda a sua escolha; esta é a padrão.
+patch: "7.3f"
+formatos:
+  ranqueada:
+    nome: Ranqueada
+    fonte: "EST: ranqueada do LoL de PC (5 banimentos de cada time ao mesmo tempo, escolhas em serpente)"
+    passos:
+      - {acao: ban, time: azul, qtd: 5, simultaneo: true}
+      - {acao: ban, time: vermelho, qtd: 5, simultaneo: true}
+      - {acao: escolha, time: azul}
+      - {acao: escolha, time: vermelho, qtd: 2}
+      - {acao: escolha, time: azul, qtd: 2}
+      - {acao: escolha, time: vermelho, qtd: 2}
+      - {acao: escolha, time: azul, qtd: 2}
+      - {acao: escolha, time: vermelho}
+  campeonato:
+    nome: Campeonato
+    fonte: "EST: draft de torneio do LoL de PC (3 + 2 banimentos alternados por time, em duas fases)"
+    passos:
+      - {acao: ban, time: azul}
+      - {acao: ban, time: vermelho}
+      - {acao: ban, time: azul}
+      - {acao: ban, time: vermelho}
+      - {acao: ban, time: azul}
+      - {acao: ban, time: vermelho}
+      - {acao: escolha, time: azul}
+      - {acao: escolha, time: vermelho, qtd: 2}
+      - {acao: escolha, time: azul, qtd: 2}
+      - {acao: escolha, time: vermelho}
+      - {acao: ban, time: vermelho}
+      - {acao: ban, time: azul}
+      - {acao: ban, time: vermelho}
+      - {acao: ban, time: azul}
+      - {acao: escolha, time: vermelho}
+      - {acao: escolha, time: azul, qtd: 2}
+      - {acao: escolha, time: vermelho}
+fearless:
+  indisponivel: ambos
+
+# Rotas do Wild Rift, na ordem dos cartões (o seed de campeões usa os mesmos nomes em `rotas`).
+rotas: [Barão, Selva, Meio, Dragão, Suporte]
+
+# Os dragões da ação rápida "dragão" (só há 3 elementais no Wild Rift, objetivos_7_3d.yml; e o Ancião).
+dragoes: [Infernal, Oceano, Montanha, Ancião]
+
+# Rodada 20, Parte 3: a nota de cada candidato no draft. Cada parte vai de -1 a 1 (0 = neutro) e a nota é a soma
+# ponderada (x 100 na tela). Pesos meus (EST) até a calibração (`calibracao` abaixo, preenchida pelo botão do Admin).
+nota:
+  pesos:
+    meta: 0.25          # presença + banimento + vitória na rota e no elo (só com meta importada; sem ela, 0)
+    rota: 0.35          # a rota do candidato está livre no time (1), ou só a 2ª rota dele (0,4); cheia = fora da lista
+    matchup: 0.30       # vantagem 1x1 contra o adversário de rota revelado ou previsto (tabela; sem ela, subclasse x subclasse)
+    composicao: 0.30    # o quanto o candidato completa o time (dano físico/mágico, linha de frente, controle...)
+    contra: 0.20        # risco de contra-escolha: o quanto os disponíveis do outro time punem o candidato (negativo)
+  # Composição: o que falta num time de 5 (cada parte de 0 a 1), lido dos perfis (ChampionProfiles) e das fichas.
+  composicao:
+    dano_magico_min: 0.30     # parte do dano do time; abaixo disso, um candidato mágico completa
+    dano_fisico_min: 0.30
+    linha_de_frente: 1        # quantos campeões com Vida + resistências no nível 15 acima da mediana o time quer
+    controle: 2               # quantos campeões com controle forte (atordoar, arremessar, puxar, enraizar...)
+    iniciacao: 1              # quantos com avanço e controle juntos
+    alcance_longo: 1          # quantos com alcance de ataque de 500 ou mais
+    cura_escudo: 1            # quantos com cura ou escudo em aliados
+    escalonamento: 0.15       # peso de equilibrar cedo e tarde (forte cedo: Lutador/Assassino; tarde: Atirador/Mago)
+  # Matchup sem tabela: a vantagem típica da subclasse do candidato contra a do adversário (-1..1), lida do perfil
+  # (dano por segundo, alcance e resistência). Valor por par quando conhecido; o resto sai do perfil.
+  matchup_sem_tabela: perfil
+  # Meta: presença, banimento e vitória entram com estes pesos dentro da parte `meta` (vitória centrada em 50%).
+  meta:
+    presenca: 0.4
+    banimento: 0.2
+    vitoria: 0.4
+    vitoria_escala: 0.05      # 55% de vitória = +1 nesta parte
+  # A árvore de cenários: só os `feixe` primeiros de cada passo são calculados; um ramo se expande ao tocar nele.
+  feixe: 5
+  # Calibração (Parte 3): composições sorteadas lutam 5x5; a regressão dá os pesos de composição. Vazio = os de cima.
+  calibracao: {}
+
+# Tabelas pré-calculadas (Admin › Draft): o matchup 1x1 de rota nos minutos abaixo, com a build padrão de cada um
+# (campanha) e o modelo de progressão (o que cada um terá no minuto); a dupla do Dragão 2x2.
+tabelas:
+  minutos: [3, 8, 15]
+  por_rota_com_meta: 20     # os 20 mais jogados por rota se houver meta importada; sem meta, todos com ficha
+  largadas: 3               # largadas por luta (distâncias diferentes)
+  duracao: 30               # segundos de cada luta
+  dupla_dragao: true
+
+# Parte 4: o primeiro encontro na fase de rotas.
+primeiro_encontro:
+  ouro_inicial: 500          # TimelineEngine.STARTING_GOLD
+  niveis: [1, 2, 3]
+  # minuto em que cada nível costuma chegar na primeira onda (a 1ª onda sai aos 0:25, objetivos_7_3d.yml)
+  minuto_por_nivel: {1: 0.5, 2: 1.4, 3: 2.2}
+  troca_s: 4                 # a primeira troca: a diferença de vida aos 4 s de luta
+  duracao_all_in: 25         # o all-in: a corrida das barras até o fim (ou 25 s)
+  largadas: 2
+  # estilos de rota (Rodada 14) no cérebro do aliado; o inimigo joga o padrão
+  estilos:
+    agressivo: tactical_stand   # fica na troca até o fim
+    padrao: auto                # a IA do campeão ou da classe
+    cauteloso: tactical         # troca e recua com a vida baixa
+  inimigos_mais_provaveis: 0     # quantos itens iniciais do inimigo entram, pelos mais prováveis (0 = todos)

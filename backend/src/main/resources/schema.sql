@@ -370,3 +370,34 @@ CREATE TABLE IF NOT EXISTS atlas_run (
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL
 );
+
+-- Rodada 20: a partida acompanhada na sub aba Simulações › Draft e partida (uma partida, ou uma série no Fearless).
+-- Tudo o que o usuário informou fica no JSON (LiveGameModel.Game): modo, série, times, os 10 campeões com rota,
+-- feitiços, runas, nível, itens e componentes no tempo, ouro e KDA, o relógio e os eventos. Tudo é opcional.
+CREATE TABLE IF NOT EXISTS live_game (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL,
+    data        TEXT NOT NULL,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+
+-- Rodada 20, Parte 2: os apelidos do leitor de voz editados no Admin, por cima do seed apelidos_7_3f.yml
+-- (target vazio = o apelido do seed foi removido).
+CREATE TABLE IF NOT EXISTS draft_apelido (
+    alias   TEXT PRIMARY KEY,
+    target  TEXT NOT NULL,
+    kind    TEXT
+);
+
+-- Rodada 20, Parte 3: as tabelas pré-calculadas do draft (o matchup 1x1 de rota e a dupla do Dragão 2x2, por minuto),
+-- calculadas por um botão do Admin. race = a corrida das barras do campeão a contra o b (0..100, 50 = empate).
+CREATE TABLE IF NOT EXISTS draft_tabelas (
+    lane        TEXT NOT NULL,
+    a           TEXT NOT NULL,
+    b           TEXT NOT NULL,
+    minute      REAL NOT NULL,
+    race        REAL NOT NULL,
+    created_at  TEXT NOT NULL,
+    PRIMARY KEY (lane, a, b, minute)
+);

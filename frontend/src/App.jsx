@@ -23,6 +23,7 @@ import Match from './pages/Match.jsx';
 import Calculator from './pages/Calculator.jsx';
 import Discovery from './pages/Discovery.jsx';
 import Atlas from './pages/Atlas.jsx';
+import LiveGame from './pages/LiveGame.jsx';
 import Campaigns from './pages/Campaigns.jsx';
 import KitsReview from './pages/KitsReview.jsx';
 import Guides from './pages/Guides.jsx';
@@ -206,7 +207,7 @@ function Shell({ meta, items, reload, error, settingsBox }) {
           </button>
         ))}
       </nav>
-      {route.sup !== 'admin' && <BuildHeader />}
+      {route.sup !== 'admin' && route.path !== '/simulacoes/draft' && <BuildHeader />}
       {PUBLIC && <div className="public-banner">{t('pub.banner')}</div>}
       </div>
       {error && <div className="main"><div className="notice error">{t('error.backend', { msg: error })}</div></div>}
@@ -242,6 +243,7 @@ function Shell({ meta, items, reload, error, settingsBox }) {
       {pane('simulacoes/calculadora', () => <Calculator />)}
       {pane('simulacoes/descoberta', () => <Discovery />)}
       {pane('simulacoes/atlas', () => <Atlas />)}
+      {pane('simulacoes/draft', () => <LiveGame />)}
 
       {pane('admin/catalogo', () => <Admin meta={meta} items={items} onChanged={reload} />)}
       {pane('admin/fichas', () => <KitsReview />)}

@@ -1636,3 +1636,86 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .kit-bar > div { height: 10px; background: var(--surface-3); border-radius: 5px; overflow: hidden; }
 .kit-bar > div > div { height: 100%; background: linear-gradient(90deg, var(--gold), var(--stat-ad)); }
 .kit-bar > b { text-align: right; }
+
+/* ---------------------------------------------------------------- Rodada 20: Simulações › Draft e partida */
+.live { max-width: 1400px; }
+.live button { min-height: 40px; }
+.live .live-big { min-height: 52px; padding: 8px 18px; font-size: 16px; }
+.live-list { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 6px; }
+.live-list button { width: 100%; text-align: left; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 12px; }
+.live-list-champs { display: inline-flex; gap: 2px; align-items: center; margin-left: auto; }
+.live-setup .row { flex-wrap: wrap; gap: 6px; align-items: center; }
+.live-name { min-width: 160px; flex: 1; }
+.live-check { display: inline-flex; gap: 4px; align-items: center; }
+.live-series { display: inline-flex; gap: 2px; margin-right: 10px; align-items: center; }
+.live-bar { position: sticky; top: var(--sticky-top, 0px); z-index: 20; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px; margin: 8px 0; }
+.live-clock { display: flex; gap: 4px; align-items: center; }
+.live-time { font-size: 24px; font-variant-numeric: tabular-nums; min-width: 92px; font-weight: 700; color: var(--gold-bright); }
+.live-clock input { width: 92px; font-size: 22px; }
+.live-play { min-width: 48px; font-size: 18px; }
+.live-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.live-actions button { min-width: 72px; min-height: 48px; font-size: 15px; }
+.live-undo { min-height: 48px; margin-left: auto; font-weight: 600; }
+.live-sel { margin: 0 0 6px; color: var(--gold-bright); }
+.live-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.live-team { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.live-team.azul { border-top: 3px solid #4f8fe6; }
+.live-team.vermelho { border-top: 3px solid #e0605a; }
+.live-team-head { display: flex; gap: 6px; align-items: center; }
+.live-team-name { flex: 1; min-width: 0; background: transparent; border: none; font-weight: 700; font-size: 15px; color: var(--text); }
+.live-side-tag { font-size: 11px; padding: 1px 6px; border-radius: 10px; margin-left: 6px; }
+.live-side-tag.azul { background: #1d3f6b; color: #cfe2ff; }
+.live-side-tag.vermelho { background: #6b1d1d; color: #ffd7d3; }
+.live-objs { font-size: 13px; white-space: nowrap; }
+.live-bans { display: flex; gap: 4px; flex-wrap: wrap; }
+.live-ban { width: 40px; height: 40px; padding: 2px; display: inline-flex; align-items: center; justify-content: center; filter: grayscale(.6); }
+.live-card { display: flex; gap: 4px; align-items: stretch; }
+.live-card-main { flex: 1; min-width: 0; display: flex; gap: 8px; align-items: center; text-align: left; padding: 6px; min-height: 64px; }
+.live-card.selected .live-card-main { border-color: var(--gold-bright); box-shadow: 0 0 0 2px var(--gold) inset; }
+.live-card.empty .live-card-main { opacity: .75; border-style: dashed; }
+.live-card-text { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.live-card-text strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live-card-items { display: flex; flex-wrap: wrap; gap: 2px; align-items: center; }
+.live-card-edit { min-width: 44px; font-size: 18px; }
+.live-icons { display: inline-flex; gap: 2px; margin-right: 4px; }
+.live-icons img { border-radius: 3px; }
+.live-editor .prep-overlay-head { flex-wrap: wrap; gap: 8px; }
+.live-tabs button { min-height: 44px; min-width: 76px; font-size: 14px; }
+.live-grid-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.live-grid-tools input { font-size: 16px; min-height: 40px; flex: 1; min-width: 160px; }
+.live-grid-tools .chips button, .live-lane-pick button { min-height: 40px; font-size: 14px; }
+.live-lane-pick { margin-bottom: 8px; align-items: center; }
+.live-champ-grid .champ-tile.live-off { opacity: .3; }
+.live-spells { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 8px 0; }
+.live-spell { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; }
+.live-spell.active { border-color: var(--gold-bright); background: var(--surface-3); }
+.live-runes-view { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+.live-rune { display: flex; flex-direction: column; align-items: center; gap: 2px; max-width: 90px; text-align: center; }
+.live-held { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 6px; }
+.live-comp { opacity: .8; }
+.live-start { border-color: var(--gold); }
+.live-shop { max-height: none; }
+.live-score-edit { display: grid; gap: 10px; max-width: 420px; }
+.live-stepper { display: grid; grid-template-columns: 1fr 52px 100px 52px; gap: 6px; align-items: center; }
+.live-stepper button { min-height: 48px; font-size: 20px; }
+.live-stepper input { min-height: 44px; font-size: 18px; text-align: center; }
+.live-objective .live-obj-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+.live-events ul { list-style: none; padding: 0; margin: 0; font-size: 13px; display: grid; gap: 2px; }
+.live-panels { display: grid; gap: 8px; margin-top: 8px; }
+@media (max-width: 760px) {
+  .live-teams { gap: 4px; }
+  .live-team { padding: 4px; }
+  .live-card-main { padding: 4px; gap: 4px; min-height: 56px; }
+  .live-card-main .champ-avatar { width: 34px !important; height: 34px !important; }
+  .live-card-text small { font-size: 11px; }
+  .live-card-edit { min-width: 36px; }
+  .live-actions button { min-width: 60px; padding: 4px 6px; }
+  .live-time { font-size: 20px; min-width: 70px; }
+  .live-undo { margin-left: 0; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .live-bar { position: static; }
+  .live-card-main { min-height: 48px; }
+  .live-card-main .champ-avatar { width: 32px !important; height: 32px !important; }
+}
