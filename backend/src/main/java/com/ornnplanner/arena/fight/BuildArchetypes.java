@@ -119,6 +119,113 @@ public class BuildArchetypes {
         });
     }
 
+    /** The archetypes in rule order: key -> name (the first rule that passes is a build's). */
+    public Map<String, String> names() {
+        Map<String, String> out = new LinkedHashMap<>();
+        rules.forEach(r -> out.put(String.valueOf(r.get("chave")), String.valueOf(r.get("nome"))));
+        return out;
+    }
+
+    /**
+     * The archetype of a set of shop items alone (no build, no level): their flat stats at level 1 (the middle of a
+     * range) by gold, and their fight effects. The Atlas's guide reads its assembled builds with it.
+     */
+    public Archetype ofItems(List<com.ornnplanner.engine.Model.ItemDef> items) {
+        Map<String, Double> gold = new LinkedHashMap<>();
+        Map<String, Double> byStat = new LinkedHashMap<>();
+        Map<String, Double> prices = planner.referenceData().statPrices;
+        Map<String, Integer> effects = new LinkedHashMap<>();
+        effectGroups.keySet().forEach(g -> effects.put(g, 0));
+        Set<String> seen = new LinkedHashSet<>();
+        for (com.ornnplanner.engine.Model.ItemDef it : items) {
+            if (it == null || !seen.add(it.name)) {
+                continue;
+            }
+            for (com.ornnplanner.engine.Model.StatLine l : it.stats) {
+                if (l.ratio == null && !l.conditional && l.value != null) {
+                    add(l.type, l.valueMax == null ? l.value : (l.value + l.valueMax) / 2, prices, gold, byStat);
+                }
+            }
+            Set<String> kinds = new LinkedHashSet<>();
+            catalog.effects(it.name).forEach(e -> kinds.add(String.valueOf(e.get("tipo"))));
+            effectGroups.forEach((group, types) -> {
+                if (types.stream().anyMatch(kinds::contains)) {
+                    effects.merge(group, 1, Integer::sum);
+                }
+            });
+        }
+        double all = gold.values().stream().mapToDouble(Double::doubleValue).sum();
+        Archetype out = new Archetype();
+        families.keySet().forEach(f -> out.shares.put(f, all > 0 ? gold.getOrDefault(f, 0.0) / all : 0));
+        out.effects = effects;
+        for (Map<String, Object> r : rules) {
+            if (passes(r, out)) {
+                out.key = String.valueOf(r.get("chave"));
+                out.name = String.valueOf(r.get("nome"));
+                break;
+            }
+        }
+        return out;
+    }
+
+    /**
+     * How far a build is from an archetype (0 = it is that archetype): what each of the target rule's conditions still
+     * misses, as a part of its threshold, plus how deep the build is inside each rule ahead of it (a rule that passes
+     * first wins, so a tank's build is no fighter). An unknown key is 0.
+     */
+    @SuppressWarnings("unchecked")
+    public double distance(Archetype a, String target) {
+        int t = -1;
+        for (int i = 0; i < rules.size(); i++) {
+            if (String.valueOf(rules.get(i).get("chave")).equals(target)) {
+                t = i;
+                break;
+            }
+        }
+        if (t < 0 || a == null) {
+            return 0;
+        }
+        double d = 0;
+        for (Object c : (List<Object>) rules.get(t).getOrDefault("se", List.of())) {
+            d += miss(String.valueOf(c), a);
+        }
+        for (int i = 0; i < t; i++) {
+            if (passes(rules.get(i), a)) {
+                double inside = Double.MAX_VALUE;
+                for (Object c : (List<Object>) rules.get(i).getOrDefault("se", List.of())) {
+                    inside = Math.min(inside, inside(String.valueOf(c), a));
+                }
+                d += inside == Double.MAX_VALUE ? 1 : 0.05 + inside;
+            }
+        }
+        return d;
+    }
+
+    private static double left(String key, Archetype a) {
+        return key.startsWith("efeito.") ? a.effects.getOrDefault(key.substring(7), 0) : a.shares.getOrDefault(key, 0.0);
+    }
+
+    /** What a condition misses, as a part of its threshold (0 when it passes). */
+    private static double miss(String cond, Archetype a) {
+        String[] x = cond.trim().split("\\s+");
+        double l = left(x[0], a);
+        double r = Double.parseDouble(x[2]);
+        double scale = Math.max(Math.abs(r), 0.05);
+        if (">=".equals(x[1]) || ">".equals(x[1])) {
+            return Math.max(0, r - l) / scale;
+        }
+        return Math.max(0, l - r) / scale;
+    }
+
+    /** How far a passing condition is past its threshold, as a part of it. */
+    private static double inside(String cond, Archetype a) {
+        String[] x = cond.trim().split("\\s+");
+        double l = left(x[0], a);
+        double r = Double.parseDouble(x[2]);
+        double scale = Math.max(Math.abs(r), 0.05);
+        return (">=".equals(x[1]) || ">".equals(x[1]) ? l - r : r - l) / scale;
+    }
+
     /** What a tank's gold went to most: armor, magic resist or health. */
     private static String detail(Map<String, Double> byStat, Map<String, Double> prices) {
         double armor = byStat.getOrDefault(Stats.ARMOR, 0.0);

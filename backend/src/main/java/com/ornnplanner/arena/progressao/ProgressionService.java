@@ -492,8 +492,17 @@ public class ProgressionService {
 
     /** The next item and the k most likely continuations to a complete build. */
     public Answer answer(String champion, List<Long> held, List<Long> components, List<String> enemies, Boolean support, Integer k) {
+        return answer(champion, held, components, enemies, support, null, k);
+    }
+
+    /** As above, leaning to an archetype (a key of the classification; null = the champion's usual one). */
+    public Answer answer(String champion, List<Long> held, List<Long> components, List<String> enemies, Boolean support,
+                         String archetype, Integer k) {
         ProgressionModel m = model();
         ProgressionModel.Context ctx = context(m, champion, held, components, enemies, support);
+        if (archetype != null) {
+            ctx.archetype = archetype;
+        }
         Answer a = new Answer();
         a.champion = ctx.champion;
         a.archetype = ctx.archetype;
@@ -549,7 +558,16 @@ public class ProgressionService {
     /** n builds of the champion drawn at a minute, from what it holds (the Atlas's other side). */
     public List<ProgressionModel.Sample> sample(String champion, List<Long> held, List<Long> components, List<String> enemies,
                                                 Boolean support, double minute, int n, long seedValue) {
+        return sample(champion, held, components, enemies, support, null, minute, n, seedValue);
+    }
+
+    /** As above, leaning to an archetype (null = the champion's usual one). */
+    public List<ProgressionModel.Sample> sample(String champion, List<Long> held, List<Long> components, List<String> enemies,
+                                                Boolean support, String archetype, double minute, int n, long seedValue) {
         ProgressionModel.Context ctx = context(champion, held, components, enemies, support);
+        if (archetype != null) {
+            ctx.archetype = archetype;
+        }
         return model().sample(ctx, minute, Math.max(1, Math.min(500, n)), seedValue);
     }
 

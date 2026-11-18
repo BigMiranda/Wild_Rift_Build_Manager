@@ -60,6 +60,7 @@ public class AtlasService {
     private final com.ornnplanner.arena.fight.ChampionProfiles profiles;
     private final com.ornnplanner.seed.ChampionCatalog champions;
     private final EffectTestService effects;
+    private final com.ornnplanner.arena.fight.BuildArchetypes archetypes;
     private final Map<String, Object> seed;
     private final KitUse.Rules kitRules;
     private final Map<String, KitUse.Kit> kits = new java.util.concurrent.ConcurrentHashMap<>();
@@ -75,9 +76,10 @@ public class AtlasService {
                         com.ornnplanner.publico.PublicMode publicMode,
                         @Lazy com.ornnplanner.arena.progressao.ProgressionService progression,
                         com.ornnplanner.arena.fight.ChampionProfiles profiles, com.ornnplanner.seed.ChampionCatalog champions,
-                        @Lazy EffectTestService effects,
+                        @Lazy EffectTestService effects, @Lazy com.ornnplanner.arena.fight.BuildArchetypes archetypes,
                         @Value("${planner.seed.atlas:classpath:seed/atlas_7_3d.yml}") Resource file) {
         this.repo = repo;
+        this.archetypes = archetypes;
         this.progression = progression;
         this.profiles = profiles;
         this.champions = champions;
@@ -1949,8 +1951,10 @@ public class AtlasService {
         }
         AtlasModel.Fixed[] perfect = "perfeito".equals(g.opponent)
                 ? joint(mr, q.a, q.b, 0, new AtlasModel.SideGuide(), new AtlasModel.SideGuide()) : null;
-        natural(run, "A", q.a, q.b, perfect == null ? null : perfect[1], g.a);
-        natural(run, "B", q.b, q.a, perfect == null ? null : perfect[0], g.b);
+        String archA = blank(q.archetypeA);
+        String archB = blank(q.archetypeB);
+        natural(run, "A", q.a, q.b, perfect == null ? null : perfect[1], archA, archB, g.a);
+        natural(run, "B", q.b, q.a, perfect == null ? null : perfect[0], archB, archA, g.b);
         return g;
     }
 
@@ -1986,6 +1990,11 @@ public class AtlasService {
      * the gold clock gets it by then.
      */
     List<Opp> opponents(AtlasModel.Run run, String side, AtlasModel.Fixed theirs, AtlasModel.Fixed perfect) {
+        return opponents(run, side, theirs, perfect, null);
+    }
+
+    /** As above; {@code theirArchetype} (null = their usual one) leans the other side's drawn builds to an archetype. */
+    List<Opp> opponents(AtlasModel.Run run, String side, AtlasModel.Fixed theirs, AtlasModel.Fixed perfect, String theirArchetype) {
         String other = "A".equals(side) ? "B" : "A";
         AtlasModel.Config c = run.config;
         String champ = "A".equals(other) ? c.a : c.b;
@@ -2012,7 +2021,7 @@ public class AtlasService {
                 int n = Math.max(1, c.progressionSamples);
                 long seedValue = c.seed * 7919 + (long) (minute * 10) + ("A".equals(other) ? 1 : 2);
                 for (com.ornnplanner.arena.progressao.ProgressionModel.Sample sm
-                        : progression.sample(champ, fixedItems, List.of(), List.of(mine), null, minute, n, seedValue)) {
+                        : progression.sample(champ, fixedItems, List.of(), List.of(mine), null, theirArchetype, minute, n, seedValue)) {
                     byItems.merge(AtlasRepository.write(sm.items), 1.0 / n, Double::sum);
                 }
             }
@@ -2113,16 +2122,17 @@ public class AtlasService {
      * goes up. Each item gets its minute, and a warning when it only pays against an unlikely branch.
      */
     private void natural(AtlasModel.Run run, String side, AtlasModel.Fixed fixed, AtlasModel.Fixed theirs, AtlasModel.Fixed perfect,
-                         AtlasModel.SideGuide g) {
-        List<Opp> opps = opponents(run, side, theirs, perfect);
+                         String target, String theirArchetype, AtlasModel.SideGuide g) {
+        List<Opp> opps = opponents(run, side, theirs, perfect, theirArchetype);
         AtlasModel.MinuteResult ref = opps.isEmpty() ? minuteOf(run, null) : opps.get(opps.size() / 2).mr;
         AtlasModel.Side s = "A".equals(side) ? ref.a : ref.b;
         AtlasModel.Fixed cur = copy(fixed);
         Set<Long> held0 = new HashSet<>(cur.items);
-        double now = evaluate(run, side, cur, opps, null)[0];
+        double now = steer(evaluate(run, side, cur, opps, null)[0], cur.items, target);
         String champ = s.champion;
-        // the kit's rule only where the objective is the role's (a run that measures it); else every item is in the kit
-        double margin = "papel".equals(run.config.objective) ? kitRules.margin : 0;
+        // the kit's rule only where the objective is the role's (a run that measures it); else every item is in the kit.
+        // An archetype asked for replaces it: the user chose what the build is
+        double margin = target == null && "papel".equals(run.config.objective) ? kitRules.margin : 0;
         Map<Long, Double> offKit = new LinkedHashMap<>();
         for (int guard = 0; guard < 8; guard++) {
             long items = cur.items.stream().map(catalog::item).filter(it -> it != null && !it.boots()).count();
@@ -2138,7 +2148,7 @@ public class AtlasService {
                     continue;
                 }
                 cur.items.add(it.id);
-                double sc = evaluate(run, side, cur, opps, null)[0];
+                double sc = steer(evaluate(run, side, cur, opps, null)[0], cur.items, target);
                 cur.items.remove(cur.items.size() - 1);
                 cands.add(it);
                 vs.add(new double[] {(sc - now) / it.cost * 1000, sc, inKit(champ, it.id) ? 1 : 0});
@@ -2175,7 +2185,7 @@ public class AtlasService {
                     if (!kind.equals(x.source) || !fits(x, tags) || w.containsKey(side + ":" + x.key)) {
                         continue;
                     }
-                    double sc = evaluate(run, side, withCondition(cur, x), opps, null)[0];
+                    double sc = steer(evaluate(run, side, withCondition(cur, x), opps, null)[0], cur.items, target);
                     if (sc > bestScore) {
                         best = x;
                         bestScore = sc;
@@ -2210,7 +2220,7 @@ public class AtlasService {
                         continue;
                     }
                     cur.items.set(i, it.id);
-                    double sc = evaluate(run, side, cur, opps, null)[0];
+                    double sc = steer(evaluate(run, side, cur, opps, null)[0], cur.items, target);
                     boolean out = margin > 0 && !inKit(champ, it.id);
                     if (sc > now + (out ? margin : 0.05)) {
                         now = sc;
@@ -2227,7 +2237,8 @@ public class AtlasService {
                 break;
             }
         }
-        fillNatural(run, side, cur, held0, theirs, opps, perfect != null, g);
+        fillNatural(run, side, cur, held0, theirs, opps, perfect != null, theirArchetype, g);
+        archetypeOf(cur.items, target, g.natural);
         // the kit of each item, and the ones out of the archetype that won by the margin
         for (AtlasModel.Option o : g.build) {
             o.kit = itemKit(champ, o.itemId);
@@ -2239,6 +2250,54 @@ public class AtlasService {
                 g.natural.warnings.add(o.name + ": " + w);
             }
         }
+    }
+
+    /** The seed's {@code arquetipo_alvo.penalidade}: points off the score per unit of distance to the asked archetype. */
+    double archetypePenalty() {
+        Object o = seed.get("arquetipo_alvo");
+        Object p = o instanceof Map ? ((Map<?, ?>) o).get("penalidade") : null;
+        return p instanceof Number ? ((Number) p).doubleValue() : 25;
+    }
+
+    /** A score steered to an archetype: the distance of the items to it, times the penalty, off (no archetype: as is). */
+    double steer(double score, List<Long> items, String target) {
+        if (target == null) {
+            return score;
+        }
+        return score - archetypePenalty() * archetypeDistance(items, target);
+    }
+
+    double archetypeDistance(List<Long> items, String target) {
+        List<ItemDef> defs = new ArrayList<>();
+        items.forEach(id -> defs.add(catalog.item(id)));
+        return archetypes.distance(archetypes.ofItems(defs), target);
+    }
+
+    /** The assembled build's archetype next to the asked one, with a warning when it was not reached. */
+    private void archetypeOf(List<Long> items, String target, AtlasModel.Natural nat) {
+        if (nat == null) {
+            return;
+        }
+        List<ItemDef> defs = new ArrayList<>();
+        items.forEach(id -> defs.add(catalog.item(id)));
+        com.ornnplanner.arena.fight.BuildArchetypes.Archetype a = archetypes.ofItems(defs);
+        nat.archetype = a.key;
+        nat.archetypeName = a.name;
+        if (target != null) {
+            Map<String, String> names = archetypes.names();
+            nat.targetArchetype = target;
+            nat.targetName = names.getOrDefault(target, target);
+            nat.archetypeDistance = archetypes.distance(a, target);
+            if (nat.archetypeDistance > 1e-9) {
+                nat.warnings.add(0, String.format(java.util.Locale.ROOT,
+                        "a build montada é %s, não %s (distância %.2f): o que o arquétipo pede custou mais pontos do que a penalidade",
+                        a.name, nat.targetName, nat.archetypeDistance));
+            }
+        }
+    }
+
+    private static String blank(String s) {
+        return s == null || s.isBlank() ? null : s.trim();
     }
 
     /** Whether a side's kit uses an item (its kit use at or above the seed's threshold). */
@@ -2267,7 +2326,7 @@ public class AtlasService {
 
     /** The side guide's build, item by item with its minute and warning, the minute notes and the other side's timeline. */
     private void fillNatural(AtlasModel.Run run, String side, AtlasModel.Fixed cur, Set<Long> fixed, AtlasModel.Fixed theirs,
-                             List<Opp> opps, boolean perfect, AtlasModel.SideGuide g) {
+                             List<Opp> opps, boolean perfect, String theirArchetype, AtlasModel.SideGuide g) {
         AtlasModel.Config c = run.config;
         com.ornnplanner.arena.progressao.ProgressionModel pm = progression.model();
         List<Double> t = pm.minutes(cur.items, standardPace());
@@ -2310,7 +2369,7 @@ public class AtlasService {
         if (!perfect) {
             String champ = "A".equals(side) ? c.b : c.a;
             nat.opponentTimeline = progression.answer(champ, theirs.items == null ? List.of() : theirs.items, List.of(),
-                    List.of("A".equals(side) ? c.a : c.b), null, 3).continuations;
+                    List.of("A".equals(side) ? c.a : c.b), null, theirArchetype, 3).continuations;
         }
         g.natural = nat;
     }

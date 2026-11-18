@@ -250,6 +250,12 @@ public final class AtlasModel {
         public String mode;
         /** Rodada 19: natural (the other side buys what is likely) | perfeito (it buys the model's best). */
         public String opponent;
+        /**
+         * The archetype each side's build should reach (a key of {@code classificacao_<patch>.yml}; null = free, as in the
+         * Discovery). Against the natural progression it steers the assembled build and the other side's drawn builds.
+         */
+        public String archetypeA;
+        public String archetypeB;
     }
 
     /** A ranked option of a side (a condition, an item, a rune, a spell): what it adds to that side's race. */
@@ -318,6 +324,13 @@ public final class AtlasModel {
         public double low;
         public int samples;
         public List<String> warnings = new ArrayList<>();
+        /** The archetype asked for this side (null = free) and its name. */
+        public String targetArchetype;
+        public String targetName;
+        /** The assembled build's archetype (by its items' gold), its name and its distance to the asked one (0 = reached). */
+        public String archetype;
+        public String archetypeName;
+        public Double archetypeDistance;
     }
 
     /** Two builds fought for real at the run's minute: the real race (side A's view) next to the prediction. */

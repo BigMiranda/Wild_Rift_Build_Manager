@@ -395,6 +395,41 @@ Canivete, junto com DdA e penetração), sem o Desespero e o Terminus da execuç
 - O guia ainda superestima: prevê 61 a 90 por minuto, e as lutas dão 30 a 54.
 - O minuto 15 segue sendo o ponto fraco do Ornn contra o Rumble em qualquer build medida.
 
+## Arquétipo pedido no Atlas (✅)
+
+Como o seletor da Descoberta: no guia contra a progressão natural, cada lado tem um "Arquétipo de <campeão>" (deixar
+livre, Tanque, Lutador, Crítico, Ao acertar, Letalidade, Mago contínuo, Mago explosivo, Suporte, Híbrido;
+`GuideRequest.archetypeA/B`).
+
+- **A build montada é puxada para o arquétipo.** O arquétipo de um conjunto de itens da loja sai das mesmas regras de
+  `classificacao_7_3d.yml` (parte do ouro de cada família de status e efeitos de luta: `BuildArchetypes.ofItems`). A
+  distância a um arquétipo (`BuildArchetypes.distance`) soma o que falta em cada condição da regra dele (como parte do
+  limiar) e o quanto a build está dentro de uma regra anterior que ganharia (um tanque puro não é lutador). Cada passo da
+  montagem (itens, runas, trocas) perde `arquetipo_alvo.penalidade` (25) pontos por unidade de distância.
+- **Com um arquétipo pedido**, a regra do "aproveita o kit?" não vale para aquele lado: quem pediu escolheu.
+- **O outro lado** sorteia a progressão natural puxada para o arquétipo pedido para ele (o contexto da cadeia de
+  progressão troca o arquétipo usual do campeão pelo pedido; `ProgressionService.sample/answer` com arquétipo).
+- **Na tela:** "Arquétipo da build montada: X", e um aviso quando o pedido não foi alcançado (o que ele pedia custou mais
+  que a penalidade). Sem pedido, a linha mostra o arquétipo a que a build chegou.
+- **Só no modo contra a progressão natural** (o padrão); o modo "contra o fixado" não usa o seletor.
+
+Ornn × Rumble (execução 11, minuto 15):
+
+| Pedido | Build do Ornn | Arquétipo | Nota (média / robustez) |
+|---|---|---|---|
+| livre | Ruptor Divino, Lembrete Mortal, Grevas Vorazes, Eclipse, Presa da Serpente, Chuva de Canivete | Crítico | 66,0 (81,6 / 55,6) |
+| Tanque | Botas Galvanizadas de Aço, Resplendor Vazio, Ruptor Divino, Manto da Meia-noite, Coração de Aço, Presa da Serpente | Tanque | 62,9 (78,2 / 52,8) |
+| Lutador | Passos de Mercúrio, Égide de Fogo Solar, Eclipse, Ruptor Divino, Lembrete Mortal, Coração de Aço | Lutador | 62,1 (77,8 / 51,7) |
+
+A build livre do Ornn, pelo ouro dos itens, é de Crítico (dois itens com 25% de crítico). Pedir Tanque ou Lutador
+custa só 3 a 4 pontos de nota prevista.
+
+**Achado:** o seletor de arquétipo da Descoberta não faz nada hoje. `DiscoveryModel.Request.archetype` chega ao
+backend, mas nenhum código o lê.
+
+**Teste:** `AtlasArchetypeTest` (uma build de tanque é Tanque e longe de Crítico e de Lutador; itens de crítico chegam
+ao Crítico; a penalidade por unidade de distância).
+
 ## Pendências
 
 - ~~A fórmula da velocidade de ataque~~: resolvida pelos prints e pelas notas do patch 7.3 (seção no começo). Falta

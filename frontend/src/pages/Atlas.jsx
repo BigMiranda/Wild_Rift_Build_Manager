@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import ItemIcon from '../components/ItemIcon.jsx';
 import { useBuild } from '../buildContext.jsx';
 import { interactions, note1, sideView } from '../atlasMath.js';
+import { archetypeOptions } from '../archetypes.js';
 
 /**
  * Rodada 16, the interaction atlas: runs (a closed fight between two champions, its context fixed by the run), the
@@ -526,6 +527,12 @@ function Natural({ g, other }) {
       <h5>Build contra a {n.opponent === 'perfeito' ? 'build ótima do outro lado (oponente perfeito)' : 'progressão natural do outro lado'}
         {' '}<small className="muted">nota {n1(n.score)} (média {n1(n.mean)}, robustez {n1(n.robust)}: pior {n1(n.worst)}, percentil baixo {n1(n.low)};
         {' '}{n.samples} builds sorteadas em {n.minutes.map((x) => `${n1(x)}'`).join(', ')})</small></h5>
+      {n.archetypeName && (
+        <p className="small">Arquétipo da build montada: <strong>{n.archetypeName}</strong>
+          {n.targetArchetype && (n.archetypeDistance > 1e-9
+            ? <span className="atlas-warn"> ⚠ pedido: {n.targetName} (distância {n1(n.archetypeDistance)})</span>
+            : <span className="muted"> (o pedido)</span>)}</p>
+      )}
       <ol className="atlas-timeline">
         {g.build.map((o, i) => (
           <li key={`${o.itemId}-${i}`} className={o.key === 'fixo' ? 'fixed' : ''}>
@@ -644,17 +651,20 @@ function Guides({ run, m, itemsList, a, setA, b, setB }) {
   const [learned, setLearned] = useState(0);
   const [mode, setMode] = useState('');
   const [opponent, setOpponent] = useState('natural');
+  const [archA, setArchA] = useState('');
+  const [archB, setArchB] = useState('');
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     let live = true;
     setError(null);
     setBusy(true);
-    api.post(`/api/atlas/runs/${run.id}/guide`, { minute: m.minute, a, b, order, scale, mode: mode || null, opponent })
+    api.post(`/api/atlas/runs/${run.id}/guide`, { minute: m.minute, a, b, order, scale, mode: mode || null, opponent,
+      archetypeA: archA || null, archetypeB: archB || null })
       .then((x) => { if (live) setG(x); })
       .catch((e) => { if (live) setError(e.message); })
       .finally(() => { if (live) setBusy(false); });
     return () => { live = false; };
-  }, [run.id, m.minute, a, b, order, scale, learned, mode, opponent]);
+  }, [run.id, m.minute, a, b, order, scale, learned, mode, opponent, archA, archB]);
   return (
     <>
       <p className="muted small">Fixe um momento à frente em cada lado (itens já comprados, runas, feitiço) e as notas são
@@ -681,6 +691,13 @@ function Guides({ run, m, itemsList, a, setA, b, setB }) {
             <option value="perfeito">joga perfeito (a build ótima do modelo)</option>
           </select></label>
         )}
+        {(mode || run.config.guideMode) === 'progressao' && [[m.a.champion, archA, setArchA], [m.b.champion, archB, setArchB]].map(([name, v, set]) => (
+          <label key={name} className="inline" title="Como na Descoberta: a build montada é puxada para o arquétipo (e a progressão natural sorteada para esse lado também)">
+            Arquétipo de {name} <select value={v} onChange={(e) => set(e.target.value)}>
+              <option value="">deixar livre</option>
+              {archetypeOptions().map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+            </select></label>
+        ))}
         <button onClick={() => { setA(emptyFixed()); setB(emptyFixed()); }}>Limpar fixações</button>
         {busy && <span className="muted small">calculando…</span>}
         {g && <span className="small">Corrida de {m.a.champion}: ajustada {n1(g.byOrder[0])} · 1D {n1(g.byOrder[1])} · 2D {n1(g.byOrder[2])} · 3D {n1(g.byOrder[3])}</span>}

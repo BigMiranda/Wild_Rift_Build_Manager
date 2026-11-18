@@ -13,6 +13,7 @@ import WholeDelta from '../components/WholeDelta.jsx';
 import { BuildLink } from '../components/BuildPreview.jsx';
 import MetaBuilds from '../components/MetaBuilds.jsx';
 import DiscoveryNotes from '../components/DiscoveryNotes.jsx';
+import { archetypeOptions } from '../archetypes.js';
 
 const STORE = 'ornn-planner-discovery';
 const AXES = ['arquetipo', 'dano', 'durabilidade', 'passivas'];
@@ -188,7 +189,7 @@ export default function Discovery() {
           <label className="field">{t('disc.archetype')}
             <select value={form.archetype} onChange={(e) => set({ archetype: e.target.value })}>
               <option value="">{t('disc.free')}</option>
-              {['tanque', 'lutador', 'critico', 'ao_acertar', 'letalidade', 'mago_continuo', 'mago_explosivo', 'suporte', 'hibrido'].map((a) => <option key={a} value={a}>{a}</option>)}
+              {archetypeOptions().map(([a, label]) => <option key={a} value={a}>{label}</option>)}
             </select>
           </label>
           </>}

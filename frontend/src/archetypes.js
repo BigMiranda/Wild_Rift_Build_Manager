@@ -25,3 +25,9 @@ export function useArchetypes(key) {
   }, [key]);
   return map;
 }
+
+/** The archetype keys, in the rule order of classificacao_<patch>.yml; the Discovery and the Atlas let the user pick one. */
+export const ARCHETYPE_KEYS = ['tanque', 'lutador', 'critico', 'ao_acertar', 'letalidade', 'mago_continuo', 'mago_explosivo', 'suporte', 'hibrido'];
+
+/** [key, name] of each archetype, for a select. */
+export const archetypeOptions = () => ARCHETYPE_KEYS.map((k) => [k, t(`arch.${k}`)]);

@@ -148,3 +148,12 @@ aproveita_kit:
     "% Magic Penetration": magico
     "Max Mana": mana
     "% Mana Regeneration": mana
+
+# Arquétipo pedido (no guia contra a progressão natural, como o seletor da Descoberta): a build montada de um lado é
+# puxada para o arquétipo escolhido (classificacao_<patch>.yml: a parte do ouro de cada família de status e os efeitos).
+# A nota de cada passo perde `penalidade` pontos por unidade de distância ao arquétipo (o que falta em cada condição da
+# regra dele, como parte do limiar, mais o quanto a build está dentro de uma regra que vem antes e ganharia). Com um
+# arquétipo pedido, a regra do "aproveita o kit?" não vale para aquele lado (quem pediu escolheu). O outro lado sorteia a
+# progressão natural puxada para o arquétipo pedido para ele.
+arquetipo_alvo:
+  penalidade: 25
