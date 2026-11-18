@@ -24,3 +24,6 @@ Thumbs.db
 capturas/*
 !capturas/LEIA-ME.md
 capturas/wiki-cache/
+
+# Rodada 20: o que tools/importar_meta.py gera (a lista dos heróis sem correspondência)
+tools/meta_herois_faltando.json

@@ -89,6 +89,8 @@ nota:
   feixe: 5
   # Calibração (Parte 3): composições sorteadas lutam 5x5; a regressão dá os pesos de composição. Vazio = os de cima.
   calibracao: {}
+  # A calibração só vale se a correlação validada (5 dobras) passar disto; senão ficam os pesos acima.
+  calibracao_minima: 0.3
 
 # Tabelas pré-calculadas (Admin › Draft): o matchup 1x1 de rota nos minutos abaixo, com a build padrão de cada um
 # (campanha) e o modelo de progressão (o que cada um terá no minuto); a dupla do Dragão 2x2.
@@ -98,6 +100,8 @@ tabelas:
   largadas: 3               # largadas por luta (distâncias diferentes)
   duracao: 30               # segundos de cada luta
   dupla_dragao: true
+  dupla_por_rota: 4         # a dupla do Dragão: os 4 primeiros atiradores x os 4 primeiros suportes
+  calibracao_amostras: 300  # lutas 5x5 da calibração (times sorteados, minuto 15, rota única)
 
 # Parte 4: o primeiro encontro na fase de rotas.
 primeiro_encontro:

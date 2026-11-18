@@ -85,6 +85,11 @@ public class LiveGameRepository {
         jdbc.update("DELETE FROM live_game WHERE id = ?", id);
     }
 
+    /** A deep copy of a build (through JSON), to change it without touching the original. */
+    static com.ornnplanner.repo.BuildRepository.Build copy(com.ornnplanner.repo.BuildRepository.Build b) {
+        return JSON.convertValue(b, com.ornnplanner.repo.BuildRepository.Build.class);
+    }
+
     static LiveGameModel.Game read(String s) {
         try {
             return JSON.readValue(s, LiveGameModel.Game.class);

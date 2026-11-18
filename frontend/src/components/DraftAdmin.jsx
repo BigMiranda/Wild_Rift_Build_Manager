@@ -48,10 +48,55 @@ function AliasEditor() {
   );
 }
 
+const secs = (v) => (v == null ? '—' : `${(Math.round(v * 10) / 10).toLocaleString('pt-BR')} s`);
+
+/** Rodada 20, Parte 3: the draft's precomputed tables (lane matchups, the Dragon duo, the composition calibration). */
+function DraftTables() {
+  const [st, setSt] = useState(null);
+  const [error, setError] = useState(null);
+  const [calibrate, setCalibrate] = useState(true);
+  const load = () => api.get('/api/draft/tabelas').then(setSt).catch((e) => setError(e.message));
+  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!st?.running) return undefined;
+    const h = setInterval(load, 2000);
+    return () => clearInterval(h);
+  }, [st?.running]);
+  const start = async () => {
+    try { setError(null); setSt(await api.post(`/api/draft/tabelas?calibrar=${calibrate}`)); } catch (e) { setError(e.message); }
+  };
+  return (
+    <section className="panel">
+      <h3>{t('draftAdmin.tables')}</h3>
+      <p className="muted small">{t('draftAdmin.tablesHelp')}</p>
+      <div className="row">
+        <button type="button" className="primary" disabled={st?.running} onClick={start}>{t('draftAdmin.tablesRun')}</button>
+        <label className="live-check"><input type="checkbox" checked={calibrate} onChange={(e) => setCalibrate(e.target.checked)} /> {t('draftAdmin.calibrate')}</label>
+        {st?.running && <button type="button" onClick={() => api.post('/api/draft/tabelas/cancelar').then(setSt)}>{t('draftAdmin.cancel')}</button>}
+      </div>
+      {error && <div className="notice error">{error}</div>}
+      {st && (
+        <p className="small">
+          {st.running ? t('draftAdmin.running', { stage: st.stage, done: st.done, total: st.total }) : t('draftAdmin.rows', { n: st.rows, date: st.updatedAt ?? '—' })}
+          {st.seconds != null && !st.running && ` · ${t('draftAdmin.took', { s: secs(st.seconds) })}`}
+          {st.error && <span className="error"> · {st.error}</span>}
+        </p>
+      )}
+      {st && Object.keys(st.times ?? {}).length > 0 && (
+        <div className="table-wrap"><table className="data">
+          <thead><tr><th className="l">{t('draftAdmin.stage')}</th><th>{t('draftAdmin.count')}</th><th>{t('draftAdmin.time')}</th></tr></thead>
+          <tbody>{Object.entries(st.times).map(([k, v]) => <tr key={k}><td className="l">{k}</td><td>{st.counts?.[k] ?? ''}</td><td>{secs(v)}</td></tr>)}</tbody>
+        </table></div>
+      )}
+    </section>
+  );
+}
+
 /** Admin › Draft e voz: the nicknames of the voice reader (Parte 2) and the draft's precomputed tables (Parte 3). */
 export default function DraftAdmin() {
   return (
     <>
+      <DraftTables />
       <AliasEditor />
     </>
   );

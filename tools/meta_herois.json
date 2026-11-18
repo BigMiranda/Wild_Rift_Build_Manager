@@ -1,0 +1,5 @@
+{
+ "_leia": "Correspondência heroId (ou nome chinês) do servidor chinês -> nome de campeoes_7_3f.yml, para tools/importar_meta.py. Conferidos em 18/11/2026 na lista de heróis: 10001 盖伦 (gailun), 10002 亚托克斯 (yatuokesi). Preencha o resto a partir de tools/meta_herois_faltando.json (gerado pelo script).",
+ "10001": "Garen",
+ "10002": "Aatrox"
+}

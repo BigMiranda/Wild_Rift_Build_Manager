@@ -1,6 +1,9 @@
 package com.ornnplanner.api;
 
 import com.ornnplanner.arena.draft.DraftCatalog;
+import com.ornnplanner.arena.draft.DraftModel;
+import com.ornnplanner.arena.draft.DraftService;
+import com.ornnplanner.arena.draft.DraftTablesService;
 import com.ornnplanner.arena.draft.LiveGameModel;
 import com.ornnplanner.arena.draft.LiveGameRepository;
 import com.ornnplanner.arena.draft.VoiceAliases;
@@ -29,11 +32,53 @@ public class DraftController {
     private final LiveGameRepository games;
     private final DraftCatalog catalog;
     private final VoiceAliases aliases;
+    private final DraftService draft;
+    private final DraftTablesService tables;
 
-    public DraftController(LiveGameRepository games, DraftCatalog catalog, VoiceAliases aliases) {
+    public DraftController(LiveGameRepository games, DraftCatalog catalog, VoiceAliases aliases, DraftService draft, DraftTablesService tables) {
         this.games = games;
         this.catalog = catalog;
         this.aliases = aliases;
+        this.draft = draft;
+        this.tables = tables;
+    }
+
+    /** Parte 3: the body of the draft's requests: the game and a branch of hypothetical picks. */
+    public static class SuggestRequest {
+        public LiveGameModel.Game game;
+        public List<DraftModel.Pick> path = new ArrayList<>();
+    }
+
+    /** Parte 3: the enemy's 5 most likely next picks, the ally's 5 best, the 5 bans and the branch's children. */
+    @PostMapping("/sugestoes")
+    public DraftService.Suggestions suggest(@RequestBody SuggestRequest q) {
+        if (q.game == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Falta a partida.");
+        }
+        return draft.suggest(q.game, q.path);
+    }
+
+    /** Parte 3: the precomputed tables (Admin): the job's state. */
+    @GetMapping("/tabelas")
+    public DraftTablesService.Status tablesStatus() {
+        return tables.status();
+    }
+
+    /** Starts the tables in the background ({@code calibrar}: also the 5x5 calibration; {@code rotas}: only these lanes). */
+    @PostMapping("/tabelas")
+    public DraftTablesService.Status startTables(@RequestParam(defaultValue = "true") boolean calibrar,
+                                                 @RequestParam(required = false) List<String> rotas) {
+        try {
+            return tables.start(calibrar, rotas);
+        } catch (IllegalStateException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        }
+    }
+
+    @PostMapping("/tabelas/cancelar")
+    public DraftTablesService.Status cancelTables() {
+        tables.cancel();
+        return tables.status();
     }
 
     /** Parte 2: the voice reader's nicknames in force (seed + the user's edits). */

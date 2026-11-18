@@ -1,6 +1,25 @@
+import { useState } from 'react';
+import { t } from '../i18n.js';
+import DraftPanel from './DraftPanel.jsx';
+
+const PANELS = ['draft'];
+
 /**
- * Rodada 20: the panels under the two teams (draft, first encounter, likely builds, tips), filled part by part.
+ * Rodada 20: the panels under the two teams, one at a time (the screen stays short on a phone): the draft (Parte 3),
+ * the first encounter (Parte 4), the likely builds (Parte 5) and the tips (Parte 6).
  */
-export default function LivePanels() {
-  return null;
+export default function LivePanels(props) {
+  const [panel, setPanel] = useState('draft');
+  return (
+    <div className="live-panels">
+      <div className="chips live-panel-tabs" role="tablist">
+        {PANELS.map((k) => (
+          <button key={k} type="button" role="tab" aria-selected={panel === k} className={panel === k ? 'active' : ''} onClick={() => setPanel(k)}>
+            {t(`live.panel.${k}`)}
+          </button>
+        ))}
+      </div>
+      {panel === 'draft' && <DraftPanel game={props.game} onChange={props.onChange} />}
+    </div>
+  );
 }

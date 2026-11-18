@@ -97,3 +97,80 @@ os seeds de verdade.
   "capuz" e vários com "lâmina": o leitor não adivinha (mostra "Não entendi (capuz)").
 - Ressalva: as frases foram escritas por mim junto com o leitor, não gravadas de uma transmissão; a taxa real com áudio
   vai ser menor. Quando o usuário usar a voz, vale juntar as frases que erraram e acrescentá-las ao teste e aos apelidos.
+
+## Parte 3: draft com previsões que afunilam (✅)
+
+**O que mostra** (painel "Draft" embaixo dos times, `components/DraftPanel.jsx`; `POST /api/draft/sugestoes`): o próximo
+passo do draft, os **5 mais prováveis do inimigo** (previsão) e os **5 melhores para o aliado** (recomendação), cada um com
+a nota e o motivo em uma linha ("rota Barão aberta; ganha a rota contra Darius (previsto) (medido); o time está sem dano
+mágico"), e os **banimentos** ("os 5 que mais ameaçam o seu time": a lista do inimigo, a mesma conta invertida).
+
+- **📌 Fixar uma previsão:** "acho que vão de Darius" vai para o cartão vazio da rota dele (`predictions` da partida; o
+  cartão mostra "Darius?"); as listas se recalculam como se fosse verdade. ✕ tira.
+- **Árvore de cenários, feixe 5** (`DraftModel.expand`): cada nó calcula só os 5 primeiros do lado que escolhe a seguir
+  (pela ordem do formato); um ramo só abre ao tocar em ▸, e o caminho fica em migalhas ("Agora › Nidalee (Selva) › ...").
+
+**A nota** (`arena/draft/DraftModel`, puro; pesos em `draft_7_3f.yml › nota`, explicados em "Como a nota é feita"), cada
+parte de -1 a 1, soma ponderada × 100:
+
+| Parte | Peso | De onde vem |
+|---|---|---|
+| meta | 0,25 | presença (0,4), banimento (0,2) e vitória centrada em 50% (0,4) na rota, do elo da partida; sem importação, 0 |
+| rota | 0,35 | a rota principal livre = 1, a 2ª rota = 0,4; com todas as rotas dele ocupadas, o campeão fica fora da lista |
+| matchup | 0,30 | a vantagem 1x1 medida na rota contra o adversário revelado ou previsto (tabelas; Dragão e Suporte pela dupla 2x2 quando os dois parceiros são conhecidos); sem medida, a subclasse contra a subclasse pelo perfil (log do dano por segundo × vida efetiva no nível 15, média da subclasse) |
+| composição | 0,30 | o que falta ao time: dano mágico e físico (mínimo 30% cada), linha de frente (1), controle forte (2), iniciação (1), alcance longo (1), cura ou escudo (1) e o equilíbrio forte cedo / tarde, lidos de `ChampionProfiles` |
+| contra | 0,20 | risco de contra-escolha: a média das 3 maiores vantagens dos disponíveis do outro time naquela rota (negativa) |
+
+Os indisponíveis (banidos, escolhidos, Fearless) saem antes.
+
+**Meta:** `tools/importar_meta.py` (só a biblioteca padrão; rodado pelo usuário) baixa o ranking público do servidor chinês
+(`mlol.qt.qq.com/.../hero_rank_list_v2`: `appear_rate`, `forbid_rate`, `win_rate` por `hero_id`) e a lista de heróis
+(`hero_list.js`), guarda em cache com a data (`backend/data/meta/cache/`) e escreve `backend/data/meta/meta.json`
+(`MetaStats`, relido quando muda). O formato foi conferido nas respostas em 18/11/2026, com três limitações que o script
+trata sem inventar:
+- os nomes vêm só em chinês e pinyin: a correspondência heroId → nome do catálogo fica em `tools/meta_herois.json`
+  (conferidos: 10001 Garen, 10002 Aatrox); os que faltam vão para `tools/meta_herois_faltando.json`;
+- a rota de cada posição "1".."5" não está na resposta: sai da maioria das rotas da lista de heróis de cada posição
+  (EST; o relatório mostra a contagem), ou `--posicoes`;
+- a chave externa (provavelmente o elo) vira "fonte_<chave>".
+Sem importação a parte da meta é neutra. **A meta não foi importada nesta rodada** (pede rede e o mapa de heróis).
+
+**Tabelas pré-calculadas** (`DraftTablesService`, tabela `draft_tabelas`; botão em **Admin › Catálogo › Draft e voz**, em
+segundo plano, com progresso e tempo por etapa): o 1x1 de rota de todos os pares de cada rota (os 20 mais jogados com meta;
+sem meta, todos com ficha) aos 3, 8 e 15 minutos, com a build padrão da campanha (a mais provável da progressão quando não
+há) no relógio do planejador, 3 largadas de 30 s, o cérebro tático sem fuga (o das lutas de referência do Atlas: barato e
+simétrico); e a dupla do Dragão 2x2 (os 4 primeiros atiradores × os 4 primeiros suportes, toda dupla contra toda dupla).
+Numa cópia do banco (142 campanhas), sem meta:
+
+| Etapa | Pares | Tempo |
+|---|---|---|
+| Barão (55 campeões), 3 / 8 / 15' | 1.485 cada | 30,5 / 40,5 / 36,4 s |
+| Selva (51) | 1.275 cada | 26,9 / 20,4 / 28,2 s |
+| Meio (51) | 1.275 cada | 24,3 / 23,7 / 25,9 s |
+| Dragão (24) | 276 cada | 5,7 / 8,8 / 9,5 s |
+| Suporte (35) | 595 cada | 17,8 / 17,9 / 15,6 s |
+| Dragão 2x2 | 54 cada | 2,4 / 2,3 / 2,3 s |
+| preparo dos lutadores (848) | | 57 s (dentro das etapas) |
+| **Total** | **14.892 linhas** | **5,7 min** |
+
+Um pedido do draft leva ~0,3 s com as tabelas (a tabela fica em memória e é conferida a cada 5 s).
+
+**Calibração dos pesos de composição** (no mesmo botão): times sorteados (um campeão por rota, dos 12 primeiros de cada)
+lutam 5x5 no minuto 15, e uma regressão ridge das diferenças de composição contra a corrida dá os multiplicadores, como
+no Atlas. **Calibração parcial:** rota única, sem o mapa e sem a partida simulada da Rodada 10 (o custo de uma partida
+inteira por amostra não cabia). Resultado:
+
+| Amostra | Correlação (na amostra) | Correlação validada (5 dobras) | Tempo |
+|---|---|---|---|
+| 60 lutas | 0,33 | 0,08 | 3,4 s |
+| 300 lutas | 0,18 | **0,005** | 42 s |
+
+Os traços de composição **não predizem** a luta 5x5 na rota única. Por isso a calibração só entra nos pesos com correlação
+validada de 0,3 ou mais (`nota.calibracao_minima`). Abaixo disso a tela diz "calibração parcial... ficam os pesos do seed
+(EST)". O próximo passo é medir a composição na partida inteira (Rodada 10), onde iniciação, alcance e linha de frente
+pesam.
+
+**Testes:** `DraftModelTest` (o feixe nunca calcula mais que 5 por passo, também ao abrir um ramo; fixar uma previsão
+muda as listas e a resposta é quem ganha do previsto; o Fearless tira os usados, no escopo de cada lado; uma rota cheia não
+recebe candidatos e com as cinco cheias a lista fica vazia; os banimentos são a lista do outro lado) e
+`tools/test_importar_meta.py` (o script sobre um cache sintético, sem rede).
