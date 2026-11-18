@@ -163,6 +163,15 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   (`pages/KitsReview.jsx`, `GET /api/arena/kits/review` and `/api/arena/kits/duel`, local only) to review and fix them.
   The user's "revisar" flags and notes per champion / ability live in `backend/data/revisao-fichas.json`
   (`arena/KitReviewMarks`, `/api/arena/kits/marks`), read first by the next sheet review.
+- Rodada 19 (`docs/rodada-19.md`): the natural progression of builds, `arena/progressao` (`ProgressionModel` pure,
+  `ProgressionService`, `api/ProgressionController` `/api/progressao`, seed `progressao_7_3f.yml`): a chain "items held ->
+  next item" from the Discovery's, saved, meta and guide builds, smoothed by subclass and archetype, components and enemy
+  composition lean it, minutes by the planner's gold clock; leave-one-out top-3 50%. The Atlas: `cerebro` (auto by default:
+  resolved once per side and minute, `MinuteResult.brainA/B`), the guide "contra a progressão natural" (`modo_guia`, the
+  other side sampled at `minutos_progressao`, score = mean and robustness), `objetivo: papel` (`objetivo_por_classe`: a
+  small team fight protecting an allied carry from `EffectTestService.allyOf`, `MinuteResult.teamA/teamB` with their own
+  model) and `KitUse` ("aproveita o kit?", `aproveita_kit`: out-of-archetype items need a margin). Old runs read as before
+  (fixado + tactical_stand, duel only).
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.

@@ -587,7 +587,9 @@ function Confirm({ run, m, g, order, scale }) {
     <div className="row">
       <button onClick={fight} disabled={busy}>{busy ? 'Lutando…' : 'Lutar de verdade com as duas builds montadas'}</button>
       {res && <span className="small">Corrida real de {m.a.champion}: <strong>{n1(res.real)}</strong> ± {n1(res.margin)}
-        {' '}(prevista {n1(res.predicted)}); {res.starts.length} largadas: {res.starts.map(n1).join(' · ')}</span>}
+        {' '}(prevista {n1(res.predicted)}); {res.starts.length} largadas: {res.starts.map(n1).join(' · ')}
+        {res.teamA != null && <> · luta de equipe (o carry de {m.a.champion}): <strong>{n1(res.teamA)}</strong> ± {n1(res.teamAMargin)}</>}
+        {res.teamB != null && <> · luta de equipe (o carry de {m.b.champion}): <strong>{n1(res.teamB)}</strong> ± {n1(res.teamBMargin)}</>}</span>}
       {error && <span className="error">{error}</span>}
     </div>
   );

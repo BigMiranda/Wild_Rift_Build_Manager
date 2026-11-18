@@ -264,3 +264,76 @@ efeito, de 0 a 1.
 mana do Rumble 0 e Poder de Habilidade 1; os itens só de crítico e velocidade de ataque ficam fora do kit do Ornn e
 dentro do da Jinx; a regra da margem (vence por 2: fica a do kit; por 4: a descoberta) e a média pelo ouro. A montagem
 do Ornn × Rumble está na Parte 5.
+
+## Parte 5: o piloto de novo (✅)
+
+Ornn × Rumble nos três jeitos, numa cópia do banco. Para caber no tempo, as execuções novas mediram só as condições
+sozinhas e as builds inteiras (600 + 3 × 120 de refino), que é o que o guia usa; o custo do seed completo está abaixo.
+
+| Jeito | Execução | Minutos medidos | Tempo |
+|---|---|---|---|
+| Antigo: contra o fixado + troca parada | nº 3 (Rodada 16, completa: 1, 2 e 3 dimensões) | 15 | 31,5 min |
+| Parte 3: contra a progressão natural, troca parada, só duelo | nº 7 | 10, 15, 20 | 19,0 min |
+| Parte 3 + 4: progressão natural, Automático, objetivo do papel | nº 8 | 10, 15, 20 | 17,8 min |
+
+**Builds montadas do Ornn** (nada fixado; o minuto é o do relógio no ritmo padrão):
+
+- **Antigo:** Lembrete Mortal, Ruptor Divino, Hemodrenário, Limite da Razão, Força da Natureza, Grevas Bélicas.
+- **Parte 3** (troca parada): Lembrete Mortal 3,6', Força da Natureza 7,6', Passos de Mercúrio 9,3', Ruptor Divino 14',
+  Resplendor Vazio 18', Eclipse 22,1'. Nota 73,8 (média 82,2, robustez 68,1). Com a troca parada o guia continua
+  abrindo com crítico: o problema da Parte 1 aparece de novo, agora contra a progressão natural.
+- **Parte 3 + 4** (Automático, Tanque: duelo 0,35 + equipe 0,65): Ruptor Divino 4', Botas Ionianas da Lucidez 5,4',
+  Desespero Eterno 9,7', Serrespada Quimiopunk 13,7', Terminus 18', Hemodrenário 22,4'. Nota 71,1 (média 82,6, robustez
+  63,4). **Sem item de crítico ou só de velocidade de ataque**, e nenhum fora do arquétipo (o teste da Parte 4 pede isso
+  ou a marca com a margem). É uma build de lutador de DdA com Vida, não de tanque puro: as habilidades do Ornn escalam
+  com DdA, e o Automático do Ornn troca bem nesse perfil.
+- O Rumble previsto (a cadeia, contra o Ornn), nos dois jeitos novos: Liandry 3,6', Virtude Radiante 7,4', Cajado do
+  Vazio 11,6', Sapatos Enfeitiçados 14,8', Eco de Luden 18,8', Armadura de Warmog 22,9'.
+
+**A luta de verdade:** cada build do Ornn, com o que o relógio dá a ela no minuto, contra o mesmo Rumble previsto (o
+mesmo relógio), com os cérebros Automáticos da execução nº 8, 24 largadas; a luta de equipe (o carry do Ornn) também
+com 24.
+
+| Ornn de | Min. 15: duelo | equipe | 0,35 d + 0,65 e | Min. 20: duelo | equipe | 0,35 d + 0,65 e |
+|---|---|---|---|---|---|---|
+| Antigo | **40,6 ± 6,5** | **30,6 ± 6,2** | **34,1** | 34,8 ± 4,3 | 27,9 ± 0,6 | 30,3 |
+| Parte 3 | 30,5 ± 5,7 | 25,2 ± 0,6 | 27,0 | 52,4 ± 5,6 | **33,8 ± 2,2** | 40,3 |
+| Parte 3 + 4 | 28,7 ± 2,8 | 23,6 ± 0,9 | 25,4 | **56,0 ± 5,4** | 33,3 ± 1,0 | **41,2** |
+
+- **No minuto 20 as builds novas ganham com folga** (41,2 e 40,3 contra 30,3 no objetivo do Tanque; 56 contra 35 no
+  duelo). **No minuto 15 a antiga ganha** (34,1 contra 25,4): os 4 primeiros itens dela (Lembrete Mortal, Ruptor,
+  Hemodrenário, Limite da Razão) são mais dano cedo; as novas põem a bota e o Desespero antes.
+- A previsão das notas (82–92 nos minutos) fica bem acima das lutas de verdade (25–56). Duas razões: o modelo de cada
+  minuto é o das builds inteiras sorteadas, e o guia escolhe o que ele superestima (o otimismo da Rodada 16); e o
+  Automático do Ornn não é o mesmo em todos os minutos (a IA v23 nos minutos 10 e 20, "parecida", e a v121 no 15,
+  "geral"): a luta muda com a IA escolhida, e a nota por minuto da Parte 3+4 cai justamente no 15 (70,5, pior 51,7).
+  O número absoluto continua valendo pela luta de verdade, como na Rodada 16.
+- **O atirador continua montando crítico:** Jinx × Caitlyn (execução nº 9, Automático, objetivo do papel, minuto 15):
+  Força do Vendaval 3,7', Botas Galvanizadas 5,4', Lembrete Mortal 9,7', Manto da Meia-noite 13,4', Espada do Rei
+  Destruído 17,8', Gume do Infinito 22,6', nenhum fora do arquétipo.
+
+**Custo do seed completo** (Automático, objetivo do papel, 1, 2 e 3 dimensões, validação, builds): uma execução só do
+minuto 15 (nº 10) mediu 14.317 conjuntos em 15,4 min (13,6 min preparando os lutadores, numa thread; 1,8 min lutando,
+com as lutas de equipe) e foi cancelada nos pares. No ritmo medido, os 49 mil pares levariam ~53 min e o minuto inteiro
+(pares, trios, validação e builds) passaria de 1 h. Por isso o seed fica em **15 e 20** (a regra pedia isso acima de
+1 h), e há o preset **"rápido"** (`ornn_rumble_rapido`: 1 dimensão e builds, nos minutos 10, 15 e 20, ~18 min), que é o
+que os pilotos desta rodada usaram. O que custa é preparar os lutadores (88% do tempo), não a luta de equipe.
+
+## O que mudou nas recomendações
+
+1. O crítico do Ornn vinha da **troca parada**: com ela, até contra a progressão natural, o guia abre com Lembrete
+   Mortal. Com o Automático e o objetivo do Tanque, ele sai (e, se voltasse, viria marcado fora do arquétipo).
+2. O guia agora monta **contra o que o outro lado tende a comprar e quando**, e mostra a linha do tempo prevista e as
+   notas em cada minuto. O Rumble previsto contra o Ornn é o mago de Liandry da campanha, não um Rumble tanque fixado.
+3. A build nova é melhor a partir do minuto 20 e pior no 15, na luta de verdade: o próximo passo é pesar os minutos
+   (hoje iguais) ou medir o 15 com mais builds, e escolher o Automático do Ornn uma vez para todos os minutos.
+
+## Pendências
+
+- **A fórmula da velocidade de ataque** (`base × (1 + bônus)` contra `base + razão × bônus` do PC): sem print, não muda.
+  **Pedido:** um print da tela de status de um campeão com um item só de velocidade de ataque (Lâmina Ravenosa, por
+  exemplo), mostrando o nível e a velocidade de ataque total, de preferência em dois níveis. Efeito, se for a do PC:
+  ~13% a mais no valor dos itens de velocidade de ataque na Arena (Ornn nível 13 com +40%: 1,154 contra 1,116).
+- O relatório de condições e a aba Validação continuam lendo só o duelo; a luta de equipe entra no guia contra a
+  progressão natural e no "Lutar de verdade".
+- O preparo dos lutadores é numa thread e domina o custo; com o Automático, cada preparo lê a IA do banco de novo.

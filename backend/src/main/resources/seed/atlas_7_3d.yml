@@ -53,7 +53,8 @@ patch: "7.3d"
 
 padrao:
   modo: x1
-  minutos: [10, 15, 20]
+  # Rodada 19: 10, 15 e 20 passariam de 1 h (o minuto 15 sozinho, com tudo, leva mais de 1 h: docs/rodada-19.md, parte 5)
+  minutos: [15, 20]
   dimensoes: [1, 2, 3]
   duracao: 60
   largadas: 6
@@ -80,6 +81,14 @@ execucoes:
     nome: "Ornn × Rumble (piloto)"
     a: ORNN
     b: RUMBLE
+  # Rodada 19: só as condições sozinhas e as builds inteiras (o modelo do guia), nos minutos 10, 15 e 20: ~18 min.
+  ornn_rumble_rapido:
+    nome: "Ornn × Rumble (rápido: 1 dimensão e builds)"
+    a: ORNN
+    b: RUMBLE
+    minutos: [10, 15, 20]
+    dimensoes: [1]
+    validacao: 0
 
 # Objetivo por classe (Rodada 19, parte 4): o peso do duelo 1x1 e o da luta de equipe na nota de cada lado. A chave é
 # "Classe/Subclasse" (como em campeoes_<patch>.yml) ou a classe; vale a primeira que existir. Sem chave: só o duelo.

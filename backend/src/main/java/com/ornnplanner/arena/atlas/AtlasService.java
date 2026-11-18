@@ -2412,6 +2412,34 @@ public class AtlasService {
             var += (r - out.real) * (r - out.real) / Math.max(1, out.starts.size() - 1);
         }
         out.margin = 1.96 * Math.sqrt(var / out.starts.size());
+        // the team fights, when the run measures them (Rodada 19, part 4)
+        Arena.Input[] cs = carries(mr);
+        int n = Math.max(CONFIRM_STARTS, c.starts);
+        for (int side = 0; side < 2; side++) {
+            if (cs[side] == null) {
+                continue;
+            }
+            final Arena.Input carry = cs[side];
+            final String protect = side == 0 ? "A" : "B";
+            List<Callable<Double>> jobs = new ArrayList<>();
+            for (int k = 0; k < n; k++) {
+                final int start = k;
+                jobs.add(() -> teamRaceAt(ins.get(0), ins.get(1), carry, protect, c, start));
+            }
+            List<Double> rs = ArenaService.parallel(jobs);
+            double mean = rs.stream().mapToDouble(Double::doubleValue).average().orElse(50);
+            double v = 0;
+            for (double r : rs) {
+                v += (r - mean) * (r - mean) / Math.max(1, rs.size() - 1);
+            }
+            if (side == 0) {
+                out.teamA = mean;
+                out.teamAMargin = 1.96 * Math.sqrt(v / rs.size());
+            } else {
+                out.teamB = mean;
+                out.teamBMargin = 1.96 * Math.sqrt(v / rs.size());
+            }
+        }
         AtlasModel.GuideRequest g = new AtlasModel.GuideRequest();
         g.minute = mr.minute;
         g.a = q.a;

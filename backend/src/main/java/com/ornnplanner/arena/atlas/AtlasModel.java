@@ -329,6 +329,14 @@ public final class AtlasModel {
         public List<Double> starts = new ArrayList<>();
         /** Half the width of the real race's 95% interval (1.96 standard errors of the mean over the starts). */
         public double margin;
+        /**
+         * Rodada 19: the team fights fought for real (side A's view) when the run measures them: A protecting its carry,
+         * B protecting its own; null when not measured.
+         */
+        public Double teamA;
+        public Double teamAMargin;
+        public Double teamB;
+        public Double teamBMargin;
     }
 
     /** A condition that changes another's value when they go together (a measured pair). */
