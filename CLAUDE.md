@@ -173,6 +173,14 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   model) and `KitUse` ("aproveita o kit?", `aproveita_kit`: out-of-archetype items need a margin). Old runs read as before
   (fixado + tactical_stand, duel only). Attack speed follows patch 7.3: `base(level) + multiplier x bonus` (`velocidade_ataque` in
   `campeoes_7_3f.yml`, `Arena.Input.attackSpeed`; ragdolls and hand-built fighters keep `base x (1 + bonus)`).
+- Rodada 20 (`docs/rodada-20.md`): Simulações › Draft e partida (`pages/LiveGame.jsx`, `arena/draft/`, `api/DraftController`
+  `/api/draft/...`, local only) for whoever watches a match: table `live_game` (the whole match as JSON, `LiveGameModel`),
+  seed `draft_7_3f.yml` (draft order EST = LoL PC, Fearless, note weights, tables, first encounter); voice input
+  (`frontend/src/voiceParser.js`, pure, tested by `npm test`; nicknames `apelidos_7_3f.yml` + table `draft_apelido`); the
+  draft (`DraftModel` pure: meta, lane, matchup, composition, counter; beam-5 tree; `DraftTablesService` fills
+  `draft_tabelas` from the Admin; optional meta from `tools/importar_meta.py` into `data/meta/meta.json`); the first
+  encounter (`FirstEncounterService`), likely builds (`LiveBuildsService`, the Rodada 19 progression) and tips
+  (`TipsService`: templates with measured numbers and their source). `DraftReportTest` is opt-in (`-Ddraft.report=`).
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.

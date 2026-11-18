@@ -3,8 +3,9 @@ import { t } from '../i18n.js';
 import DraftPanel from './DraftPanel.jsx';
 import EncounterPanel from './EncounterPanel.jsx';
 import LiveBuildsPanel from './LiveBuildsPanel.jsx';
+import TipsPanel from './TipsPanel.jsx';
 
-const PANELS = ['draft', 'encontro', 'builds'];
+const PANELS = ['draft', 'encontro', 'builds', 'dicas'];
 
 /**
  * Rodada 20: the panels under the two teams, one at a time (the screen stays short on a phone): the draft (Parte 3),
@@ -26,6 +27,7 @@ export default function LivePanels(props) {
       {panel === 'draft' && <DraftPanel game={props.game} onChange={props.onChange} />}
       {panel === 'encontro' && <EncounterPanel game={props.game} selected={props.selected} />}
       {panel === 'builds' && <LiveBuildsPanel game={props.game} selected={props.selected} />}
+      {panel === 'dicas' && <TipsPanel game={props.game} selected={props.selected} />}
     </div>
   );
 }

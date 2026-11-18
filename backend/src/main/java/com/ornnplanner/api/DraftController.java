@@ -6,6 +6,7 @@ import com.ornnplanner.arena.draft.DraftService;
 import com.ornnplanner.arena.draft.DraftTablesService;
 import com.ornnplanner.arena.draft.FirstEncounterService;
 import com.ornnplanner.arena.draft.LiveBuildsService;
+import com.ornnplanner.arena.draft.TipsService;
 import com.ornnplanner.arena.draft.LiveGameModel;
 import com.ornnplanner.arena.draft.LiveGameRepository;
 import com.ornnplanner.arena.draft.VoiceAliases;
@@ -38,9 +39,11 @@ public class DraftController {
     private final DraftTablesService tables;
     private final FirstEncounterService encounter;
     private final LiveBuildsService builds;
+    private final TipsService tips;
 
     public DraftController(LiveGameRepository games, DraftCatalog catalog, VoiceAliases aliases, DraftService draft, DraftTablesService tables,
-                           FirstEncounterService encounter, LiveBuildsService builds) {
+                           FirstEncounterService encounter, LiveBuildsService builds, TipsService tips) {
+        this.tips = tips;
         this.encounter = encounter;
         this.builds = builds;
         this.games = games;
@@ -70,6 +73,8 @@ public class DraftController {
         public LiveGameModel.Game game;
         public String side;
         public int index;
+        /** Parte 6: the enemy cards the tips are against (empty = the lane rival first, then the others). */
+        public List<Integer> against = new ArrayList<>();
     }
 
     /** Parte 4: the first encounter of a card's champion with its lane rival (levels 1-3, every start, three styles). */
@@ -90,6 +95,16 @@ public class DraftController {
     public LiveBuildsService.Result builds(@RequestBody PlayerRequest q, @RequestParam(defaultValue = "true") boolean medir) {
         try {
             return builds.run(q.game, q.side, q.index, medir);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    /** Parte 6: tips against each chosen enemy (templates with measured numbers, each with its source). */
+    @PostMapping("/dicas")
+    public TipsService.Result tips(@RequestBody PlayerRequest q) {
+        try {
+            return tips.run(q.game, q.side, q.index, q.against);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }

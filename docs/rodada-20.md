@@ -240,3 +240,78 @@ inícios).
 
 **Tempo:** 2,5 a 4,5 s por campeão com as lutas (10 builds; os prefixos iguais lutam uma vez).
 
+## Parte 6: dicas de como jogar contra cada inimigo (✅)
+
+**Painel "Dicas"** (`components/TipsPanel.jsx`; `POST /api/draft/dicas`; `TipsService`): para o aliado selecionado, as dicas
+contra cada inimigo, **o adversário de rota primeiro**; o usuário pode escolher contra quem (um ou mais).
+
+- **Sem texto inventado:** cada dica é uma chave de modelo de frase (pt e en no `i18n`) com os números medidos, e diz de
+  onde veio: **Arena**, **ficha** (com a qualidade A a D) ou **guia**. ⚠ marca a ficha de qualidade C/D ou com números do
+  PC / estimados (`fontes` com PC ou EST, ou uma `lacuna`).
+- **Janelas de força (Arena):** quem ganha a troca agora e depois do próximo item de cada um (o mais provável da
+  progressão, no minuto em que fecha), e se vira; antes dos 4 minutos e sem itens, os níveis 1 a 3 com os inícios (o
+  informado ou o mais provável) e o nível em que a troca vira.
+- **Ameaças do kit (ficha):** para cada habilidade aprendida (os ranks e a Aceleração de Habilidade do inimigo no minuto,
+  pelo lutador preparado), o controle forte (atordoa, arremessa, enraíza, puxa, silencia, amedronta, suprime, provoca,
+  encanta, adormece, polimorfa, empurra; lentidão sozinha não conta) com a recarga no rank atual: "Depois do 3 dele
+  (Apreender, puxa; recarga ~13,8 s no rank 1), você tem a janela para trocar"; o alcance: "Fique fora de 450 de alcance
+  do 3 dele"; os avanços e saltos (`mobilidade` da ficha); a ultimate com a recarga.
+- **Guias da Rodada 14:** o estilo de rota que mais rendeu na campanha mais nova que mediu os estilos: contra o próprio
+  campeão, se a campanha o mediu ("trocas curtas, +2.361 de ouro aos 10 min" para o Ornn contra o Darius), senão contra a
+  subclasse dele.
+
+**Tempo:** 0,7 a 4,7 s (três inimigos; mais no começo, em que cada nível é uma luta preparada).
+
+**Testes:** `TipsTest` (o controle vem da habilidade e das zonas dela: o E do Darius puxa, o Q não abre janela; a recarga
+no rank; as estimativas marcadas; a corrida em palavras) e `DraftReportTest` (as dicas do Ornn têm todas uma fonte).
+
+## Relatório final
+
+### As telas
+
+`docs/rodada-20/`:
+
+| Tamanho | Arquivos |
+|---|---|
+| 1920 × 1080 (Chrome headless) | `draft-1920x1080.png` (times e draft), `encontro-1920x1080.png` |
+| 844 × 390, paisagem | `draft-844x390.png` (topo: a configuração recolhida, o relógio, as ações e a voz), `draft-844x390-times.jpg` (os cartões, com o Desfazer flutuante) |
+| 390 × 844, retrato | `draft-390x844-topo.jpg` (ações em grade de 3), `draft-390x844-times.jpg` (as duas colunas e o draft) |
+
+Alvos de toque de 44 a 52 px; a configuração da partida fica recolhida quando já há campeões; no celular (em pé ou
+deitado) a barra deixa de ser fixa e o **Desfazer flutua no canto**, sempre visível. Um link abre a partida direto:
+`#/simulacoes/draft?jogo=1&sel=azul:0&painel=encontro`. As capturas em 390 de largura saíram do painel do navegador do
+app (o Chrome headless não abre janelas tão estreitas).
+
+### A taxa de acerto do leitor de voz
+
+**38 de 40 = 95%** (`frontend/test/voiceParser.test.mjs`); as 2 falhas são nomes ambíguos de propósito ("o capuz", "a
+lâmina"). Ressalva: frases escritas, não áudio gravado.
+
+### O tempo das tabelas do draft e do primeiro encontro
+
+- Tabelas do draft, completas: **5,7 min** (14.892 linhas; tabela por etapa na Parte 3). Calibração 5x5 com 300 lutas:
+  42 s.
+- Pedido do draft (listas e árvore): ~0,3 s.
+- Primeiro encontro de uma rota (10 inícios × 10, 3 níveis, 3 estilos): **5,7 s** aquecido, 12,2 s frio; com 3
+  adversários prováveis, ~15 s.
+- Builds prováveis com as lutas: 2,5 a 4,5 s. Dicas: 0,7 a 4,7 s.
+
+### O que depende de ficha C/D, e por isso pode errar
+
+As fichas de `kits_7_3f.yml`: 6 de qualidade A, 5 B, **114 C e 18 D** (Rodada 18), a geometria (alcances, raios,
+larguras) quase toda **EST** (valores do PC, a conferir no Treino). Dependem delas:
+
+- todas as lutas (tabelas de matchup, primeiro encontro, duelos das builds, janelas das dicas): um alcance errado muda
+  quem acerta primeiro;
+- as dicas do kit: os alcances ("fique fora de 450") e as recargas; elas aparecem com ⚠ quando a ficha é C/D ou o número é
+  do PC / estimado;
+- o perfil (`ChampionProfiles`: controle, alcance, avanços) que a composição do draft lê.
+
+### Pendências
+
+1. **A ordem do draft do Wild Rift** (no começo deste doc): a de agora é a do LoL de PC (EST).
+2. **A meta:** rodar `python tools/importar_meta.py`, preencher `tools/meta_herois.json` (heroId → nome) a partir de
+   `tools/meta_herois_faltando.json` e conferir a rota de cada posição no relatório do script.
+3. **A composição** não se mede na luta 5x5 de rota única (correlação validada ~0): medir na partida inteira.
+4. O primeiro encontro na Arena com mapa (tropas e torre) e a resposta aliada pelo Atlas ficaram de fora pelo custo.
+5. A taxa do leitor de voz com áudio de verdade.
