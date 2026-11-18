@@ -50,6 +50,28 @@ public final class AtlasModel {
         /** Condition sources: status, passiva, fundamental, runa, feitico. */
         public List<String> sources = new ArrayList<>(List.of("status", "passiva", "fundamental", "runa", "feitico"));
         public long seed = 1;
+        /**
+         * Rodada 19: the fighters' brain (seed {@code cerebro}): auto (the champion's AI or its class's, picked once per
+         * side and minute on the two bases), tactical (the tactical rules, running away allowed), tactical_stand (the
+         * "troca parada": no running away). Null = tactical_stand, what every run before Rodada 19 used.
+         */
+        public String brain;
+        /**
+         * Rodada 19, the guide's default reading: progressao (against the other side's natural progression, sampled over
+         * {@link #progressionMinutes}) or fixado (against what the other side fixed, as before). Null = fixado (runs before
+         * Rodada 19).
+         */
+        public String guideMode;
+        /** Minutes the other side's natural progression is sampled at (each read on the run's nearest minute). */
+        public List<Double> progressionMinutes;
+        /** Builds drawn per minute. */
+        public int progressionSamples = 12;
+        /** The score of a build: this x the weighted mean + the rest x the robustness. */
+        public double meanWeight = 0.4;
+        /** The robustness: the mean of the worst case and this percentile of the values. */
+        public double lowPercentile = 0.2;
+        /** A choice good against less than this share of the drawn builds gets a warning. */
+        public double branchWarning = 0.3;
     }
 
     /** One condition a side can have. */
@@ -84,6 +106,14 @@ public final class AtlasModel {
     /** One minute's measures. Keys of a set: sorted side keys ("A:status:Armor:1|B:passiva:12") joined by "|". */
     public static class MinuteResult {
         public double minute;
+        /**
+         * Rodada 19: the brain each side fought with (an automatic one resolved to its AI: "ai:12"), and how it was
+         * picked ("classe Tanque", "tatico"...). Null = tactical_stand (runs before Rodada 19).
+         */
+        public String brainA;
+        public String brainB;
+        public String brainNoteA;
+        public String brainNoteB;
         public Side a = new Side();
         public Side b = new Side();
         /** The race (side A's view, 0..100) with no condition on either side. */
@@ -197,6 +227,10 @@ public final class AtlasModel {
         public String scale;
         /** The side the improvement by fights works on: A | B. */
         public String side;
+        /** Rodada 19: progressao | fixado (null = the run's {@link Config#guideMode}). */
+        public String mode;
+        /** Rodada 19: natural (the other side buys what is likely) | perfeito (it buys the model's best). */
+        public String opponent;
     }
 
     /** A ranked option of a side (a condition, an item, a rune, a spell): what it adds to that side's race. */
@@ -209,6 +243,12 @@ public final class AtlasModel {
         public Double perThousand;
         /** Conditions it brings, with their share (stats by amount, passives whole). */
         public Map<String, Double> parts;
+        /** Rodada 19, in a build against the natural progression: the minute it is finished (standard pace). */
+        public Double minute;
+        /** The share of the other side's drawn builds it gains against (0..1). */
+        public Double branchShare;
+        /** Why the choice deserves a look (only good against an unlikely branch, out of the archetype...). */
+        public String warning;
     }
 
     public static class SideGuide {
@@ -226,6 +266,37 @@ public final class AtlasModel {
         public List<String> buildRunes = new ArrayList<>();
         public String buildSpell;
         public double buildRace;
+        /** Rodada 19: the build against the other side's natural progression (null in the fixed reading). */
+        public Natural natural;
+    }
+
+    /** One minute of a build against the natural progression: what it holds, and its value over the drawn builds. */
+    public static class MinuteNote {
+        public double minute;
+        /** The run's minute it was read on. */
+        public double measured;
+        public List<String> items = new ArrayList<>();
+        public double mean;
+        public double worst;
+        public int samples;
+    }
+
+    /** A side's build against the other side's natural progression. */
+    public static class Natural {
+        /** natural | perfeito */
+        public String opponent;
+        public List<Double> minutes = new ArrayList<>();
+        /** The other side's most likely continuations (items, minutes, probabilities). */
+        public List<com.ornnplanner.arena.progressao.ProgressionService.ContinuationView> opponentTimeline = new ArrayList<>();
+        public List<MinuteNote> notes = new ArrayList<>();
+        /** In the side's view: the score (mean and robustness mixed), the weighted mean, the robustness and its parts. */
+        public double score;
+        public double mean;
+        public double robust;
+        public double worst;
+        public double low;
+        public int samples;
+        public List<String> warnings = new ArrayList<>();
     }
 
     /** Two builds fought for real at the run's minute: the real race (side A's view) next to the prediction. */
@@ -321,6 +392,9 @@ public final class AtlasModel {
 
     public static class Guide {
         public double minute;
+        /** Rodada 19: progressao | fixado, and natural | perfeito. */
+        public String mode;
+        public String opponent;
         /** 0 = the factors the validation fitted. */
         public int order;
         public String scale;

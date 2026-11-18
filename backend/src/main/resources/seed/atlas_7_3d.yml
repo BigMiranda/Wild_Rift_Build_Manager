@@ -34,6 +34,9 @@
 #                runas); o modelo as prevê antes de vê-las (o erro e o viés ficam guardados), elas são lutadas e o modelo
 #                é ajustado de novo. O guia escolhe o que o modelo superestima; o refino ensina o modelo justamente aí
 #   fontes       quais condições entram
+#   cerebro      (Rodada 19) quem decide na luta: tactical_stand (a "troca parada": as regras táticas sem fugir, o de
+#                antes e o de quem não tem o campo), tactical (o Tático, com fuga) ou auto (o Automático: a IA do campeão
+#                ou a da classe, escolhida uma vez por lado e minuto, nas duas bases frente a frente)
 patch: "7.3d"
 
 padrao:

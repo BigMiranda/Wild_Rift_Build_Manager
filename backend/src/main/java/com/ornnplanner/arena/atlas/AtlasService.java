@@ -138,6 +138,7 @@ public class AtlasService {
             }
         }
         c.seed = (long) num(all.get("semente"), c.seed);
+        c.brain = str(all.get("cerebro"));
         return c;
     }
 
@@ -236,6 +237,7 @@ public class AtlasService {
         mr.minute = minute;
         mr.a = side(baseA, c);
         mr.b = side(baseB, c);
+        brains(c, mr, baseA, baseB);
         Fights f = new Fights(c, baseA, baseB, minute, mr);
         String tag = "min " + fmt(minute) + ": ";
         // 1 dimension (and the base)
@@ -279,6 +281,38 @@ public class AtlasService {
         mr.fights = f.fights;
         mr.seconds = (System.nanoTime() - t0) / 1e9;
         return mr;
+    }
+
+    /**
+     * The brain of each side for the whole minute. The automatic one is picked once, on the two bases facing each other
+     * (the conditions never change who fights with which AI), so every measure of the run uses the same AI.
+     */
+    void brains(AtlasModel.Config c, AtlasModel.MinuteResult mr, BuildRepository.Build baseA, BuildRepository.Build baseB) {
+        String brain = c.brain == null || c.brain.isBlank() ? ArenaService.STAND : c.brain;
+        if (!com.ornnplanner.arena.AutoBrain.AUTO.equals(brain)) {
+            mr.brainA = brain;
+            mr.brainB = brain;
+            return;
+        }
+        ArenaModel.Scenario sc = new ArenaModel.Scenario();
+        sc.fighters = List.of(slot(baseA, mr.minute, List.of(), 0, brain), slot(baseB, mr.minute, List.of(), 1, brain));
+        List<Arena.Input> ins = arena.prepareSlots(sc);
+        com.ornnplanner.arena.AutoBrain.Choice ca = ins.get(0).autoChoice;
+        com.ornnplanner.arena.AutoBrain.Choice cb = ins.get(1).autoChoice;
+        mr.brainA = ca == null ? "tactical" : ca.brain;
+        mr.brainB = cb == null ? "tactical" : cb.brain;
+        mr.brainNoteA = ca == null ? null : choiceNote(ca);
+        mr.brainNoteB = cb == null ? null : choiceNote(cb);
+    }
+
+    private static String choiceNote(com.ornnplanner.arena.AutoBrain.Choice ch) {
+        return ch.owner == null ? ch.kind : ch.kind + " · " + ch.owner + (ch.version == null ? "" : " v" + ch.version);
+    }
+
+    /** A side's brain in a minute's fights (tactical_stand for the runs before Rodada 19). */
+    static String brainOf(AtlasModel.MinuteResult mr, String side) {
+        String b = "A".equals(side) ? mr.brainA : mr.brainB;
+        return b == null ? ArenaService.STAND : b;
     }
 
     private AtlasModel.Side side(BuildRepository.Build base, AtlasModel.Config c) {
@@ -626,7 +660,7 @@ public class AtlasService {
             Map<String, Arena.Input> cache = keys.size() <= 1 ? kept : prepared;
             Arena.Input in = cache.get(key);
             if (in == null) {
-                ArenaModel.Slot me = slot("A".equals(side) ? baseA : baseB, minute, mine, "A".equals(side) ? 0 : 1);
+                ArenaModel.Slot me = slot("A".equals(side) ? baseA : baseB, minute, mine, "A".equals(side) ? 0 : 1, brainOf(mr, side));
                 ArenaModel.Slot dummy = new ArenaModel.Slot();   // only to prepare this side: a ragdoll is cheap
                 dummy.team = "A".equals(side) ? 1 : 0;
                 dummy.dummy = new ArenaModel.Dummy();
@@ -778,7 +812,7 @@ public class AtlasService {
             // the final build confirmed with the confirmation's starts
             AtlasModel.BuildSample last = sample(side, mine, theirs);
             ArenaModel.Scenario sc = new ArenaModel.Scenario();
-            sc.fighters = List.of(fixedSlot(baseA, mr.minute, last.a, 0), fixedSlot(baseB, mr.minute, last.b, 1));
+            sc.fighters = List.of(fixedSlot(baseA, mr, last.a, 0), fixedSlot(baseB, mr, last.b, 1));
             List<Arena.Input> ins = arena.prepareSlots(sc);
             List<Double> rs = races(ins.get(0), ins.get(1), c, Math.max(CONFIRM_STARTS, c.starts));
             double mean = 0;
@@ -826,7 +860,7 @@ public class AtlasService {
                         String side, AtlasModel.Fixed mine, AtlasModel.Fixed theirs, List<AtlasModel.BuildSample> fought) {
         AtlasModel.BuildSample s = sample(side, mine, theirs);
         ArenaModel.Scenario sc = new ArenaModel.Scenario();
-        sc.fighters = List.of(fixedSlot(baseA, mr.minute, s.a, 0), fixedSlot(baseB, mr.minute, s.b, 1));
+        sc.fighters = List.of(fixedSlot(baseA, mr, s.a, 0), fixedSlot(baseB, mr, s.b, 1));
         List<Arena.Input> ins = arena.prepareSlots(sc);
         List<Callable<Double>> jobs = new ArrayList<>();
         for (int k = 0; k < IMPROVE_STARTS; k++) {
@@ -844,13 +878,13 @@ public class AtlasService {
 
 
     /** A side's slot: its base build at the minute, holding exactly the conditions' items, runes and spell swapped in. */
-    ArenaModel.Slot slot(BuildRepository.Build base, double minute, List<AtlasModel.Condition> conds, int team) {
+    ArenaModel.Slot slot(BuildRepository.Build base, double minute, List<AtlasModel.Condition> conds, int team, String brain) {
         BuildRepository.Build b = AtlasRepository.read(AtlasRepository.write(base), BuildRepository.Build.class);
         b.id = null;
         ArenaModel.Slot s = new ArenaModel.Slot();
         s.team = team;
         s.minute = minute;
-        s.brain = ArenaService.STAND;
+        s.brain = brain == null ? ArenaService.STAND : brain;
         s.holdItems = new ArrayList<>();
         s.extraItems = new ArrayList<>();
         Map<Long, ItemEdit> edits = new LinkedHashMap<>();
@@ -971,7 +1005,7 @@ public class AtlasService {
             long p0 = System.nanoTime();
             for (AtlasModel.BuildSample s : batch) {
                 ArenaModel.Scenario sc = new ArenaModel.Scenario();
-                sc.fighters = List.of(fixedSlot(baseA, mr.minute, s.a, 0), fixedSlot(baseB, mr.minute, s.b, 1));
+                sc.fighters = List.of(fixedSlot(baseA, mr, s.a, 0), fixedSlot(baseB, mr, s.b, 1));
                 List<Arena.Input> ins = arena.prepareSlots(sc);
                 jobs.add(() -> {
                     List<Double> r = races(ins.get(0), ins.get(1), c, c.starts);
@@ -1651,8 +1685,8 @@ public class AtlasService {
         AtlasModel.Run run = find(id);
         AtlasModel.MinuteResult mr = minuteOf(run, q.minute);
         AtlasModel.Config c = run.config;
-        ArenaModel.Slot sa = fixedSlot(campaign.standardBuild(c.a), mr.minute, q.a, 0);
-        ArenaModel.Slot sb = fixedSlot(campaign.standardBuild(c.b), mr.minute, q.b, 1);
+        ArenaModel.Slot sa = fixedSlot(campaign.standardBuild(c.a), mr, q.a, 0);
+        ArenaModel.Slot sb = fixedSlot(campaign.standardBuild(c.b), mr, q.b, 1);
         ArenaModel.Scenario sc = new ArenaModel.Scenario();
         sc.fighters = List.of(sa, sb);
         List<Arena.Input> ins = arena.prepareSlots(sc);
@@ -1679,7 +1713,7 @@ public class AtlasService {
     }
 
     /** A side holding its fixed items (real ones, with their stats), keystone, runes and spell. */
-    private ArenaModel.Slot fixedSlot(BuildRepository.Build base, double minute, AtlasModel.Fixed f, int team) {
+    private ArenaModel.Slot fixedSlot(BuildRepository.Build base, AtlasModel.MinuteResult mr, AtlasModel.Fixed f, int team) {
         List<AtlasModel.Condition> swaps = new ArrayList<>();
         if (f.keystone != null) {
             AtlasModel.Condition k = new AtlasModel.Condition();
@@ -1702,7 +1736,7 @@ public class AtlasService {
             s.spell = f.spell;
             swaps.add(s);
         }
-        ArenaModel.Slot s = slot(base, minute, swaps, team);
+        ArenaModel.Slot s = slot(base, mr.minute, swaps, team, brainOf(mr, team == 0 ? "A" : "B"));
         s.holdItems = new ArrayList<>(f.items == null ? List.of() : f.items);
         return s;
     }
