@@ -56,6 +56,7 @@ public class AtlasService {
     private final ArenaService arena;
     private final CampaignService campaign;
     private final com.ornnplanner.publico.PublicMode publicMode;
+    private final com.ornnplanner.arena.progressao.ProgressionService progression;
     private final Map<String, Object> seed;
     private final ExecutorService runner = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "atlas");
@@ -67,8 +68,10 @@ public class AtlasService {
 
     public AtlasService(AtlasRepository repo, AtlasCatalog catalog, ArenaService arena, @Lazy CampaignService campaign,
                         com.ornnplanner.publico.PublicMode publicMode,
+                        @Lazy com.ornnplanner.arena.progressao.ProgressionService progression,
                         @Value("${planner.seed.atlas:classpath:seed/atlas_7_3d.yml}") Resource file) {
         this.repo = repo;
+        this.progression = progression;
         this.publicMode = publicMode;
         this.catalog = catalog;
         this.arena = arena;
@@ -139,6 +142,17 @@ public class AtlasService {
         }
         c.seed = (long) num(all.get("semente"), c.seed);
         c.brain = str(all.get("cerebro"));
+        c.guideMode = str(all.get("modo_guia"));
+        if (all.get("minutos_progressao") instanceof List) {
+            c.progressionMinutes = new ArrayList<>();
+            for (Object o : (List<Object>) all.get("minutos_progressao")) {
+                c.progressionMinutes.add(((Number) o).doubleValue());
+            }
+        }
+        c.progressionSamples = (int) num(all.get("amostras_progressao"), c.progressionSamples);
+        c.meanWeight = num(all.get("peso_media"), c.meanWeight);
+        c.lowPercentile = num(all.get("percentil_baixo"), c.lowPercentile);
+        c.branchWarning = num(all.get("aviso_ramo"), c.branchWarning);
         return c;
     }
 
@@ -1652,9 +1666,382 @@ public class AtlasService {
         }
         g.a = sideGuide(mr, "A", q.a, wa, wb, order);
         g.b = sideGuide(mr, "B", q.b, wb, wa, order);
-        joint(mr, q.a, q.b, order, g.a, g.b);
+        String mode = q.mode != null ? q.mode : run.config.guideMode;
+        g.mode = "progressao".equals(mode) ? "progressao" : "fixado";
+        g.opponent = "perfeito".equals(q.opponent) ? "perfeito" : "natural";
+        if ("fixado".equals(g.mode)) {
+            joint(mr, q.a, q.b, order, g.a, g.b);
+            return g;
+        }
+        AtlasModel.Fixed[] perfect = "perfeito".equals(g.opponent)
+                ? joint(mr, q.a, q.b, 0, new AtlasModel.SideGuide(), new AtlasModel.SideGuide()) : null;
+        natural(run, "A", q.a, q.b, perfect == null ? null : perfect[1], g.a);
+        natural(run, "B", q.b, q.a, perfect == null ? null : perfect[0], g.b);
         return g;
     }
+
+    // ------------------------------------------------------------------ against the natural progression (Rodada 19)
+
+    /** The other side at one minute: its distinct drawn builds' weights, items and share, read on the run's nearest minute. */
+    static final class Opp {
+        double minute;
+        AtlasModel.MinuteResult mr;
+        List<Map<String, Double>> weights = new ArrayList<>();
+        List<List<Long>> items = new ArrayList<>();
+        List<Double> share = new ArrayList<>();
+    }
+
+    /** The minutes the natural progression is read at (the run's own minutes when the config has none). */
+    private static List<Double> naturalMinutes(AtlasModel.Run run) {
+        List<Double> m = run.config.progressionMinutes;
+        if (m != null && !m.isEmpty()) {
+            return m;
+        }
+        List<Double> out = new ArrayList<>();
+        run.result.minutes.forEach(x -> out.add(x.minute));
+        return out;
+    }
+
+    private double standardPace() {
+        return progression.model().settings().paces.getOrDefault("padrao", 700.0);
+    }
+
+    /**
+     * The other side's builds at each minute: drawn from its natural progression from what it fixed (its items are the
+     * chain's first state), against this side's champion; or, against a perfect opponent, its assembled build as far as
+     * the gold clock gets it by then.
+     */
+    List<Opp> opponents(AtlasModel.Run run, String side, AtlasModel.Fixed theirs, AtlasModel.Fixed perfect) {
+        String other = "A".equals(side) ? "B" : "A";
+        AtlasModel.Config c = run.config;
+        String champ = "A".equals(other) ? c.a : c.b;
+        String mine = "A".equals(side) ? c.a : c.b;
+        List<Long> fixedItems = theirs.items == null ? List.of() : theirs.items;
+        com.ornnplanner.arena.progressao.ProgressionModel pm = progression.model();
+        List<Opp> out = new ArrayList<>();
+        for (double minute : naturalMinutes(run)) {
+            Opp o = new Opp();
+            o.minute = minute;
+            o.mr = minuteOf(run, minute);
+            prime(o.mr);
+            Map<String, Double> byItems = new LinkedHashMap<>();
+            if (perfect != null) {
+                List<Double> t = pm.minutes(perfect.items, standardPace());
+                List<Long> held = new ArrayList<>();
+                for (int i = 0; i < perfect.items.size(); i++) {
+                    if (t.get(i) <= minute + 1e-9 || fixedItems.contains(perfect.items.get(i))) {
+                        held.add(perfect.items.get(i));
+                    }
+                }
+                byItems.put(AtlasRepository.write(held), 1.0);
+            } else {
+                int n = Math.max(1, c.progressionSamples);
+                long seedValue = c.seed * 7919 + (long) (minute * 10) + ("A".equals(other) ? 1 : 2);
+                for (com.ornnplanner.arena.progressao.ProgressionModel.Sample sm
+                        : progression.sample(champ, fixedItems, List.of(), List.of(mine), null, minute, n, seedValue)) {
+                    byItems.merge(AtlasRepository.write(sm.items), 1.0 / n, Double::sum);
+                }
+            }
+            for (Map.Entry<String, Double> e : byItems.entrySet()) {
+                AtlasModel.Fixed f = copy(theirs);
+                f.items = new ArrayList<>(java.util.Arrays.asList(AtlasRepository.read(e.getKey(), Long[].class)));
+                o.items.add(f.items);
+                o.weights.add(weights(o.mr, other, f));
+                o.share.add(e.getValue());
+            }
+            out.add(o);
+        }
+        return out;
+    }
+
+    /** A side's value (its own view) of its weights against the other side's, on a minute's measures. */
+    double value(AtlasModel.MinuteResult mr, String side, Map<String, Double> mine, Map<String, Double> theirs) {
+        return view(side, predict(mr, mine, theirs, 0));
+    }
+
+    /** A purchase order's evaluation: {score, mean, robustness, worst, low percentile}; with notes, each minute's. */
+    double[] evaluate(AtlasModel.Run run, String side, AtlasModel.Fixed build, List<Opp> opps, List<AtlasModel.MinuteNote> notes) {
+        List<Double> t = progression.model().minutes(build.items, standardPace());
+        List<double[]> vals = new ArrayList<>();
+        double total = 0;
+        for (Opp o : opps) {
+            AtlasModel.Fixed held = heldAt(build, t, o.minute);
+            Map<String, Double> mine = weights(o.mr, side, held);
+            double sum = 0;
+            double worst = Double.MAX_VALUE;
+            for (int k = 0; k < o.weights.size(); k++) {
+                double v = value(o.mr, side, mine, o.weights.get(k));
+                double w = o.share.get(k) / opps.size();
+                vals.add(new double[] {v, w});
+                total += w;
+                sum += v * o.share.get(k);
+                worst = Math.min(worst, v);
+            }
+            if (notes != null) {
+                AtlasModel.MinuteNote n = new AtlasModel.MinuteNote();
+                n.minute = o.minute;
+                n.measured = o.mr.minute;
+                for (Long id : held.items) {
+                    ItemDef d = catalog.item(id);
+                    n.items.add(d == null ? String.valueOf(id) : d.name);
+                }
+                n.mean = sum;
+                n.worst = worst;
+                n.samples = o.weights.size();
+                notes.add(n);
+            }
+        }
+        return mix(run.config, vals, total);
+    }
+
+    /** {score, mean, robustness, worst, low percentile} of weighted values: robustness = (worst + low percentile) / 2. */
+    static double[] mix(AtlasModel.Config c, List<double[]> vals, double total) {
+        if (vals.isEmpty() || total <= 0) {
+            return new double[] {50, 50, 50, 50, 50};
+        }
+        double mean = 0;
+        for (double[] v : vals) {
+            mean += v[0] * v[1] / total;
+        }
+        List<double[]> sorted = new ArrayList<>(vals);
+        sorted.sort(Comparator.comparingDouble((double[] v) -> v[0]));
+        double worst = sorted.get(0)[0];
+        double low = worst;
+        double acc = 0;
+        for (double[] v : sorted) {
+            acc += v[1] / total;
+            low = v[0];
+            if (acc >= c.lowPercentile - 1e-12) {
+                break;
+            }
+        }
+        double robust = (worst + low) / 2;
+        return new double[] {c.meanWeight * mean + (1 - c.meanWeight) * robust, mean, robust, worst, low};
+    }
+
+    /** Boots the natural build may buy: the shop's tier-2 and tier-3 ones (the tier-1 is a component). */
+    private static boolean finalBoots(ItemDef it) {
+        return "tier_medio".equals(it.section) || "aprimorado".equals(it.section);
+    }
+
+    /**
+     * A side's build against the other side's natural progression (or the perfect opponent's build over time): items
+     * by gain of the score per gold, up to five and boots, then keystone, runes and spell, then swaps while the score
+     * goes up. Each item gets its minute, and a warning when it only pays against an unlikely branch.
+     */
+    private void natural(AtlasModel.Run run, String side, AtlasModel.Fixed fixed, AtlasModel.Fixed theirs, AtlasModel.Fixed perfect,
+                         AtlasModel.SideGuide g) {
+        List<Opp> opps = opponents(run, side, theirs, perfect);
+        AtlasModel.MinuteResult ref = opps.isEmpty() ? minuteOf(run, null) : opps.get(opps.size() / 2).mr;
+        AtlasModel.Side s = "A".equals(side) ? ref.a : ref.b;
+        AtlasModel.Fixed cur = copy(fixed);
+        Set<Long> held0 = new HashSet<>(cur.items);
+        double now = evaluate(run, side, cur, opps, null)[0];
+        for (int guard = 0; guard < 8; guard++) {
+            long items = cur.items.stream().map(catalog::item).filter(it -> it != null && !it.boots()).count();
+            boolean boots = cur.items.stream().map(catalog::item).anyMatch(it -> it != null && it.boots());
+            if (items >= 5 && boots) {
+                break;
+            }
+            ItemDef best = null;
+            double bestV = -Double.MAX_VALUE;
+            double bestScore = now;
+            for (ItemDef it : catalog.buyable()) {
+                if (cur.items.contains(it.id) || it.boots() && (boots || !finalBoots(it)) || !it.boots() && items >= 5
+                        || !itemFits(it, cur.items) || it.cost <= 0) {
+                    continue;
+                }
+                cur.items.add(it.id);
+                double sc = evaluate(run, side, cur, opps, null)[0];
+                cur.items.remove(cur.items.size() - 1);
+                double v = (sc - now) / it.cost * 1000;
+                if (v > bestV + 1e-12) {
+                    bestV = v;
+                    best = it;
+                    bestScore = sc;
+                }
+            }
+            if (best == null) {
+                break;
+            }
+            cur.items.add(best.id);
+            now = bestScore;
+        }
+        for (String kind : List.of("fundamental", "runa", "feitico")) {
+            for (int guard = 0; guard < 4; guard++) {
+                Map<String, Double> w = weights(ref, side, cur);
+                Set<String> tags = tags(s, w.keySet(), side);
+                AtlasModel.Condition best = null;
+                double bestScore = now + 1e-9;
+                for (AtlasModel.Condition x : s.conditions) {
+                    if (!kind.equals(x.source) || !fits(x, tags) || w.containsKey(side + ":" + x.key)) {
+                        continue;
+                    }
+                    double sc = evaluate(run, side, withCondition(cur, x), opps, null)[0];
+                    if (sc > bestScore) {
+                        best = x;
+                        bestScore = sc;
+                    }
+                }
+                if (best == null) {
+                    break;
+                }
+                cur = withCondition(cur, best);
+                now = bestScore;
+                if (!"runa".equals(kind)) {
+                    break;
+                }
+            }
+        }
+        // swaps (never a fixed item; boots for boots) while the score goes up
+        for (int pass = 0; pass < 2; pass++) {
+            boolean changed = false;
+            for (int i = 0; i < cur.items.size(); i++) {
+                Long old = cur.items.get(i);
+                if (held0.contains(old)) {
+                    continue;
+                }
+                ItemDef oi = catalog.item(old);
+                boolean boots = oi != null && oi.boots();
+                List<Long> others = new ArrayList<>(cur.items);
+                others.remove(i);
+                Long bestId = null;
+                for (ItemDef it : catalog.buyable()) {
+                    if (it.id == old || cur.items.contains(it.id) || it.boots() != boots || boots && !finalBoots(it)
+                            || !itemFits(it, others) || it.cost <= 0) {
+                        continue;
+                    }
+                    cur.items.set(i, it.id);
+                    double sc = evaluate(run, side, cur, opps, null)[0];
+                    if (sc > now + 0.05) {
+                        now = sc;
+                        bestId = it.id;
+                    }
+                }
+                cur.items.set(i, bestId != null ? bestId : old);
+                changed |= bestId != null;
+            }
+            if (!changed) {
+                break;
+            }
+        }
+        fillNatural(run, side, cur, held0, theirs, opps, perfect != null, g);
+    }
+
+    /** The build with a keystone, a rune or a spell condition added. */
+    private static AtlasModel.Fixed withCondition(AtlasModel.Fixed f, AtlasModel.Condition x) {
+        AtlasModel.Fixed out = copy(f);
+        if ("fundamental".equals(x.source)) {
+            out.keystone = x.rune;
+        } else if ("runa".equals(x.source)) {
+            out.runes.add(x.rune);
+        } else if ("feitico".equals(x.source)) {
+            out.spell = x.spell;
+        }
+        return out;
+    }
+
+    /** The side guide's build, item by item with its minute and warning, the minute notes and the other side's timeline. */
+    private void fillNatural(AtlasModel.Run run, String side, AtlasModel.Fixed cur, Set<Long> fixed, AtlasModel.Fixed theirs,
+                             List<Opp> opps, boolean perfect, AtlasModel.SideGuide g) {
+        AtlasModel.Config c = run.config;
+        com.ornnplanner.arena.progressao.ProgressionModel pm = progression.model();
+        List<Double> t = pm.minutes(cur.items, standardPace());
+        AtlasModel.Natural nat = new AtlasModel.Natural();
+        nat.opponent = perfect ? "perfeito" : "natural";
+        opps.forEach(o -> nat.minutes.add(o.minute));
+        double[] ev = evaluate(run, side, cur, opps, nat.notes);
+        nat.score = ev[0];
+        nat.mean = ev[1];
+        nat.robust = ev[2];
+        nat.worst = ev[3];
+        nat.low = ev[4];
+        for (Opp o : opps) {
+            nat.samples += o.weights.size();
+        }
+        g.build = new ArrayList<>();
+        for (int i = 0; i < cur.items.size(); i++) {
+            Long id = cur.items.get(i);
+            ItemDef it = catalog.item(id);
+            AtlasModel.Option o = new AtlasModel.Option();
+            o.itemId = id;
+            o.name = it == null ? String.valueOf(id) : it.name;
+            o.cost = it == null ? null : it.cost;
+            o.minute = t.get(i);
+            o.key = fixed.contains(id) ? "fixo" : "item:" + id;
+            if (!fixed.contains(id)) {
+                branches(run, side, cur, i, t, opps, o);
+                if (o.warning != null && o.branchShare != null) {
+                    nat.warnings.add(o.name + ": " + o.warning);
+                }
+            }
+            g.build.add(o);
+        }
+        AtlasModel.MinuteResult ref = opps.isEmpty() ? minuteOf(run, null) : opps.get(opps.size() / 2).mr;
+        AtlasModel.Side s = "A".equals(side) ? ref.a : ref.b;
+        g.buildKeystone = cur.keystone != null ? cur.keystone : s.keystone;
+        g.buildRunes = new ArrayList<>(cur.runes);
+        g.buildSpell = cur.spell;
+        g.buildRace = nat.score;
+        if (!perfect) {
+            String champ = "A".equals(side) ? c.b : c.a;
+            nat.opponentTimeline = progression.answer(champ, theirs.items == null ? List.of() : theirs.items, List.of(),
+                    List.of("A".equals(side) ? c.a : c.b), null, 3).continuations;
+        }
+        g.natural = nat;
+    }
+
+    /**
+     * An item's gain against each drawn build of the other side, at the minutes it is held: the weighted mean, the share
+     * of the builds it gains half a point or more against, and a warning when that share is small.
+     */
+    private void branches(AtlasModel.Run run, String side, AtlasModel.Fixed cur, int i, List<Double> t, List<Opp> opps,
+                          AtlasModel.Option o) {
+        AtlasModel.Fixed without = copy(cur);
+        without.items.remove(i);
+        List<Double> tw = progression.model().minutes(without.items, standardPace());
+        double gain = 0;
+        double good = 0;
+        double all = 0;
+        for (Opp op : opps) {
+            if (t.get(i) > op.minute + 1e-9) {
+                continue;
+            }
+            Map<String, Double> with = weights(op.mr, side, heldAt(cur, t, op.minute));
+            Map<String, Double> wo = weights(op.mr, side, heldAt(without, tw, op.minute));
+            for (int k = 0; k < op.weights.size(); k++) {
+                double d = value(op.mr, side, with, op.weights.get(k)) - value(op.mr, side, wo, op.weights.get(k));
+                gain += d * op.share.get(k);
+                all += op.share.get(k);
+                if (d >= 0.5) {
+                    good += op.share.get(k);
+                }
+            }
+        }
+        if (all <= 0) {
+            o.warning = "sai depois do último minuto lido";
+            return;
+        }
+        o.gain = gain / all;
+        o.branchShare = good / all;
+        if (o.gain > 0 && o.branchShare < run.config.branchWarning) {
+            o.warning = String.format(java.util.Locale.ROOT, "só rende contra %.0f%% das builds previstas do outro lado",
+                    100 * o.branchShare);
+        }
+    }
+
+    /** What a build holds by a minute, by its purchase minutes. */
+    private static AtlasModel.Fixed heldAt(AtlasModel.Fixed build, List<Double> t, double minute) {
+        AtlasModel.Fixed held = copy(build);
+        held.items = new ArrayList<>();
+        for (int i = 0; i < build.items.size(); i++) {
+            if (t.get(i) <= minute + 1e-9) {
+                held.items.add(build.items.get(i));
+            }
+        }
+        return held;
+    }
+
 
     /** Rounds of the joint assembly: each side builds against the other's assembled build, in turns. */
     private static final int JOINT_ROUNDS = 2;

@@ -169,3 +169,39 @@ próximo item real fica escondido. O modelo, sem aquela build, ordena o próximo
   modesto.
 - No Rumble a cadeia perde para a linha de base (42,3% × 44,5%): as builds dele na campanha são quase todas a mesma
   (Liandry, Virtude, Cajado...) e a frequência pura já acerta; a sobreposição só ajuda onde há variedade (Ornn: +10).
+
+## Parte 3: o Atlas contra a progressão natural (✅)
+
+**Novo modo do guia, "contra a progressão natural"** (`modo_guia: progressao`, o padrão das execuções novas), ao lado
+de "contra o fixado" (o de antes, e o de toda execução sem o campo: as antigas abrem como eram). A tela tem os dois e
+deixa trocar.
+
+- **O outro lado não tem build fixa:** ele é sorteado pelo modelo da Parte 2 nos minutos `minutos_progressao`
+  (padrão 10, 15, 20 e 25), `amostras_progressao` builds por minuto (12), contra o campeão deste lado. Cada minuto é lido
+  no minuto medido mais perto da execução (numa execução só de 15 min, todos no 15).
+- **O que o outro lado fixar vira o começo da cadeia** (ex.: Rumble com Liandry): o resto é sorteado a partir dali.
+- **A nota de uma build** deste lado é a dos itens que ela já terminou em cada minuto (o relógio do planejador, ritmo
+  padrão) contra cada build sorteada, combinadas em `peso_media` (0,4) × a média + o resto × a robustez, que é a média do
+  pior caso e do percentil baixo (`percentil_baixo`: 20%), como a versatilidade das runas.
+- **A montagem** passa a usar essa nota: itens por ganho da nota a cada mil de ouro (até 5 e a bota), depois runa
+  fundamental, runas e feitiço, depois trocas enquanto a nota sobe. O outro lado "responde" comprando o mais provável
+  condicionado à composição (a cadeia), não o ótimo do modelo.
+- **O ótimo continua como opção** ("o outro lado joga perfeito"): a montagem conjunta da Rodada 16 dá a build ótima do
+  outro lado, e ela entra no tempo pelo mesmo relógio, uma build por minuto.
+- **Na tela**, para cada lado: a build item a item com o minuto de cada um, o ganho médio dele sobre as builds sorteadas e
+  em quantas delas ele rende; a nota em cada minuto (itens, média, pior); a linha do tempo prevista do outro lado (as 3
+  continuações mais prováveis, com a probabilidade de cada passo e o minuto); e um **aviso** quando um item só rende
+  (meio ponto ou mais) contra menos de `aviso_ramo` (30%) das builds sorteadas, ou sai depois do último minuto lido.
+- "Lutar de verdade", "Melhorar lutando" e o refino continuam no modo de antes (a montagem conjunta no minuto da
+  execução).
+
+**Custo:** um guia contra a progressão natural numa execução de um minuto leva ~7 s (o fixado, ~3 s). O modelo de
+progressão passou a conferir o banco no máximo a cada 5 s (antes, a cada pedido: o guia o consulta milhares de vezes).
+
+**Mais minutos:** o seed passa a medir 10, 15 e 20 (`minutos`). O custo de uma execução inteira com eles está na
+Parte 5.
+
+**Exemplo** (a execução da Parte 1 com o Automático, só o minuto 15, nada fixado): o Ornn monta Ruptor Divino 4',
+Força da Natureza 8', Passos de Mercúrio 9,7', Desespero Eterno 14' contra o Rumble previsto (Liandry 3,6', Virtude
+Radiante 7,4', Cajado do Vazio 11,6'...), nota 91,8 (pior caso 91,1). Com Liandry fixado no Rumble e o oponente perfeito,
+o Ornn troca a ordem (Desespero antes da bota) e a nota cai para 81,3.

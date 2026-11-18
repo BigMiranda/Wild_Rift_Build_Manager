@@ -17,8 +17,18 @@ const SOURCE = { status: 'status', passiva: 'passiva de item', fundamental: 'run
 const emptyFixed = () => ({ items: [], keystone: null, runes: [], spell: null, conditions: [] });
 const tone = (v) => (v > 0.05 ? 'atlas-up' : v < -0.05 ? 'atlas-down' : '');
 
+const BRAINS = {
+  auto: 'Automático (a IA do campeão ou da classe)',
+  tactical_stand: 'Troca parada (tático sem fugir)',
+  tactical: 'Tático (com fuga)',
+};
+
+/** A brain as stored in a minute (an automatic one resolved to its AI), in words. */
+const brainName = (b, note) => (b == null ? BRAINS.tactical_stand : b.startsWith('ai:') ? `IA ${b.slice(3)}${note ? ` (${note})` : ''}` : (BRAINS[b] ?? b));
+
 function RunList({ runs, presets, selected, onSelect, onReload }) {
   const [preset, setPreset] = useState('');
+  const [brain, setBrain] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const keys = Object.keys(presets ?? {});
@@ -27,7 +37,9 @@ function RunList({ runs, presets, selected, onSelect, onReload }) {
     setBusy(true);
     setError(null);
     try {
-      const r = await api.post(`/api/atlas/runs?preset=${encodeURIComponent(preset)}`);
+      const r = brain
+        ? await api.post('/api/atlas/runs', { ...presets[preset], brain })
+        : await api.post(`/api/atlas/runs?preset=${encodeURIComponent(preset)}`);
       onSelect(r.id);
       onReload();
     } catch (e) {
@@ -47,6 +59,10 @@ function RunList({ runs, presets, selected, onSelect, onReload }) {
         <select value={preset} onChange={(e) => setPreset(e.target.value)}>
           {keys.map((k) => <option key={k} value={k}>{presets[k].name ?? k}</option>)}
         </select>
+        <label className="inline">Cérebro <select value={brain} onChange={(e) => setBrain(e.target.value)}>
+          <option value="">o do seed ({BRAINS[presets?.[preset]?.brain ?? 'tactical_stand'] ?? presets?.[preset]?.brain})</option>
+          {Object.entries(BRAINS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select></label>
         <button onClick={start} disabled={busy || !preset}>Rodar</button>
       </div>
       {error && <p className="error">{error}</p>}
@@ -458,16 +474,17 @@ function SideGuide({ side, m, g, fixed, setFixed, itemsList }) {
           </div>
         )}
       </div>
+      {g?.natural && <Natural g={g} other={side === 'A' ? m.b : m.a} />}
       {g && (
         <>
-          <h5>Build montada pelas notas <small className="muted">duelo contra a build montada do outro lado: {n1(g.buildRace)}</small></h5>
-          <div className="atlas-build">
+          {!g.natural && <h5>Build montada pelas notas <small className="muted">duelo contra a build montada do outro lado: {n1(g.buildRace)}</small></h5>}
+          {!g.natural && <div className="atlas-build">
             {g.build.map((o, i) => (
               <span key={`${o.itemId}-${i}`} title={`${o.name}${o.key === 'fixo' ? ' (fixado)' : ` · ${signed(o.gain)}`}`} className={o.key === 'fixo' ? 'fixed' : ''}>
                 <ItemIcon id={o.itemId} size={30} />
               </span>
             ))}
-          </div>
+          </div>}
           <p className="small">{g.buildKeystone}{g.buildRunes.length > 0 && ` · ${g.buildRunes.join(', ')}`}{g.buildSpell && ` · ${g.buildSpell}`}</p>
           <h5>Próximo item <small className="muted">por ganho a cada mil de ouro</small></h5>
           <ul className="atlas-options">
@@ -491,6 +508,54 @@ function SideGuide({ side, m, g, fixed, setFixed, itemsList }) {
             {s.conditions.find((c) => c.key === k)?.name ?? k} ✕
           </button>
         ))}</p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Rodada 19: a side's build against the other side's natural progression: the other side's predicted timeline, the
+ * build item by item with its minute, its value at each minute over the drawn builds, and the warnings.
+ */
+function Natural({ g, other }) {
+  const n = g.natural;
+  return (
+    <div className="atlas-natural">
+      <h5>Build contra a {n.opponent === 'perfeito' ? 'build ótima do outro lado (oponente perfeito)' : 'progressão natural do outro lado'}
+        {' '}<small className="muted">nota {n1(n.score)} (média {n1(n.mean)}, robustez {n1(n.robust)}: pior {n1(n.worst)}, percentil baixo {n1(n.low)};
+        {' '}{n.samples} builds sorteadas em {n.minutes.map((x) => `${n1(x)}'`).join(', ')})</small></h5>
+      <ol className="atlas-timeline">
+        {g.build.map((o, i) => (
+          <li key={`${o.itemId}-${i}`} className={o.key === 'fixo' ? 'fixed' : ''}>
+            <ItemIcon id={o.itemId} size={24} /> {o.name}
+            {o.minute != null && <small className="muted"> {n1(o.minute)}'</small>}
+            {o.key === 'fixo' ? <small className="muted"> (fixado)</small>
+              : o.gain != null && <small className={tone(o.gain)}> {signed(o.gain)}{o.branchShare != null && ` · rende contra ${Math.round(o.branchShare * 100)}%`}</small>}
+            {o.warning && <small className="atlas-warn"> ⚠ {o.warning}</small>}
+          </li>
+        ))}
+      </ol>
+      <table className="data small">
+        <thead><tr><th>Min.</th><th className="l">Itens</th><th>Média</th><th>Pior</th><th>Sorteios</th></tr></thead>
+        <tbody>
+          {n.notes.map((x) => (
+            <tr key={x.minute}>
+              <td>{n1(x.minute)}'{x.measured !== x.minute && <small className="muted"> (lido no {n1(x.measured)}')</small>}</td>
+              <td className="l">{x.items.join(', ') || '—'}</td><td>{n1(x.mean)}</td><td>{n1(x.worst)}</td><td>{x.samples}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {n.opponentTimeline.length > 0 && (
+        <>
+          <h5>{other.champion} previsto <small className="muted">as continuações mais prováveis (minuto no ritmo padrão)</small></h5>
+          <ul className="small atlas-opponent">
+            {n.opponentTimeline.map((c, i) => (
+              <li key={i}>{(c.probability * 100).toLocaleString('pt-BR', { maximumSignificantDigits: 2 })}%:{' '}
+                {c.steps.map((st) => `${st.name} ${n1(st.minute)}' (${Math.round(st.probability * 100)}%)`).join(' → ')}</li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );
@@ -573,14 +638,19 @@ function Guides({ run, m, itemsList, a, setA, b, setB }) {
   const [g, setG] = useState(null);
   const [error, setError] = useState(null);
   const [learned, setLearned] = useState(0);
+  const [mode, setMode] = useState('');
+  const [opponent, setOpponent] = useState('natural');
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
     let live = true;
     setError(null);
-    api.post(`/api/atlas/runs/${run.id}/guide`, { minute: m.minute, a, b, order, scale })
+    setBusy(true);
+    api.post(`/api/atlas/runs/${run.id}/guide`, { minute: m.minute, a, b, order, scale, mode: mode || null, opponent })
       .then((x) => { if (live) setG(x); })
-      .catch((e) => { if (live) setError(e.message); });
+      .catch((e) => { if (live) setError(e.message); })
+      .finally(() => { if (live) setBusy(false); });
     return () => { live = false; };
-  }, [run.id, m.minute, a, b, order, scale, learned]);
+  }, [run.id, m.minute, a, b, order, scale, learned, mode, opponent]);
   return (
     <>
       <p className="muted small">Fixe um momento à frente em cada lado (itens já comprados, runas, feitiço) e as notas são
@@ -596,9 +666,24 @@ function Guides({ run, m, itemsList, a, setA, b, setB }) {
           <option value="">a da validação ({m.scale === 'pontos' ? 'pontos' : 'chances'})</option>
           <option value="logit">chances (logit)</option><option value="pontos">pontos</option>
         </select></label>
+        <label className="inline">Contra <select value={mode} onChange={(e) => setMode(e.target.value)}>
+          <option value="">o da execução ({run.config.guideMode === 'progressao' ? 'a progressão natural' : 'o fixado'})</option>
+          <option value="progressao">a progressão natural do outro lado</option>
+          <option value="fixado">o fixado (a build montada do outro lado)</option>
+        </select></label>
+        {(mode || run.config.guideMode) === 'progressao' && (
+          <label className="inline">O outro lado <select value={opponent} onChange={(e) => setOpponent(e.target.value)}>
+            <option value="natural">compra o mais provável</option>
+            <option value="perfeito">joga perfeito (a build ótima do modelo)</option>
+          </select></label>
+        )}
         <button onClick={() => { setA(emptyFixed()); setB(emptyFixed()); }}>Limpar fixações</button>
+        {busy && <span className="muted small">calculando…</span>}
         {g && <span className="small">Corrida de {m.a.champion}: ajustada {n1(g.byOrder[0])} · 1D {n1(g.byOrder[1])} · 2D {n1(g.byOrder[2])} · 3D {n1(g.byOrder[3])}</span>}
       </div>
+      <p className="muted small">Cérebros: {m.a.champion} {brainName(m.brainA, m.brainNoteA)} · {m.b.champion} {brainName(m.brainB, m.brainNoteB)}.
+        {g?.mode === 'progressao' && <> Contra a progressão natural: o outro lado não tem build fixa; o que ele fixou é o começo da cadeia
+        de compras (Rodada 19), sorteada nos minutos da execução, e cada build é julgada pela média e pela robustez sobre os sorteios.</>}</p>
       {error && <p className="error">{error}</p>}
       {g && <Confirm run={run} m={m} g={g} order={order} scale={scale} />}
       {g && m.model && <Improve run={run} m={m} a={a} b={b} onLearned={() => setLearned((x) => x + 1)} />}

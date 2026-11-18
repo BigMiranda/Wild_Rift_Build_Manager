@@ -37,11 +37,19 @@
 #   cerebro      (Rodada 19) quem decide na luta: tactical_stand (a "troca parada": as regras táticas sem fugir, o de
 #                antes e o de quem não tem o campo), tactical (o Tático, com fuga) ou auto (o Automático: a IA do campeão
 #                ou a da classe, escolhida uma vez por lado e minuto, nas duas bases frente a frente)
+#   modo_guia    (Rodada 19) o que o guia lê por padrão: progressao (contra a progressão natural do outro lado) ou
+#                fixado (contra o que o outro lado fixou, como antes; o das execuções sem o campo)
+#   minutos_progressao  os minutos em que a progressão natural do outro lado é sorteada (cada um lido no minuto medido
+#                mais perto). O que o outro lado fixou é o começo da cadeia de compras
+#   amostras_progressao builds sorteadas por minuto
+#   peso_media, percentil_baixo  a nota de uma build: peso_media x a média + o resto x a robustez, que é a média do pior
+#                caso e do percentil baixo (como a versatilidade das runas)
+#   aviso_ramo   uma escolha que só rende contra menos do que essa parte das builds sorteadas ganha um aviso
 patch: "7.3d"
 
 padrao:
   modo: x1
-  minutos: [15]
+  minutos: [10, 15, 20]
   dimensoes: [1, 2, 3]
   duracao: 60
   largadas: 6
@@ -53,6 +61,12 @@ padrao:
   refino_builds: 120
   fontes: [status, passiva, fundamental, runa, feitico]
   semente: 1
+  modo_guia: progressao
+  minutos_progressao: [10, 15, 20, 25]
+  amostras_progressao: 12
+  peso_media: 0.4
+  percentil_baixo: 0.2
+  aviso_ramo: 0.3
 
 execucoes:
   ornn_rumble:

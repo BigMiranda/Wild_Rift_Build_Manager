@@ -55,6 +55,9 @@ public class ProgressionService {
     private final Map<String, Object> seed;
     private ProgressionModel model;
     private String fingerprint;
+    /** When the sources were last looked at: at most every few seconds (the Atlas asks thousands of times a guide). */
+    private long checkedAt;
+    private static final long CHECK_EVERY_NANOS = 5_000_000_000L;
 
     public ProgressionService(DiscoveryRepository discovery, BuildRepository builds, PlannerService planner, CombatCatalog combat,
                               ChampionProfiles profiles, ChampionCatalog champions, @Lazy GuideService guides, JdbcTemplate jdbc,
@@ -78,6 +81,11 @@ public class ProgressionService {
 
     /** The model over the database as it is now (rebuilt when a source changed). */
     public synchronized ProgressionModel model() {
+        long now = System.nanoTime();
+        if (model != null && now - checkedAt < CHECK_EVERY_NANOS) {
+            return model;
+        }
+        checkedAt = now;
         String fp = fingerprint();
         if (model == null || !fp.equals(fingerprint)) {
             model = new ProgressionModel(items(), trajectories(), settings());
