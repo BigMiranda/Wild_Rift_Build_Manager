@@ -571,6 +571,13 @@ public class ArenaService {
         return p;
     }
 
+    /** Rodada 20: a prepared fighter playing with another brain (a copy; the automatic one needs a whole preparation). */
+    public Arena.Input withBrain(Arena.Input in, String brain) {
+        Arena.Input c = in.copy();
+        c.policy = policy(brain, c);
+        return c;
+    }
+
     /**
      * The policy of a brain: script (null), tactical, or ai:&lt;id&gt; (a saved learned policy of that champion, with
      * weights of the current observation and action layout).

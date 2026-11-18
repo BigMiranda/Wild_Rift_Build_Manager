@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { useBuild } from '../buildContext.jsx';
+import { useRoute } from '../router.js';
 import { loadChampions } from '../components/ChampionPicker.jsx';
 import { ChampionAvatar } from '../components/ChampionAvatar.jsx';
 import ItemIcon from '../components/ItemIcon.jsx';
@@ -35,6 +36,10 @@ export default function LiveGame() {
   const [saved, setSaved] = useState(true);
   const [, tick] = useState(0);
   const saveTimer = useRef(null);
+  const route = useRoute();
+  const [panel, setPanel] = useState(null);
+  // the match's settings stay folded once the match has champions (the cards and the clock come first on a phone)
+  const [setupOpen, setSetupOpen] = useState(true);
 
   useEffect(() => {
     loadChampions().then(setChampions).catch(() => {});
@@ -42,6 +47,18 @@ export default function LiveGame() {
     api.get('/api/draft/formatos').then(setFormats).catch((e) => setError(e.message));
     api.get('/api/draft/jogos').then(setList).catch(() => {});
   }, []);
+  // a link opens a game directly: #/simulacoes/draft?jogo=3&sel=azul:0&painel=encontro
+  useEffect(() => {
+    const id = route.params?.jogo;
+    if (!id || game?.id === Number(id)) return;
+    open(Number(id)).then(() => {
+      const [side, i] = String(route.params.sel ?? '').split(':');
+      if (side && i != null) setSelected({ side, index: Number(i) });
+      if (route.params.painel) setPanel(route.params.painel);
+    });
+    // only when the link changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.jogo]);
   // the clock ticks on screen while running
   useEffect(() => {
     if (!game || game.clock?.paused) return undefined;
@@ -85,12 +102,15 @@ export default function LiveGame() {
     setHistory([]);
     setSelected(null);
     if (id == null) {
+      setSetupOpen(true);
       setGame(emptyGame());
       setSaved(false);
       return;
     }
     try {
-      setGame(await api.get(`/api/draft/jogos/${id}`));
+      const g = await api.get(`/api/draft/jogos/${id}`);
+      setGame(g);
+      setSetupOpen(![...g.blue.players, ...g.red.players].some((p) => p.champion));
       setSaved(true);
     } catch (e) {
       setError(e.message);
@@ -224,9 +244,14 @@ export default function LiveGame() {
   const fmt = formats?.formats?.find((f) => f.key === game.mode);
   return (
     <div className="main live">
-      <section className="panel live-setup">
+      <details className="panel live-setup" open={setupOpen} onToggle={(e) => setSetupOpen(e.currentTarget.open)}>
+        <summary className="live-setup-sum">
+          <button type="button" onClick={(e) => { e.preventDefault(); setGame(null); setHistory([]); }}>‹ {t('live.games')}</button>
+          <strong className="live-setup-name">{game.name ?? t('live.name')}</strong>
+          <small className="muted">{fmt?.name ?? game.mode}{game.fearless ? ' · Fearless' : ''} · {t('live.allyIs', { side: t(`live.side.${ally}`) })} · {saved ? t('live.saved') : t('live.saving')}</small>
+          <span className="live-setup-gear" aria-hidden="true">⚙</span>
+        </summary>
         <div className="row">
-          <button type="button" onClick={() => { setGame(null); setHistory([]); }}>‹ {t('live.games')}</button>
           <input className="live-name" value={game.name ?? ''} placeholder={t('live.name')} onChange={(e) => change({ ...clone(game), name: e.target.value })} />
           <select value={game.mode} onChange={(e) => change({ ...clone(game), mode: e.target.value })} aria-label={t('live.mode')}>
             {(formats?.formats ?? []).map((f) => <option key={f.key} value={f.key}>{f.name}</option>)}
@@ -246,7 +271,6 @@ export default function LiveGame() {
           </button>
           {game.fearless && <button type="button" onClick={nextInSeries}>{t('live.nextGame', { n: (game.series?.length ?? 0) + 2 })}</button>}
           {game.id && <button type="button" className="danger" onClick={remove}>{t('live.delete')}</button>}
-          <small className="muted">{saved ? t('live.saved') : t('live.saving')}</small>
         </div>
         {fmt?.source && <p className="muted small">{t('live.formatSource', { source: fmt.source })}</p>}
         {game.fearless && (game.series ?? []).length > 0 && (
@@ -254,7 +278,7 @@ export default function LiveGame() {
             <span key={k} className="live-series">#{k + 1}: {[...s.blue, ...s.red].map((c) => <ChampionAvatar key={c} name={c} size={18} />)}</span>
           ))}</p>
         )}
-      </section>
+      </details>
 
       <div className="live-bar">
         <div className="live-clock">
@@ -295,7 +319,7 @@ export default function LiveGame() {
       </div>
 
       <LivePanels game={game} champions={champions} profiles={profiles} items={items} formats={formats} selected={selected}
-        unavailableFor={unavailableFor} onChange={change} />
+        unavailableFor={unavailableFor} onChange={change} panel={panel} onPanel={setPanel} />
 
       {game.events?.length > 0 && (
         <section className="panel live-events">

@@ -3,6 +3,12 @@
  * it. Mirrors `LiveGameModel.Game` on the backend; everything is optional.
  */
 
+import { currentLang } from './i18n.js';
+
+/** Numbers of a template's values in the reader's format (pt-BR: comma). */
+export const localVars = (vars) => Object.fromEntries(Object.entries(vars ?? {}).map(([k, v]) => [k,
+  typeof v === 'number' ? (Math.round(v * 10) / 10).toLocaleString(currentLang() === 'en' ? 'en-US' : 'pt-BR') : v]));
+
 export const BLUE = 'azul';
 export const RED = 'vermelho';
 export const LANES = ['Barão', 'Selva', 'Meio', 'Dragão', 'Suporte'];

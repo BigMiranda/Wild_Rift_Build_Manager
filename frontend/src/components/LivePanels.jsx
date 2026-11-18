@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { t } from '../i18n.js';
 import DraftPanel from './DraftPanel.jsx';
+import EncounterPanel from './EncounterPanel.jsx';
 
-const PANELS = ['draft'];
+const PANELS = ['draft', 'encontro'];
 
 /**
  * Rodada 20: the panels under the two teams, one at a time (the screen stays short on a phone): the draft (Parte 3),
  * the first encounter (Parte 4), the likely builds (Parte 5) and the tips (Parte 6).
  */
 export default function LivePanels(props) {
-  const [panel, setPanel] = useState('draft');
+  const [own, setOwn] = useState('draft');
+  const panel = props.panel ?? own;
+  const setPanel = (k) => (props.onPanel ? props.onPanel(k) : setOwn(k));
   return (
     <div className="live-panels">
       <div className="chips live-panel-tabs" role="tablist">
@@ -20,6 +23,7 @@ export default function LivePanels(props) {
         ))}
       </div>
       {panel === 'draft' && <DraftPanel game={props.game} onChange={props.onChange} />}
+      {panel === 'encontro' && <EncounterPanel game={props.game} selected={props.selected} />}
     </div>
   );
 }

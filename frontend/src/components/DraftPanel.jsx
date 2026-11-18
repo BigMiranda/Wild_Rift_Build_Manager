@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { ChampionAvatar } from './ChampionAvatar.jsx';
-import { clone, teamKey } from '../liveGame.js';
+import { clone, localVars, teamKey } from '../liveGame.js';
 
 const n0 = (v) => (v == null ? '—' : Math.round(v).toLocaleString('pt-BR'));
 
 /** One reason of a note, in words. */
 export function reasonText(r) {
-  const v = r.vars ?? {};
+  const v = localVars(r.vars);
   const pred = v.predicted ? t('draft.predicted') : '';
   const src = v.measured === false ? t('draft.byProfile') : v.measured ? t('draft.measured') : '';
   return t(`draft.r.${r.key}`, { ...v, need: v.need ? t(`draft.need.${v.need}`) : '', pred, src });

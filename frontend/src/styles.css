@@ -1754,3 +1754,42 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .enc-starts { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 4px 0; }
 .enc-best { background: var(--surface-2); border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
 .enc-advice { color: var(--gold-bright); font-weight: 600; }
+.lb-list { padding-left: 22px; margin: 6px 0; display: grid; gap: 6px; }
+.lb-build { background: var(--surface-2); border-radius: 6px; padding: 4px 6px; }
+.lb-steps { display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-end; }
+.lb-step { display: inline-flex; flex-direction: column; align-items: center; font-size: 11px; color: var(--muted); }
+.lb-step.next img { outline: 2px solid var(--gold); border-radius: 4px; }
+.lb-prob { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--text-2); font-size: 12px; }
+.lb-why { display: block; color: var(--text-2); }
+.lb-answers ul { list-style: none; padding: 0; display: grid; gap: 4px; }
+.tips-enemy ul { list-style: none; padding: 0; margin: 4px 0 10px; display: grid; gap: 4px; }
+.tip { display: flex; gap: 8px; align-items: baseline; background: var(--surface-2); border-radius: 6px; padding: 4px 8px; }
+.tip span { flex: 1; }
+.tip-src { color: var(--muted); white-space: nowrap; }
+.tip-janela { border-left: 3px solid var(--gold); }
+.tip-kit { border-left: 3px solid #5ec5ff; }
+.tip-guia { border-left: 3px solid #a58bff; }
+.live-setup { padding: 6px 10px; }
+.live-setup-sum { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; cursor: pointer; list-style: none; }
+.live-setup-sum::-webkit-details-marker { display: none; }
+.live-setup-name { font-size: 15px; }
+.live-setup-gear { margin-left: auto; font-size: 18px; color: var(--muted); }
+.live-setup[open] .live-setup-sum { margin-bottom: 6px; }
+@media (max-height: 520px) and (orientation: landscape) {
+  .live-actions button { min-height: 44px; min-width: 64px; }
+  .live-time { font-size: 20px; }
+}
+@media (max-width: 760px) {
+  .live-bar { position: static; }
+  .live-actions { display: grid; grid-template-columns: repeat(3, 1fr); flex: 1 1 100%; }
+  .live-actions button { min-width: 0; }
+  /* "Desfazer" always visible: floating at the bottom corner */
+  .live-undo { position: fixed; right: 10px; bottom: 12px; z-index: 40; box-shadow: 0 4px 14px rgba(0, 0, 0, .5); background: var(--surface-3); }
+  .live-sel { display: none; }
+}
+@media (max-width: 760px) { .live { padding-bottom: 72px; } }
+@media (max-height: 520px) and (orientation: landscape) {
+  .live-undo { position: fixed; right: 10px; bottom: 10px; z-index: 40; box-shadow: 0 4px 14px rgba(0, 0, 0, .5); background: var(--surface-3); }
+  .live { padding-bottom: 64px; }
+  .live-sel { display: none; }
+}

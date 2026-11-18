@@ -174,3 +174,47 @@ pesam.
 muda as listas e a resposta é quem ganha do previsto; o Fearless tira os usados, no escopo de cada lado; uma rota cheia não
 recebe candidatos e com as cinco cheias a lista fica vazia; os banimentos são a lista do outro lado) e
 `tools/test_importar_meta.py` (o script sobre um cache sintético, sem rede).
+
+## Parte 4: o primeiro encontro na fase de rotas (✅)
+
+**Painel "Primeiro encontro"** (`components/EncounterPanel.jsx`; `POST /api/draft/encontro`; `arena/draft/FirstEncounterService`),
+para o campeão do cartão selecionado:
+
+- **Opções de início:** os itens da loja que cabem no ouro inicial (500, `TimelineEngine.STARTING_GOLD`) e são vendidos
+  no começo: os `secao: basico` de até 500 (Adaga, Anel da Revelação, Botas da Velocidade, Couraça de Pano, Cristal de
+  Rubi, Espada Longa, Lágrima da Deusa, Luvas da Pancadaria, Manto Anula-Magia, Tomo Amplificador) e, para quem joga de
+  suporte, os 2 `secao: preparacao` (Foice Espectral, Escudo Relicário): **10, ou 12 no suporte**. O Wild Rift não tem
+  os itens iniciais do PC (Lâmina de Doran etc.): a loja transcrita confirma.
+- **O adversário:** o revelado no cartão da mesma rota; senão a previsão fixada; senão os 3 mais prováveis do draft para
+  a rota (Parte 3). No Dragão e no Suporte a luta é 2x2: o parceiro de cada lado entra com o início mais provável dele.
+- **O início provável do inimigo:** pela progressão (Rodada 19): a chance de cada primeiro item do campeão se espalha
+  nos inícios que estão na árvore dele (um pouco em todos). Quando o usuário informa o início real do inimigo ("Marcar o
+  item inicial" no cartão dele), só ele entra e o painel recalcula sozinho.
+- **As lutas:** na Arena, nos níveis 1, 2 e 3 (aos 0,5, 1,4 e 2,2 minutos: a 1ª onda sai aos 0:25), cada início do aliado
+  contra cada início do inimigo, nos três estilos de rota no cérebro do aliado (seed `primeiro_encontro.estilos`:
+  agressivo = tático sem fugir, padrão = o Automático, cauteloso = tático com fuga; o inimigo joga o Automático), com as
+  runas e os feitiços informados (senão os da build padrão), 2 largadas. A **troca** é a vantagem de vida aos 4 s (−100
+  a 100); o **all-in**, a corrida das barras até o fim (25 s).
+- **A saída:** os inícios prováveis do inimigo com a chance; o melhor início do aliado com o estilo que mais rende (média
+  do all-in nos três níveis, pesada pela chance de cada início inimigo); a tabela de troca e all-in por nível nos três
+  estilos; o conselho por modelo de frase ("Pressione antes do nível 2 do X: você ganha o nível 1 (62) e ele ganha o
+  nível 2 (44)", "Farme até o nível 3...", "ganha os três", "perde os três", "equilibrada"); e todos os inícios.
+- **A selva (invasão no nível 1):** o mesmo painel no cartão da Selva; a coluna do nível 1 é a invasão.
+- **Usa a Arena de rota única**, não a Arena com mapa: o 1x1 da fase de rotas é uma luta entre dois (com tropas e torre
+  ficaria uma partida inteira por combinação, fora do orçamento de segundos). Fica para quando o mapa for barato.
+
+**Tempo** (Ornn no Barão, 10 inícios de cada lado, 3 níveis × 3 estilos × 2 largadas = 1.800 lutas):
+
+| Caso | Tempo |
+|---|---|
+| Darius revelado, servidor aquecido | **5,7 s** (1,7 s preparando) |
+| Darius revelado, primeiro pedido (`DraftReportTest`, servidor frio) | 12,2 s (2,8 s preparando) |
+| Adversário não revelado: os 3 prováveis (Rumble, Mordekaiser, Kennen), 5.400 lutas | 14,5 a 14,9 s |
+
+Exemplo (Ornn × Darius): o Darius ganha os três níveis com qualquer início (melhor do Ornn: Espada Longa, agressivo, 41);
+contra os prováveis sem o Darius, o melhor é Cristal de Rubi no estilo cauteloso (55).
+
+**Testes:** `FirstEncounterTest` (a loja dá 10 inícios e 2 de suporte, 12 no total; o conselho segue os níveis medidos) e
+`DraftReportTest` (opcional, `-Ddraft.report=data/ornn-planner.db`: o encontro de uma rota em menos de 30 s, com 10 a 12
+inícios).
+

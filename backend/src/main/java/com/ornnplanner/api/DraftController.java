@@ -4,6 +4,7 @@ import com.ornnplanner.arena.draft.DraftCatalog;
 import com.ornnplanner.arena.draft.DraftModel;
 import com.ornnplanner.arena.draft.DraftService;
 import com.ornnplanner.arena.draft.DraftTablesService;
+import com.ornnplanner.arena.draft.FirstEncounterService;
 import com.ornnplanner.arena.draft.LiveGameModel;
 import com.ornnplanner.arena.draft.LiveGameRepository;
 import com.ornnplanner.arena.draft.VoiceAliases;
@@ -34,8 +35,11 @@ public class DraftController {
     private final VoiceAliases aliases;
     private final DraftService draft;
     private final DraftTablesService tables;
+    private final FirstEncounterService encounter;
 
-    public DraftController(LiveGameRepository games, DraftCatalog catalog, VoiceAliases aliases, DraftService draft, DraftTablesService tables) {
+    public DraftController(LiveGameRepository games, DraftCatalog catalog, VoiceAliases aliases, DraftService draft, DraftTablesService tables,
+                           FirstEncounterService encounter) {
+        this.encounter = encounter;
         this.games = games;
         this.catalog = catalog;
         this.aliases = aliases;
@@ -56,6 +60,23 @@ public class DraftController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Falta a partida.");
         }
         return draft.suggest(q.game, q.path);
+    }
+
+    /** Parte 4: the body of the per-player requests: the game and a card (side and index). */
+    public static class PlayerRequest {
+        public LiveGameModel.Game game;
+        public String side;
+        public int index;
+    }
+
+    /** Parte 4: the first encounter of a card's champion with its lane rival (levels 1-3, every start, three styles). */
+    @PostMapping("/encontro")
+    public FirstEncounterService.Result encounter(@RequestBody PlayerRequest q) {
+        try {
+            return encounter.run(q.game, q.side, q.index);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     /** Parte 3: the precomputed tables (Admin): the job's state. */
