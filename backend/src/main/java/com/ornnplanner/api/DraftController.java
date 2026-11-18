@@ -3,6 +3,7 @@ package com.ornnplanner.api;
 import com.ornnplanner.arena.draft.DraftCatalog;
 import com.ornnplanner.arena.draft.LiveGameModel;
 import com.ornnplanner.arena.draft.LiveGameRepository;
+import com.ornnplanner.arena.draft.VoiceAliases;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -26,10 +28,41 @@ public class DraftController {
 
     private final LiveGameRepository games;
     private final DraftCatalog catalog;
+    private final VoiceAliases aliases;
 
-    public DraftController(LiveGameRepository games, DraftCatalog catalog) {
+    public DraftController(LiveGameRepository games, DraftCatalog catalog, VoiceAliases aliases) {
         this.games = games;
         this.catalog = catalog;
+        this.aliases = aliases;
+    }
+
+    /** Parte 2: the voice reader's nicknames in force (seed + the user's edits). */
+    @GetMapping("/apelidos")
+    public List<VoiceAliases.Alias> aliases() {
+        return aliases.all();
+    }
+
+    @PutMapping("/apelidos")
+    public List<VoiceAliases.Alias> putAlias(@RequestBody VoiceAliases.Alias a) {
+        try {
+            aliases.put(a);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+        return aliases.all();
+    }
+
+    @DeleteMapping("/apelidos")
+    public List<VoiceAliases.Alias> deleteAlias(@RequestParam String tipo, @RequestParam String apelido) {
+        aliases.remove(tipo, apelido);
+        return aliases.all();
+    }
+
+    /** Back to the seed's nicknames. */
+    @PostMapping("/apelidos/restaurar")
+    public List<VoiceAliases.Alias> resetAliases() {
+        aliases.reset();
+        return aliases.all();
     }
 
     /** The formats (each turn in order), the Fearless default and the lanes. */

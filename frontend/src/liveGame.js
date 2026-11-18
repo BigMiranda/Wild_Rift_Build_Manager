@@ -146,3 +146,93 @@ export function pushHistory(history, g, max = 60) {
 
 /** Champions picked by a side, in card order. */
 export const picks = (g, side) => g[teamKey(side)].players.map((p) => p.champion).filter(Boolean);
+
+/** The side an intent means: azul / vermelho as said, aliado / inimigo relative to the followed side. */
+export function sideOf(said, g) {
+  if (said === BLUE || said === RED) return said;
+  if (said === 'aliado') return g.allySide ?? BLUE;
+  if (said === 'inimigo') return enemyOf(g.allySide ?? BLUE);
+  return null;
+}
+
+/** Where a champion is on the board: {side, index} or null. */
+export function findChampion(g, name) {
+  for (const side of [BLUE, RED]) {
+    const i = g[teamKey(side)].players.findIndex((p) => p.champion === name);
+    if (i >= 0) return { side, index: i };
+  }
+  return null;
+}
+
+/**
+ * Applies one intent of the voice reader (voiceParser.parse) to the game: {game, error}. A purchase, a score or an
+ * event needs the champion on the board; a player of the loading screen goes to its card (the same champion, else the
+ * card of its lane, else the first empty one of its side). `runeInfo(name)` gives {tree, row} of a rune.
+ */
+export function applyIntent(g, intent, items = [], runeInfo = () => null, now = Date.now()) {
+  const at = intent.champion ? findChampion(g, intent.champion) : null;
+  if (intent.type === 'objetivo') {
+    const side = sideOf(intent.side, g);
+    if (!side) return { game: g, error: 'lado' };
+    return { game: addEvent(g, { kind: intent.kind, side, detail: intent.detail ?? undefined }, items, now) };
+  }
+  if (intent.type === 'jogador') {
+    let side = sideOf(intent.side, g) ?? at?.side ?? null;
+    let index = at && at.side === side ? at.index : -1;
+    if (!side) side = g.allySide ?? BLUE;
+    const team = g[teamKey(side)].players;
+    if (index < 0 && intent.lane) index = team.findIndex((p) => p.lane === intent.lane && !p.champion);
+    if (index < 0) index = team.findIndex((p) => !p.champion);
+    if (index < 0) return { game: g, error: 'cheio' };
+    if (at && (at.side !== side || at.index !== index)) return { game: g, error: 'ja_esta' };
+    const out = updatePlayer(g, side, index, (p) => {
+      p.champion = intent.champion;
+      if (intent.lane) p.lane = intent.lane;
+      if (intent.spells?.length) p.spells = intent.spells.slice(0, 2);
+      if (intent.keystone) p.runes = { ...(p.runes ?? {}), keystone: intent.keystone };
+      if (intent.runes?.length) {
+        const r = { primaryRunes: [null, null, null], secondaryRune: null, ...(p.runes ?? {}) };
+        r.primaryRunes = [...(r.primaryRunes ?? [null, null, null])];
+        for (const name of intent.runes) {
+          const info = runeInfo(name);
+          if (info && (!r.primary || r.primary === info.tree) && info.row >= 1 && info.row <= 3) {
+            r.primary = info.tree;
+            r.primaryRunes[info.row - 1] = name;
+          } else {
+            if (info) r.secondary = info.tree;
+            r.secondaryRune = name;
+          }
+        }
+        p.runes = r;
+      }
+    });
+    // lanes stay one per card: the card that had this lane takes the old lane of this one
+    if (intent.lane) {
+      const players = out[teamKey(side)].players;
+      const before = g[teamKey(side)].players[index].lane;
+      const other = players.findIndex((x, k) => k !== index && x.lane === intent.lane);
+      if (other >= 0 && before !== intent.lane) players[other].lane = before;
+    }
+    return { game: out };
+  }
+  if (!at) return { game: g, error: 'fora' };
+  const { side, index } = at;
+  switch (intent.type) {
+    case 'compra': {
+      const it = items.find((i) => i.id === intent.item);
+      return { game: addEvent(g, { kind: it && !isFinished(it) ? 'componente' : 'compra', side, player: index, item: intent.item }, items, now) };
+    }
+    case 'morte': return { game: addEvent(g, { kind: 'morte', side, player: index }, items, now) };
+    case 'abate': return { game: addEvent(g, { kind: 'abate', side, player: index }, items, now) };
+    case 'placar': return {
+      game: updatePlayer(g, side, index, (p) => {
+        if (intent.kills != null) p.kills = intent.kills;
+        if (intent.deaths != null) p.deaths = intent.deaths;
+        if (intent.assists != null) p.assists = intent.assists;
+      }),
+    };
+    case 'ouro': return { game: updatePlayer(g, side, index, (p) => { p.gold = intent.gold; }) };
+    case 'nivel': return { game: updatePlayer(g, side, index, (p) => { p.level = intent.level; }) };
+    default: return { game: g, error: 'tipo' };
+  }
+}

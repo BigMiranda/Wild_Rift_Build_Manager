@@ -1719,3 +1719,21 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
   .live-card-main { min-height: 48px; }
   .live-card-main .champ-avatar { width: 32px !important; height: 32px !important; }
 }
+.live-voice { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1 1 260px; }
+.live-mic { min-height: 48px; min-width: 90px; font-weight: 600; }
+.live-mic.on { background: #6b1d1d; border-color: #e0605a; color: #ffd7d3; }
+.live-voice-text { flex: 1; min-width: 160px; display: flex; }
+.live-voice-text input { flex: 1; min-height: 44px; font-size: 15px; }
+.live-interim { font-style: italic; color: var(--muted); flex-basis: 100%; }
+.live-voice-notice { flex-basis: 100%; }
+.live-voice-pending { flex-basis: 100%; display: grid; gap: 4px; max-height: 40vh; overflow: auto; }
+.live-intent { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: var(--surface-2); border-radius: 6px; padding: 4px 6px; }
+.live-intent.none { opacity: .7; }
+.live-heard { flex-basis: 100%; }
+.live-parts { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; align-items: center; }
+.live-part { background: var(--surface-3); border: 1px solid var(--border-strong); border-radius: 12px; padding: 2px 8px; font-size: 13px; }
+.live-part small { color: var(--muted); margin-right: 2px; }
+.live-part.fuzzy { border-color: var(--warn-border); background: var(--warn-bg); }
+.live-ok, .live-no { min-width: 48px; min-height: 44px; font-size: 18px; }
+.live-ok { color: var(--ok); }
+.live-no { color: var(--error); }

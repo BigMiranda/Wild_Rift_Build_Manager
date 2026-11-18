@@ -284,7 +284,7 @@ export default function LiveGame() {
           <button type="button" onClick={() => setObjective('barao')}>{t('live.q.baron')}</button>
         </div>
         <button type="button" className="live-undo" disabled={!history.length} onClick={undo} title={t('live.undo')}>↶ {t('live.undo')}</button>
-        <VoiceBar game={game} champions={champions} items={items} onApply={change} />
+        <VoiceBar game={game} champions={champions} items={items} onApply={change} onUndo={history.length ? undo : null} />
       </div>
       {sel && <p className="live-sel small">{t('live.selected', { name: sel.champion })}</p>}
       {error && <div className="notice error" onClick={() => setError(null)}>{error}</div>}

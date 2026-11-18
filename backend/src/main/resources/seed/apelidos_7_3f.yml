@@ -1,0 +1,193 @@
+# Rodada 20, Parte 2: apelidos do leitor de voz (frontend/src/voiceParser.js), por tipo. O que se fala -> o nome do
+# catálogo (campeões, feitiços, runas e itens de loja_7_3f.yml, como o jogo escreve em pt-BR). Editáveis em
+# Admin › Catálogo › Apelidos da voz: o que o usuário muda fica na tabela draft_apelido, por cima deste arquivo.
+#
+# O leitor já casa os nomes do catálogo sem acento, sem caixa e com tolerância (distância de edição e uma semelhança
+# fonética simples). Os apelidos servem para o que não se parece com o nome: siglas, nomes em inglês, encurtamentos.
+#
+# rotas, lados e objetivos são as palavras da gramática (o que vira rota, time e evento).
+patch: "7.3f"
+apelidos:
+  campeoes:
+    mf: Miss Fortune
+    miss: Miss Fortune
+    tf: Twisted Fate
+    twisted: Twisted Fate
+    j4: Jarvan IV
+    jota quatro: Jarvan IV
+    jarvan: Jarvan IV
+    yi: Master Yi
+    master: Master Yi
+    morde: Mordekaiser
+    kassa: Kassadin
+    wu: Wukong
+    mundo: Dr. Mundo
+    doutor mundo: Dr. Mundo
+    lee: Lee Sin
+    xin: Xin Zhao
+    asol: Aurelion Sol
+    aurelion: Aurelion Sol
+    cait: Caitlyn
+    ez: Ezreal
+    nunu: Nunu e Willump
+    blitz: Blitzcrank
+    naut: Nautilus
+    malph: Malphite
+    voli: Volibear
+    kog: Kog'Maw
+    kaisa: Kai'Sa
+    khazix: Kha'Zix
+    kha: Kha'Zix
+    cho: Cho'Gath
+    chogath: Cho'Gath
+    velkoz: Vel'Koz
+    ksante: K'Sante
+    heimer: Heimerdinger
+    fiddle: Fiddlesticks
+    trynda: Tryndamere
+    tristana: Tristana
+    trist: Tristana
+    sera: Seraphine
+    kat: Katarina
+    liss: Lissandra
+    ori: Orianna
+    eve: Evelynn
+    vlad: Vladimir
+    aurora: Aurora
+    bard: Bardo
+  feiticos:
+    flash: Flash
+    flesh: Flash
+    flex: Flash
+    ignite: Incendiar
+    ignait: Incendiar
+    incendio: Incendiar
+    tp: Teleporte
+    teleport: Teleporte
+    teleporte: Teleporte
+    smite: Golpear
+    golpe: Golpear
+    heal: Curar
+    cura: Curar
+    barrier: Barreira
+    exhaust: Exaustão
+    exaust: Exaustão
+    cleanse: Purificar
+    ghost: Fantasma
+  runas:
+    conq: Conquistador
+    conquistador: Conquistador
+    aperto: Aperto dos Mortos-Vivos
+    grasp: Aperto dos Mortos-Vivos
+    eletro: Eletrocutar
+    electrocute: Eletrocutar
+    fleet: Agilidade nos Pés
+    lethal tempo: Ritmo Fatal
+    tempo: Ritmo Fatal
+    phase rush: Ímpeto Gradual
+    cometa: Cometa Arcano
+    comet: Cometa Arcano
+    aery: Aery
+    colheita: Colheita Sombria
+    dark harvest: Colheita Sombria
+    guardiao: Guardião
+    first strike: Primeiro Ataque
+    glacial: Suserano do Gelo
+    fonte de vida: Fonte da Vida
+    segunda pele: Osso Revestido
+  itens:
+    bc: Cutelo Negro
+    black cleaver: Cutelo Negro
+    botas de mercurio: Passos de Mercúrio
+    mercurio: Passos de Mercúrio
+    tabi: Grevas Vorazes
+    botas de armadura: Grevas Vorazes
+    botas ionianas: Botas Ionianas da Lucidez
+    lucidez: Botas Ionianas da Lucidez
+    botas de ataque: Grevas do Berserker
+    berserker: Grevas do Berserker
+    zhonya: Ampulheta de Zhonya
+    rabadon: Capuz da Morte de Rabadon
+    gume: Gume do Infinito
+    ie: Gume do Infinito
+    infinity edge: Gume do Infinito
+    liandry: Tormento de Liandry
+    rylai: Cetro de Cristal de Rylai
+    sterak: Sinal de Sterak
+    ga: Anjo Guardião
+    anjo: Anjo Guardião
+    warmog: Armadura de Warmog
+    randuin: Presságio de Randuin
+    espinhos: Armadura de Espinhos
+    thornmail: Armadura de Espinhos
+    sunfire: Égide de Fogo Solar
+    fogo solar: Égide de Fogo Solar
+    triforce: Força da Trindade
+    trindade: Força da Trindade
+    youmuu: Lâmina Fantasma de Youmuu
+    collector: A Coletora
+    coletora: A Coletora
+    kraken: Mata-Cráquens
+    guinsoo: Lâmina da Fúria de Guinsoo
+    luden: Eco de Luden
+    morello: Morellonomicon
+    banshee: Véu da Banshee
+    shojin: Lança de Shojin
+    hidra: Hidra Titânica
+    sedenta: Sedenta por Sangue
+    bloodthirster: Sedenta por Sangue
+    lembrete: Lembrete Mortal
+    dominik: Lembranças do Lorde Dominik
+    serylda: Rancor de Serylda
+    malmortius: Mandíbula de Malmortius
+    varinha: Varinha Explosiva
+    bastao grande: Bastão Desnecessariamente Grande
+    cristal: Cristal de Rubi
+    espada longa: Espada Longa
+    tomo: Tomo Amplificador
+    lagrima: Lágrima da Deusa
+  rotas:
+    barao: Barão
+    top: Barão
+    topo: Barão
+    selva: Selva
+    jungle: Selva
+    jg: Selva
+    jungler: Selva
+    meio: Meio
+    mid: Meio
+    dragao: Dragão
+    bot: Dragão
+    adc: Dragão
+    atirador: Dragão
+    suporte: Suporte
+    sup: Suporte
+    support: Suporte
+  lados:
+    azul: azul
+    blue: azul
+    vermelho: vermelho
+    red: vermelho
+    aliado: aliado
+    aliada: aliado
+    nosso: aliado
+    inimigo: inimigo
+    inimiga: inimigo
+    adversario: inimigo
+  objetivos:
+    dragao: dragao
+    drake: dragao
+    arauto: arauto
+    herald: arauto
+    barao: barao
+    baron: barao
+    nashor: barao
+  dragoes:
+    infernal: Infernal
+    fogo: Infernal
+    oceano: Oceano
+    agua: Oceano
+    montanha: Montanha
+    terra: Montanha
+    anciao: Ancião
+    elder: Ancião

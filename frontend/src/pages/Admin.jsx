@@ -7,11 +7,12 @@ import ItemIcon from '../components/ItemIcon.jsx';
 import BaseInfo from '../components/BaseInfo.jsx';
 import { StatIcon } from '../components/StatIcon.jsx';
 import SitePublicPanel from '../components/SitePublicPanel.jsx';
+import DraftAdmin from '../components/DraftAdmin.jsx';
 
 /** Admin-only strings (kept here instead of the shared dictionary). */
 const L = {
   pt: {
-    items: 'Itens', ornn: 'Ornn & Forja Viva', xp: 'Tabela de XP', prices: 'Preço por status', catalog: 'Reimportar catálogo',
+    items: 'Itens', ornn: 'Ornn & Forja Viva', xp: 'Tabela de XP', prices: 'Preço por status', catalog: 'Reimportar catálogo', draft: 'Draft e voz',
     saved: 'Salvo.', error: 'Erro: {msg}', close: 'fechar', save: 'Salvar', del: 'Apagar', search: 'Buscar…', newItem: '+ Novo',
     pickHint: 'Selecione um item para editar. Itens editados (✎) não são sobrescritos pela reimportação.',
     editing: 'Editar #{id}', creating: 'Novo item', deleteConfirm: 'Apagar "{name}"?', deleted: 'Item apagado.',
@@ -43,7 +44,7 @@ const L = {
     report: 'Patch {patch}: {ins} inseridos, {upd} atualizados, {skip} preservados (editados), {stats} status.',
   },
   en: {
-    items: 'Items', ornn: 'Ornn & Living Forge', xp: 'XP table', prices: 'Price per stat', catalog: 'Re-import catalog',
+    items: 'Items', ornn: 'Ornn & Living Forge', xp: 'XP table', prices: 'Price per stat', catalog: 'Re-import catalog', draft: 'Draft and voice',
     saved: 'Saved.', error: 'Error: {msg}', close: 'close', save: 'Save', del: 'Delete', search: 'Search…', newItem: '+ New',
     pickHint: 'Select an item to edit. Edited items (✎) are not overwritten by a re-import.',
     editing: 'Edit #{id}', creating: 'New item', deleteConfirm: 'Delete "{name}"?', deleted: 'Item deleted.',
@@ -82,7 +83,7 @@ function a(key, vars) {
   return s;
 }
 
-const SUBTABS = ['items', 'ornn', 'xp', 'prices', 'catalog'];
+const SUBTABS = ['items', 'ornn', 'xp', 'prices', 'catalog', 'draft'];
 
 export default function Admin({ meta, items, onChanged }) {
   const [tab, setTab] = useState('items');
@@ -119,6 +120,7 @@ export default function Admin({ meta, items, onChanged }) {
       {tab === 'xp' && <XpAdmin meta={meta} run={run} />}
       {tab === 'prices' && <PricesAdmin run={run} items={items} />}
       {tab === 'catalog' && <CatalogAdmin run={run} />}
+      {tab === 'draft' && <DraftAdmin />}
     </div>
   );
 }
