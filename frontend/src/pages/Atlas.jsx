@@ -261,7 +261,7 @@ function Partners({ row }) {
 function ConditionTable({ rows, reading }) {
   return (
     <table className="data">
-      <thead><tr><th>Condição</th><th>Sozinha</th><th>Nas builds</th><th>Com o fixado</th><th>Por mil de ouro</th><th>Com quem</th></tr></thead>
+      <thead><tr><th>Condição</th><th>Sozinha</th><th>Nas builds</th><th>Com o fixado</th><th>Por mil de ouro</th><th title="Quanto o kit do campeão converte essa condição em efeito (razões das habilidades, dependência de ataques básicos, tipo de dano, mana)">Aproveita o kit?</th><th>Com quem</th></tr></thead>
       <tbody>
         {rows.map((r) => {
           const v = r[reading] ?? r.here;
@@ -273,6 +273,8 @@ function ConditionTable({ rows, reading }) {
               <td className={tone(r.inBuilds)}>{signed(r.inBuilds)}</td>
               <td className={tone(r.here)}>{signed(r.here)}</td>
               <td className={tone(v)}>{r.gold ? signed((v / r.gold) * 1000) : '—'}</td>
+              <td className={r.offKit ? 'atlas-warn' : ''} title={r.offKit ? 'Fora do arquétipo: só entra na build montada se vencer as do kit pela margem' : ''}>
+                {r.kit == null ? '—' : `${Math.round(r.kit * 100)}%`}{r.offKit && ' ⚠'}</td>
               <td className="small"><Partners row={r} /></td>
             </tr>
           );
@@ -682,6 +684,8 @@ function Guides({ run, m, itemsList, a, setA, b, setB }) {
         {g && <span className="small">Corrida de {m.a.champion}: ajustada {n1(g.byOrder[0])} · 1D {n1(g.byOrder[1])} · 2D {n1(g.byOrder[2])} · 3D {n1(g.byOrder[3])}</span>}
       </div>
       <p className="muted small">Cérebros: {m.a.champion} {brainName(m.brainA, m.brainNoteA)} · {m.b.champion} {brainName(m.brainB, m.brainNoteB)}.
+        {' '}Objetivo: {[[m.a, m.objectiveA], [m.b, m.objectiveB]].map(([sd, o]) => `${sd.champion} ${o && o[1] > 0
+          ? `duelo ${Math.round(o[0] * 100)}% + equipe ${Math.round(o[1] * 100)}%` : 'só o duelo'}`).join(' · ')}.
         {g?.mode === 'progressao' && <> Contra a progressão natural: o outro lado não tem build fixa; o que ele fixou é o começo da cadeia
         de compras (Rodada 19), sorteada nos minutos da execução, e cada build é julgada pela média e pela robustez sobre os sorteios.</>}</p>
       {error && <p className="error">{error}</p>}

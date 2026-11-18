@@ -57,7 +57,12 @@ public class AtlasService {
     private final CampaignService campaign;
     private final com.ornnplanner.publico.PublicMode publicMode;
     private final com.ornnplanner.arena.progressao.ProgressionService progression;
+    private final com.ornnplanner.arena.fight.ChampionProfiles profiles;
+    private final com.ornnplanner.seed.ChampionCatalog champions;
+    private final EffectTestService effects;
     private final Map<String, Object> seed;
+    private final KitUse.Rules kitRules;
+    private final Map<String, KitUse.Kit> kits = new java.util.concurrent.ConcurrentHashMap<>();
     private final ExecutorService runner = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "atlas");
         t.setDaemon(true);
@@ -69,9 +74,14 @@ public class AtlasService {
     public AtlasService(AtlasRepository repo, AtlasCatalog catalog, ArenaService arena, @Lazy CampaignService campaign,
                         com.ornnplanner.publico.PublicMode publicMode,
                         @Lazy com.ornnplanner.arena.progressao.ProgressionService progression,
+                        com.ornnplanner.arena.fight.ChampionProfiles profiles, com.ornnplanner.seed.ChampionCatalog champions,
+                        @Lazy EffectTestService effects,
                         @Value("${planner.seed.atlas:classpath:seed/atlas_7_3d.yml}") Resource file) {
         this.repo = repo;
         this.progression = progression;
+        this.profiles = profiles;
+        this.champions = champions;
+        this.effects = effects;
         this.publicMode = publicMode;
         this.catalog = catalog;
         this.arena = arena;
@@ -81,6 +91,22 @@ public class AtlasService {
         } catch (IOException e) {
             throw new IllegalStateException("Cannot read seed file " + file, e);
         }
+        this.kitRules = kitRules(seed);
+    }
+
+    /** The seed's {@code aproveita_kit}. */
+    @SuppressWarnings("unchecked")
+    static KitUse.Rules kitRules(Map<String, Object> seed) {
+        KitUse.Rules r = new KitUse.Rules();
+        Map<String, Object> m = (Map<String, Object>) seed.getOrDefault("aproveita_kit", Map.of());
+        ((Map<String, Object>) m.getOrDefault("dependencia_ataque", Map.of())).forEach((k, v) -> r.classAttack.put(k, num(v, 0.5)));
+        r.classWeight = num(m.get("peso_classe"), r.classWeight);
+        r.critWithoutText = num(m.get("critico_sem_texto"), r.critWithoutText);
+        r.attackSpeed = num(m.get("velocidade_ataque"), r.attackSpeed);
+        r.threshold = num(m.get("limiar"), r.threshold);
+        r.margin = num(m.get("margem"), r.margin);
+        ((Map<String, Object>) m.getOrDefault("status", Map.of())).forEach((k, v) -> r.stats.put(k, String.valueOf(v)));
+        return r;
     }
 
     /** Runs left running by a stop of the app go back to the queue, which starts again. */
@@ -153,6 +179,8 @@ public class AtlasService {
         c.meanWeight = num(all.get("peso_media"), c.meanWeight);
         c.lowPercentile = num(all.get("percentil_baixo"), c.lowPercentile);
         c.branchWarning = num(all.get("aviso_ramo"), c.branchWarning);
+        c.objective = str(all.get("objetivo"));
+        c.teamStarts = (int) num(all.get("largadas_equipe"), c.teamStarts);
         return c;
     }
 
@@ -252,6 +280,7 @@ public class AtlasService {
         mr.a = side(baseA, c);
         mr.b = side(baseB, c);
         brains(c, mr, baseA, baseB);
+        objectives(c, mr);
         Fights f = new Fights(c, baseA, baseB, minute, mr);
         String tag = "min " + fmt(minute) + ": ";
         // 1 dimension (and the base)
@@ -261,6 +290,9 @@ public class AtlasService {
         mr.b.conditions.forEach(x -> sets.add("B:" + x.key));
         f.measure(sets, id, tag + "1 dimensão");
         mr.base = mr.races.get("");
+        for (AtlasModel.MinuteResult t : teams(mr)) {
+            t.base = t.races.getOrDefault("", 50.0);
+        }
         List<String> poolA = top(mr, "A", c.top2d, false);
         List<String> poolB = top(mr, "B", c.top2d, false);
         if (c.dims.contains(2) && !cancel) {
@@ -317,6 +349,202 @@ public class AtlasService {
         mr.brainB = cb == null ? "tactical" : cb.brain;
         mr.brainNoteA = ca == null ? null : choiceNote(ca);
         mr.brainNoteB = cb == null ? null : choiceNote(cb);
+    }
+
+    // ------------------------------------------------------------------ objective by role (Rodada 19, part 4)
+
+    /**
+     * Each side's objective by its class (seed {@code objetivo_por_classe}: "Classe/Subclasse" first, then the class):
+     * the duel's weight and the team fight's. A side with a team weight gets its team measures.
+     */
+    @SuppressWarnings("unchecked")
+    void objectives(AtlasModel.Config c, AtlasModel.MinuteResult mr) {
+        if (!"papel".equals(c.objective)) {
+            return;
+        }
+        Map<String, Object> table = (Map<String, Object>) seed.getOrDefault("objetivo_por_classe", Map.of());
+        for (String side : List.of("A", "B")) {
+            AtlasModel.Side s = "A".equals(side) ? mr.a : mr.b;
+            double[] o = {1, 0};
+            com.ornnplanner.arena.fight.ChampionProfiles.Profile p = profiles.of(s.champion);
+            if (p != null) {
+                Object w = null;
+                for (String cl : p.classes) {
+                    if (w == null) {
+                        w = table.get(cl);
+                    }
+                }
+                for (String cl : p.mainClasses) {
+                    if (w == null) {
+                        w = table.get(cl);
+                    }
+                }
+                if (w instanceof Map) {
+                    double duel = num(((Map<String, Object>) w).get("duelo"), 1);
+                    double team = num(((Map<String, Object>) w).get("equipe"), 0);
+                    double sum = duel + team;
+                    if (sum > 0) {
+                        o = new double[] {duel / sum, team / sum};
+                    }
+                }
+            }
+            AtlasModel.MinuteResult t = null;
+            if (o[1] > 0) {
+                t = new AtlasModel.MinuteResult();
+                t.minute = mr.minute;
+                t.a = null;
+                t.b = null;
+            }
+            if ("A".equals(side)) {
+                mr.objectiveA = o;
+                mr.teamA = t;
+            } else {
+                mr.objectiveB = o;
+                mr.teamB = t;
+            }
+        }
+    }
+
+    /** The minute's team measures (none, one or two). */
+    static List<AtlasModel.MinuteResult> teams(AtlasModel.MinuteResult mr) {
+        List<AtlasModel.MinuteResult> out = new ArrayList<>();
+        if (mr.teamA != null) {
+            out.add(mr.teamA);
+        }
+        if (mr.teamB != null) {
+            out.add(mr.teamB);
+        }
+        return out;
+    }
+
+    /** The team fight's settings: the preset scenario its carry comes from, which ally, and its starts. */
+    @SuppressWarnings("unchecked")
+    private String teamScenario() {
+        Map<String, Object> m = (Map<String, Object>) seed.getOrDefault("equipe", Map.of());
+        return String.valueOf(m.getOrDefault("cenario", "mergulho_no_carry"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private int teamAlly() {
+        Map<String, Object> m = (Map<String, Object>) seed.getOrDefault("equipe", Map.of());
+        return (int) num(m.get("aliado"), 0);
+    }
+
+    /** The allied carry of each side at a minute: {A's, B's} (null when the side has no team measure). */
+    private Arena.Input[] carries(AtlasModel.MinuteResult mr) {
+        Arena.Input ca = mr.teamA == null ? null : effects.allyOf(teamScenario(), teamAlly(), mr.minute, 0);
+        Arena.Input cb = mr.teamB == null ? null : effects.allyOf(teamScenario(), teamAlly(), mr.minute, 1);
+        if (mr.teamA != null && ca == null || mr.teamB != null && cb == null) {
+            throw new IllegalStateException("Cenário de equipe sem aliado: " + teamScenario());
+        }
+        return new Arena.Input[] {ca, cb};
+    }
+
+    /**
+     * The small team fight of start k, in side A's view: the protecting side with its allied carry behind it, the other
+     * champion diving the carry (Rodada 14's support scenarios). The race is the carry's lifebar against the diver's.
+     */
+    private double teamRaceAt(Arena.Input a, Arena.Input b, Arena.Input carry, String protect, AtlasModel.Config c, int k) {
+        Arena.Input x = a.copy();
+        Arena.Input y = b.copy();
+        Arena.Input z = carry.copy();
+        x.x = 4600;
+        x.y = 0;
+        y.x = 4600 + DISTANCES[k % DISTANCES.length];
+        y.y = LATERAL[(k + k / DISTANCES.length) % LATERAL.length];
+        x.healthTrail = true;
+        y.healthTrail = true;
+        z.healthTrail = true;
+        EffectModel.Measures m = new EffectModel.Measures();
+        if ("A".equals(protect)) {
+            z.x = x.x - 350;
+            z.y = 0;
+            y.target = 2;
+            EffectTestService.race(m, arena.runPlain(List.of(x, y, z), c.duration), 2, 1, 0);
+            return m.race;
+        }
+        z.x = y.x + 350;
+        z.y = y.y;
+        x.target = 2;
+        EffectTestService.race(m, arena.runPlain(List.of(y, x, z), c.duration), 2, 1, 0);
+        return 100 - m.race;
+    }
+
+    /** The team fights' races over the run's team starts: {A protecting, B protecting} (NaN when not measured). */
+    private double[] teamRaces(Arena.Input a, Arena.Input b, Arena.Input[] carry, AtlasModel.Config c) {
+        double[] out = {Double.NaN, Double.NaN};
+        int n = Math.max(1, c.teamStarts);
+        for (int side = 0; side < 2; side++) {
+            if (carry[side] == null) {
+                continue;
+            }
+            double sum = 0;
+            for (int k = 0; k < n; k++) {
+                sum += teamRaceAt(a, b, carry[side], side == 0 ? "A" : "B", c, k);
+            }
+            out[side] = sum / n;
+        }
+        return out;
+    }
+
+    // ------------------------------------------------------------------ the kit (Rodada 19, part 4)
+
+    /** What the kit of a champion is read from (cached by name). */
+    KitUse.Kit kitOf(String champion) {
+        return kits.computeIfAbsent(champion == null ? "" : champion, name -> {
+            KitUse.Kit k = new KitUse.Kit();
+            com.ornnplanner.arena.fight.ChampionProfiles.Profile p = profiles.of(name);
+            if (p != null) {
+                k.classes = p.mainClasses;
+                k.attackShare = p.attackDps + p.abilityDps > 0 ? p.attackDps / (p.attackDps + p.abilityDps) : 0.5;
+                k.physical = p.physical;
+                k.magic = p.magic;
+            }
+            Map<String, Object> champ = champions.find(com.ornnplanner.seed.ChampionCatalog.code(name)).orElse(null);
+            if (champ != null) {
+                Set<String> ratios = new HashSet<>();
+                for (com.ornnplanner.arena.fight.AbilityParser.Ability ab : com.ornnplanner.arena.fight.AbilityParser.abilities(champ)) {
+                    if (ab.damage != null) {
+                        ab.damage.terms.forEach(t -> {
+                            if (t.stat != null) {
+                                ratios.add(t.stat);
+                            }
+                        });
+                    }
+                }
+                k.ratios = ratios;
+                String text = String.valueOf(champ.get("habilidades")).toLowerCase(java.util.Locale.ROOT);
+                k.critText = text.contains("crític") || text.contains("critic");
+                Object st = champ.get("status");
+                Object l1 = st instanceof Map ? ((Map<?, ?>) st).get("nv1") : null;
+                Object mana = l1 instanceof Map ? ((Map<?, ?>) l1).get("Mana") : null;
+                k.mana = mana instanceof Number && ((Number) mana).doubleValue() > 0;
+            }
+            return k;
+        });
+    }
+
+    /** How much a side's kit turns an item (its flat stats, weighted by their gold) into effect. */
+    double itemKit(String champion, long itemId) {
+        Map<String, Double> gold = new LinkedHashMap<>();
+        catalog.flatStats(itemId).forEach((stat, v) -> {
+            Double g = catalog.statGold(stat, v);
+            if (g != null && g > 0) {
+                gold.merge(stat, g, Double::sum);
+            }
+        });
+        return KitUse.weighted(kitOf(champion), kitRules, gold);
+    }
+
+    /** A condition's kit use: a stat's own, an item passive's as its item's, runes and spells 1. */
+    double conditionKit(String champion, AtlasModel.Condition c) {
+        if ("status".equals(c.source)) {
+            return KitUse.stat(kitOf(champion), kitRules, c.stat);
+        }
+        if ("passiva".equals(c.source) && c.itemId != null) {
+            return itemKit(champion, c.itemId);
+        }
+        return 1;
     }
 
     private static String choiceNote(com.ornnplanner.arena.AutoBrain.Choice ch) {
@@ -623,27 +851,47 @@ public class AtlasService {
                     todo.add(s);
                 }
             }
-            mr.races.putAll(run(todo, id, stage));
+            Map<String, double[]> got = run(todo, id, stage, true);
+            got.forEach((k, v) -> {
+                mr.races.put(k, v[0]);
+                if (mr.teamA != null && !Double.isNaN(v[1])) {
+                    mr.teamA.races.put(k, v[1]);
+                }
+                if (mr.teamB != null && !Double.isNaN(v[2])) {
+                    mr.teamB.races.put(k, v[2]);
+                }
+            });
         }
 
-        /** Measures sets kept apart from the races (the validation: the prediction must not see them). */
+        /** Measures sets kept apart from the races (the validation: the prediction must not see them; duel only). */
         Map<String, Double> measureApart(List<String> sets, long id, String stage) {
-            return run(sets, id, stage);
+            Map<String, Double> out = new LinkedHashMap<>();
+            run(sets, id, stage, false).forEach((k, v) -> out.put(k, v[0]));
+            return out;
         }
 
-        private Map<String, Double> run(List<String> todo, long id, String stage) {
-            Map<String, Double> out = new LinkedHashMap<>();
+        private Arena.Input[] carry;
+
+        private Map<String, double[]> run(List<String> todo, long id, String stage, boolean team) {
+            if (team && carry == null) {
+                carry = carries(mr);
+            }
+            Arena.Input[] cs = team ? carry : new Arena.Input[] {null, null};
+            Map<String, double[]> out = new LinkedHashMap<>();
             for (int from = 0; from < todo.size() && !cancel; from += BATCH) {
                 List<String> batch = todo.subList(from, Math.min(todo.size(), from + BATCH));
-                List<Callable<Double>> jobs = new ArrayList<>();
+                List<Callable<double[]>> jobs = new ArrayList<>();
                 long p0 = System.nanoTime();
                 for (String set : batch) {
                     Arena.Input a = input(set, "A");
                     Arena.Input b = input(set, "B");
-                    jobs.add(() -> race(a, b));
+                    jobs.add(() -> {
+                        double[] t = teamRaces(a, b, cs, c);
+                        return new double[] {race(a, b), t[0], t[1]};
+                    });
                 }
                 long p1 = System.nanoTime();
-                List<Double> done = ArenaService.parallel(jobs);
+                List<double[]> done = ArenaService.parallel(jobs);
                 mr.prepareSeconds += (p1 - p0) / 1e9;
                 mr.fightSeconds += (System.nanoTime() - p1) / 1e9;
                 for (int i = 0; i < batch.size(); i++) {
@@ -1015,8 +1263,9 @@ public class AtlasService {
         int fights = 0;
         for (int from = 0; from < todo.size() && !cancel; from += BATCH) {
             List<AtlasModel.BuildSample> batch = todo.subList(from, Math.min(todo.size(), from + BATCH));
-            List<Callable<Double>> jobs = new ArrayList<>();
+            List<Callable<double[]>> jobs = new ArrayList<>();
             long p0 = System.nanoTime();
+            Arena.Input[] cs = carries(mr);
             for (AtlasModel.BuildSample s : batch) {
                 ArenaModel.Scenario sc = new ArenaModel.Scenario();
                 sc.fighters = List.of(fixedSlot(baseA, mr, s.a, 0), fixedSlot(baseB, mr, s.b, 1));
@@ -1027,15 +1276,18 @@ public class AtlasService {
                     for (double v : r) {
                         sum += v;
                     }
-                    return sum / r.size();
+                    double[] t = teamRaces(ins.get(0), ins.get(1), cs, c);
+                    return new double[] {sum / r.size(), t[0], t[1]};
                 });
             }
             long p1 = System.nanoTime();
-            List<Double> done = ArenaService.parallel(jobs);
+            List<double[]> done = ArenaService.parallel(jobs);
             mr.prepareSeconds += (p1 - p0) / 1e9;
             mr.fightSeconds += (System.nanoTime() - p1) / 1e9;
             for (int i = 0; i < batch.size(); i++) {
-                batch.get(i).race = done.get(i);
+                batch.get(i).race = done.get(i)[0];
+                batch.get(i).teamA = Double.isNaN(done.get(i)[1]) ? null : done.get(i)[1];
+                batch.get(i).teamB = Double.isNaN(done.get(i)[2]) ? null : done.get(i)[2];
             }
             fights += batch.size() * Math.max(1, c.starts);
             repo.progress(id, "rodando", stage, Math.min(todo.size(), from + BATCH), todo.size());
@@ -1281,6 +1533,23 @@ public class AtlasService {
         mr.model = fitModel(mr, ws, ys);
         prime(mr);
         mr.inBuilds = inBuilds(mr, ws);
+        for (String side : List.of("A", "B")) {
+            AtlasModel.MinuteResult t = "A".equals(side) ? mr.teamA : mr.teamB;
+            if (t == null) {
+                continue;
+            }
+            List<Map<String, Double>> tw = new ArrayList<>();
+            List<Double> ty = new ArrayList<>();
+            for (int i = 0; i < mr.builds.size(); i++) {
+                Double v = "A".equals(side) ? mr.builds.get(i).teamA : mr.builds.get(i).teamB;
+                if (v != null) {
+                    tw.add(ws.get(i));
+                    ty.add(v);
+                }
+            }
+            t.model = fitModel(t, tw, ty);
+            prime(t);
+        }
     }
 
     /** Penalties on the conditions' corrections tried by the cross validation (-1 = no corrections). */
@@ -1444,6 +1713,9 @@ public class AtlasService {
     static void prime(AtlasModel.MinuteResult mr) {
         mr.useLogit = !"pontos".equals(mr.scale);
         mr.logits = AtlasMath.logits(mr.races);
+        for (AtlasModel.MinuteResult t : teams(mr)) {
+            prime(t);
+        }
     }
 
     /** A set's prediction before the scale's last step: log-odds (model or logit scale) or points. */
@@ -1585,6 +1857,8 @@ public class AtlasService {
             row.inBuilds = mr.inBuilds == null ? null : mr.inBuilds.get(k);
             row.here = gain(mr, all, raw, k, stat);
             row.gold = stat ? catalog.statGold(c.stat, c.amount) : null;
+            row.kit = conditionKit(s.champion, c);
+            row.offKit = row.kit < kitRules.threshold;
             partners(mr, side, k, row, names);
             r.rows.add(row);
         }
@@ -1756,7 +2030,16 @@ public class AtlasService {
 
     /** A side's value (its own view) of its weights against the other side's, on a minute's measures. */
     double value(AtlasModel.MinuteResult mr, String side, Map<String, Double> mine, Map<String, Double> theirs) {
-        return view(side, predict(mr, mine, theirs, 0));
+        double duel = view(side, predict(mr, mine, theirs, 0));
+        double[] o = "A".equals(side) ? mr.objectiveA : mr.objectiveB;
+        AtlasModel.MinuteResult t = "A".equals(side) ? mr.teamA : mr.teamB;
+        if (o == null || o[1] <= 0 || t == null || t.races.isEmpty()) {
+            return duel;   // the duel only (runs before Rodada 19, or a class without a team weight)
+        }
+        if (t.logits == null) {
+            prime(t);
+        }
+        return o[0] * duel + o[1] * view(side, predict(t, mine, theirs, 0));
     }
 
     /** A purchase order's evaluation: {score, mean, robustness, worst, low percentile}; with notes, each minute's. */
@@ -1837,15 +2120,18 @@ public class AtlasService {
         AtlasModel.Fixed cur = copy(fixed);
         Set<Long> held0 = new HashSet<>(cur.items);
         double now = evaluate(run, side, cur, opps, null)[0];
+        String champ = s.champion;
+        // the kit's rule only where the objective is the role's (a run that measures it); else every item is in the kit
+        double margin = "papel".equals(run.config.objective) ? kitRules.margin : 0;
+        Map<Long, Double> offKit = new LinkedHashMap<>();
         for (int guard = 0; guard < 8; guard++) {
             long items = cur.items.stream().map(catalog::item).filter(it -> it != null && !it.boots()).count();
             boolean boots = cur.items.stream().map(catalog::item).anyMatch(it -> it != null && it.boots());
             if (items >= 5 && boots) {
                 break;
             }
-            ItemDef best = null;
-            double bestV = -Double.MAX_VALUE;
-            double bestScore = now;
+            List<ItemDef> cands = new ArrayList<>();
+            List<double[]> vs = new ArrayList<>();
             for (ItemDef it : catalog.buyable()) {
                 if (cur.items.contains(it.id) || it.boots() && (boots || !finalBoots(it)) || !it.boots() && items >= 5
                         || !itemFits(it, cur.items) || it.cost <= 0) {
@@ -1854,18 +2140,30 @@ public class AtlasService {
                 cur.items.add(it.id);
                 double sc = evaluate(run, side, cur, opps, null)[0];
                 cur.items.remove(cur.items.size() - 1);
-                double v = (sc - now) / it.cost * 1000;
-                if (v > bestV + 1e-12) {
-                    bestV = v;
-                    best = it;
-                    bestScore = sc;
-                }
+                cands.add(it);
+                vs.add(new double[] {(sc - now) / it.cost * 1000, sc, inKit(champ, it.id) ? 1 : 0});
             }
-            if (best == null) {
+            if (cands.isEmpty()) {
                 break;
             }
-            cur.items.add(best.id);
-            now = bestScore;
+            double[] values = new double[cands.size()];
+            double[] scores = new double[cands.size()];
+            boolean[] in = new boolean[cands.size()];
+            for (int k = 0; k < cands.size(); k++) {
+                values[k] = vs.get(k)[0];
+                scores[k] = vs.get(k)[1];
+                in[k] = vs.get(k)[2] > 0;
+            }
+            int pick = KitUse.choose(values, scores, margin > 0 ? in : all(in.length), margin);
+            if (pick < 0) {
+                break;
+            }
+            if (margin > 0 && !in[pick]) {
+                int bestIn = KitUse.choose(values, scores, in, Double.MAX_VALUE);
+                offKit.put(cands.get(pick).id, bestIn >= 0 && in[bestIn] ? scores[pick] - scores[bestIn] : null);
+            }
+            cur.items.add(cands.get(pick).id);
+            now = scores[pick];
         }
         for (String kind : List.of("fundamental", "runa", "feitico")) {
             for (int guard = 0; guard < 4; guard++) {
@@ -1913,12 +2211,16 @@ public class AtlasService {
                     }
                     cur.items.set(i, it.id);
                     double sc = evaluate(run, side, cur, opps, null)[0];
-                    if (sc > now + 0.05) {
+                    boolean out = margin > 0 && !inKit(champ, it.id);
+                    if (sc > now + (out ? margin : 0.05)) {
                         now = sc;
                         bestId = it.id;
                     }
                 }
                 cur.items.set(i, bestId != null ? bestId : old);
+                if (bestId != null && margin > 0 && !inKit(champ, bestId)) {
+                    offKit.put(bestId, null);
+                }
                 changed |= bestId != null;
             }
             if (!changed) {
@@ -1926,6 +2228,28 @@ public class AtlasService {
             }
         }
         fillNatural(run, side, cur, held0, theirs, opps, perfect != null, g);
+        // the kit of each item, and the ones out of the archetype that won by the margin
+        for (AtlasModel.Option o : g.build) {
+            o.kit = itemKit(champ, o.itemId);
+            if (margin > 0 && !"fixo".equals(o.key) && o.kit < kitRules.threshold) {
+                Double by = offKit.get(o.itemId);
+                String w = String.format(java.util.Locale.ROOT, "fora do arquétipo (o kit aproveita %.0f%%)%s: descoberta a conferir",
+                        100 * o.kit, by == null ? "" : String.format(java.util.Locale.ROOT, ", vence as do kit por %.1f pontos", by));
+                o.warning = o.warning == null ? w : w + "; " + o.warning;
+                g.natural.warnings.add(o.name + ": " + w);
+            }
+        }
+    }
+
+    /** Whether a side's kit uses an item (its kit use at or above the seed's threshold). */
+    boolean inKit(String champion, long itemId) {
+        return itemKit(champion, itemId) >= kitRules.threshold;
+    }
+
+    private static boolean[] all(int n) {
+        boolean[] b = new boolean[n];
+        java.util.Arrays.fill(b, true);
+        return b;
     }
 
     /** The build with a keystone, a rune or a spell condition added. */

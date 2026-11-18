@@ -205,3 +205,62 @@ Parte 5.
 Força da Natureza 8', Passos de Mercúrio 9,7', Desespero Eterno 14' contra o Rumble previsto (Liandry 3,6', Virtude
 Radiante 7,4', Cajado do Vazio 11,6'...), nota 91,8 (pior caso 91,1). Com Liandry fixado no Rumble e o oponente perfeito,
 o Ornn troca a ordem (Desespero antes da bota) e a nota cai para 81,3.
+
+## Parte 4: objetivo por papel e aproveitamento do kit (✅)
+
+**Cérebro:** o padrão do Atlas passa a ser o Automático (`cerebro: auto`): a IA do campeão ou a da classe, escolhida
+uma vez por lado e minuto (Parte 1). A troca parada (`tactical_stand`) e o Tático continuam como opção no seed e na tela
+(o seletor "Cérebro" ao rodar uma execução). As execuções antigas seguem com a troca parada.
+
+**Objetivo por classe** (`objetivo: papel` no seed; `duelo` é o de antes e o das execuções antigas). A nota de cada lado
+mistura o duelo 1x1 e uma luta pequena de equipe, com os pesos de `objetivo_por_classe` ("Classe/Subclasse" ou a
+classe; editáveis):
+
+| Classe | Duelo | Equipe |
+|---|---|---|
+| Tanque, Controlador | 0,35 | 0,65 |
+| Lutador | 0,8 | 0,2 |
+| Assassino | 0,9 | 0,1 |
+| Mago, Atirador, Especialista | 1 | 0 |
+
+- **A luta de equipe** usa o cenário `suporte` da Rodada 14 (`equipe.cenario: mergulho_no_carry`): o atirador aliado do
+  cenário, crescendo com o minuto e mortal, fica atrás do lado que protege, e o campeão do outro lado mergulha nele (o
+  alvo dele é o carry). A medida é a corrida das barras do carry e do mergulhador
+  (`EffectTestService.race` com o carry como "nós"): o que o lado faz pelo carry (controle no mergulhador, dano
+  absorvido, dano inimigo cortado, matar o mergulhador antes) entra nela. É o "carry vivo" das medidas da Rodada 14
+  numa escala de 0 a 100, a mesma do duelo.
+- Cada condição, par, trio e build inteira medidos ganham também a corrida de equipe (de cada lado que tem peso de
+  equipe), com `largadas_equipe` (3) largadas. As notas, o modelo de builds inteiras (ajustado nas mesmas builds) e a
+  previsão de equipe são os do duelo, num segundo mapa (`MinuteResult.teamA/teamB`).
+- **A nota de um lado** (guia contra a progressão natural) é `duelo × peso + equipe × peso`, cada uma na visão do lado.
+  O modo "contra o fixado", "Lutar de verdade", "Melhorar lutando" e o refino continuam só no duelo.
+- No Ornn × Rumble só o Ornn (Tanque) tem a luta de equipe; o Rumble (Mago) é só duelo.
+
+**"Aproveita o kit?"** (`KitUse`, seed `aproveita_kit`): para cada status, quanto o kit do campeão o converte em
+efeito, de 0 a 1.
+
+- **Dependência de ataques básicos:** a da classe principal no seed (Atirador 1, Lutador e Assassino 0,6, Especialista
+  0,4, Tanque 0,3, Controlador 0,2, Mago 0,15), misturada (60/40) com a parte do dano por segundo dos ataques básicos
+  no perfil (`ChampionProfiles`). Só o perfil não separa: nos números de referência, os ataques do Ornn são 72% do dano
+  dele (as habilidades de tanque dão pouco dano), mais que os da Caitlyn (41%).
+- **Por status:** crítico = a dependência (× 0,6 quando nenhuma habilidade fala de crítico); velocidade de ataque = a
+  dependência × 0,8; roubo de vida = a dependência; Dano de Ataque e Poder de Habilidade = 1 se alguma habilidade escala
+  com ele (`AbilityParser`), senão (só o DdA) a dependência; penetrações = a parte do dano daquele tipo; mana = 1 só para
+  quem usa mana; o resto (vida, resistências, aceleração, velocidade...) = 1.
+- **Um item ou passiva** vale a média dos status dele, pelo ouro.
+- **Números:** Ornn: crítico 0,28, velocidade de ataque 0,38 (fora); Jinx: 0,49 e 0,66 (dentro); Rumble: mana 0 (fora),
+  Poder de Habilidade 1. Itens só de crítico e velocidade de ataque (Dançarina Fantasma, Furacão de Runaan, Adagas
+  Rápidas Navori, Canhão Fumegante) ficam em 0,35 para o Ornn e ~0,6 para a Jinx. Itens de Dano de Ataque continuam no
+  kit do Ornn (Gume do Infinito 0,79), porque as habilidades dele escalam com DdA.
+- **Não proíbe nada:** abaixo do `limiar` (0,4) a condição é "fora do arquétipo". Na montagem contra a progressão
+  natural, um item fora do arquétipo só entra se a nota com ele (objetivo do papel e robustez) vencer a do melhor item do
+  kit por `margem` (3 pontos); numa troca, se subir a nota em 3 pontos. Ele aparece marcado "fora do arquétipo (o kit
+  aproveita X%), vence as do kit por Y pontos: descoberta a conferir". A regra só vale nas execuções com o objetivo do
+  papel.
+- **Na tela:** uma coluna "Aproveita o kit?" no relatório de condições (com ⚠ fora do arquétipo) e a marca no item da
+  build montada; o cabeçalho do guia diz o cérebro e o objetivo de cada lado.
+
+**Testes:** `AtlasKitTest`: com o seed de verdade, o Ornn não converte crítico nem velocidade de ataque e a Jinx sim;
+mana do Rumble 0 e Poder de Habilidade 1; os itens só de crítico e velocidade de ataque ficam fora do kit do Ornn e
+dentro do da Jinx; a regra da margem (vence por 2: fica a do kit; por 4: a descoberta) e a média pelo ouro. A montagem
+do Ornn × Rumble está na Parte 5.

@@ -711,6 +711,19 @@ public class EffectTestService {
         return d;
     }
 
+    /**
+     * Rodada 19: an ally of a preset scenario (the support scenarios' carry), as fought at a minute (grown with it when
+     * the scenario does), mortal, on a team: the Atlas's small team fight. Null when the scenario or the ally is missing.
+     */
+    public Arena.Input allyOf(String scenario, int ally, double minute, int team) {
+        Test t = presets().get(scenario);
+        if (t == null || t.allies == null || ally < 0 || ally >= t.allies.size()) {
+            return null;
+        }
+        Test grown = scaled(t, minute);
+        return botInput(grown.allies.get(ally), team, true);
+    }
+
     private Arena.Input botInput(Bot b, int team, boolean mortal) {
         ArenaModel.Dummy d = dummy(b, team == 1 && !mortal);
         String key = "bot|" + team + "|" + write(d);

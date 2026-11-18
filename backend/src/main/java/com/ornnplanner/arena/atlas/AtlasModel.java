@@ -72,6 +72,13 @@ public final class AtlasModel {
         public double lowPercentile = 0.2;
         /** A choice good against less than this share of the drawn builds gets a warning. */
         public double branchWarning = 0.3;
+        /**
+         * Rodada 19, part 4: papel (each side's objective by its class: the duel and, for tanks and controllers, a small
+         * team fight protecting an allied carry) or duelo (the 1x1 only). Null = duelo (runs before Rodada 19).
+         */
+        public String objective;
+        /** Starts of each team fight (fewer than the duel's: it is the measure's extra cost). */
+        public int teamStarts = 3;
     }
 
     /** One condition a side can have. */
@@ -114,6 +121,15 @@ public final class AtlasModel {
         public String brainB;
         public String brainNoteA;
         public String brainNoteB;
+        /**
+         * Rodada 19, part 4: each side's objective, {duel weight, team weight} (null = the duel only), and the team fight's
+         * measures of the side that has one: its races (side A's view, 0..100) over the same sets, its builds' races in
+         * {@link BuildSample#teamA} / {@link BuildSample#teamB} and its own model. The team objects hold no sides.
+         */
+        public double[] objectiveA;
+        public double[] objectiveB;
+        public MinuteResult teamA;
+        public MinuteResult teamB;
         public Side a = new Side();
         public Side b = new Side();
         /** The race (side A's view, 0..100) with no condition on either side. */
@@ -166,6 +182,9 @@ public final class AtlasModel {
         /** sorteada (any item of the shop) | guiada (among the empty guide's best items per gold) | refino (the guide's own builds and neighbours) */
         public String kind;
         public double race;
+        /** Rodada 19: the team fights' races (side A's view) when the run measures them. */
+        public Double teamA;
+        public Double teamB;
     }
 
     /**
@@ -249,6 +268,8 @@ public final class AtlasModel {
         public Double branchShare;
         /** Why the choice deserves a look (only good against an unlikely branch, out of the archetype...). */
         public String warning;
+        /** Rodada 19: how much the champion's kit turns what it brings into effect (0..1). */
+        public Double kit;
     }
 
     public static class SideGuide {
@@ -335,6 +356,9 @@ public final class AtlasModel {
         public double here;
         /** The gold of a stat condition (null for a passive). */
         public Double gold;
+        /** Rodada 19: how much the champion's kit turns it into effect (0..1), and whether that is out of its archetype. */
+        public Double kit;
+        public boolean offKit;
         /** Own conditions that make it worth more / less (synergy / overlap). */
         public List<Partner> synergies = new ArrayList<>();
         public List<Partner> overlaps = new ArrayList<>();

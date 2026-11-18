@@ -45,6 +45,10 @@
 #   peso_media, percentil_baixo  a nota de uma build: peso_media x a média + o resto x a robustez, que é a média do pior
 #                caso e do percentil baixo (como a versatilidade das runas)
 #   aviso_ramo   uma escolha que só rende contra menos do que essa parte das builds sorteadas ganha um aviso
+#   objetivo     (Rodada 19, parte 4) papel: o objetivo de cada lado sai da classe dele (objetivo_por_classe abaixo):
+#                o duelo e, para quem tem peso de equipe, uma luta pequena com um carry aliado; duelo: só o 1x1 (o de
+#                antes e o das execuções sem o campo)
+#   largadas_equipe  largadas de cada luta de equipe (menos que as do duelo: é o custo a mais de cada medida)
 patch: "7.3d"
 
 padrao:
@@ -61,6 +65,9 @@ padrao:
   refino_builds: 120
   fontes: [status, passiva, fundamental, runa, feitico]
   semente: 1
+  cerebro: auto
+  objetivo: papel
+  largadas_equipe: 3
   modo_guia: progressao
   minutos_progressao: [10, 15, 20, 25]
   amostras_progressao: 12
@@ -73,3 +80,62 @@ execucoes:
     nome: "Ornn × Rumble (piloto)"
     a: ORNN
     b: RUMBLE
+
+# Objetivo por classe (Rodada 19, parte 4): o peso do duelo 1x1 e o da luta de equipe na nota de cada lado. A chave é
+# "Classe/Subclasse" (como em campeoes_<patch>.yml) ou a classe; vale a primeira que existir. Sem chave: só o duelo.
+#   Lutadores e assassinos: o duelo pesa mais. Tanques e controladores: além do duelo, a luta de equipe, que mede o que
+#   eles fazem por um carry aliado.
+objetivo_por_classe:
+  Tanque: {duelo: 0.35, equipe: 0.65}
+  Controlador: {duelo: 0.35, equipe: 0.65}
+  Lutador: {duelo: 0.8, equipe: 0.2}
+  Assassino: {duelo: 0.9, equipe: 0.1}
+  Mago: {duelo: 1.0}
+  Atirador: {duelo: 1.0}
+  Especialista: {duelo: 1.0}
+
+# A luta de equipe: o lado com peso de equipe e o aliado de um cenário de efetividade (o carry do grupo `suporte` da
+# Rodada 14, crescendo com o minuto, mortal) atrás dele; o campeão do outro lado mergulha no carry. A medida é a corrida
+# das barras do carry e do mergulhador: quanto o lado faz o carry viver (controle aplicado, dano absorvido, dano inimigo
+# cortado, matar o mergulhador) entra nela.
+equipe:
+  cenario: mergulho_no_carry
+  aliado: 0
+
+# "Aproveita o kit?" (Rodada 19, parte 4): para cada status, quanto o kit do campeão o converte em efeito (0 a 1).
+#   dependencia_ataque  a dependência de ataques básicos de cada classe; misturada (peso_classe) com a parte do dano por
+#                segundo dos ataques básicos no perfil do campeão (ChampionProfiles)
+#   status       como cada status se converte: ataque (a dependência), critico (a dependência; sem nenhuma menção a
+#                crítico nas habilidades, vezes critico_sem_texto), vel_ataque (a dependência vezes velocidade_ataque),
+#                razao (1 se alguma habilidade escala com ele; o Dano de Ataque, senão, a dependência), fisico / magico
+#                (a parte do dano daquele tipo), mana (1 se o campeão usa mana). Status fora da lista: 1 (vida,
+#                resistências, velocidade, aceleração... todo kit converte)
+#   Um item (ou passiva) vale a média dos status dele, pelo ouro. Abaixo do limiar, a condição é "fora do arquétipo":
+#   não é proibida, mas só entra na build montada se vencer as do kit por `margem` pontos na nota (objetivo do papel e
+#   robustez), e aparece marcada como descoberta a conferir.
+aproveita_kit:
+  limiar: 0.4
+  margem: 3
+  peso_classe: 0.6
+  critico_sem_texto: 0.6
+  velocidade_ataque: 0.8
+  dependencia_ataque:
+    Atirador: 1.0
+    Lutador: 0.6
+    Assassino: 0.6
+    Especialista: 0.4
+    Tanque: 0.3
+    Controlador: 0.2
+    Mago: 0.15
+  status:
+    "Attack Damage": razao
+    "Ability Power": razao
+    "% Critical Rate": critico
+    "% Attack Speed": vel_ataque
+    "% Lifesteal": ataque
+    "Armor Penetration": fisico
+    "% Armor Penetration": fisico
+    "Magic Penetration": magico
+    "% Magic Penetration": magico
+    "Max Mana": mana
+    "% Mana Regeneration": mana
