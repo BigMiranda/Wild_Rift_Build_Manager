@@ -89,3 +89,83 @@ ganho médio dentro das builds medidas, pelo modelo):
 - **Custo:** o Automático não encarece a medida (6,3 min contra 6,8 do `STAND`; quase tudo é preparar os lutadores).
 - Com o Automático, o topo do Ornn é o de um tanque contra um mago (Manto da Meia-noite, Força da Natureza, RM,
   Fimbulwinter). Por isso a Parte 4 o torna o padrão.
+
+## Parte 2: modelo de progressão natural de builds (✅)
+
+**Onde ficou:** `arena/progressao` (não em `engine/`, porque as fontes vêm do banco e da Arena: Descoberta, guias,
+perfis de campeão). `ProgressionModel` é a parte pura (sem Spring, determinística); `ProgressionService` lê as fontes e
+monta o modelo de novo quando uma tabela muda; seed `progressao_7_3f.yml`. A Rodada 20 usa o mesmo serviço.
+
+**Fontes**, com peso no seed (`fontes`):
+
+| Fonte | O que entra | Peso |
+|---|---|---|
+| descoberta | de cada campanha guardada: a build padrão (×2), as ranqueadas (×1) e a de cada nicho (×0,6), na ordem de compra que a Descoberta mediu | 1,0 |
+| salvas | as builds salvas, na ordem dos passos (sem vendas) | 1,5 |
+| meta | as builds meta com `fonte` (sem ordem: a bota entra depois do primeiro item) | 2,0 |
+| guias | cada caminho das guias de decisão, com o peso da frequência dele | 1,5 |
+
+Hoje o banco tem 150 linhas de campanha (142 campeões), 49 builds salvas e nenhuma build meta ou guia: o modelo lê
+~3.000 builds; o Ornn tem 56 da Descoberta e 40 salvas, o Rumble 28 e 2.
+
+**Forma:** uma cadeia "estado → próximo item", em que o estado é o conjunto de itens finais e a bota já comprados.
+
+- Cada build conhecida vota no primeiro item dela que o estado não tem (e que a loja permite), com o peso da fonte vezes
+  a sobreposição com o estado, `(itens em comum / itens do estado) ^ 4`.
+- Mistura, cada parte normalizada (seed `mistura`): as builds do campeão pela sobreposição (1,0); a frequência dos itens
+  nas builds dele, em qualquer posição (0,8); as builds de campeões da mesma subclasse (0,3); as builds do mesmo
+  arquétipo de build da Rodada 9 que o do campeão (0,3; o arquétipo de um campeão sem build é o da subclasse dele); um
+  pouco de tudo o que a loja permite (0,02).
+- **Regras da loja:** itens únicos e grupos exclusivos, uma bota, 5 itens além dela, item de suporte só em quem joga de
+  suporte (o campeão tem build de suporte, ou o pedido diz), bota aprimorada só a partir dos 10:00 no relógio.
+- **Componentes comprados** multiplicam a chance dos itens finais que os usam por
+  `1 + 1,5 × (parte do custo do item que eles já pagam)`; comprado o item, os componentes saem do estado.
+- **Composição inimiga** (seed `composicao`, as leituras das guias: dano mágico ou físico pelo perfil, quem se cura,
+  tanques): quando a regra vale, os itens com aqueles status ou efeitos de combate pesam o fator (RM ×1,4 contra 60%+ de
+  dano mágico, Armadura ×1,4 contra físico, efeito `feridas` ×1,6 contra quem se cura, penetração % ×1,3 contra
+  tanques). Nenhum item ou campeão é citado.
+- **Tempo:** o relógio do planejador e do site, `500 + ritmo × minuto` cobrindo o custo acumulado da build na ordem; três
+  ritmos (atrás 600, padrão 700, à frente 800). A bota aprimorada espera os 10:00, e o que vem depois espera por ela.
+  Um teste confere o relógio contra a linha do tempo do planejador numa build do Ornn (diferença < 0,75 min por item).
+
+**API** (só local; no modo público é 404):
+
+- `GET /api/progressao?campeao=&itens=&componentes=&inimigos=&k=` → o próximo item (distribuição inteira, soma 1) e as k
+  continuações mais prováveis até a build completa (busca em feixe: 60 estados, 10 ramos), com a probabilidade de cada
+  passo e da continuação, e o minuto de cada item nos três ritmos;
+- `GET /api/progressao/amostras?campeao=&minuto=&n=&semente=&itens=&inimigos=` → n builds sorteadas pela cadeia, cada
+  uma num ritmo sorteado (25% / 50% / 25%), com o que já terminou no minuto (o que o Atlas usa);
+- `GET /api/progressao/validacao?campeoes=` → a validação "deixe uma fora".
+
+**Testes:** `ProgressionModelTest` (loja sintética): a soma dá 1; segue as builds conhecidas; regras da loja; um
+componente sobe o item que o usa (e é gasto na compra); a composição inclina a cadeia; a bota aprimorada nunca antes
+dos 10 min (no relógio, nas continuações e nas amostras); determinismo; a conta do "deixe uma fora".
+`ProgressionReportTest` (opcional, `-Dprogressao.report=data/ornn-planner.db`, sobre uma cópia): as 3 continuações
+mais prováveis do Ornn e do Rumble batem com builds da campanha (4 a 6 itens de 6 em comum) e o relógio bate com o
+planejador.
+
+**As 3 mais prováveis** (sem nada comprado, contra o outro; minuto no ritmo padrão):
+
+- Ornn (arquétipo tanque): Manto da Meia-noite 2,9', Botas Galvanizadas 4,6', Resplendor Vazio 8,6', Desespero Eterno
+  12,9', Manto da Aurora 16,8', Duplaguarda de Amaranto 21,4' (e duas variações da ordem e do último item). 4 de 6 em
+  comum com a build da campanha mais próxima: o Ornn tem muitas builds diferentes (96), e a cadeia junta pedaços delas.
+- Rumble (mago contínuo): Liandry 3,6', Virtude Radiante 7,4', Cajado do Vazio 11,6', Sapatos Enfeitiçados 14,8', Eco
+  de Luden 18,8', e Armadura de Warmog / Fúria de Guinsoo / Bastão das Eras. 6 de 6 em comum com builds da campanha.
+- As probabilidades de uma build inteira são pequenas (Ornn 0,008%, Rumble 0,04%): são 6 escolhas seguidas entre ~100
+  itens. O que importa é a ordem entre elas e a distribuição do próximo item.
+
+**Validação "deixe uma fora":** para cada build conhecida (as iguais saem juntas), cada prefixo é um estado e o
+próximo item real fica escondido. O modelo, sem aquela build, ordena o próximo item.
+
+| | Casos | Top-1 | **Top-3** | Top-3 depois da 2ª compra | Linha de base (frequência dos itens do campeão) |
+|---|---|---|---|---|---|
+| Todos os campeões | 19.864 | 28,7% | **50,0%** | 42,9% | 44,4% |
+| Ornn e Rumble | 735 | 24,1% | **49,7%** | 44,5% | 42,6% |
+| Ornn | 553 | | 52,1% | | 42,0% |
+| Rumble | 182 | | 42,3% | | 44,5% |
+
+- O expoente da sobreposição e o peso da frequência foram escolhidos nessa mesma validação (expoente 2 e 0,25 davam
+  47,1%; 4 e 0,8 dão 50,0%). São dois números num grid pequeno: o ganho sobre a linha de base (+5,6 pontos) é real mas
+  modesto.
+- No Rumble a cadeia perde para a linha de base (42,3% × 44,5%): as builds dele na campanha são quase todas a mesma
+  (Liandry, Virtude, Cajado...) e a frequência pura já acerta; a sobreposição só ajuda onde há variedade (Ornn: +10).

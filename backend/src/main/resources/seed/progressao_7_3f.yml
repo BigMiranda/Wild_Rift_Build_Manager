@@ -1,0 +1,74 @@
+# Progressão natural de builds (Rodada 19, docs/rodada-19.md): dado o que um campeão já tem (itens finais e bota, em
+# ordem, e componentes comprados), qual é o próximo item e em que minuto. O Atlas usa o modelo para amostrar o lado de
+# lá ("contra a progressão natural") e a Rodada 20 para os itens parciais informados pelo usuário.
+#
+# Forma: uma cadeia "estado -> próximo item". O estado é o conjunto de itens finais e a bota já comprados. Cada build
+# conhecida vota no primeiro item dela que o estado ainda não tem, com o peso da fonte vezes a sobreposição com o
+# estado: (itens em comum / itens do estado) ^ sobreposicao_expoente. Nenhum item ou campeão é citado no código.
+#
+# Fontes (todas as do banco, sem nome no código):
+#   descoberta   as builds das campanhas guardadas (a padrão, as ranqueadas e as de cada nicho), na ordem de compra
+#                que a Descoberta mediu
+#   salvas       as builds salvas, na ordem dos passos
+#   meta         as builds meta guardadas com `fonte` (sem ordem: a bota entra depois do primeiro item)
+#   guias        os caminhos das guias de decisão, cada um com o peso da sua frequência
+#
+# Mistura (as partes são normalizadas antes de somar; uma parte vazia sai e as outras se reescalam):
+#   campeao        as builds do próprio campeão, pela sobreposição com o estado
+#   campeao_itens  a frequência de cada item nas builds do campeão, em qualquer posição
+#   subclasse      as builds de outros campeões da mesma subclasse (Rodada 14), pela sobreposição
+#   arquetipo      as builds com o mesmo arquétipo (Rodada 9) que o do campeão, pela sobreposição. É o que dá forma a
+#                  campeões com poucas builds
+#   uniforme       um pouco de tudo o que a loja permite
+#
+# Regras da loja (sempre): itens únicos e grupos exclusivos, uma bota, 5 itens finais além dela, item de suporte só em
+# quem joga de suporte (o campeão tem build de suporte, ou o pedido diz), bota aprimorada só a partir do minuto da
+# regra da loja (regras_loja.yml) no relógio.
+#
+# componente   um componente comprado multiplica a chance dos itens finais que o usam por
+#              1 + componente x (parte do custo do item que os componentes já pagam)
+# composicao   regras leves sobre os inimigos (as mesmas leituras das guias: dano mágico ou físico pelo perfil, quem se
+#              cura, tanques). Quando a regra vale, os itens com aqueles status ou efeitos (tipo em combate_<patch>.yml)
+#              pesam o fator (o maior das regras que valem)
+#
+# Relógio: o mesmo do planejador e do site: ouro = 500 + ritmo x minuto; um item sai quando o ouro cobre o custo
+# acumulado da build, na ordem. Três ritmos de ouro por minuto (atrás / padrão / à frente, os do site). As amostras do
+# Atlas sorteiam o ritmo pelos pesos_ritmo.
+patch: "7.3f"
+
+fontes:
+  descoberta: 1.0
+  salvas: 1.5
+  meta: 2.0
+  guias: 1.5
+
+descoberta:
+  padrao: 2.0
+  ranqueada: 1.0
+  nicho: 0.6
+
+mistura:
+  campeao: 1.0
+  campeao_itens: 0.8
+  subclasse: 0.3
+  arquetipo: 0.3
+  uniforme: 0.02
+
+# Escolhidos pela validação "deixe uma fora" (docs/rodada-19.md): expoente 2 e campeao_itens 0,25 davam top-3 de 47%;
+# 4 e 0,8, 50% (a linha de base, só a frequência dos itens do campeão, dá 44%).
+sobreposicao_expoente: 4
+componente: 1.5
+
+ritmos: {atras: 600, padrao: 700, frente: 800}
+pesos_ritmo: {atras: 0.25, padrao: 0.5, frente: 0.25}
+
+composicao:
+  - {nome: "dano mágico", quando: {dano_magico: 0.6}, status: {"Magic Resistance": 1.4}}
+  - {nome: "dano físico", quando: {dano_fisico: 0.6}, status: {Armor: 1.4}}
+  - {nome: "cura", quando: {curas: 1}, efeitos: {feridas: 1.6}}
+  - {nome: "tanques", quando: {tanques: 1}, status: {"% Armor Penetration": 1.3, "% Magic Penetration": 1.3}}
+
+# A busca das continuações inteiras: estados guardados e ramos tentados de cada um.
+feixe: 60
+ramos: 10
+continuacoes: 5
