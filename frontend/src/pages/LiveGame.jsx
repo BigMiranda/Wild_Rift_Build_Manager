@@ -140,6 +140,14 @@ export default function LiveGame() {
     }
     return out;
   }, [game, fearlessSet]);
+  /** What a ban cannot take: only the champions already picked (and the Fearless ones). Bans may repeat. */
+  const unbannableFor = useCallback((side) => {
+    const out = fearlessSet(side);
+    for (const k of ['blue', 'red']) {
+      for (const p of game?.[k]?.players ?? []) if (p.champion) out.add(p.champion);
+    }
+    return out;
+  }, [game, fearlessSet]);
 
   if (!game) {
     return (
@@ -368,7 +376,7 @@ export default function LiveGame() {
               }}>{t('live.clearBan')}</button>
             )}
           </div>
-          <ChampionGrid champions={champions} lanesOf={lanesOf} unavailable={unavailableFor(banning.side)} fearless={fearlessSet(banning.side)}
+          <ChampionGrid champions={champions} lanesOf={lanesOf} unavailable={unbannableFor(banning.side)} fearless={fearlessSet(banning.side)}
             value={game[teamKey(banning.side)].bans?.[banning.index]}
             onPick={(name) => {
               const g = clone(game);
