@@ -40,13 +40,13 @@ class LiveGameTest {
         assertFalse(r.banSkip);
         assertTrue(r.turns.subList(0, 10).stream().allMatch(t -> "ban".equals(t.action) && t.simultaneous));
         assertEquals("ABBAABBAAB", sides(r.turns.subList(10, 20)));
-        // championship: bans 1-2-2-1, picks 1-2-2-1, bans 1-2-1, picks 1-2-1 (the second phase starts with red: EST)
+        // championship: bans 1-2-2-1, picks 1-2-2-1, bans 1-2-1, picks 1-2-1 (the second phase starts with red: confirmed)
         DraftCatalog.Format ch = c.format("campeonato");
         assertFalse(ch.bansRepeat);
         assertTrue(ch.banSkip);
         assertFalse(ch.fearless);
         assertEquals("ban:ABBAAB|escolha:ABBAAB|ban:BAAB|escolha:BAAB", blocks(ch.turns));
-        assertTrue(ch.turns.subList(12, 20).stream().allMatch(t -> t.phase == 2 && "EST".equals(t.source)));
+        assertTrue(ch.turns.subList(12, 20).stream().allMatch(t -> t.phase == 2 && t.source == null), "phase 2 confirmed by the user");
         assertTrue(ch.turns.subList(0, 12).stream().allMatch(t -> t.phase == 1 && t.source == null));
         // the Fearless: the same steps
         DraftCatalog.Format fe = c.format("campeonato_fearless");

@@ -30,7 +30,7 @@ formatos:
       - {acao: escolha, time: vermelho}
   campeonato:
     nome: Campeonato
-    fonte: "USU, 20/11/2026: banimentos 1-2-2-1 e escolhas 1-2-2-1, depois banimentos 1-2-1 e escolhas 1-2-1; quem começa a 2ª fase (o vermelho) é EST, como no LoL de PC"
+    fonte: "USU, 20/11/2026: banimentos 1-2-2-1 e escolhas 1-2-2-1, depois banimentos 1-2-1 e escolhas 1-2-1, a 2ª fase começando pelo vermelho"
     banimentos: alternados
     pode_pular_ban: true
     passos: &campeonato
@@ -44,13 +44,13 @@ formatos:
       - {acao: escolha, time: vermelho, qtd: 2, fase: 1}
       - {acao: escolha, time: azul, qtd: 2, fase: 1}
       - {acao: escolha, time: vermelho, fase: 1}
-      # fase 2 (EST: começa o vermelho, como no LoL de PC; a confirmar): banimentos 1-2-1 e escolhas 1-2-1
-      - {acao: ban, time: vermelho, fase: 2, fonte: EST}
-      - {acao: ban, time: azul, qtd: 2, fase: 2, fonte: EST}
-      - {acao: ban, time: vermelho, fase: 2, fonte: EST}
-      - {acao: escolha, time: vermelho, fase: 2, fonte: EST}
-      - {acao: escolha, time: azul, qtd: 2, fase: 2, fonte: EST}
-      - {acao: escolha, time: vermelho, fase: 2, fonte: EST}
+      # fase 2 (começa o vermelho; USU, confirmado em 20/11/2026): banimentos 1-2-1 e escolhas 1-2-1
+      - {acao: ban, time: vermelho, fase: 2}
+      - {acao: ban, time: azul, qtd: 2, fase: 2}
+      - {acao: ban, time: vermelho, fase: 2}
+      - {acao: escolha, time: vermelho, fase: 2}
+      - {acao: escolha, time: azul, qtd: 2, fase: 2}
+      - {acao: escolha, time: vermelho, fase: 2}
   campeonato_fearless:
     nome: Campeonato Fearless
     fonte: "USU, 20/11/2026: o Campeonato, com os 10 campeões de cada partida anterior da série já banidos (os dois times)"

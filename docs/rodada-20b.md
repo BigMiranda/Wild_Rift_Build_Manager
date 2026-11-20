@@ -14,8 +14,8 @@ A sub aba continua sendo **Simulações › Draft e partida** (`pages/LiveGame.j
 | Campeonato | fase 1: 1-2-2-1 (azul, vermelho ×2, azul ×2, vermelho); fase 2: 1-2-1 (vermelho, azul ×2, vermelho); visíveis, sem repetir; "Sem banimento" conta como feito | fase 1: 1-2-2-1; fase 2: 1-2-1 (vermelho, azul ×2, vermelho) | 20 |
 | Campeonato Fearless | como o Campeonato | como o Campeonato | 20 |
 
-**Pedido ao usuário:** quem começa a **segunda fase** do Campeonato (banimentos e escolhas). Usei o **vermelho**, como no
-LoL de PC; os passos da fase 2 levam `fonte: EST` no seed e a tela mostra a fonte. Basta trocar `time` nesses passos.
+**A segunda fase do Campeonato começa pelo vermelho** (banimentos e escolhas): usei o vermelho, como no LoL de PC, e o
+usuário confirmou em 20/11/2026 (os passos da fase 2 perderam a marca `fonte: EST`).
 
 - **Banimento pulado:** `LiveGameModel.NO_BAN` ("-") no lugar do campeão; o próximo passo segue (`DraftCatalog.next`) e
   ninguém fica banido. Na tela, o seletor de banimento do Campeonato tem o botão "Sem banimento" e o espaço mostra "sem".
@@ -36,7 +36,7 @@ LoL de PC; os passos da fase 2 levam `fonte: EST` no seed e a tela mostra a font
   os campeões já escolhidos guardam a rota como fixada, os cartões vazios perdem a rota.
 
 **Testes** (`LiveGameTest`): os três formatos, 20 passos cada, 5 + 5 por lado, as sequências exatas (ranqueada
-`ABBAABBAAB`; campeonato `ban:ABBAAB|escolha:ABBAAB|ban:BAAB|escolha:BAAB`, a fase 2 com `fonte: EST`); o próximo passo
+`ABBAABBAAB`; campeonato `ban:ABBAAB|escolha:ABBAAB|ban:BAAB|escolha:BAAB`, a fase 2 começando pelo vermelho); o próximo passo
 do campeonato com banimentos pulados até a fase 2; a proibição de repetir no campeonato e a permissão na ranqueada; a
 herança de 10 por jogo no Fearless (jogo 3 = 20, os dois times); as partidas antigas abrindo pelo formato mais próximo,
 com o aviso; a partida indo e voltando da tabela.
@@ -253,7 +253,7 @@ tabela aprendida, um herói com nome variante casado pelo `alias`); `EncounterRi
 
 ## Relatório final
 
-- **Os formatos** são os do usuário; falta só **confirmar quem começa a fase 2 do Campeonato** (usei o vermelho, EST).
+- **Os formatos** são os do usuário, inclusive a fase 2 do Campeonato começando pelo vermelho (confirmado).
 - **Rotas livres**: tudo lê a distribuição das 120 atribuições; um pick inesperado só move a distribuição.
 - **A ordem do draft** entra na nota (flex e risco de contra-escolha pela posição) e nos banimentos.
 - **Mecânicas que punem**: rascunho EST em `contra_mecanicas_7_3f.yml` para conferir (limiares, pesos, a lista de quem
@@ -263,7 +263,7 @@ tabela aprendida, um herói com nome variante casado pelo `alias`); `EncounterRi
 
 ### Pendências e pedidos ao usuário
 
-1. Quem começa a fase 2 do Campeonato (banimentos 1-2-1 e escolhas 1-2-1): hoje o vermelho (EST).
+1. ~~Quem começa a fase 2 do Campeonato~~: o vermelho, confirmado pelo usuário em 20/11/2026.
 2. Conferir o rascunho `contra_mecanicas_7_3f.yml` ("Ver a tabela" em "Como a nota é feita" mostra os campeões de cada
    linha).
 3. As regras de feitiços e fundamental por rota do Carregamento (`draft_7_3f.yml › carregamento`) são minhas (EST): não há
