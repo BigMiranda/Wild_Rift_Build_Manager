@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import { api } from '../api.js';
+import { useState } from 'react';
 import { t } from '../i18n.js';
 import { ChampionAvatar } from './ChampionAvatar.jsx';
 import { clone, localVars, teamKey } from '../liveGame.js';
+import { useDraftSuggestions } from '../useDraft.js';
+import { LANE_SHORT } from './PickLanes.jsx';
 
 const n0 = (v) => (v == null ? '—' : Math.round(v).toLocaleString('pt-BR'));
 
@@ -14,14 +15,21 @@ export function reasonText(r) {
   return t(`draft.r.${r.key}`, { ...v, need: v.need ? t(`draft.need.${v.need}`) : '', pred, src });
 }
 
+/** Rodada 20.b: a candidate's likely lanes in short ("Bar 70% · Mei 30%"); one lane alone without the chance. */
+const lanesText = (s) => {
+  const e = Object.entries(s.lanes ?? {}).sort((a, b) => b[1] - a[1]).filter(([, v]) => v >= 0.1);
+  if (e.length <= 1) return s.lane;
+  return e.map(([l, v]) => `${LANE_SHORT[l] ?? l} ${Math.round(v * 100)}%`).join(' · ');
+};
+
 /** A candidate: portrait, name, lane, note and its reasons in one line; the parts of the note in the title. */
-function Candidate({ s, action, actionLabel, onAction }) {
+export function Candidate({ s, action, actionLabel, onAction }) {
   const parts = Object.entries(s.parts ?? {}).map(([k, v]) => `${t(`draft.part.${k}`)} ${v >= 0 ? '+' : ''}${(Math.round(v * 100) / 100).toLocaleString('pt-BR')}`).join(' · ');
   return (
     <li className="draft-cand" title={parts}>
       <ChampionAvatar name={s.champion} size={36} />
       <span className="draft-cand-text">
-        <strong>{s.champion}</strong> <small className="muted">{s.lane}</small> <span className="draft-score">{n0(s.score)}</span>
+        <strong>{s.champion}</strong> <small className="muted">{lanesText(s)}</small> <span className="draft-score">{n0(s.score)}</span>
         <small className="draft-why">{(s.reasons ?? []).map(reasonText).join('; ')}</small>
       </span>
       {action && <button type="button" className="draft-act" onClick={() => onAction(s)} title={actionLabel}>{action}</button>}
@@ -34,46 +42,23 @@ function Candidate({ s, action, actionLabel, onAction }) {
  * 5 best (recommendation), each with its reason. A prediction can be fixed on an empty enemy card ("acho que vão de
  * Darius"): both lists are recalculated as if it were true. The tree of scenarios (beam 5) opens one branch at a tap.
  */
-export default function DraftPanel({ game, onChange }) {
-  const [data, setData] = useState(null);
+export default function DraftPanel({ game, onChange, root }) {
   const [path, setPath] = useState([]);
-  const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(false);
   const [howOpen, setHowOpen] = useState(false);
-  // what the lists depend on: picks, lanes, bans, predictions, Fearless, sides, mode
-  const key = useMemo(() => JSON.stringify({
-    b: game.blue.players.map((p) => [p.champion, p.lane]), r: game.red.players.map((p) => [p.champion, p.lane]),
-    bb: game.blue.bans, rb: game.red.bans, p: game.predictions, f: [game.fearless, game.series], a: game.allySide, m: game.mode, e: game.elo,
-  }), [game]);
-  useEffect(() => {
-    let live = true;
-    setBusy(true);
-    const h = setTimeout(() => {
-      api.post('/api/draft/sugestoes', { game, path })
-        .then((d) => { if (live) { setData(d); setError(null); } })
-        .catch((e) => live && setError(e.message))
-        .finally(() => live && setBusy(false));
-    }, 250);
-    return () => { live = false; clearTimeout(h); };
-    // the game's other fields (items, clock, events) do not change the draft
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, JSON.stringify(path)]);
+  // Rodada 20.b: the page already asks for the lists of the board as it is (root); only a branch asks again
+  const branch = useDraftSuggestions(game, path, path.length > 0 || !root);
+  const cur = path.length > 0 || !root ? branch : root;
+  const { data, busy, error } = cur;
 
   const ally = data?.ally ?? game.allySide;
   const enemy = data?.enemy;
-  /** Fixes a predicted enemy pick on the empty card of its lane (else the first empty one). */
+  /** Fixes a predicted enemy pick on its next empty card (Rodada 20.b: cards are picks in order; its lanes stay open). */
   const fix = (s) => {
     const g = clone(game);
     const team = g[teamKey(enemy)].players;
-    let i = team.findIndex((p) => !p.champion && p.lane === s.lane && !g.predictions?.[`${enemy}:${team.indexOf(p)}`]);
-    if (i < 0) i = team.findIndex((p, k) => !p.champion && !g.predictions?.[`${enemy}:${k}`]);
+    const i = team.findIndex((p, k) => !p.champion && !g.predictions?.[`${enemy}:${k}`]);
     if (i < 0) return;
     g.predictions = { ...(g.predictions ?? {}), [`${enemy}:${i}`]: s.champion };
-    if (team[i].lane !== s.lane) {
-      const other = team.findIndex((p) => p.lane === s.lane);
-      if (other >= 0 && !team[other].champion) team[other].lane = team[i].lane;
-      team[i].lane = s.lane;
-    }
     onChange(g);
   };
   const unfix = (k) => {
@@ -117,7 +102,7 @@ export default function DraftPanel({ game, onChange }) {
           <ul className="draft-list">
             {(data?.recommendations ?? []).map((s) => (
               <Candidate key={s.champion} s={s} action="▸" actionLabel={t('draft.explore')}
-                onAction={(x) => setPath([...path, { side: ally, champion: x.champion, lane: x.lane, predicted: true }])} />
+                onAction={(x) => setPath([...path, { side: ally, champion: x.champion, lane: null, predicted: true }])} />
             ))}
           </ul>
         </div>
@@ -133,7 +118,7 @@ export default function DraftPanel({ game, onChange }) {
           <button type="button" className={path.length === 0 ? 'active' : ''} onClick={() => setPath([])}>{t('draft.treeRoot')}</button>
           {path.map((p, k) => (
             <button key={k} type="button" className={`live-side-tag ${p.side}`} onClick={() => setPath(path.slice(0, k + 1))}>
-              {p.champion} ({p.lane})
+              {p.champion}
             </button>
           ))}
         </div>
@@ -143,7 +128,7 @@ export default function DraftPanel({ game, onChange }) {
             <ul className="draft-list">
               {node.children.map((s) => (
                 <Candidate key={s.champion} s={s} action="▸" actionLabel={t('draft.explore')}
-                  onAction={(x) => setPath([...path, { side: node.side, champion: x.champion, lane: x.lane, predicted: true }])} />
+                  onAction={(x) => setPath([...path, { side: node.side, champion: x.champion, lane: null, predicted: true }])} />
               ))}
             </ul>
           </>

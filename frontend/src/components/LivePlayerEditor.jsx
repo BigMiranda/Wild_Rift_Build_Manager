@@ -7,6 +7,7 @@ import ItemIcon from './ItemIcon.jsx';
 import ShopBrowser from './ShopBrowser.jsx';
 import RuneEditor from './RuneEditor.jsx';
 import { LANES, buy } from '../liveGame.js';
+import PickLanes from './PickLanes.jsx';
 
 const plain = (s) => String(s ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
@@ -64,7 +65,7 @@ const TABS = ['campeao', 'feiticos', 'runas', 'itens', 'placar'];
  * Rodada 20: a player's card opened in the shop's style: champion, lane, spells, runes, items (purchases in order,
  * components apart, the starting item) and the score (level, gold, K/D/A). Every change goes through onChange(player).
  */
-export default function LivePlayerEditor({ player, side, champions, lanesOf, unavailable, fearless, items, onChange, onClose, startTab }) {
+export default function LivePlayerEditor({ player, side, champions, lanesOf, possibleOf = () => [], unavailable, fearless, items, onChange, onClose, startTab }) {
   const [tab, setTab] = useState(startTab ?? (player.champion ? 'itens' : 'campeao'));
   const [runes, setRunes] = useState(false);
   const [startMode, setStartMode] = useState(false);
@@ -119,16 +120,27 @@ export default function LivePlayerEditor({ player, side, champions, lanesOf, una
 
       {tab === 'campeao' && (
         <>
+          {player.champion && (
+            <div className="live-lane-pick">
+              <span className="muted small">{t('pl.possible')}</span>
+              <PickLanes player={player} possible={possibleOf(player.champion)} onChange={(lanes) => set({ lanes })} />
+            </div>
+          )}
           <div className="chips live-lane-pick">
-            <span className="muted">{t('live.lane')}</span>
+            <span className="muted small" title={t('pl.fixedHelp')}>{t('live.laneFixed')}</span>
+            <button type="button" className={!player.lane ? 'active' : ''} onClick={() => set({ lane: null })}>{t('live.laneOpen')}</button>
             {LANES.map((l) => (
               <button key={l} type="button" className={player.lane === l ? 'active' : ''} onClick={() => set({ lane: l })}>{l}</button>
             ))}
-            {player.champion && <button type="button" className="danger" onClick={() => set({ champion: null })}>{t('live.clearChampion')}</button>}
+            {player.champion && <button type="button" className="danger" onClick={() => set({ champion: null, lanes: null })}>{t('live.clearChampion')}</button>}
           </div>
           <ChampionGrid champions={champions} lanesOf={lanesOf} unavailable={unavailable} fearless={fearless} value={player.champion}
             lane={player.champion ? null : player.lane}
-            onPick={(name) => { set({ champion: name }); setTab('feiticos'); }} />
+            onPick={(name) => {
+              // Rodada 20.b: a new pick comes with its possible lanes prefilled (the seed's and the meta's)
+              set({ champion: name, lanes: name === player.champion && player.lanes ? player.lanes : [...possibleOf(name)] });
+              setTab('feiticos');
+            }} />
         </>
       )}
 

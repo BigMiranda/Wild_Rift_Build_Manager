@@ -70,8 +70,8 @@ dragoes: [Infernal, Oceano, Montanha, Ancião]
 nota:
   pesos:
     meta: 0.25          # presença + banimento + vitória na rota e no elo (só com meta importada; sem ela, 0)
-    rota: 0.35          # a rota do candidato está livre no time (1), ou só a 2ª rota dele (0,4); cheia = fora da lista
-    matchup: 0.30       # vantagem 1x1 contra o adversário de rota revelado ou previsto (tabela; sem ela, subclasse x subclasse)
+    rota: 0.35          # Rodada 20.b: a chance de as rotas do candidato estarem abertas no time (1 = livres); quase nula = fora da lista
+    matchup: 0.30       # vantagem 1x1 contra os adversários prováveis de rota (média pela distribuição; tabela, senão subclasse x subclasse)
     composicao: 0.30    # o quanto o candidato completa o time (dano físico/mágico, linha de frente, controle...)
     contra: 0.20        # risco de contra-escolha: o quanto os disponíveis do outro time punem o candidato (negativo)
   # Composição: o que falta num time de 5 (cada parte de 0 a 1), lido dos perfis (ChampionProfiles) e das fichas.
@@ -95,6 +95,16 @@ nota:
     vitoria_escala: 0.05      # 55% de vitória = +1 nesta parte
   # A árvore de cenários: só os `feixe` primeiros de cada passo são calculados; um ramo se expande ao tocar nele.
   feixe: 5
+  # Rodada 20.b, Parte 2: picks livres de rota. Cada pick tem rotas possíveis e o time, uma distribuição de rotas (as 120
+  # atribuições dos 5 campeões às 5 rotas, pesadas pela chance de cada campeão em cada rota).
+  rotas:
+    presenca_minima: 0.10     # uma rota entra nas possíveis de um campeão (além das do seed) com esta parte da presença dele na meta
+    ordem_seed: [1, 0.4, 0.2, 0.1, 0.05]  # sem meta: o peso das rotas do seed pela ordem (a 1ª é a principal)
+    sem_meta_na_rota: 0.05    # com meta: o peso de uma rota do seed em que a meta não o mostra
+    marcada_minimo: 0.3       # uma rota marcada pelo usuário pesa ao menos isto da melhor rota do campeão
+    indefinido: 0.05          # pick indefinido: o peso das rotas fora das dele
+    encaixe_minimo: 0.08      # um candidato com as rotas abertas abaixo disto sai da lista (rotas cheias)
+    incerto_abaixo: 0.6       # a tela mostra "?" quando nenhuma rota de um pick passa disto
   # Calibração (Parte 3): composições sorteadas lutam 5x5; a regressão dá os pesos de composição. Vazio = os de cima.
   calibracao: {}
   # A calibração só vale se a correlação validada (5 dobras) passar disto; senão ficam os pesos acima.

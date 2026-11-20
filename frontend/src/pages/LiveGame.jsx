@@ -13,6 +13,8 @@ import {
 } from '../liveGame.js';
 import LivePanels from '../components/LivePanels.jsx';
 import VoiceBar from '../components/VoiceBar.jsx';
+import PickLanes, { LikelyLane } from '../components/PickLanes.jsx';
+import { laneDistBySlot, useDraftSuggestions } from '../useDraft.js';
 
 /**
  * Rodada 20: Simulações › Draft e partida. For whoever WATCHES a match (replay, stream, championship, coaching): the
@@ -41,6 +43,8 @@ export default function LiveGame() {
   const [panel, setPanel] = useState(null);
   // the match's settings stay folded once the match has champions (the cards and the clock come first on a phone)
   const [setupOpen, setSetupOpen] = useState(true);
+  // Rodada 20.b: the draft's lists and the lanes' distribution of the board as it is (the cards show the likely lane)
+  const draft = useDraftSuggestions(game, [], !!game);
 
   useEffect(() => {
     loadChampions().then(setChampions).catch(() => {});
@@ -69,6 +73,8 @@ export default function LiveGame() {
 
   const lanesByName = useMemo(() => new Map(profiles.map((p) => [p.name, p.lanes])), [profiles]);
   const lanesOf = useCallback((name) => lanesByName.get(name), [lanesByName]);
+  /** Rodada 20.b: the lanes a pick of a champion is prefilled with (the seed's and the meta's). */
+  const possibleOf = useCallback((name) => formats?.possibleLanes?.[name] ?? lanesByName.get(name) ?? [], [formats, lanesByName]);
 
   /** Every change: the previous state goes to the undo history and the game is saved a moment later. */
   const change = (next) => {
@@ -195,6 +201,7 @@ export default function LiveGame() {
 
   const team = (side) => {
     const tm = game[teamKey(side)];
+    const dist = laneDistBySlot(draft.data, side);
     const bans = formatOf(game, formats)?.turns?.filter((x) => x.action === 'ban' && x.side === side).length ?? 5;
     return (
       <section className={`live-team ${side}${side === ally ? ' ally' : ' enemy'}`} aria-label={t(`live.side.${side}`)}>
@@ -224,7 +231,9 @@ export default function LiveGame() {
                 <ChampionAvatar name={p.champion ?? pred} size={44} />
                 <span className="live-card-text">
                   <strong>{p.champion ?? (pred ? `${pred}?` : t('live.emptySlot'))}</strong>
-                  <small className="muted">{p.lane}{p.level ? ` · ${t('live.lvl', { n: p.level })}` : ''}
+                  <small className="muted">{t('live.pickN', { n: i + 1 })}{' '}
+                    {(p.champion || pred) && <LikelyLane player={p} dist={dist[i]?.lanes} unsureBelow={draft.data?.unsureBelow ?? formats?.unsureBelow} />}
+                    {p.level ? ` · ${t('live.lvl', { n: p.level })}` : ''}
                     {p.kills != null || p.deaths != null ? ` · ${p.kills ?? 0}/${p.deaths ?? 0}/${p.assists ?? 0}` : ''}
                     {p.gold ? ` · ${p.gold}g` : ''}</small>
                   <span className="live-card-items">
@@ -236,6 +245,10 @@ export default function LiveGame() {
               </button>
               <button type="button" className="live-card-edit" aria-label={t('live.edit')} title={t('live.edit')}
                 onClick={() => setEditing({ side, index: i })}>✎</button>
+              {p.champion && !p.lane && (
+                <PickLanes compact player={p} possible={possibleOf(p.champion)}
+                  onChange={(lanes) => change(updatePlayer(game, side, i, (x) => { x.lanes = lanes; }))} />
+              )}
             </div>
           );
         })}
@@ -316,7 +329,7 @@ export default function LiveGame() {
       </div>
 
       <LivePanels game={game} champions={champions} profiles={profiles} items={items} formats={formats} selected={selected}
-        unavailableFor={unavailableFor} onChange={change} panel={panel} onPanel={setPanel} />
+        unavailableFor={unavailableFor} onChange={change} panel={panel} onPanel={setPanel} draft={draft} />
 
       {game.events?.length > 0 && (
         <section className="panel live-events">
@@ -336,7 +349,7 @@ export default function LiveGame() {
       {editing && (
         <LivePlayerEditor
           player={game[teamKey(editing.side)].players[editing.index]} side={editing.side} startTab={editing.tab}
-          champions={champions} lanesOf={lanesOf} unavailable={unavailableFor()} fearless={fearlessSet()} items={items}
+          champions={champions} lanesOf={lanesOf} possibleOf={possibleOf} unavailable={unavailableFor()} fearless={fearlessSet()} items={items}
           onClose={() => setEditing(null)}
           onChange={(p) => {
             const before = game[teamKey(editing.side)].players[editing.index];

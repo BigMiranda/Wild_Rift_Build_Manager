@@ -69,6 +69,71 @@ public class DraftService {
         return out;
     }
 
+    /**
+     * Rodada 20.b: the champions with their lane chances: the meta's presence share in each lane (the seed's lanes the
+     * meta does not show get a small weight), else the seed's order; the possible lanes are the seed's plus the meta's
+     * above the seed's minimum share.
+     */
+    public static List<DraftModel.Champ> champs(ChampionProfiles profiles, Map<String, Map<String, DraftModel.Meta>> meta, DraftModel.Weights w,
+                                                double minShare, double unseenSeedLane) {
+        List<DraftModel.Champ> out = champs(profiles);
+        for (DraftModel.Champ c : out) {
+            Map<String, DraftModel.Meta> m = meta == null ? Map.of() : meta.getOrDefault(c.name, Map.of());
+            double total = 0;
+            for (DraftModel.Meta x : m.values()) {
+                total += Math.max(0, x.presence);
+            }
+            c.possibleLanes = new ArrayList<>(c.lanes);
+            if (total <= 0) {
+                c.lanePrior = DraftModel.seedPrior(c.lanes, w.seedLaneOrder);
+                continue;
+            }
+            Map<String, Double> prior = new LinkedHashMap<>();
+            for (Map.Entry<String, DraftModel.Meta> e : m.entrySet()) {
+                double share = Math.max(0, e.getValue().presence) / total;
+                prior.put(e.getKey(), share);
+                if (share >= minShare && !c.possibleLanes.contains(e.getKey())) {
+                    c.possibleLanes.add(e.getKey());
+                }
+            }
+            for (String l : c.lanes) {
+                prior.merge(l, unseenSeedLane, Math::max);
+            }
+            double sum = prior.values().stream().mapToDouble(d -> d).sum();
+            prior.replaceAll((k, v) -> v / sum);
+            c.lanePrior = prior;
+        }
+        return out;
+    }
+
+    /** Rodada 20.b: each champion's possible lanes (the seed's plus the meta's above the minimum), for the screen's prefill. */
+    public Map<String, List<String>> possibleLanes(String elo) {
+        Map<String, List<String>> out = new LinkedHashMap<>();
+        DraftModel.Weights w = weights();
+        for (DraftModel.Champ c : champs(profiles, meta.of(elo), w, minShare(), unseenSeedLane())) {
+            out.put(c.name, c.possibleLanes);
+        }
+        return out;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> lanesCfg() {
+        return (Map<String, Object>) catalog.section("nota").getOrDefault("rotas", Map.of());
+    }
+
+    double minShare() {
+        return num(lanesCfg().get("presenca_minima"), 0.10);
+    }
+
+    double unseenSeedLane() {
+        return num(lanesCfg().get("sem_meta_na_rota"), 0.05);
+    }
+
+    /** The screen shows "?" when no lane of a pick passes this. */
+    public double unsureBelow() {
+        return num(lanesCfg().get("incerto_abaixo"), 0.6);
+    }
+
     private static double durability(ChampionProfiles.Profile p) {
         return Math.max(1, p.healthLv15) * (1 + (p.armorLv15 + p.magicResistLv15) / 200);
     }
@@ -98,6 +163,17 @@ public class DraftService {
         w.healShield = (int) num(comp.get("cura_escudo"), w.healShield);
         w.scaling = num(comp.get("escalonamento"), w.scaling);
         w.beam = (int) num(nota.get("feixe"), w.beam);
+        Map<String, Object> lc = (Map<String, Object>) nota.getOrDefault("rotas", Map.of());
+        if (lc.get("ordem_seed") instanceof List) {
+            List<Object> o = (List<Object>) lc.get("ordem_seed");
+            w.seedLaneOrder = new double[o.size()];
+            for (int i = 0; i < o.size(); i++) {
+                w.seedLaneOrder[i] = num(o.get(i), 0.05);
+            }
+        }
+        w.userLaneMin = num(lc.get("marcada_minimo"), w.userLaneMin);
+        w.undefinedLane = num(lc.get("indefinido"), w.undefinedLane);
+        w.laneFitMin = num(lc.get("encaixe_minimo"), w.laneFitMin);
         Map<String, Object> seedCal = (Map<String, Object>) nota.getOrDefault("calibracao", Map.of());
         seedCal.forEach((k, v) -> w.calibration.put(k, num(v, 1)));
         // the measured calibration only when it predicts out of sample (else the seed's)
@@ -112,20 +188,30 @@ public class DraftService {
         return o instanceof Number ? ((Number) o).doubleValue() : def;
     }
 
-    /** The board of a game: the picks (each on its card's lane), the predictions fixed on empty cards, what each side cannot pick. */
+    /**
+     * The board of a game: the picks (Rodada 20.b: with their possible lanes and the lane fixed on the loading screen, if
+     * any), the predictions fixed on empty cards, what each side cannot pick.
+     */
     public DraftModel.Board board(LiveGameModel.Game g) {
+        catalog.upgrade(g);
         DraftModel.Board b = new DraftModel.Board();
         for (String side : List.of(LiveGameModel.BLUE, LiveGameModel.RED)) {
             List<LiveGameModel.Player> ps = g.team(side).players;
             for (int i = 0; i < ps.size(); i++) {
                 LiveGameModel.Player p = ps.get(i);
+                DraftModel.Pick pick = null;
                 if (p.champion != null && !p.champion.isBlank()) {
-                    b.picks.add(new DraftModel.Pick(side, p.champion, p.lane, false));
+                    pick = new DraftModel.Pick(side, p.champion, p.lane, false);
+                    pick.lanes = p.lanes == null ? null : new ArrayList<>(p.lanes);
                 } else {
                     String pred = g.predictions == null ? null : g.predictions.get(side + ":" + i);
                     if (pred != null && !pred.isBlank()) {
-                        b.picks.add(new DraftModel.Pick(side, pred, p.lane, true));
+                        pick = new DraftModel.Pick(side, pred, p.lane, true);
                     }
+                }
+                if (pick != null) {
+                    pick.slot = i;
+                    b.picks.add(pick);
                 }
             }
             Set<String> off = new LinkedHashSet<>(catalog.unavailable(g, side));
@@ -140,7 +226,6 @@ public class DraftService {
         Map<String, String> laneOf = new LinkedHashMap<>();
         for (DraftModel.Pick p : board.picks) {
             sideOf.put(p.champion, p.side);
-            laneOf.put(p.side + "|" + p.lane, p.champion);
         }
         DraftModel.Matchup m = (a, b, lane) -> {
             if ("Dragão".equals(lane) || "Suporte".equals(lane)) {
@@ -161,7 +246,75 @@ public class DraftService {
             }
             return tables.advantage(a, b, lane);
         };
-        return new DraftModel(champs(profiles), meta.of(g.elo), m, w, catalog.lanes());
+        Map<String, Map<String, DraftModel.Meta>> mt = meta.of(g.elo);
+        DraftModel model = new DraftModel(champs(profiles, mt, w, minShare(), unseenSeedLane()), mt, m, w, catalog.lanes());
+        // Rodada 20.b: the duo's partners by the most likely assignment of each team
+        for (String side : List.of(LiveGameModel.BLUE, LiveGameModel.RED)) {
+            List<DraftModel.Pick> ps = board.of(side);
+            List<String> likely = model.likelyLanes(board, side);
+            for (int i = 0; i < ps.size(); i++) {
+                laneOf.put(side + "|" + likely.get(i), ps.get(i).champion);
+            }
+        }
+        return model;
+    }
+
+    /** Rodada 20.b: a team's lane distribution for the screen: each pick's lane chances and each lane's chance of being open. */
+    public static class LaneView {
+        /** Board order (slot = the card; -1 = a hypothetical pick of the tree). */
+        public List<Map<String, Object>> picks = new ArrayList<>();
+        public Map<String, Double> open = new LinkedHashMap<>();
+        public boolean relaxed;
+    }
+
+    static LaneView laneView(DraftModel model, DraftModel.Board b, String side) {
+        LaneAssignment.Result a = model.assignment(b, side);
+        LaneView v = new LaneView();
+        List<DraftModel.Pick> ps = b.of(side);
+        List<String> lanes = model.lanes();
+        for (int i = 0; i < ps.size(); i++) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("slot", ps.get(i).slot);
+            m.put("champion", ps.get(i).champion);
+            m.put("predicted", ps.get(i).predicted);
+            m.put("fixed", ps.get(i).lane);
+            Map<String, Double> d = new LinkedHashMap<>();
+            for (int l = 0; l < lanes.size(); l++) {
+                if (a.marginal[i][l] >= 0.005) {
+                    d.put(lanes.get(l), Math.round(a.marginal[i][l] * 1000) / 1000.0);
+                }
+            }
+            m.put("lanes", d);
+            m.put("likely", lanes.get(a.best[i]));
+            v.picks.add(m);
+        }
+        for (int l = 0; l < lanes.size(); l++) {
+            v.open.put(lanes.get(l), Math.round(a.open[l] * 1000) / 1000.0);
+        }
+        v.relaxed = a.relaxed;
+        return v;
+    }
+
+    /**
+     * Rodada 20.b: a copy of the game where every picked (or predicted) card has a lane: the fixed one, else the one of
+     * the most likely whole assignment of its team. The per-player panels (first encounter, likely builds, tips) read
+     * lanes from it, so a pick in an unexpected lane only moves the distribution.
+     */
+    public LiveGameModel.Game resolved(LiveGameModel.Game g) {
+        LiveGameModel.Game c = LiveGameRepository.read(LiveGameRepository.write(g));
+        DraftModel.Board b = board(c);
+        DraftModel model = model(c, b, weights());
+        for (String side : List.of(LiveGameModel.BLUE, LiveGameModel.RED)) {
+            List<DraftModel.Pick> ps = b.of(side);
+            List<String> likely = model.likelyLanes(b, side);
+            for (int i = 0; i < ps.size(); i++) {
+                LiveGameModel.Player p = c.team(side).players.get(ps.get(i).slot);
+                if (p.lane == null) {
+                    p.lane = likely.get(i);
+                }
+            }
+        }
+        return c;
     }
 
     /** The picks in the order of the game's format (sides only). */
@@ -190,6 +343,10 @@ public class DraftService {
         public boolean calibrationApplied;
         public int measuredRows;
         public DraftModel.Weights weights;
+        /** Rodada 20.b: each side's lane distribution (after the branch's picks). */
+        public Map<String, LaneView> lanes = new LinkedHashMap<>();
+        /** Rodada 20.b: the screen shows "?" below this. */
+        public double unsureBelow;
     }
 
     /**
@@ -219,6 +376,9 @@ public class DraftService {
         s.calibrationApplied = !w.calibration.isEmpty() && !s.calibration.isEmpty();
         s.measuredRows = tables.status().rows;
         s.weights = w;
+        s.lanes.put(LiveGameModel.BLUE, laneView(model, b, LiveGameModel.BLUE));
+        s.lanes.put(LiveGameModel.RED, laneView(model, b, LiveGameModel.RED));
+        s.unsureBelow = unsureBelow();
         return s;
     }
 }

@@ -77,11 +77,14 @@ public class DraftController {
         public List<Integer> against = new ArrayList<>();
     }
 
-    /** Parte 4: the first encounter of a card's champion with its lane rival (levels 1-3, every start, three styles). */
+    /**
+     * Parte 4: the first encounter of a card's champion with its lane rival (levels 1-3, every start, three styles).
+     * Rodada 20.b: the per-player panels read a copy of the game whose open lanes are the most likely assignment.
+     */
     @PostMapping("/encontro")
     public FirstEncounterService.Result encounter(@RequestBody PlayerRequest q) {
         try {
-            return encounter.run(q.game, q.side, q.index);
+            return encounter.run(draft.resolved(q.game), q.side, q.index);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
@@ -94,7 +97,7 @@ public class DraftController {
     @PostMapping("/builds")
     public LiveBuildsService.Result builds(@RequestBody PlayerRequest q, @RequestParam(defaultValue = "true") boolean medir) {
         try {
-            return builds.run(q.game, q.side, q.index, medir);
+            return builds.run(draft.resolved(q.game), q.side, q.index, medir);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
@@ -104,7 +107,7 @@ public class DraftController {
     @PostMapping("/dicas")
     public TipsService.Result tips(@RequestBody PlayerRequest q) {
         try {
-            return tips.run(q.game, q.side, q.index, q.against);
+            return tips.run(draft.resolved(q.game), q.side, q.index, q.against);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
@@ -171,6 +174,9 @@ public class DraftController {
         out.put("lanes", catalog.lanes());
         out.put("dragons", catalog.seed().getOrDefault("dragoes", List.of()));
         out.put("weights", catalog.section("nota"));
+        // Rodada 20.b: each champion's possible lanes (the seed's and the meta's), to prefill a pick
+        out.put("possibleLanes", draft.possibleLanes(null));
+        out.put("unsureBelow", draft.unsureBelow());
         return out;
     }
 

@@ -1803,3 +1803,11 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .live-series-champ.azul { border-bottom-color: #4f8fe6; }
 .live-series-champ.vermelho { border-bottom-color: #e0605a; }
 .live-series-add, .live-series-del { min-height: 32px !important; font-size: 13px; }
+.live-card { flex-wrap: wrap; }
+.pl-lanes { gap: 3px; align-items: center; }
+.pl-lanes button { min-height: 36px; min-width: 40px; padding: 2px 6px; font-size: 13px; }
+.pl-lanes.compact { flex-basis: 100%; }
+.pl-lanes.compact button { min-height: 30px !important; min-width: 36px; font-size: 12px; }
+.pl-likely { color: var(--gold-bright); font-weight: 600; }
+.pl-likely.unsure { color: var(--warn, #e0b45a); }
+.pl-likely.fixed { color: var(--text); }

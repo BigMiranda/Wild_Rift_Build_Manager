@@ -15,6 +15,12 @@ import java.util.Set;
  * rival, what the candidate adds to the team's composition, and the risk of a counter-pick by the other side's
  * available champions. Every part goes from -1 to 1 and the note is their sum by the seed's weights. The reasons are
  * keys with values (the screen words them in pt or en). No rule names a champion.
+ *
+ * <p>Rodada 20.b, Parte 2: picks are free of lanes. Each pick has a set of possible lanes (the seed's and the meta's, the
+ * user's, or undefined) and a team's lanes are a distribution ({@link LaneAssignment}: the 120 assignments weighed by
+ * each champion's chance in each lane). Everything reads the distribution: the free lane is the chance of the
+ * candidate's lanes being open, the matchup is the mean over the likely lane rivals, the meta is the mean over the
+ * candidate's likely lanes, the counter-pick risk weighs each lane by the chance of the rival lane still being open.
  */
 public final class DraftModel {
 
@@ -23,6 +29,13 @@ public final class DraftModel {
         public String name;
         /** In the seed's order: the first is its main lane. */
         public List<String> lanes = new ArrayList<>();
+        /**
+         * Rodada 20.b: the chance of each lane when the champion is picked (sums to 1): the meta's presence share, else
+         * the seed's order. Empty = from {@link #lanes} by the seed's order.
+         */
+        public Map<String, Double> lanePrior = new LinkedHashMap<>();
+        /** Rodada 20.b: the lanes a pick of it may play when the user did not say (the seed's, plus the meta's above the minimum). */
+        public List<String> possibleLanes = new ArrayList<>();
         public List<String> subclasses = new ArrayList<>();
         public List<String> classes = new ArrayList<>();
         public double physical;
@@ -67,6 +80,14 @@ public final class DraftModel {
         public int longRange = 1;
         public int healShield = 1;
         public double scaling = 0.15;
+        /** Rodada 20.b: the seed's lane weights by order (main, 2nd...) when there is no meta. */
+        public double[] seedLaneOrder = {1, 0.4, 0.2, 0.1, 0.05};
+        /** Rodada 20.b: a lane the user marked weighs at least this share of the champion's best lane. */
+        public double userLaneMin = 0.3;
+        /** Rodada 20.b: an undefined pick's lanes outside its prior. */
+        public double undefinedLane = 0.05;
+        /** Rodada 20.b: a candidate whose lanes are this unlikely to be open is not listed. */
+        public double laneFitMin = 0.08;
         /** Calibrated multipliers of the composition needs (feature -> weight); empty = all 1. */
         public Map<String, Double> calibration = new LinkedHashMap<>();
         public int beam = 5;
@@ -76,8 +97,13 @@ public final class DraftModel {
     public static class Pick {
         public String side;
         public String champion;
+        /** Rodada 20.b: the lane fixed on the loading screen (null = open: the distribution decides). */
         public String lane;
+        /** Rodada 20.b: the lanes it may play (null = the champion's possible lanes; empty = undefined, any lane). */
+        public List<String> lanes;
         public boolean predicted;
+        /** Rodada 20.b: its card in the game (pick order; -1 = a hypothetical pick of the tree). */
+        public int slot = -1;
 
         public Pick() {
         }
@@ -129,7 +155,10 @@ public final class DraftModel {
 
     public static class Scored {
         public String champion;
+        /** Its most likely lane. */
         public String lane;
+        /** Rodada 20.b: the chance of each lane if it is picked now (the team's open lanes and its own). */
+        public Map<String, Double> lanes = new LinkedHashMap<>();
         /** The note, x 100. */
         public double score;
         public Map<String, Double> parts = new LinkedHashMap<>();
@@ -147,6 +176,14 @@ public final class DraftModel {
 
     public DraftModel(List<Champ> champions, Map<String, Map<String, Meta>> meta, Matchup measured, Weights w, List<String> lanes) {
         champions.forEach(c -> champs.put(c.name, c));
+        for (Champ c : champions) {
+            if (c.lanePrior.isEmpty()) {
+                c.lanePrior = seedPrior(c.lanes, w.seedLaneOrder);
+            }
+            if (c.possibleLanes.isEmpty()) {
+                c.possibleLanes = new ArrayList<>(c.lanes);
+            }
+        }
         this.meta = meta == null ? Map.of() : meta;
         this.measured = measured;
         this.w = w;
@@ -166,24 +203,89 @@ public final class DraftModel {
         return champs.get(name);
     }
 
-    /** The lanes a side has not filled yet (picks and predictions). */
-    public List<String> openLanes(Board b, String side) {
-        Set<String> taken = new HashSet<>();
-        for (Pick p : b.of(side)) {
-            taken.add(p.lane != null ? p.lane : mainLane(p.champion));
+    /** Rodada 20.b: a champion's lane chances from the seed's order alone (sums to 1). */
+    public static Map<String, Double> seedPrior(List<String> lanes, double[] order) {
+        Map<String, Double> out = new LinkedHashMap<>();
+        double sum = 0;
+        for (int i = 0; i < lanes.size(); i++) {
+            double v = i < order.length ? order[i] : order[order.length - 1];
+            out.merge(lanes.get(i), v, Double::sum);
+            sum += v;
         }
-        List<String> out = new ArrayList<>();
-        for (String l : lanes) {
-            if (!taken.contains(l)) {
-                out.add(l);
+        if (sum > 0) {
+            for (Map.Entry<String, Double> e : out.entrySet()) {
+                e.setValue(e.getValue() / sum);
             }
         }
         return out;
     }
 
-    private String mainLane(String champion) {
-        Champ c = champs.get(champion);
-        return c == null || c.lanes.isEmpty() ? null : c.lanes.get(0);
+    public List<String> lanes() {
+        return lanes;
+    }
+
+    /**
+     * Rodada 20.b: a pick's weight in each lane (in {@link #lanes} order): only its fixed lane; else the lanes it may play
+     * (the user's, at least {@link Weights#userLaneMin} of its best; undefined = every lane, the unseen ones small; not
+     * told = its possible lanes) by its prior.
+     */
+    public double[] weights(Pick p) {
+        double[] out = new double[lanes.size()];
+        if (p.lane != null && lanes.contains(p.lane)) {
+            out[lanes.indexOf(p.lane)] = 1;
+            return out;
+        }
+        Champ c = champs.get(p.champion);
+        Map<String, Double> prior = c == null ? Map.of() : c.lanePrior;
+        double max = 0;
+        for (double v : prior.values()) {
+            max = Math.max(max, v);
+        }
+        boolean undefined = p.lanes != null && p.lanes.isEmpty();
+        boolean told = p.lanes != null && !p.lanes.isEmpty();
+        for (int l = 0; l < lanes.size(); l++) {
+            String lane = lanes.get(l);
+            double pr = prior.getOrDefault(lane, 0.0);
+            if (c == null || undefined) {
+                out[l] = Math.max(pr, w.undefinedLane);
+            } else if (told) {
+                out[l] = p.lanes.contains(lane) ? Math.max(pr, w.userLaneMin * Math.max(max, 1e-9)) : 0;
+            } else {
+                out[l] = c.possibleLanes.contains(lane) ? Math.max(pr, LaneAssignment.RELAXED) : 0;
+            }
+        }
+        return out;
+    }
+
+    /** Rodada 20.b: the likely assignment of a side's picks (and predictions) to the lanes, in board order. */
+    public LaneAssignment.Result assignment(Board b, String side) {
+        List<double[]> ws = new ArrayList<>();
+        for (Pick p : b.of(side)) {
+            ws.add(weights(p));
+        }
+        return LaneAssignment.of(lanes.size(), ws);
+    }
+
+    /** The lanes a side has likely not filled yet (open with a chance of 50% or more). */
+    public List<String> openLanes(Board b, String side) {
+        LaneAssignment.Result a = assignment(b, side);
+        List<String> out = new ArrayList<>();
+        for (int l = 0; l < lanes.size(); l++) {
+            if (a.open[l] >= 0.5) {
+                out.add(lanes.get(l));
+            }
+        }
+        return out;
+    }
+
+    /** The most likely lane of each of a side's picks (board order), from the most likely whole assignment. */
+    public List<String> likelyLanes(Board b, String side) {
+        LaneAssignment.Result a = assignment(b, side);
+        List<String> out = new ArrayList<>();
+        for (int i = 0; i < a.best.length; i++) {
+            out.add(lanes.get(a.best[i]));
+        }
+        return out;
     }
 
     /** The lane advantage of a over b: measured, else the subclass against the subclass by the profile. */
@@ -209,31 +311,22 @@ public final class DraftModel {
     /** The k best candidates for a side's next pick, best first. */
     public List<Scored> rank(Board b, String side, int k) {
         String other = LiveGameModel.BLUE.equals(side) ? LiveGameModel.RED : LiveGameModel.BLUE;
-        List<String> open = openLanes(b, side);
         Set<String> taken = new HashSet<>();
         b.picks.forEach(p -> taken.add(p.champion));
         Set<String> off = new HashSet<>(b.unavailable.getOrDefault(side, Set.of()));
         List<Scored> out = new ArrayList<>();
-        if (open.isEmpty()) {
+        if (b.of(side).size() >= lanes.size()) {
             return out;
         }
+        Ctx x = new Ctx(b, side, other, taken);
         for (Champ c : champs.values()) {
             if (taken.contains(c.name) || off.contains(c.name)) {
                 continue;
             }
-            String lane = null;
-            double laneFit = 0;
-            for (int i = 0; i < c.lanes.size(); i++) {
-                if (open.contains(c.lanes.get(i))) {
-                    lane = c.lanes.get(i);
-                    laneFit = i == 0 ? 1 : 0.4;
-                    break;
-                }
+            Scored s = score(x, c);
+            if (s != null) {
+                out.add(s);
             }
-            if (lane == null) {
-                continue;   // a full lane gets no candidates
-            }
-            out.add(score(b, side, other, c, lane, laneFit, taken, off));
         }
         out.sort(Comparator.comparingDouble((Scored s) -> -s.score).thenComparing(s -> s.champion));
         return new ArrayList<>(out.subList(0, Math.min(k, out.size())));
@@ -245,70 +338,156 @@ public final class DraftModel {
         return rank(b, other, k);
     }
 
-    private Scored score(Board b, String side, String other, Champ c, String lane, double laneFit, Set<String> taken, Set<String> off) {
+    /** What every candidate of one ranking shares: the two teams' lane distributions. */
+    final class Ctx {
+        final Board b;
+        final String side;
+        final String other;
+        final Set<String> taken;
+        final List<Pick> mine;
+        final List<Pick> theirs;
+        final LaneAssignment.Result myLanes;
+        final LaneAssignment.Result theirLanes;
+
+        Ctx(Board b, String side, String other, Set<String> taken) {
+            this.b = b;
+            this.side = side;
+            this.other = other;
+            this.taken = taken;
+            this.mine = b.of(side);
+            this.theirs = b.of(other);
+            this.myLanes = assignment(b, side);
+            this.theirLanes = assignment(b, other);
+        }
+    }
+
+    /**
+     * A candidate's lane chances if picked now: its weight in each lane times the chance of the lane being open in its
+     * team, normalized; and the lane fit, the chance of its own lanes being open (1 = its lanes are surely free).
+     */
+    double[] candidateLanes(Ctx x, Champ c, double[] fitOut) {
+        double[] wc = weights(new Pick(x.side, c.name, null, true));
+        double sumW = 0;
+        for (double v : wc) {
+            sumW += v;
+        }
+        double[] pc = new double[lanes.size()];
+        double z = 0;
+        for (int l = 0; l < lanes.size(); l++) {
+            pc[l] = x.myLanes.open[l] * wc[l];
+            z += pc[l];
+        }
+        fitOut[0] = sumW <= 0 ? 0 : z / sumW;
+        if (z > 0) {
+            for (int l = 0; l < pc.length; l++) {
+                pc[l] /= z;
+            }
+        }
+        return pc;
+    }
+
+    private Scored score(Ctx x, Champ c) {
+        double[] fit = new double[1];
+        double[] pc = candidateLanes(x, c, fit);
+        double laneFit = fit[0];
+        if (laneFit < w.laneFitMin) {
+            return null;   // its lanes are (almost surely) full: no candidate there
+        }
+        int best = 0;
+        for (int l = 1; l < pc.length; l++) {
+            if (pc[l] > pc[best]) {
+                best = l;
+            }
+        }
         Scored s = new Scored();
         s.champion = c.name;
-        s.lane = lane;
-        s.reasons.add(new Reason(laneFit >= 1 ? "rotaAberta" : "rotaSecundaria", "lane", lane));
-        // meta
-        Meta m = meta.getOrDefault(c.name, Map.of()).get(lane);
+        s.lane = lanes.get(best);
+        for (int l = 0; l < pc.length; l++) {
+            if (pc[l] >= 0.005) {
+                s.lanes.put(lanes.get(l), round3(pc[l]));
+            }
+        }
+        double mainShare = c.lanePrior.getOrDefault(s.lane, 0.0);
+        double maxShare = 0;
+        for (double v : c.lanePrior.values()) {
+            maxShare = Math.max(maxShare, v);
+        }
+        s.reasons.add(new Reason(mainShare >= maxShare - 1e-9 ? "rotaAberta" : "rotaSecundaria", "lane", s.lane,
+                "pct", round(100 * pc[best])));
+        // meta: the mean over its likely lanes
         double pMeta = 0;
-        if (m != null) {
-            pMeta = w.metaPresence * Math.min(1, m.presence / 0.2) + w.metaBan * Math.min(1, m.ban / 0.2)
-                    + w.metaWin * clamp((m.win - 0.5) / w.metaWinScale);
-            s.reasons.add(new Reason("presenca", "pct", round(m.presence * 100), "win", round(m.win * 100)));
+        Map<String, Meta> cm = meta.getOrDefault(c.name, Map.of());
+        for (int l = 0; l < pc.length; l++) {
+            Meta m = cm.get(lanes.get(l));
+            if (m != null && pc[l] > 0) {
+                pMeta += pc[l] * (w.metaPresence * Math.min(1, m.presence / 0.2) + w.metaBan * Math.min(1, m.ban / 0.2)
+                        + w.metaWin * clamp((m.win - 0.5) / w.metaWinScale));
+            }
         }
-        // lane matchup
+        Meta mb = cm.get(s.lane);
+        if (mb != null) {
+            s.reasons.add(new Reason("presenca", "pct", round(mb.presence * 100), "win", round(mb.win * 100)));
+        }
+        // lane matchup: the mean over the likely lane rivals of the other side
         double pMatch = 0;
-        Pick rival = null;
-        for (Pick p : b.of(other)) {
-            String pl = p.lane != null ? p.lane : mainLane(p.champion);
-            if (lane.equals(pl)) {
-                rival = p;
+        double topWeight = 0;
+        Pick top = null;
+        double topAdv = 0;
+        for (int l = 0; l < pc.length; l++) {
+            if (pc[l] <= 0) {
+                continue;
+            }
+            for (int o = 0; o < x.theirs.size(); o++) {
+                double po = x.theirLanes.marginal[o][l];
+                if (po <= 0) {
+                    continue;
+                }
+                double a = advantage(c.name, x.theirs.get(o).champion, lanes.get(l));
+                pMatch += pc[l] * po * a;
+                if (pc[l] * po > topWeight) {
+                    topWeight = pc[l] * po;
+                    top = x.theirs.get(o);
+                    topAdv = a;
+                }
             }
         }
-        if (rival != null) {
-            pMatch = advantage(c.name, rival.champion, lane);
-            if (Math.abs(pMatch) >= 0.1) {
-                s.reasons.add(new Reason(pMatch > 0 ? "ganhaRota" : "perdeRota", "champ", rival.champion, "predicted", rival.predicted,
-                        "measured", measured(c.name, rival.champion, lane)));
-            }
+        if (top != null && topWeight >= 0.25 && Math.abs(topAdv) >= 0.1) {
+            s.reasons.add(new Reason(topAdv > 0 ? "ganhaRota" : "perdeRota", "champ", top.champion, "predicted", top.predicted,
+                    "measured", measured(c.name, top.champion, lanes.get(best)), "pct", round(100 * topWeight)));
         }
-        // what it punishes among the other side's picks (outside its lane too)
-        for (Pick p : b.of(other)) {
-            if (p != rival && advantage(c.name, p.champion, lane) >= 0.5) {
+        // what it punishes among the other side's picks (outside its lane too), in their likely lanes
+        List<String> theirLikely = new ArrayList<>();
+        for (int o = 0; o < x.theirs.size(); o++) {
+            theirLikely.add(lanes.get(x.theirLanes.best[o]));
+        }
+        for (int o = 0; o < x.theirs.size(); o++) {
+            Pick p = x.theirs.get(o);
+            if (p != top && advantage(c.name, p.champion, theirLikely.get(o)) >= 0.5) {
                 s.reasons.add(new Reason("pune", "champ", p.champion, "predicted", p.predicted));
                 break;
             }
         }
         // composition
-        double pComp = composition(b.of(side), c, s);
-        // counter-pick risk: the other side's available champions that play this lane
+        double pComp = composition(x.mine, c, s);
+        // counter-pick risk: in each likely lane, by the chance of the other side's rival lane still being open
         double pCounter = 0;
-        if (rival == null && openLanes(b, other).contains(lane)) {
-            List<double[]> risks = new ArrayList<>();
-            List<String> names = new ArrayList<>();
-            Set<String> otherOff = b.unavailable.getOrDefault(other, Set.of());
-            for (Champ o : champs.values()) {
-                if (o.name.equals(c.name) || taken.contains(o.name) || otherOff.contains(o.name) || !o.lanes.contains(lane)) {
-                    continue;
-                }
-                double a = advantage(o.name, c.name, lane);
-                if (a > 0) {
-                    risks.add(new double[] {a, names.size()});
-                    names.add(o.name);
-                }
+        String worst = null;
+        double worstRisk = 0;
+        for (int l = 0; l < pc.length; l++) {
+            double openThere = x.theirLanes.open[l];
+            if (pc[l] <= 0 || openThere <= 0) {
+                continue;
             }
-            risks.sort(Comparator.comparingDouble((double[] x) -> -x[0]).thenComparingDouble(x -> x[1]));
-            double sum = 0;
-            int n = Math.min(3, risks.size());
-            for (int i = 0; i < n; i++) {
-                sum += risks.get(i)[0];
+            Object[] r = laneRisk(x, c, lanes.get(l));
+            double risk = (double) r[0];
+            pCounter -= pc[l] * openThere * risk;
+            if (pc[l] * openThere * risk > worstRisk) {
+                worstRisk = pc[l] * openThere * risk;
+                worst = (String) r[1];
             }
-            pCounter = n == 0 ? 0 : -sum / 3;
-            if (pCounter <= -0.3) {
-                s.reasons.add(new Reason("risco", "champ", names.get((int) risks.get(0)[1])));
-            }
+        }
+        if (pCounter <= -0.3 && worst != null) {
+            s.reasons.add(new Reason("risco", "champ", worst));
         }
         s.parts.put("meta", pMeta);
         s.parts.put("rota", laneFit);
@@ -317,6 +496,33 @@ public final class DraftModel {
         s.parts.put("contra", pCounter);
         s.score = 100 * (w.meta * pMeta + w.lane * laneFit + w.matchup * pMatch + w.composition * pComp + w.counter * pCounter);
         return s;
+    }
+
+    /**
+     * How much the other side's available champions that play a lane punish a candidate there: the mean of the 3
+     * biggest advantages over it (0..1), and the one that punishes most.
+     */
+    Object[] laneRisk(Ctx x, Champ c, String lane) {
+        List<double[]> risks = new ArrayList<>();
+        List<String> names = new ArrayList<>();
+        Set<String> otherOff = x.b.unavailable.getOrDefault(x.other, Set.of());
+        for (Champ o : champs.values()) {
+            if (o.name.equals(c.name) || x.taken.contains(o.name) || otherOff.contains(o.name) || !o.possibleLanes.contains(lane)) {
+                continue;
+            }
+            double a = advantage(o.name, c.name, lane);
+            if (a > 0) {
+                risks.add(new double[] {a, names.size()});
+                names.add(o.name);
+            }
+        }
+        risks.sort(Comparator.comparingDouble((double[] r) -> -r[0]).thenComparingDouble(r -> r[1]));
+        double sum = 0;
+        int n = Math.min(3, risks.size());
+        for (int i = 0; i < n; i++) {
+            sum += risks.get(i)[0];
+        }
+        return new Object[] {n == 0 ? 0.0 : sum / 3, n == 0 ? null : names.get((int) risks.get(0)[1])};
     }
 
     private double cal(String feature) {
@@ -437,6 +643,10 @@ public final class DraftModel {
 
     private static double round(double v) {
         return Math.round(v * 10) / 10.0;
+    }
+
+    private static double round3(double v) {
+        return Math.round(v * 1000) / 1000.0;
     }
 
     /** For tests: the names of a ranking. */

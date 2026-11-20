@@ -130,6 +130,109 @@ class DraftModelTest {
         assertTrue(m.rank(b, BLUE, 5).isEmpty());
     }
 
+    // ------------------------------------------------------------------ Rodada 20.b, Parte 2: picks free of lanes
+
+    private static DraftModel.Pick open(String side, String champion) {
+        return new DraftModel.Pick(side, champion, null, false);
+    }
+
+    @Test
+    void aMidPickInAnUnexpectedSpotDoesNotBreakTheLists() {
+        DraftModel m = model();
+        DraftModel.Board b = new DraftModel.Board();
+        b.picks.add(open(BLUE, "Meio0"));
+        // red's first pick is a Meio champion while blue's Meio is taken: both lists keep working
+        b.picks.add(open(RED, "Meio3"));
+        assertEquals(5, m.rank(b, BLUE, 5).size());
+        assertEquals(5, m.rank(b, RED, 5).size());
+        assertEquals(0, m.assignment(b, RED).open[2], 1e-9, "red's Meio is taken by its Meio pick");
+        // and a team with two Meio-only picks (one in an unexpected lane): relaxed, never empty, never an exception
+        b.picks.add(open(BLUE, "Meio1"));
+        LaneAssignment.Result a = m.assignment(b, BLUE);
+        assertTrue(a.relaxed);
+        for (double[] row : a.marginal) {
+            assertEquals(1, row[0] + row[1] + row[2] + row[3] + row[4], 1e-9);
+        }
+        assertFalse(m.rank(b, BLUE, 5).isEmpty());
+        assertFalse(m.rank(b, RED, 5).isEmpty());
+        DraftModel.Node n = m.expand(b, List.of(), List.of(BLUE, RED, RED, BLUE, BLUE, RED, RED, BLUE, BLUE, RED));
+        assertFalse(n.children.isEmpty());
+    }
+
+    @Test
+    void aTwoLaneChampionKeepsBothLanesOpenUntilResolved() {
+        DraftModel m = model();
+        DraftModel.Board b = new DraftModel.Board();
+        b.picks.add(open(BLUE, "Barão7"));   // Barão or Meio
+        LaneAssignment.Result a = m.assignment(b, BLUE);
+        double barao = a.open[0];
+        double meio = a.open[2];
+        assertTrue(barao > 0 && barao < 1, "Barão maybe taken: " + barao);
+        assertTrue(meio > 0 && meio < 1, "Meio maybe taken: " + meio);
+        assertTrue(barao < meio, "its main lane is the likelier");
+        assertEquals(1, a.open[1], 1e-9);
+        // both lanes still get candidates, a Barão-only one with a lower lane part than a Selva-only one
+        List<DraftModel.Scored> all = m.rank(b, BLUE, 100);
+        DraftModel.Scored top = all.stream().filter(s -> "Barão4".equals(s.champion)).findFirst().orElseThrow();
+        DraftModel.Scored jungle = all.stream().filter(s -> "Selva4".equals(s.champion)).findFirst().orElseThrow();
+        assertTrue(top.parts.get("rota") < jungle.parts.get("rota"));
+        assertTrue(all.stream().anyMatch(s -> "Meio".equals(s.lane)));
+        // the loading screen resolves it: Barão fixed, Meio surely open
+        b.picks.get(0).lane = "Barão";
+        a = m.assignment(b, BLUE);
+        assertEquals(0, a.open[0], 1e-9);
+        assertEquals(1, a.open[2], 1e-9);
+        // or the user marks only Meio
+        b.picks.get(0).lane = null;
+        b.picks.get(0).lanes = List.of("Meio");
+        a = m.assignment(b, BLUE);
+        assertEquals(1, a.open[0], 1e-9);
+        assertEquals(0, a.open[2], 1e-9);
+    }
+
+    @Test
+    void undefinedLanesWorkToTheEndOfTheDraft() {
+        DraftModel m = model();
+        DraftModel.Board b = new DraftModel.Board();
+        String[] picks = {"Barão1", "Selva2", "Meio3", "Dragão4"};
+        for (String c : picks) {
+            DraftModel.Pick p = open(BLUE, c);
+            p.lanes = List.of();   // undefined
+            b.picks.add(p);
+            assertFalse(m.rank(b, BLUE, 5).isEmpty(), "after " + c);
+        }
+        LaneAssignment.Result a = m.assignment(b, BLUE);
+        assertFalse(a.relaxed);
+        assertTrue(a.open[4] > 0.5, "Suporte is the likely open lane: " + a.open[4]);
+        assertEquals("Suporte", m.rank(b, BLUE, 1).get(0).lane);
+        DraftModel.Pick last = open(BLUE, "Suporte5");
+        last.lanes = List.of();
+        b.picks.add(last);
+        assertTrue(m.rank(b, BLUE, 5).isEmpty(), "five picks: the team is done");
+        assertEquals(List.of("Barão", "Selva", "Meio", "Dragão", "Suporte"), m.likelyLanes(b, BLUE));
+    }
+
+    @Test
+    void theAssignmentEnumeratesEveryPermutation() {
+        List<double[]> w = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            w.add(new double[] {1, 1, 1, 1, 1});
+        }
+        LaneAssignment.Result a = LaneAssignment.of(5, w);
+        for (double[] row : a.marginal) {
+            for (double v : row) {
+                assertEquals(0.2, v, 1e-12);
+            }
+        }
+        for (double v : a.open) {
+            assertEquals(0, v, 1e-12);
+        }
+        // one pick that only plays lane 0 and one that prefers it: the second goes elsewhere
+        LaneAssignment.Result b = LaneAssignment.of(5, List.of(new double[] {1, 0, 0, 0, 0}, new double[] {0.6, 0.4, 0, 0, 0}));
+        assertEquals(1, b.marginal[1][1], 1e-12);
+        assertEquals(1, b.open[2], 1e-12);
+    }
+
     @Test
     void theBansAreTheOtherSidesBest() {
         DraftModel m = model();

@@ -27,7 +27,16 @@ export const PT20B = {
   'live.upgrade.formatoDesconhecido': 'O formato salvo não existe mais: aberta como o mais próximo.',
   'live.upgrade.rotasLivres': 'Os cartões agora são as vagas na ordem de escolha; as rotas dos campeões já escolhidos ficaram fixadas, as outras em aberto.',
   'live.upgrade.ok': 'Entendi',
+  'live.pickN': '{n}º pick',
+  'draft.r.rotaAberta': 'rota {lane} livre ({pct}%)',
+  'draft.r.rotaSecundaria': 'rota {lane}, não a principal ({pct}%)',
+  'live.laneFixed': 'Rota fixada:',
+  'live.laneOpen': 'Em aberto',
+  'pl.possible': 'Rotas possíveis',
+  'pl.undefinedHelp': 'Indefinido: pode ir para qualquer rota (pesa pela meta / pelo seed).',
+  'pl.fixedHelp': 'A rota fixada no Carregamento; até lá ela fica em aberto e o draft lê a atribuição provável.',
 };
+
 
 export const EN20B = {
   'live.noBan': 'No ban',
@@ -57,4 +66,13 @@ export const EN20B = {
   'live.upgrade.formatoDesconhecido': 'The saved format no longer exists: opened as the nearest one.',
   'live.upgrade.rotasLivres': 'The cards are now the slots in pick order; the lanes of the champions already picked stayed fixed, the others open.',
   'live.upgrade.ok': 'Got it',
+  'live.pickN': 'Pick {n}',
+  'draft.r.rotaAberta': '{lane} lane free ({pct}%)',
+  'draft.r.rotaSecundaria': '{lane} lane, not its main one ({pct}%)',
+  'live.laneFixed': 'Fixed lane:',
+  'live.laneOpen': 'Open',
+  'pl.possible': 'Possible lanes',
+  'pl.undefinedHelp': 'Undefined: may go to any lane (weighed by the meta / the seed).',
+  'pl.fixedHelp': 'The lane fixed on the loading screen; until then it stays open and the draft reads the likely assignment.',
 };
+

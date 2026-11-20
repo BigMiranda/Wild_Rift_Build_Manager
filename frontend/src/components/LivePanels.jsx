@@ -24,7 +24,7 @@ export default function LivePanels(props) {
           </button>
         ))}
       </div>
-      {panel === 'draft' && <DraftPanel game={props.game} onChange={props.onChange} />}
+      {panel === 'draft' && <DraftPanel game={props.game} onChange={props.onChange} root={props.draft} />}
       {panel === 'encontro' && <EncounterPanel game={props.game} selected={props.selected} />}
       {panel === 'builds' && <LiveBuildsPanel game={props.game} selected={props.selected} />}
       {panel === 'dicas' && <TipsPanel game={props.game} selected={props.selected} />}
