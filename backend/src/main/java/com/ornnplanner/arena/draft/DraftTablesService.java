@@ -68,6 +68,7 @@ public class DraftTablesService {
     private final ArenaService arena;
     private final CampaignService campaign;
     private final ProgressionService progression;
+    private final com.ornnplanner.arena.MatchService matches;
     private final Status status = new Status();
     private volatile boolean cancel;
     private Map<String, double[]> cache;
@@ -77,7 +78,9 @@ public class DraftTablesService {
     private static final long CHECK_EVERY_NANOS = 5_000_000_000L;
 
     public DraftTablesService(JdbcTemplate jdbc, DraftCatalog catalog, ChampionProfiles profiles, ChampionCatalog champions,
-                              MetaStats meta, ArenaService arena, @Lazy CampaignService campaign, @Lazy ProgressionService progression) {
+                              MetaStats meta, ArenaService arena, @Lazy CampaignService campaign, @Lazy ProgressionService progression,
+                              @Lazy com.ornnplanner.arena.MatchService matches) {
+        this.matches = matches;
         this.jdbc = jdbc;
         this.catalog = catalog;
         this.profiles = profiles;
@@ -170,6 +173,43 @@ public class DraftTablesService {
 
     public void cancel() {
         cancel = true;
+    }
+
+    /**
+     * Rodada 20.b, Parte 5: the composition calibration on the whole match (Rodada 10), in the background: drawn
+     * compositions (one champion per lane per team), builds by the progression, the scripted macro on both sides; the
+     * result (winner, else the gold lead) against the composition differences. Applied only when the correlation
+     * validated on the held-out half passes the seed's minimum.
+     */
+    public synchronized Status startMatchCalibration() {
+        if (status.running) {
+            throw new IllegalStateException("As tabelas do draft já estão sendo calculadas.");
+        }
+        cancel = false;
+        status.running = true;
+        status.error = null;
+        status.times.clear();
+        status.counts.clear();
+        status.done = 0;
+        status.total = 0;
+        status.seconds = null;
+        status.startedAt = Instant.now().toString();
+        Thread t = new Thread(() -> {
+            long t0 = System.nanoTime();
+            try {
+                calibrateOnMatches();
+            } catch (Exception e) {
+                log.warn("Draft match calibration failed", e);
+                status.error = e.getMessage() == null ? e.toString() : e.getMessage();
+            } finally {
+                status.seconds = (System.nanoTime() - t0) / 1e9;
+                status.running = false;
+                status.stage = cancel ? "cancelado" : null;
+            }
+        }, "draft-calibracao-partida");
+        t.setDaemon(true);
+        t.start();
+        return status;
     }
 
     @SuppressWarnings("unchecked")
@@ -603,6 +643,183 @@ public class DraftTablesService {
                     CALIBRATION, kv[0], kv[1], now);
         }
         time(stage, s0, samples);
+    }
+
+    static final Map<String, String> ROLE_OF_LANE = Map.of("Barão", "barao", "Selva", "selva", "Meio", "meio", "Dragão", "dupla", "Suporte", "suporte");
+
+    /** The match calibration's samples: the compositions drawn, their feature differences and outcomes. */
+    @SuppressWarnings("unchecked")
+    private void calibrateOnMatches() {
+        Map<String, Object> cfg = (Map<String, Object>) catalog.section("tabelas").getOrDefault("calibracao_partida", Map.of());
+        int samples = ((Number) cfg.getOrDefault("amostras", 120)).intValue();
+        int perLane = ((Number) cfg.getOrDefault("por_rota", 8)).intValue();
+        double limit = ((Number) cfg.getOrDefault("minutos_limite", 25)).doubleValue();
+        String minQuality = String.valueOf(cfg.getOrDefault("qualidade_minima", "C"));
+        long seed = ((Number) cfg.getOrDefault("semente", 20)).longValue();
+        String stage = "calibração na partida inteira (" + samples + " partidas)";
+        long s0 = System.nanoTime();
+        stage(stage, samples);
+        Map<String, List<String>> byLane = new LinkedHashMap<>();
+        Map<?, ?> kits = (Map<?, ?>) arena.kits().get("campeoes");
+        for (String lane : catalog.lanes()) {
+            List<String> pool = new ArrayList<>();
+            for (String c : laneChampions(lane, 1000)) {
+                Object kit = kits.get(c);
+                Object q = kit instanceof Map ? ((Map<?, ?>) kit).get("qualidade") : null;
+                if (q != null && String.valueOf(q).compareTo(minQuality) <= 0) {
+                    pool.add(c);
+                }
+                if (pool.size() >= perLane) {
+                    break;
+                }
+            }
+            byLane.put(lane, pool);
+        }
+        Map<String, DraftModel.Champ> champs = new LinkedHashMap<>();
+        DraftService.champs(profiles).forEach(c -> champs.put(c.name, c));
+        Random rnd = new Random(seed);
+        List<double[]> xs = new ArrayList<>();
+        List<Callable<Double>> jobs = new ArrayList<>();
+        java.util.concurrent.atomic.AtomicInteger done = new java.util.concurrent.atomic.AtomicInteger();
+        for (int k = 0; k < samples; k++) {
+            List<String> blue = new ArrayList<>();
+            List<String> red = new ArrayList<>();
+            List<String> roles = new ArrayList<>();
+            for (Map.Entry<String, List<String>> e : byLane.entrySet()) {
+                List<String> free = new ArrayList<>(e.getValue());
+                free.removeAll(blue);
+                free.removeAll(red);
+                if (free.size() < 2) {
+                    continue;
+                }
+                blue.add(free.remove(rnd.nextInt(free.size())));
+                red.add(free.remove(rnd.nextInt(free.size())));
+                roles.add(ROLE_OF_LANE.getOrDefault(e.getKey(), "barao"));
+            }
+            double[] fb = features(blue, champs);
+            double[] fr = features(red, champs);
+            double[] diff = new double[FEATURES.size()];
+            for (int i = 0; i < diff.length; i++) {
+                diff[i] = fb[i] - fr[i];
+            }
+            xs.add(diff);
+            List<BuildRepository.Build> chosen = new ArrayList<>();
+            List<String> names = new ArrayList<>();
+            List<Integer> teams = new ArrayList<>();
+            List<String> allRoles = new ArrayList<>();
+            List<String> styles = new ArrayList<>();
+            for (int i = 0; i < blue.size(); i++) {
+                chosen.add(progressionBuild(blue.get(i)));
+                names.add(blue.get(i));
+                teams.add(0);
+                allRoles.add(roles.get(i));
+                styles.add(null);
+            }
+            for (int i = 0; i < red.size(); i++) {
+                chosen.add(progressionBuild(red.get(i)));
+                names.add(red.get(i));
+                teams.add(1);
+                allRoles.add(roles.get(i));
+                styles.add(null);
+            }
+            final long matchSeed = seed * 1000 + k;
+            jobs.add(() -> {
+                if (cancel) {
+                    return Double.NaN;
+                }
+                com.ornnplanner.arena.MatchService.Draft d = matches.draftOf(chosen, names, teams, allRoles, styles);
+                com.ornnplanner.arena.rift.MacroPolicy script = matches.scripted();
+                com.ornnplanner.arena.rift.MatchModel.Result r = matches.run(d, matchSeed, limit, script, script);
+                status.done = done.incrementAndGet();
+                return outcome(r);
+            });
+        }
+        List<Double> ys = ArenaService.parallel(jobs);
+        if (cancel) {
+            return;
+        }
+        // the held-out half: fitted on the even samples, validated on the odd ones
+        List<double[]> tx = new ArrayList<>();
+        List<Double> ty = new ArrayList<>();
+        List<double[]> vx = new ArrayList<>();
+        List<Double> vy = new ArrayList<>();
+        int blueWins = 0;
+        int decided = 0;
+        for (int i = 0; i < xs.size(); i++) {
+            double y = ys.get(i);
+            if (Double.isNaN(y)) {
+                continue;
+            }
+            if (y == 100 || y == 0) {
+                decided++;
+                blueWins += y == 100 ? 1 : 0;
+            }
+            (i % 2 == 0 ? tx : vx).add(xs.get(i));
+            (i % 2 == 0 ? ty : vy).add(y);
+        }
+        double[] half = ridge(tx, ty, 1.0);
+        List<Double> pred = new ArrayList<>();
+        for (double[] x : vx) {
+            pred.add(predict(half, x, 0));
+        }
+        double validated = pearson(pred, vy, vy.stream().mapToDouble(d -> d).average().orElse(0));
+        List<double[]> allX = new ArrayList<>(tx);
+        allX.addAll(vx);
+        List<Double> allY = new ArrayList<>(ty);
+        allY.addAll(vy);
+        double[] beta = ridge(allX, allY, 1.0);
+        double mean = 0;
+        for (double v : beta) {
+            mean += Math.abs(v);
+        }
+        mean = mean / beta.length;
+        double r = correlation(allX, allY, beta);
+        String now = Instant.now().toString();
+        double secs = (System.nanoTime() - s0) / 1e9;
+        jdbc.update("DELETE FROM draft_tabelas WHERE lane = ?", CALIBRATION);
+        for (int i = 0; i < beta.length; i++) {
+            double mult = mean <= 0 ? 1 : Math.max(0, Math.min(2, beta[i] / mean));
+            jdbc.update("INSERT INTO draft_tabelas (lane, a, b, minute, race, created_at) VALUES (?, ?, 'peso', 0, ?, ?)",
+                    CALIBRATION, FEATURES.get(i), mult, now);
+        }
+        for (Object[] kv : new Object[][] {{"correlacao", r}, {"correlacao_validada", validated}, {"amostras", (double) allY.size()},
+                {"segundos", secs}, {"parcial", 0.0}, {"partida", 1.0}, {"decididas", (double) decided}, {"vitorias_azul", (double) blueWins}}) {
+            jdbc.update("INSERT INTO draft_tabelas (lane, a, b, minute, race, created_at) VALUES (?, ?, 'info', 0, ?, ?)",
+                    CALIBRATION, kv[0], kv[1], now);
+        }
+        time(stage, s0, samples);
+        log.info("Draft match calibration: {} matches, r = {}, validated on the held-out half = {}, {} s", allY.size(), r, validated, secs);
+    }
+
+    /**
+     * A whole match's outcome for blue (0..100): 100 a blue win, 0 a red win; without a winner at the limit, 50 plus the
+     * gold lead (1 point per 100 gold, at most 45).
+     */
+    static double outcome(com.ornnplanner.arena.rift.MatchModel.Result r) {
+        if (r.winner == 0) {
+            return 100;
+        }
+        if (r.winner == 1) {
+            return 0;
+        }
+        double lead = 0;
+        for (com.ornnplanner.arena.rift.MatchModel.Player p : r.players) {
+            lead += (p.team == 0 ? 1 : -1) * p.goldEarned;
+        }
+        return 50 + Math.max(-45, Math.min(45, lead / 100));
+    }
+
+    /** A champion's build for the match calibration: its standard page and spells with the progression's most likely items. */
+    BuildRepository.Build progressionBuild(String champion) {
+        BuildRepository.Build b = LiveGameRepository.copy(campaign.standardBuild(unitOf(champion)));
+        ProgressionService.Answer a = progression.answer(champion, List.of(), List.of(), List.of(), null, 1);
+        if (!a.continuations.isEmpty()) {
+            b.steps = new ArrayList<>();
+            for (ProgressionService.Step st : a.continuations.get(0).steps) {
+                b.steps.add(new BuildRepository.Step(st.itemId, true));
+            }
+        }
+        return b;
     }
 
     /** A team's composition needs met, in FEATURES order. */

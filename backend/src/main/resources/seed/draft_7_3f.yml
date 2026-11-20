@@ -130,6 +130,16 @@ tabelas:
   dupla_dragao: true
   dupla_por_rota: 4         # a dupla do Dragão: os 4 primeiros atiradores x os 4 primeiros suportes
   calibracao_amostras: 300  # lutas 5x5 da calibração (times sorteados, minuto 15, rota única)
+  # Rodada 20.b, Parte 5: a calibração na partida inteira (Rodada 10; botão próprio no Admin): composições sorteadas
+  # (um campeão por rota por time, dos `por_rota` mais jogados com ficha de qualidade até `qualidade_minima`), builds pela
+  # progressão, o roteiro de macro nos dois lados; o resultado (vitória, senão o ouro à frente no limite) contra as
+  # diferenças de composição. Os pesos só entram se a correlação na metade separada passar de nota.calibracao_minima.
+  calibracao_partida:
+    amostras: 120
+    por_rota: 8
+    qualidade_minima: C       # a partida inteira normal só aceita A e B (11 campeões, quase todos do Barão)
+    minutos_limite: 25
+    semente: 20
 
 # Parte 4: o primeiro encontro na fase de rotas.
 primeiro_encontro:

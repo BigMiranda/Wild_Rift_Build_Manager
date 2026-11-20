@@ -20,6 +20,10 @@ Por isso:
   - o nome do campeão vem do arquivo de correspondência `--herois` (padrão tools/meta_herois.json), que o usuário
     mantém: {"10001": "Garen", "奥恩": "Ornn", ...} (chave = heroId ou o nome chinês; valor = o nome de
     campeoes_7_3f.yml). Os heróis sem correspondência vão para tools/meta_herois_faltando.json, para preencher;
+  - Rodada 20.b: quando nem o heroId nem o nome chinês casam, casa pelo pinyin: o `alias` do herói (pinyin sem tons nem
+    espaços) contra o pinyin dos nomes chineses do arquivo de correspondência. Sem biblioteca: o pinyin de cada caractere
+    é aprendido da própria lista de heróis (o nome chinês de cada herói alinhado com as sílabas do alias dele, quando a
+    divisão em sílabas é única); um nome do arquivo com algum caractere não aprendido não entra;
   - a rota de cada posição sai da maioria das rotas dos heróis listados nela (o campo `lane` da lista de heróis:
     单人路 Barão, 打野 Selva, 中路 Meio, 射手 Dragão, 辅助 Suporte). É uma inferência (EST): o relatório mostra a
     contagem de cada posição para conferir. `--posicoes '{"1": "Meio", ...}'` impõe outra;
@@ -72,6 +76,61 @@ def cached(cache, name, url, offline):
     return text, path
 
 
+# Rodada 20.b: the pinyin syllables (initial + final, toneless; ü written v), to split an alias into syllables
+_INITIALS = ['zh', 'ch', 'sh', 'b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'r', 'z', 'c', 's', 'y', 'w', '']
+_FINALS = ['iang', 'iong', 'uang', 'ang', 'eng', 'ing', 'ong', 'iao', 'ian', 'uai', 'uan', 'van', 'ai', 'ei', 'ui', 'ao', 'ou',
+           'iu', 'ie', 've', 'ue', 'er', 'an', 'en', 'in', 'un', 'vn', 'ia', 'ua', 'uo', 'a', 'o', 'e', 'i', 'u', 'v']
+SYLLABLES = {i + f for i in _INITIALS for f in _FINALS if i + f}
+
+
+def splits(alias, n):
+    """Every way to split an alias into exactly n pinyin syllables (most aliases have one)."""
+    out = []
+
+    def walk(rest, acc):
+        if len(out) > 2:
+            return
+        if not rest:
+            if len(acc) == n:
+                out.append(list(acc))
+            return
+        if len(acc) >= n:
+            return
+        for k in range(min(6, len(rest)), 0, -1):
+            if rest[:k] in SYLLABLES:
+                walk(rest[k:], acc + [rest[:k]])
+
+    walk(alias, [])
+    return out
+
+
+def learn_pinyin(heroes):
+    """Character -> syllable, from the heroes whose Chinese name splits one way only over its alias."""
+    table = {}
+    clash = set()
+    for h in heroes.values():
+        name = ''.join(ch for ch in (h.get('name') or '') if '\u4e00' <= ch <= '\u9fff')
+        alias = (h.get('alias') or '').lower()
+        ways = splits(alias, len(name)) if name and alias.isalpha() else []
+        if len(ways) != 1:
+            continue
+        for ch, syl in zip(name, ways[0]):
+            if table.get(ch, syl) != syl:
+                clash.add(ch)
+            table[ch] = syl
+    for ch in clash:
+        table.pop(ch, None)
+    return table
+
+
+def pinyin_of(name, table):
+    """A Chinese name's pinyin by the learned table (None when a character is unknown)."""
+    chars = [ch for ch in name if '\u4e00' <= ch <= '\u9fff']
+    if not chars or any(ch not in table for ch in chars):
+        return None
+    return ''.join(table[ch] for ch in chars)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--herois', default=os.path.join(ROOT, 'tools', 'meta_herois.json'))
@@ -90,9 +149,23 @@ def main():
         with open(args.herois, encoding='utf-8') as f:
             names = {k: v for k, v in json.load(f).items() if not k.startswith('_')}
 
+    # Rodada 20.b: the map's Chinese names by their pinyin (learned from the hero list), for the heroes neither key matches
+    table = learn_pinyin(heroes)
+    by_pinyin = {}
+    for key, champ in names.items():
+        py = pinyin_of(key, table)
+        if py:
+            by_pinyin.setdefault(py, champ)
+    via_pinyin = {}
+
     def champion(hero_id):
         h = heroes.get(str(hero_id), {})
-        return names.get(str(hero_id)) or names.get(h.get('name', ''))
+        found = names.get(str(hero_id)) or names.get(h.get('name', ''))
+        if not found:
+            found = by_pinyin.get((h.get('alias') or '').lower())
+            if found:
+                via_pinyin[str(hero_id)] = {'nome_chines': h.get('name'), 'alias': h.get('alias'), 'campeao': found}
+        return found
 
     # the lane of each position: the majority of its heroes' lanes (EST), unless imposed
     counts = {}
@@ -137,6 +210,7 @@ def main():
         'posicoes_fonte': 'imposta' if args.posicoes else 'EST: maioria das rotas dos heróis de cada posição',
         'elos': elos,
         'sem_correspondencia': len(missing),
+        'pelo_pinyin': via_pinyin,
     }
     os.makedirs(os.path.dirname(args.saida), exist_ok=True)
     with open(args.saida, 'w', encoding='utf-8') as f:
@@ -149,6 +223,8 @@ def main():
           f'(lista em {falta}: preencha {args.herois}).')
     for p in sorted(counts):
         print(f'  posição {p} -> {positions.get(p)} ({dict(counts[p])})')
+    print(f'pinyin: {len(table)} caracteres aprendidos da lista de heróis; {len(via_pinyin)} herói(s) casado(s) pelo pinyin'
+          + (': ' + ', '.join(f'{k} ({v["alias"]}) -> {v["campeao"]}' for k, v in via_pinyin.items()) if via_pinyin else ''))
     print(f'escrito em {args.saida}')
 
 

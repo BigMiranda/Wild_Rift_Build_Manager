@@ -152,6 +152,16 @@ public class DraftController {
         }
     }
 
+    /** Rodada 20.b, Parte 5: the composition calibration on the whole match, in the background. */
+    @PostMapping("/calibracao-partida")
+    public DraftTablesService.Status startMatchCalibration() {
+        try {
+            return tables.startMatchCalibration();
+        } catch (IllegalStateException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        }
+    }
+
     @PostMapping("/tabelas/cancelar")
     public DraftTablesService.Status cancelTables() {
         tables.cancel();

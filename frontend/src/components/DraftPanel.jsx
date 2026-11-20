@@ -145,7 +145,9 @@ export default function DraftPanel({ game, onChange, root }) {
         )}
         <p className="small muted">
           {data?.calibrationInfo?.amostras
-            ? t(data.calibrationApplied ? 'draft.calibrated' : 'draft.calibratedWeak', { n: n0(data.calibrationInfo.amostras), r: (Math.round((data.calibrationInfo.correlacao_validada ?? 0) * 100) / 100).toLocaleString('pt-BR') })
+            ? t(data.calibrationInfo.partida
+              ? (data.calibrationApplied ? 'draft.calibratedMatch' : 'draft.calibratedMatchWeak')
+              : (data.calibrationApplied ? 'draft.calibrated' : 'draft.calibratedWeak'), { n: n0(data.calibrationInfo.amostras), r: (Math.round((data.calibrationInfo.correlacao_validada ?? 0) * 100) / 100).toLocaleString('pt-BR') })
             : t('draft.notCalibrated')}
         </p>
         <MechanicsTable />

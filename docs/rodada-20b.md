@@ -172,3 +172,104 @@ cartão; alvos de toque de 36 a 52 px.
 
 **Testes:** `LoadoutTest` (um flex Barão/Selva: cada rota com a sua melhor, Golpear só na Selva, a fundamental própria
 servindo; um Mago no Suporte troca o Ritmo Fatal por Aery; com a rota fixada, ponderada = robusta = a da rota).
+
+## Parte 5: a meta e as pendências da Rodada 20 (✅)
+
+### A meta importada
+
+`python tools/importar_meta.py` rodado em 20/11/2026 com o `tools/meta_herois.json` novo do usuário (os 143 campeões pelo
+nome chinês, com variantes nos incertos): dados de **19/11/2026**, **5 chaves externas**, **687 pares campeão-chave**, **0
+heróis sem correspondência** (os 143 da lista de heróis casaram pelo heroId ou pelo nome chinês). Gragas e Nilah não têm
+linha no ranking (sem dado na data). `backend/data/meta/meta.json` (fora do git, como o cache).
+
+- **Pinyin (`alias`)**: implementado sem biblioteca nova. O pinyin de cada caractere é **aprendido da própria lista de
+  heróis**: o nome chinês de cada herói alinhado com as sílabas do `alias` dele quando a divisão em sílabas é única
+  (sílabas = iniciais × finais do pinyin, sem tons); 166 caracteres aprendidos. Um herói que não casa pelo id nem pelo
+  nome casa se o `alias` dele for o pinyin de um nome chinês do mapa (um nome com caractere não aprendido não entra). Hoje
+  **nenhum herói precisou** dele; os que casarem assim ficam em `pelo_pinyin` no `meta.json` e no relatório.
+- **O que restou sem correspondência:** nada (o `tools/meta_herois_faltando.json` ficou vazio).
+
+**Posição → rota** (a maioria das rotas dos heróis listados em cada posição, somadas as 5 chaves; EST):
+
+| Posição | Rota | Contagem (heróis × chaves) |
+|---|---|---|
+| 1 | Meio | Meio 159, Barão 23, Suporte 16, Dragão 1 |
+| 2 | Barão | Barão 138, Meio 30, Selva 20, Dragão 14, Suporte 9 |
+| 3 | Dragão | Dragão 110 |
+| 4 | Suporte | Suporte 115, Meio 30, Barão 9, Dragão 5, Selva 5 |
+| 5 | Selva | Selva 130, Barão 56, Meio 34, Dragão 4 |
+
+A posição 3 é só de atiradores e a 4 tem os suportes (mais magos que também vão de suporte); a 5 tem lutadores que vão à
+selva. As cinco rotas saem diferentes, o que reforça a leitura, mas segue EST até alguém conferir no app chinês.
+
+**A chave externa** ("0" a "4"; `fonte_0`..`fonte_4`): a hipótese é que seja a **faixa de elo**, do mais baixo (0) ao mais
+alto (4). O que se vê: as chaves 1 e 2 são quase iguais (o mesmo herói no topo da posição 1, com 24% de banimento), as
+chaves 3 e 4 têm banimentos bem menores no topo (<1%) e outro herói em primeiro, a 0 é diferente das outras; o número de
+heróis com dado cresce de 177 (0) a 186 (4) e a soma das presenças fica em ~8,8 em todas. Nada na resposta diz o nome da
+faixa: segue EST. A tela de configuração da partida ganhou o seletor **"Elo da meta"** (as chaves, com esta hipótese no
+título); sem escolha, vale a primeira (`fonte_0`).
+
+**A meta alimenta:** a chance de cada rota (Parte 2: a parte da presença; as rotas com 10% ou mais da presença entram nas
+possíveis), o flex (Parte 3: rotas com 15% ou mais) e a parte `meta` da nota (presença, banimento e vitória nas rotas
+prováveis). Exemplos do `fonte_0`: Yasuo Meio 14,7% / Barão 4,1%; Ornn Barão 1,5% / Suporte 1,6% (a meta chinesa o
+mostra de suporte tanto quanto no Barão, então ele vira "?" até ser resolvido).
+
+### A calibração da composição na partida inteira
+
+Botão novo em **Admin › Catálogo › Draft e voz**: "Calibrar na partida inteira" (`POST /api/draft/calibracao-partida`,
+`DraftTablesService.calibrateOnMatches`, em segundo plano, com o progresso no mesmo quadro das tabelas). Composições
+sorteadas (um campeão por rota em cada time, dos 8 mais jogados de cada rota pela meta), builds pela progressão (a
+continuação mais provável, com a página e os feitiços padrão), o roteiro de macro nos dois lados, partidas inteiras da
+Rodada 10 até 25 minutos; o resultado é 100 / 0 para a vitória do azul / do vermelho (sem vencedor no limite, 50 mais o
+ouro à frente). Uma regressão ridge das diferenças de composição contra o resultado, ajustada na metade par e **validada
+na metade ímpar**; os pesos só entram se essa correlação passar de `nota.calibracao_minima` (0,3).
+
+- **A partida inteira normal só aceita fichas A e B**: 11 campeões, quase todos do Barão (Ornn, Darius, Renekton, Rumble,
+  Vayne, K'Sante, Garen, Irelia, Kayle, Teemo, Shen). Para sortear composições de verdade a calibração aceita fichas até
+  **C** (`tabelas.calibracao_partida.qualidade_minima`), sabendo que as lutas dependem delas.
+- **Resultado** (banco de teste, meta de 19/11, 20 threads):
+
+| Partidas | Decididas | Vitórias do azul | Correlação (amostra) | Correlação na metade separada | Tempo |
+|---|---|---|---|---|---|
+| 120 | 116 | 59 | 0,27 | **0,10** | 355 s |
+
+  Abaixo do mínimo: **os pesos do seed ficam** (EST) e a tela diz "calibração em 120 partidas inteiras com correlação na
+  metade separada 0,1, abaixo do mínimo". A correlação melhorou em relação à luta 5x5 de rota única (0,005 validada na
+  Rodada 20), mas ainda não prediz. Os coeficientes saíram nos extremos (dano físico e mágico 2, controle 0,26, o resto 0),
+  sinal de amostra pequena para 7 traços. Próximo passo: mais partidas (o custo é ~3 s por partida por thread) e as fichas
+  C revistas.
+
+### O primeiro encontro com tropas e torre: não oferecido
+
+Medido (`EncounterRiftProbeTest`, opcional, `-Ddraft.rift=data/ornn-planner.db`; Ornn × Darius no meio da rota do Barão,
+minuto 1,4, 18 lutas de 25 s): **60 ms por luta no mapa com tropas e torre contra 62 ms na rota única**: o custo caberia
+(o encontro inteiro, 1.800 lutas, ~107 s; um "refinar" de 18 lutas, ~1 s). Mas o custo igual mostra o problema: na Arena
+com mapa **a onda nasce no Nexo** e, nos minutos do primeiro encontro (0:30 a 2:12), não chega ao meio da rota dentro dos
+25 s da luta; a luta "com tropas" é a mesma da rota única. Para ser fiel, a Arena precisa pôr uma onda já na rota (uma
+mudança no simulador, com as goldens). Por isso **o botão "refinar" não foi oferecido**; fica registrado como pendência.
+
+**Testes:** `tools/test_importar_meta.py` (o cache sintético de antes e o casamento pelo pinyin: a divisão em sílabas, a
+tabela aprendida, um herói com nome variante casado pelo `alias`); `EncounterRiftProbeTest` (opcional).
+
+## Relatório final
+
+- **Os formatos** são os do usuário; falta só **confirmar quem começa a fase 2 do Campeonato** (usei o vermelho, EST).
+- **Rotas livres**: tudo lê a distribuição das 120 atribuições; um pick inesperado só move a distribuição.
+- **A ordem do draft** entra na nota (flex e risco de contra-escolha pela posição) e nos banimentos.
+- **Mecânicas que punem**: rascunho EST em `contra_mecanicas_7_3f.yml` para conferir (limiares, pesos, a lista de quem
+  anula projéteis).
+- **A tela** tem três etapas e cabe em 844 × 390 e 390 × 844.
+- **Meta** importada (0 sem correspondência); posição → rota e a chave externa como elo seguem EST.
+
+### Pendências e pedidos ao usuário
+
+1. Quem começa a fase 2 do Campeonato (banimentos 1-2-1 e escolhas 1-2-1): hoje o vermelho (EST).
+2. Conferir o rascunho `contra_mecanicas_7_3f.yml` ("Ver a tabela" em "Como a nota é feita" mostra os campeões de cada
+   linha).
+3. As regras de feitiços e fundamental por rota do Carregamento (`draft_7_3f.yml › carregamento`) são minhas (EST): não há
+   medida de feitiço ou runa por rota.
+4. A posição → rota e o significado da chave externa do ranking chinês (EST).
+5. A calibração da composição ainda não prediz (0,10 na metade separada); mais partidas e fichas C revistas.
+6. O primeiro encontro com tropas e torre precisa de uma onda já na rota na Arena com mapa.
+7. As tabelas de matchup do Admin foram medidas antes desta rodada; vale recalcular com a meta importada (os 20 mais
+   jogados por rota passam a vir da meta).

@@ -72,6 +72,10 @@ function DraftTables() {
       <div className="row">
         <button type="button" className="primary" disabled={st?.running} onClick={start}>{t('draftAdmin.tablesRun')}</button>
         <label className="live-check"><input type="checkbox" checked={calibrate} onChange={(e) => setCalibrate(e.target.checked)} /> {t('draftAdmin.calibrate')}</label>
+        <button type="button" disabled={st?.running} title={t('draftAdmin.matchCalibrationHelp')}
+          onClick={async () => { try { setError(null); setSt(await api.post('/api/draft/calibracao-partida')); } catch (e) { setError(e.message); } }}>
+          {t('draftAdmin.matchCalibration')}
+        </button>
         {st?.running && <button type="button" onClick={() => api.post('/api/draft/tabelas/cancelar').then(setSt)}>{t('draftAdmin.cancel')}</button>}
       </div>
       {error && <div className="notice error">{error}</div>}

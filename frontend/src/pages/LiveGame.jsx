@@ -305,6 +305,13 @@ export default function LiveGame() {
             onChange={(e) => change({ ...clone(game), mode: e.target.value, fearless: !!formats?.formats?.find((f) => f.key === e.target.value)?.fearless })}>
             {(formats?.formats ?? []).map((f) => <option key={f.key} value={f.key}>{f.name}</option>)}
           </select>
+          {(draft.data?.meta?.elos ?? []).length > 0 && (
+            <select value={game.elo ?? ''} aria-label={t('live.metaElo')} title={t('live.metaEloHelp')}
+              onChange={(e) => change({ ...clone(game), elo: e.target.value || null })}>
+              <option value="">{t('live.metaEloDefault')}</option>
+              {draft.data.meta.elos.map((e) => <option key={e} value={e}>{t('live.metaEloOf', { key: e.replace('fonte_', '') })}</option>)}
+            </select>
+          )}
           <button type="button" onClick={() => change({ ...clone(game), allySide: enemy })} title={t('live.swapSidesHelp')}>
             {t('live.allyIs', { side: t(`live.side.${ally}`) })} ⇄
           </button>
