@@ -8,8 +8,8 @@ import { ChampionAvatar } from '../components/ChampionAvatar.jsx';
 import ItemIcon from '../components/ItemIcon.jsx';
 import LivePlayerEditor, { ChampionGrid, SpellRuneIcons } from '../components/LivePlayerEditor.jsx';
 import {
-  BLUE, RED, addEvent, clockSeconds, clone, emptyGame, enemyOf, mmssOf, parseClock, picks, pushHistory, setClock, teamKey,
-  toggleClock, updatePlayer,
+  BLUE, NO_BAN, RED, addEvent, bannedChampions, cannotBan, clockSeconds, clone, emptyGame, enemyOf, formatOf, mmssOf, parseClock,
+  pushHistory, seriesBanned, setClock, teamKey, toggleClock, updatePlayer,
 } from '../liveGame.js';
 import LivePanels from '../components/LivePanels.jsx';
 import VoiceBar from '../components/VoiceBar.jsx';
@@ -31,6 +31,7 @@ export default function LiveGame() {
   const [editing, setEditing] = useState(null); // {side, index, tab}
   const [banning, setBanning] = useState(null); // {side, index}
   const [objective, setObjective] = useState(null); // dragao | arauto | barao
+  const [seriesAdd, setSeriesAdd] = useState(null); // the series game a champion is added to (by hand)
   const [clockEdit, setClockEdit] = useState(null);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(true);
@@ -123,31 +124,23 @@ export default function LiveGame() {
     setList(await api.get('/api/draft/jogos'));
   };
 
-  const fearlessSet = useCallback((side) => {
-    if (!game?.fearless) return new Set();
-    const scope = game.fearlessScope ?? formats?.fearless ?? 'ambos';
+  // Rodada 20.b: the Fearless series bans its champions for both teams
+  const fearlessSet = useCallback(() => (game ? seriesBanned(game, formats) : new Set()), [game, formats]);
+  const unavailableFor = useCallback(() => {
+    const out = fearlessSet();
+    for (const k of ['blue', 'red']) {
+      for (const p of game?.[k]?.players ?? []) if (p.champion) out.add(p.champion);
+      for (const b of bannedChampions(game?.[k])) out.add(b);
+    }
+    return out;
+  }, [game, fearlessSet]);
+  /** What a ban slot cannot take (DraftCatalog.cannotBan): picked, the series' and, in a championship, the other bans. */
+  const unbannableFor = useCallback((side, index) => {
     const out = new Set();
-    for (const s of game.series ?? []) {
-      for (const c of scope === 'proprio' ? (side === RED ? s.red : s.blue) : [...s.blue, ...s.red]) out.add(c);
-    }
+    if (!game) return out;
+    for (const c of champions) if (cannotBan(game, formats, side, index, c.nome)) out.add(c.nome);
     return out;
-  }, [game, formats]);
-  const unavailableFor = useCallback((side) => {
-    const out = fearlessSet(side);
-    for (const k of ['blue', 'red']) {
-      for (const p of game?.[k]?.players ?? []) if (p.champion) out.add(p.champion);
-      for (const b of game?.[k]?.bans ?? []) if (b) out.add(b);
-    }
-    return out;
-  }, [game, fearlessSet]);
-  /** What a ban cannot take: only the champions already picked (and the Fearless ones). Bans may repeat. */
-  const unbannableFor = useCallback((side) => {
-    const out = fearlessSet(side);
-    for (const k of ['blue', 'red']) {
-      for (const p of game?.[k]?.players ?? []) if (p.champion) out.add(p.champion);
-    }
-    return out;
-  }, [game, fearlessSet]);
+  }, [game, formats, champions]);
 
   if (!game) {
     return (
@@ -165,7 +158,7 @@ export default function LiveGame() {
                 <li key={g.id}>
                   <button type="button" onClick={() => open(g.id)}>
                     <strong>{g.name}</strong>
-                    <small className="muted"> · {formats?.formats?.find((f) => f.key === g.mode)?.name ?? g.mode}{g.fearless ? ' · Fearless' : ''}</small>
+                    <small className="muted"> · {formats?.formats?.find((f) => f.key === g.mode)?.name ?? g.mode}</small>
                     <span className="live-list-champs">
                       {g.blue.map((c) => <ChampionAvatar key={`b${c}`} name={c} size={22} />)}
                       <span className="muted"> × </span>
@@ -187,22 +180,22 @@ export default function LiveGame() {
   const sel = selected ? game[teamKey(selected.side)].players[selected.index] : null;
   const event = (ev) => change(addEvent(game, ev, items));
   const needSel = (fn) => () => (sel ? fn() : setError(t('live.pickFirst')));
-  const nextInSeries = () => {
-    if (!window.confirm(t('live.nextGameConfirm'))) return;
-    const g = clone(game);
-    g.series = [...(g.series ?? []), { blue: picks(g, BLUE), red: picks(g, RED) }];
-    const fresh = emptyGame();
-    g.blue = { ...fresh.blue, name: g.blue.name };
-    g.red = { ...fresh.red, name: g.red.name };
-    g.predictions = {};
-    g.events = [];
-    g.clock = fresh.clock;
-    change(g);
+  /** Rodada 20.b: a new game "in the same series" (the backend copies the earlier bans plus this game's ten). */
+  const nextInSeries = async () => {
+    if (!game.id || !window.confirm(t('live.series.nextConfirm', { n: (game.series?.length ?? 0) + 2 }))) return;
+    try {
+      await api.put(`/api/draft/jogos/${game.id}`, game);
+      const out = await api.post(`/api/draft/jogos/${game.id}/proximo`, {});
+      setList(await api.get('/api/draft/jogos'));
+      await open(out.id);
+    } catch (e) {
+      setError(e.message);
+    }
   };
 
   const team = (side) => {
     const tm = game[teamKey(side)];
-    const bans = formats?.formats?.find((f) => f.key === game.mode)?.turns?.filter((x) => x.action === 'ban' && x.side === side).length ?? 5;
+    const bans = formatOf(game, formats)?.turns?.filter((x) => x.action === 'ban' && x.side === side).length ?? 5;
     return (
       <section className={`live-team ${side}${side === ally ? ' ally' : ' enemy'}`} aria-label={t(`live.side.${side}`)}>
         <header className="live-team-head">
@@ -216,7 +209,8 @@ export default function LiveGame() {
         <div className="live-bans" aria-label={t('live.bans')}>
           {Array.from({ length: bans }, (_, i) => (
             <button key={i} type="button" className="live-ban" title={tm.bans?.[i] ?? t('live.ban')} onClick={() => setBanning({ side, index: i })}>
-              {tm.bans?.[i] ? <ChampionAvatar name={tm.bans[i]} size={28} /> : <span aria-hidden="true">⊘</span>}
+              {tm.bans?.[i] === NO_BAN ? <small className="muted">{t('live.noBanShort')}</small>
+                : tm.bans?.[i] ? <ChampionAvatar name={tm.bans[i]} size={28} /> : <span aria-hidden="true">⊘</span>}
             </button>
           ))}
         </div>
@@ -249,7 +243,7 @@ export default function LiveGame() {
     );
   };
 
-  const fmt = formats?.formats?.find((f) => f.key === game.mode);
+  const fmt = formatOf(game, formats);
   return (
     <div className="main live">
       <details className="panel live-setup" open={setupOpen} onToggle={(e) => setSetupOpen(e.currentTarget.open)}>
@@ -261,32 +255,27 @@ export default function LiveGame() {
         </summary>
         <div className="row">
           <input className="live-name" value={game.name ?? ''} placeholder={t('live.name')} onChange={(e) => change({ ...clone(game), name: e.target.value })} />
-          <select value={game.mode} onChange={(e) => change({ ...clone(game), mode: e.target.value })} aria-label={t('live.mode')}>
+          <select value={game.mode} aria-label={t('live.mode')}
+            onChange={(e) => change({ ...clone(game), mode: e.target.value, fearless: !!formats?.formats?.find((f) => f.key === e.target.value)?.fearless })}>
             {(formats?.formats ?? []).map((f) => <option key={f.key} value={f.key}>{f.name}</option>)}
           </select>
-          <label className="live-check">
-            <input type="checkbox" checked={!!game.fearless} onChange={(e) => change({ ...clone(game), fearless: e.target.checked })} /> Fearless
-          </label>
-          {game.fearless && (
-            <select value={game.fearlessScope ?? formats?.fearless ?? 'ambos'} aria-label={t('live.fearlessScope')}
-              onChange={(e) => change({ ...clone(game), fearlessScope: e.target.value })}>
-              <option value="ambos">{t('live.fearless.ambos')}</option>
-              <option value="proprio">{t('live.fearless.proprio')}</option>
-            </select>
-          )}
           <button type="button" onClick={() => change({ ...clone(game), allySide: enemy })} title={t('live.swapSidesHelp')}>
             {t('live.allyIs', { side: t(`live.side.${ally}`) })} ⇄
           </button>
-          {game.fearless && <button type="button" onClick={nextInSeries}>{t('live.nextGame', { n: (game.series?.length ?? 0) + 2 })}</button>}
+          {fmt?.fearless && game.id && <button type="button" onClick={nextInSeries}>{t('live.series.next')}</button>}
           {game.id && <button type="button" className="danger" onClick={remove}>{t('live.delete')}</button>}
         </div>
         {fmt?.source && <p className="muted small">{t('live.formatSource', { source: fmt.source })}</p>}
-        {game.fearless && (game.series ?? []).length > 0 && (
-          <p className="small">{t('live.seriesUsed')} {(game.series ?? []).map((s, k) => (
-            <span key={k} className="live-series">#{k + 1}: {[...s.blue, ...s.red].map((c) => <ChampionAvatar key={c} name={c} size={18} />)}</span>
-          ))}</p>
-        )}
+        {fmt && <p className="muted small">{t(fmt.bansRepeat ? 'live.banRule.repeat' : 'live.banRule.visible')}</p>}
       </details>
+      {(game.notices ?? []).length > 0 && (
+        <div className="notice live-upgrade">
+          <strong>{t('live.upgrade.title')}</strong>
+          <ul>{game.notices.map((k) => <li key={k}>{t(`live.upgrade.${k}`)}</li>)}</ul>
+          <button type="button" onClick={() => setGame({ ...game, notices: [] })}>{t('live.upgrade.ok')}</button>
+        </div>
+      )}
+      {fmt?.fearless && <SeriesStrip game={game} onChange={change} onAdd={(k) => setSeriesAdd(k)} />}
 
       <div className="live-bar">
         <div className="live-clock">
@@ -347,7 +336,7 @@ export default function LiveGame() {
       {editing && (
         <LivePlayerEditor
           player={game[teamKey(editing.side)].players[editing.index]} side={editing.side} startTab={editing.tab}
-          champions={champions} lanesOf={lanesOf} unavailable={unavailableFor(editing.side)} fearless={fearlessSet(editing.side)} items={items}
+          champions={champions} lanesOf={lanesOf} unavailable={unavailableFor()} fearless={fearlessSet()} items={items}
           onClose={() => setEditing(null)}
           onChange={(p) => {
             const before = game[teamKey(editing.side)].players[editing.index];
@@ -367,6 +356,17 @@ export default function LiveGame() {
         <div className="prep-overlay live-editor" role="dialog" aria-label={t('live.ban')}>
           <div className="prep-overlay-head">
             <button className="prep-back" onClick={() => setBanning(null)}><span aria-hidden="true">‹</span> {t('live.banOf', { side: t(`live.side.${banning.side}`) })}</button>
+            {fmt?.banSkip && (
+              <button type="button" title={t('live.noBanHelp')} onClick={() => {
+                const g = clone(game);
+                const bans = g[teamKey(banning.side)].bans ?? [];
+                while (bans.length <= banning.index) bans.push(null);
+                bans[banning.index] = NO_BAN;
+                g[teamKey(banning.side)].bans = bans;
+                change(g);
+                setBanning(null);
+              }}>{t('live.noBan')}</button>
+            )}
             {game[teamKey(banning.side)].bans?.[banning.index] && (
               <button type="button" className="danger" onClick={() => {
                 const g = clone(game);
@@ -376,7 +376,7 @@ export default function LiveGame() {
               }}>{t('live.clearBan')}</button>
             )}
           </div>
-          <ChampionGrid champions={champions} lanesOf={lanesOf} unavailable={unbannableFor(banning.side)} fearless={fearlessSet(banning.side)}
+          <ChampionGrid champions={champions} lanesOf={lanesOf} unavailable={unbannableFor(banning.side, banning.index)} fearless={fearlessSet()}
             value={game[teamKey(banning.side)].bans?.[banning.index]}
             onPick={(name) => {
               const g = clone(game);
@@ -386,6 +386,22 @@ export default function LiveGame() {
               g[teamKey(banning.side)].bans = bans;
               change(g);
               setBanning(null);
+            }} />
+        </div>
+      )}
+
+      {seriesAdd != null && (
+        <div className="prep-overlay live-editor" role="dialog" aria-label={t('live.series.addTo', { n: seriesAdd + 1 })}>
+          <div className="prep-overlay-head">
+            <button className="prep-back" onClick={() => setSeriesAdd(null)}><span aria-hidden="true">‹</span> {t('live.series.addTo', { n: seriesAdd + 1 })}</button>
+          </div>
+          <ChampionGrid champions={champions} lanesOf={lanesOf} unavailable={fearlessSet()} fearless={fearlessSet()}
+            onPick={(name) => {
+              const g = clone(game);
+              const s = g.series[seriesAdd];
+              (s.blue.length <= s.red.length ? s.blue : s.red).push(name);
+              change(g);
+              setSeriesAdd(null);
             }} />
         </div>
       )}
@@ -408,5 +424,41 @@ export default function LiveGame() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Rodada 20.b: the champions a Fearless series bans before the draft, grouped by earlier game, with hand corrections
+ * (a series started outside the app): remove one, add one, add or remove a game.
+ */
+function SeriesStrip({ game, onChange, onAdd }) {
+  const series = game.series ?? [];
+  const total = series.reduce((n, s) => n + (s.blue?.length ?? 0) + (s.red?.length ?? 0), 0);
+  const edit = (fn) => {
+    const g = clone(game);
+    fn(g.series);
+    onChange(g);
+  };
+  return (
+    <section className="panel live-series-strip" aria-label={t('live.series.title', { n: total })}>
+      <div className="spread">
+        <strong className="small">{t('live.series.title', { n: total })}</strong>
+        <button type="button" title={t('live.series.addGameHelp')} onClick={() => edit((s) => s.push({ blue: [], red: [], gameId: null }))}>{t('live.series.addGame')}</button>
+      </div>
+      {series.map((s, k) => (
+        <div key={k} className="live-series-game">
+          <small className="muted">{t('live.series.game', { n: k + 1 })}</small>
+          {['blue', 'red'].map((side) => (s[side] ?? []).map((c, j) => (
+            <button key={`${side}${c}`} type="button" className={`live-series-champ ${side === 'blue' ? BLUE : RED}`} title={t('live.series.remove', { name: c })}
+              onClick={() => edit((ss) => ss[k][side].splice(j, 1))}>
+              <ChampionAvatar name={c} size={24} />
+            </button>
+          )))}
+          <button type="button" className="live-series-add" onClick={() => onAdd(k)}>{t('live.series.add')}</button>
+          <button type="button" className="live-series-del" title={t('live.series.removeGame', { n: k + 1 })} aria-label={t('live.series.removeGame', { n: k + 1 })}
+            onClick={() => edit((ss) => ss.splice(k, 1))}>✕</button>
+        </div>
+      ))}
+    </section>
   );
 }

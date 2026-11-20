@@ -12,18 +12,59 @@ export const localVars = (vars) => Object.fromEntries(Object.entries(vars ?? {})
 export const BLUE = 'azul';
 export const RED = 'vermelho';
 export const LANES = ['Barão', 'Selva', 'Meio', 'Dragão', 'Suporte'];
+/** Rodada 20.b: a ban slot the team chose not to use ("sem banimento"; LiveGameModel.NO_BAN). */
+export const NO_BAN = '-';
+/** Rodada 20.b: the stored game's version (LiveGameModel.VERSION). */
+export const VERSION = 2;
 
-export const emptyPlayer = (lane) => ({
-  champion: null, lane, spells: [], runes: { keystone: null, primary: null, secondary: null, primaryRunes: [], secondaryRune: null },
+/**
+ * A player slot. Rodada 20.b: the five slots of a team are in pick order; `lanes` are the lanes the pick may play (null
+ * = not told: the seed's and the meta's; [] = undefined) and `lane` the one fixed on the loading screen.
+ */
+export const emptyPlayer = () => ({
+  champion: null, lane: null, lanes: null, spells: [], runes: { keystone: null, primary: null, secondary: null, primaryRunes: [], secondaryRune: null },
   level: null, items: [], components: [], startItem: null, gold: null, kills: null, deaths: null, assists: null,
 });
 
-export const emptyTeam = () => ({ name: null, bans: [], players: LANES.map(emptyPlayer), dragons: null, heralds: null, barons: null });
+export const emptyTeam = () => ({ name: null, bans: [], players: [0, 1, 2, 3, 4].map(emptyPlayer), dragons: null, heralds: null, barons: null });
 
 export const emptyGame = () => ({
-  id: null, name: null, mode: 'ranqueada', fearless: false, fearlessScope: null, series: [], allySide: BLUE, elo: null,
+  id: null, name: null, version: VERSION, mode: 'ranqueada', fearless: false, series: [], allySide: BLUE, elo: null, stage: 'draft',
   blue: emptyTeam(), red: emptyTeam(), predictions: {}, clock: { seconds: 0, setAt: null, paused: true }, events: [],
 });
+
+/** The format of a game among /api/draft/formatos (null while loading). */
+export const formatOf = (g, formats) => formats?.formats?.find((f) => f.key === g?.mode) ?? null;
+
+/** Rodada 20.b: the champions banned before the draft by a Fearless series (both teams), per earlier game. */
+export function seriesBanned(g, formats) {
+  const f = formatOf(g, formats);
+  const out = new Set();
+  if (!(f ? f.fearless : g?.fearless)) return out;
+  for (const s of g.series ?? []) for (const c of [...(s.blue ?? []), ...(s.red ?? [])]) if (c) out.add(c);
+  return out;
+}
+
+/** A team's bans that are champions (a skipped one is not). */
+export const bannedChampions = (team) => (team?.bans ?? []).filter((b) => b && b !== NO_BAN);
+
+/**
+ * Rodada 20.b (DraftCatalog.cannotBan): why a side cannot ban a champion in a slot, or null: picked by anyone, banned by
+ * the series, or (visible bans: championship) banned already in another slot. Blind ranked bans may repeat.
+ */
+export function cannotBan(g, formats, side, index, name) {
+  if (!name || name === NO_BAN) return null;
+  if (picks(g, BLUE).includes(name) || picks(g, RED).includes(name)) return 'escolhido';
+  if (seriesBanned(g, formats).has(name)) return 'fearless';
+  const f = formatOf(g, formats);
+  if (f && !f.bansRepeat) {
+    for (const s of [BLUE, RED]) {
+      const bans = g[teamKey(s)].bans ?? [];
+      for (let i = 0; i < bans.length; i++) if (bans[i] === name && !(s === side && i === index)) return 'banido';
+    }
+  }
+  return null;
+}
 
 export const teamKey = (side) => (side === RED ? 'red' : 'blue');
 export const enemyOf = (side) => (side === RED ? BLUE : RED);

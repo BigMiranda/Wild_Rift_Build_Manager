@@ -34,6 +34,7 @@ public class LiveGameRepository {
             LiveGameModel.Game g = read(rs.getString("data"));
             m.put("mode", g.mode);
             m.put("fearless", g.fearless);
+            m.put("version", g.version);
             m.put("blue", g.blue.champions());
             m.put("red", g.red.champions());
             m.put("createdAt", rs.getString("created_at"));

@@ -1793,3 +1793,13 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
   .live { padding-bottom: 64px; }
   .live-sel { display: none; }
 }
+
+/* ---------------------------------------------------------------- Rodada 20.b: the draft redone */
+.live-upgrade ul { margin: 4px 0 6px; padding-left: 18px; }
+.live-series-strip { padding: 6px 10px; display: grid; gap: 4px; }
+.live-series-game { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+.live-series-game > small { min-width: 52px; }
+.live-series-champ { min-height: 32px !important; padding: 2px; filter: grayscale(.5); border-bottom-width: 3px; }
+.live-series-champ.azul { border-bottom-color: #4f8fe6; }
+.live-series-champ.vermelho { border-bottom-color: #e0605a; }
+.live-series-add, .live-series-del { min-height: 32px !important; font-size: 13px; }

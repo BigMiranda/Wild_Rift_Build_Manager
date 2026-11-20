@@ -43,7 +43,7 @@ export default function DraftPanel({ game, onChange }) {
   // what the lists depend on: picks, lanes, bans, predictions, Fearless, sides, mode
   const key = useMemo(() => JSON.stringify({
     b: game.blue.players.map((p) => [p.champion, p.lane]), r: game.red.players.map((p) => [p.champion, p.lane]),
-    bb: game.blue.bans, rb: game.red.bans, p: game.predictions, f: [game.fearless, game.fearlessScope, game.series], a: game.allySide, m: game.mode, e: game.elo,
+    bb: game.blue.bans, rb: game.red.bans, p: game.predictions, f: [game.fearless, game.series], a: game.allySide, m: game.mode, e: game.elo,
   }), [game]);
   useEffect(() => {
     let live = true;

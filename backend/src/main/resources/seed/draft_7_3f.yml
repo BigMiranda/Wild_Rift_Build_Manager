@@ -1,23 +1,24 @@
 # Rodada 20: formatos de draft da sub aba Simulações › Draft e partida, e os pesos das notas do draft.
 #
-# ORDEM DE BANIMENTOS E ESCOLHAS: EST. É a do LoL de PC (ranqueada solo/duo e o draft de torneio), não a oficial do
-# Wild Rift: não foi conferida no jogo. Pedido ao usuário em docs/rodada-20.md (confirmar a do Wild Rift: quantos
-# banimentos por time, se são simultâneos e a ordem das escolhas). Basta editar `passos`.
+# Rodada 20.b: os três formatos do usuário (USU, 20/11/2026), e só eles (docs/rodada-20b.md). Partidas salvas com os
+# formatos antigos abrem como Ranqueada ou Campeonato (o mais próximo), com aviso.
 #
 # Por formato:
-#   nome        o que a tela mostra
-#   fonte       de onde veio a ordem (EST enquanto não for conferida)
-#   passos      em ordem: {acao: ban | escolha, time: azul | vermelho, qtd: quantos seguidos (1 se faltar),
-#               simultaneo: true quando os dois times banem ao mesmo tempo (a tela deixa preencher em qualquer ordem)}
-#
-# fearless: série em que os campeões usados nos jogos anteriores ficam indisponíveis.
-#   indisponivel  ambos (ninguém pode escolher de novo) | proprio (só o time que usou não pode). Cada partida
-#                 acompanhada guarda a sua escolha; esta é a padrão.
+#   nome            o que a tela mostra
+#   fonte           de onde veio a ordem (USU = o usuário; EST = estimativa, a confirmar)
+#   fearless        true: antes de começar, os 10 campeões de cada partida anterior da série (os dois times) ficam banidos
+#   banimentos      simultaneos (às cegas, ao mesmo tempo; os dois times podem banir o mesmo campeão) | alternados
+#                   (visíveis, na ordem dos passos, sem repetir)
+#   pode_pular_ban  true: o time pode não banir ("sem banimento" conta como feito)
+#   passos          em ordem: {acao: ban | escolha, time: azul | vermelho, qtd: quantos seguidos (1 se faltar),
+#                   fase: 1 | 2 (só para a tela), fonte: quando o passo tem fonte própria}
 patch: "7.3f"
 formatos:
   ranqueada:
     nome: Ranqueada
-    fonte: "EST: ranqueada do LoL de PC (5 banimentos de cada time ao mesmo tempo, escolhas em serpente)"
+    fonte: "USU, 20/11/2026: 5 banimentos de cada lado às cegas e ao mesmo tempo; escolhas em serpente 1-2-2-2-2-1"
+    banimentos: simultaneos
+    pode_pular_ban: false
     passos:
       - {acao: ban, time: azul, qtd: 5, simultaneo: true}
       - {acao: ban, time: vermelho, qtd: 5, simultaneo: true}
@@ -29,27 +30,34 @@ formatos:
       - {acao: escolha, time: vermelho}
   campeonato:
     nome: Campeonato
-    fonte: "EST: draft de torneio do LoL de PC (3 + 2 banimentos alternados por time, em duas fases)"
-    passos:
-      - {acao: ban, time: azul}
-      - {acao: ban, time: vermelho}
-      - {acao: ban, time: azul}
-      - {acao: ban, time: vermelho}
-      - {acao: ban, time: azul}
-      - {acao: ban, time: vermelho}
-      - {acao: escolha, time: azul}
-      - {acao: escolha, time: vermelho, qtd: 2}
-      - {acao: escolha, time: azul, qtd: 2}
-      - {acao: escolha, time: vermelho}
-      - {acao: ban, time: vermelho}
-      - {acao: ban, time: azul}
-      - {acao: ban, time: vermelho}
-      - {acao: ban, time: azul}
-      - {acao: escolha, time: vermelho}
-      - {acao: escolha, time: azul, qtd: 2}
-      - {acao: escolha, time: vermelho}
-fearless:
-  indisponivel: ambos
+    fonte: "USU, 20/11/2026: banimentos 1-2-2-1 e escolhas 1-2-2-1, depois banimentos 1-2-1 e escolhas 1-2-1; quem começa a 2ª fase (o vermelho) é EST, como no LoL de PC"
+    banimentos: alternados
+    pode_pular_ban: true
+    passos: &campeonato
+      # fase 1: banimentos 1-2-2-1 (azul, vermelho x2, azul x2, vermelho)
+      - {acao: ban, time: azul, fase: 1}
+      - {acao: ban, time: vermelho, qtd: 2, fase: 1}
+      - {acao: ban, time: azul, qtd: 2, fase: 1}
+      - {acao: ban, time: vermelho, fase: 1}
+      # fase 1: escolhas 1-2-2-1
+      - {acao: escolha, time: azul, fase: 1}
+      - {acao: escolha, time: vermelho, qtd: 2, fase: 1}
+      - {acao: escolha, time: azul, qtd: 2, fase: 1}
+      - {acao: escolha, time: vermelho, fase: 1}
+      # fase 2 (EST: começa o vermelho, como no LoL de PC; a confirmar): banimentos 1-2-1 e escolhas 1-2-1
+      - {acao: ban, time: vermelho, fase: 2, fonte: EST}
+      - {acao: ban, time: azul, qtd: 2, fase: 2, fonte: EST}
+      - {acao: ban, time: vermelho, fase: 2, fonte: EST}
+      - {acao: escolha, time: vermelho, fase: 2, fonte: EST}
+      - {acao: escolha, time: azul, qtd: 2, fase: 2, fonte: EST}
+      - {acao: escolha, time: vermelho, fase: 2, fonte: EST}
+  campeonato_fearless:
+    nome: Campeonato Fearless
+    fonte: "USU, 20/11/2026: o Campeonato, com os 10 campeões de cada partida anterior da série já banidos (os dois times)"
+    fearless: true
+    banimentos: alternados
+    pode_pular_ban: true
+    passos: *campeonato
 
 # Rotas do Wild Rift, na ordem dos cartões (o seed de campeões usa os mesmos nomes em `rotas`).
 rotas: [Barão, Selva, Meio, Dragão, Suporte]

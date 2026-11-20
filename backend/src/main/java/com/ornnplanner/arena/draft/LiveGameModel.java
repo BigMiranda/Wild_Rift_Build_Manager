@@ -18,19 +18,30 @@ public final class LiveGameModel {
 
     public static final String BLUE = "azul";
     public static final String RED = "vermelho";
+    /** Rodada 20.b: a ban slot the team chose not to use (championship: "sem banimento", counts as done). */
+    public static final String NO_BAN = "-";
+    /** Rodada 20.b: the version of the stored game (null or 1 = Rodada 20: card per lane, the old formats). */
+    public static final int VERSION = 2;
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Game {
         public Long id;
         public String name;
-        /** A format of draft_7_3f.yml: ranqueada | campeonato. */
+        /** Rodada 20.b: {@link #VERSION} (null = a game saved before it, upgraded when read). */
+        public Integer version;
+        /** A format of draft_7_3f.yml: ranqueada | campeonato | campeonato_fearless. */
         public String mode = "ranqueada";
-        /** A Fearless series: the champions of {@link #series} are unavailable. */
+        /** A Fearless series: the champions of {@link #series} are banned before the draft (kept in step with the format). */
         public boolean fearless;
-        /** ambos | proprio (null = the seed's). */
+        /** Rodada 20 only (ambos | proprio); since 20.b the Fearless is always both teams. Read to warn, then dropped. */
         public String fearlessScope;
-        /** The series' earlier games (Fearless). */
+        /** The series' earlier games (Fearless): their ten champions are banned before this one starts. */
         public List<SeriesGame> series = new ArrayList<>();
+        /** Rodada 20.b: the stage of the screen: draft | carregamento | partida. */
+        public String stage;
+        /** Rodada 20.b: what the upgrade of an old game changed (the screen shows it once; not stored). */
+        @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+        public List<String> notices = new ArrayList<>();
         /** The side the user follows as "ally" (the left column). */
         public String allySide = BLUE;
         /** Elo of the meta (null = all). */
@@ -58,13 +69,33 @@ public final class LiveGameModel {
     public static class SeriesGame {
         public List<String> blue = new ArrayList<>();
         public List<String> red = new ArrayList<>();
+        /** Rodada 20.b: the game it came from (null = typed by hand, e.g. a series started outside the app). */
+        public Long gameId;
+
+        public List<String> all() {
+            List<String> out = new ArrayList<>();
+            for (String c : blue) {
+                if (c != null && !c.isBlank()) {
+                    out.add(c);
+                }
+            }
+            for (String c : red) {
+                if (c != null && !c.isBlank()) {
+                    out.add(c);
+                }
+            }
+            return out;
+        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Team {
         public String name;
         public List<String> bans = new ArrayList<>();
-        /** Five players in card order (lanes Barão, Selva, Meio, Dragão, Suporte unless the user moved them). */
+        /**
+         * Five players. Rodada 20.b: in pick order (1st pick, 2nd pick...), each with its possible lanes and, once the
+         * loading screen fixes it, its lane. Rodada 20 games had one card per lane (upgraded when read).
+         */
         public List<Player> players = defaultPlayers();
         public Integer dragons;
         public Integer heralds;
@@ -72,10 +103,19 @@ public final class LiveGameModel {
 
         static List<Player> defaultPlayers() {
             List<Player> out = new ArrayList<>();
-            for (String lane : List.of("Barão", "Selva", "Meio", "Dragão", "Suporte")) {
-                Player p = new Player();
-                p.lane = lane;
-                out.add(p);
+            for (int i = 0; i < 5; i++) {
+                out.add(new Player());
+            }
+            return out;
+        }
+
+        /** The bans made (a skipped ban, {@link #NO_BAN}, is not a champion). */
+        public List<String> bannedChampions() {
+            List<String> out = new ArrayList<>();
+            for (String b : bans) {
+                if (b != null && !b.isBlank() && !NO_BAN.equals(b)) {
+                    out.add(b);
+                }
             }
             return out;
         }
@@ -94,7 +134,13 @@ public final class LiveGameModel {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Player {
         public String champion;
+        /** The lane fixed on the loading screen (null = still open: the draft reads the likely assignment). */
         public String lane;
+        /**
+         * Rodada 20.b: the lanes this pick may play. null = not told (the seed's and the meta's); empty = undefined (any
+         * lane, by the priors); else only these.
+         */
+        public List<String> lanes;
         public List<String> spells = new ArrayList<>();
         public Runes runes = new Runes();
         public Integer level;

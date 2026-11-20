@@ -168,7 +168,6 @@ public class DraftController {
         Map<String, Object> out = new LinkedHashMap<>();
         List<DraftCatalog.Format> fs = new ArrayList<>(catalog.formats().values());
         out.put("formats", fs);
-        out.put("fearless", catalog.fearlessDefault());
         out.put("lanes", catalog.lanes());
         out.put("dragons", catalog.seed().getOrDefault("dragoes", List.of()));
         out.put("weights", catalog.section("nota"));
@@ -177,23 +176,52 @@ public class DraftController {
 
     @GetMapping("/jogos")
     public List<Map<String, Object>> list() {
-        return games.list();
+        List<Map<String, Object>> out = games.list();
+        // Rodada 20.b: an old game is listed by the format it will open as
+        for (Map<String, Object> m : out) {
+            LiveGameModel.Game g = new LiveGameModel.Game();
+            g.mode = String.valueOf(m.get("mode"));
+            g.fearless = Boolean.TRUE.equals(m.get("fearless"));
+            g.version = (Integer) m.get("version");
+            catalog.upgrade(g);
+            m.put("mode", g.mode);
+            m.put("fearless", g.fearless);
+        }
+        return out;
     }
 
+    /** A game; one saved before Rodada 20.b comes upgraded, with {@code notices} saying what changed. */
     @GetMapping("/jogos/{id}")
     public LiveGameModel.Game get(@PathVariable long id) {
-        return games.find(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        LiveGameModel.Game g = games.find(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        catalog.upgrade(g);
+        return g;
     }
 
     @PostMapping("/jogos")
     public LiveGameModel.Game create(@RequestBody LiveGameModel.Game g) {
         g.id = null;
+        if (g.version == null) {
+            g.version = LiveGameModel.VERSION;
+        }
+        catalog.upgrade(g);
         return games.save(g);
+    }
+
+    /**
+     * Rodada 20.b: the next game of a Fearless series: a new game with the earlier games' bans plus this one's ten
+     * champions.
+     */
+    @PostMapping("/jogos/{id}/proximo")
+    public LiveGameModel.Game nextInSeries(@PathVariable long id) {
+        LiveGameModel.Game g = games.find(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return games.save(catalog.nextInSeries(g));
     }
 
     @PutMapping("/jogos/{id}")
     public LiveGameModel.Game update(@PathVariable long id, @RequestBody LiveGameModel.Game g) {
         g.id = id;
+        catalog.upgrade(g);
         try {
             return games.save(g);
         } catch (IllegalArgumentException e) {
@@ -210,6 +238,7 @@ public class DraftController {
     @PostMapping("/estado")
     public Map<String, Object> state(@RequestBody LiveGameModel.Game g) {
         Map<String, Object> out = new LinkedHashMap<>();
+        catalog.upgrade(g);
         out.put("next", catalog.next(g));
         out.put("unavailableBlue", catalog.unavailable(g, LiveGameModel.BLUE));
         out.put("unavailableRed", catalog.unavailable(g, LiveGameModel.RED));
