@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { t } from '../i18n.js';
+import { api } from '../api.js';
+import { currentLang, t } from '../i18n.js';
 import { ChampionAvatar } from './ChampionAvatar.jsx';
 import { clone, localVars, teamKey } from '../liveGame.js';
 import { useDraftSuggestions } from '../useDraft.js';
@@ -12,7 +13,8 @@ export function reasonText(r) {
   const v = localVars(r.vars);
   const pred = v.predicted ? t('draft.predicted') : '';
   const src = v.measured === false ? t('draft.byProfile') : v.measured ? t('draft.measured') : '';
-  return t(`draft.r.${r.key}`, { ...v, need: v.need ? t(`draft.need.${v.need}`) : '', pred, src });
+  const mechName = v.mech ? t(`draft.mech.${v.mech}`) : '';
+  return t(`draft.r.${r.key}`, { ...v, need: v.need ? t(`draft.need.${v.need}`) : '', pred, src, mechName: mechName.startsWith('draft.mech.') ? v.mech : mechName });
 }
 
 /** Rodada 20.b: a candidate's likely lanes in short ("Bar 70% · Mei 30%"); one lane alone without the chance. */
@@ -82,6 +84,7 @@ export default function DraftPanel({ game, onChange, root }) {
         {data?.meta ? t('draft.meta', { date: data.meta.data }) : t('draft.noMeta')}
         {' · '}
         {data?.measuredRows ? t('draft.tables', { n: n0(data.measuredRows) }) : t('draft.noTables')}
+        {data && !data.mechanics ? ` · ${t('draft.mechPending')}` : ''}
       </p>
       {error && <div className="notice error">{error}</div>}
       {fixed.length > 0 && (
@@ -138,14 +141,64 @@ export default function DraftPanel({ game, onChange, root }) {
         <summary>{t('draft.how')}</summary>
         <p className="small">{t('draft.howText')}</p>
         {data?.weights && (
-          <p className="small">{['meta', 'lane', 'matchup', 'composition', 'counter'].map((k) => `${t(`draft.w.${k}`)} ${data.weights[k]}`).join(' · ')}</p>
+          <p className="small">{['meta', 'lane', 'matchup', 'composition', 'counter', 'flex'].map((k) => `${t(`draft.w.${k}`)} ${data.weights[k]}`).join(' · ')}</p>
         )}
         <p className="small muted">
           {data?.calibrationInfo?.amostras
             ? t(data.calibrationApplied ? 'draft.calibrated' : 'draft.calibratedWeak', { n: n0(data.calibrationInfo.amostras), r: (Math.round((data.calibrationInfo.correlacao_validada ?? 0) * 100) / 100).toLocaleString('pt-BR') })
             : t('draft.notCalibrated')}
         </p>
+        <MechanicsTable />
       </details>
     </section>
+  );
+}
+
+/**
+ * Rodada 20.b, Parte 3: the mechanics that punish (contra_mecanicas_7_3f.yml), for the user to check: each vulnerability,
+ * what punishes it and its weight, and the champions that have it. Loaded on demand (GET /api/draft/mecanicas).
+ */
+function MechanicsTable() {
+  const [info, setInfo] = useState(null);
+  const [error, setError] = useState(null);
+  const en = currentLang() === 'en';
+  if (!info) {
+    return (
+      <div className="draft-mech">
+        <strong className="small">{t('draft.mech.title')}</strong>{' '}
+        <button type="button" onClick={() => api.get('/api/draft/mecanicas').then(setInfo).catch((e) => setError(e.message))}>{t('draft.mech.load')}</button>
+        {error && <div className="notice error">{error}</div>}
+      </div>
+    );
+  }
+  const champs = Object.entries(info.campeoes ?? {});
+  return (
+    <div className="draft-mech">
+      <strong className="small">{t('draft.mech.title')}</strong>
+      <p className="muted small">{t('draft.mech.help')}</p>
+      <div className="table-wrap">
+        <table className="small">
+          <thead><tr><th>{t('draft.mech.vuln')}</th><th>{t('draft.mech.punishedBy')}</th><th>{t('draft.mech.weight')}</th><th>{t('draft.mech.champs')}</th></tr></thead>
+          <tbody>
+            {Object.values(info.vulnerabilidades ?? {}).map((v) => {
+              const who = champs.filter(([, x]) => x.vulnerabilities.includes(v.key)).map(([n]) => n);
+              const by = v.punishedBy.map((p) => {
+                const pn = info.punicoes?.[p];
+                const n = champs.filter(([, x]) => x.punishments.includes(p)).length;
+                return `${(en ? pn?.nome_en : pn?.nome) ?? p} (${n})`;
+              });
+              return (
+                <tr key={v.key}>
+                  <td>{en ? v.nameEn : v.name}</td>
+                  <td>{by.join('; ')}</td>
+                  <td>{v.weight}</td>
+                  <td title={who.join(', ')}>{who.length}: {who.slice(0, 12).join(', ')}{who.length > 12 ? '…' : ''}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

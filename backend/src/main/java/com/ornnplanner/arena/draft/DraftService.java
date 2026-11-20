@@ -23,12 +23,14 @@ public class DraftService {
     private final ChampionProfiles profiles;
     private final MetaStats meta;
     private final DraftTablesService tables;
+    private final CounterMechanics mechanics;
 
-    public DraftService(DraftCatalog catalog, ChampionProfiles profiles, MetaStats meta, DraftTablesService tables) {
+    public DraftService(DraftCatalog catalog, ChampionProfiles profiles, MetaStats meta, DraftTablesService tables, CounterMechanics mechanics) {
         this.catalog = catalog;
         this.profiles = profiles;
         this.meta = meta;
         this.tables = tables;
+        this.mechanics = mechanics;
     }
 
     /** What the draft reads of every champion (the profiles: classes, damage, toughness, control, range, sustain). */
@@ -150,6 +152,14 @@ public class DraftService {
         w.matchup = num(p.get("matchup"), w.matchup);
         w.composition = num(p.get("composicao"), w.composition);
         w.counter = num(p.get("contra"), w.counter);
+        w.flex = num(p.get("flex"), w.flex);
+        Map<String, Object> fx = (Map<String, Object>) nota.getOrDefault("flex", Map.of());
+        w.flexMin = num(fx.get("presenca_real"), w.flexMin);
+        Map<String, Object> ct = (Map<String, Object>) nota.getOrDefault("contra", Map.of());
+        w.counterMechanics = num(ct.get("mecanicas"), w.counterMechanics);
+        w.counterFullAfter = (int) num(ct.get("cheio_com"), w.counterFullAfter);
+        w.counterTop = num(ct.get("mais_forte"), w.counterTop);
+        w.banCounter = num(ct.get("banimentos"), w.banCounter);
         w.metaPresence = num(m.get("presenca"), w.metaPresence);
         w.metaBan = num(m.get("banimento"), w.metaBan);
         w.metaWin = num(m.get("vitoria"), w.metaWin);
@@ -214,6 +224,7 @@ public class DraftService {
                     b.picks.add(pick);
                 }
             }
+            b.order = pickOrder(g);
             Set<String> off = new LinkedHashSet<>(catalog.unavailable(g, side));
             b.unavailable.put(side, off);
         }
@@ -247,7 +258,8 @@ public class DraftService {
             return tables.advantage(a, b, lane);
         };
         Map<String, Map<String, DraftModel.Meta>> mt = meta.of(g.elo);
-        DraftModel model = new DraftModel(champs(profiles, mt, w, minShare(), unseenSeedLane()), mt, m, w, catalog.lanes());
+        DraftModel model = new DraftModel(champs(profiles, mt, w, minShare(), unseenSeedLane()), mt, m, w, catalog.lanes())
+                .withPunish(punish());
         // Rodada 20.b: the duo's partners by the most likely assignment of each team
         for (String side : List.of(LiveGameModel.BLUE, LiveGameModel.RED)) {
             List<DraftModel.Pick> ps = board.of(side);
@@ -257,6 +269,38 @@ public class DraftService {
             }
         }
         return model;
+    }
+
+    /** Rodada 20.b, Parte 3: the mechanics that punish (contra_mecanicas_7_3f.yml), as the model reads them. */
+    DraftModel.Punish punish() {
+        // computed once in the background: until then the counter-pick risk reads only the measured matchup
+        Map<String, CounterMechanics.Traits> t = mechanics.traitsIfReady();
+        if (t == null) {
+            return null;
+        }
+        return new DraftModel.Punish() {
+            @Override
+            public double of(String b, String a) {
+                return mechanics.punish(t, b, a);
+            }
+
+            @Override
+            public String why(String b, String a) {
+                List<CounterMechanics.Why> w = mechanics.why(t, b, a);
+                return w.isEmpty() ? null : w.get(0).vulnerability;
+            }
+        };
+    }
+
+    /** Rodada 20.b, Parte 3: the mechanics' table for the screen (vulnerabilities, punishments, each champion's traits). */
+    public Map<String, Object> mechanicsInfo() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("vulnerabilidades", mechanics.vulnerabilities());
+        Map<String, Object> ps = new LinkedHashMap<>();
+        mechanics.punishments().forEach((k, v) -> ps.put(k, Map.of("nome", v.getOrDefault("nome", k), "nome_en", v.getOrDefault("nome_en", k))));
+        out.put("punicoes", ps);
+        out.put("campeoes", mechanics.traits());
+        return out;
     }
 
     /** Rodada 20.b: a team's lane distribution for the screen: each pick's lane chances and each lane's chance of being open. */
@@ -347,6 +391,8 @@ public class DraftService {
         public Map<String, LaneView> lanes = new LinkedHashMap<>();
         /** Rodada 20.b: the screen shows "?" below this. */
         public double unsureBelow;
+        /** Rodada 20.b: the mechanics that punish are in the counter-pick risk (false while they are computed). */
+        public boolean mechanics;
     }
 
     /**
@@ -379,6 +425,7 @@ public class DraftService {
         s.lanes.put(LiveGameModel.BLUE, laneView(model, b, LiveGameModel.BLUE));
         s.lanes.put(LiveGameModel.RED, laneView(model, b, LiveGameModel.RED));
         s.unsureBelow = unsureBelow();
+        s.mechanics = mechanics.traitsIfReady() != null;
         return s;
     }
 }

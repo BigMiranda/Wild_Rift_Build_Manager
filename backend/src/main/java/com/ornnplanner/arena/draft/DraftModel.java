@@ -21,6 +21,13 @@ import java.util.Set;
  * each champion's chance in each lane). Everything reads the distribution: the free lane is the chance of the
  * candidate's lanes being open, the matchup is the mean over the likely lane rivals, the meta is the mean over the
  * candidate's likely lanes, the counter-pick risk weighs each lane by the chance of the rival lane still being open.
+ *
+ * <p>Rodada 20.b, Parte 3: the note understands the order. <b>Flex</b>: a champion with real presence in two or more open
+ * lanes is worth more early (it hides the lane and keeps options) and nothing on the team's last pick. <b>Counter-pick
+ * risk</b> depends on the position: how much the available champions punish the candidate (the measured matchup, played
+ * with the likely builds, plus the mechanics that punish, {@link Punish}) times the other side's picks still to come
+ * after this one; the last pick has none. The <b>bans</b> also weigh how much a candidate counter-picks the picks
+ * already made.
  */
 public final class DraftModel {
 
@@ -62,12 +69,31 @@ public final class DraftModel {
         Double advantage(String a, String b, String lane);
     }
 
+    /** Rodada 20.b: how much b's mechanics punish a's (0..1) and the vulnerability it answers (null = none). */
+    public interface Punish {
+        double of(String b, String a);
+
+        String why(String b, String a);
+    }
+
     public static class Weights {
         public double meta = 0.25;
         public double lane = 0.35;
         public double matchup = 0.30;
         public double composition = 0.30;
         public double counter = 0.20;
+        /** Rodada 20.b: flex (two or more open lanes with real presence), worth more early. */
+        public double flex = 0.15;
+        /** Rodada 20.b: a lane counts for the flex with at least this share of the champion's presence. */
+        public double flexMin = 0.15;
+        /** Rodada 20.b: the mechanics' punishment added to the measured advantage in the counter-pick risk. */
+        public double counterMechanics = 0.3;
+        /** Rodada 20.b: the counter-pick risk is full with this many picks of the other side still to come. */
+        public int counterFullAfter = 5;
+        /** Rodada 20.b: in a lane's counter-pick risk, the strongest counter's share (the mean of the 3 strongest, the rest). */
+        public double counterTop = 0.6;
+        /** Rodada 20.b: the bans' weight of counter-picking the picks already made. */
+        public double banCounter = 0.5;
         public double metaPresence = 0.4;
         public double metaBan = 0.2;
         public double metaWin = 0.4;
@@ -118,6 +144,8 @@ public final class DraftModel {
 
     public static class Board {
         public List<Pick> picks = new ArrayList<>();
+        /** Rodada 20.b: the sides of the picks in the format's order (null = the ranked snake). */
+        public List<String> order;
         /** Banned, and the Fearless series (per side: the scope may differ). */
         public Map<String, Set<String>> unavailable = new LinkedHashMap<>();
 
@@ -136,6 +164,7 @@ public final class DraftModel {
             b.picks.addAll(picks);
             b.picks.add(p);
             b.unavailable = unavailable;
+            b.order = order;
             return b;
         }
     }
@@ -168,6 +197,7 @@ public final class DraftModel {
     private final Map<String, Champ> champs = new LinkedHashMap<>();
     private final Map<String, Map<String, Meta>> meta;
     private final Matchup measured;
+    private Punish punish;
     private final Weights w;
     private final List<String> lanes;
     private final Map<String, Double> subclassPower = new LinkedHashMap<>();
@@ -201,6 +231,56 @@ public final class DraftModel {
 
     public Champ champ(String name) {
         return champs.get(name);
+    }
+
+    /** Rodada 20.b: the mechanics that punish (null = only the measured matchup). */
+    public DraftModel withPunish(Punish p) {
+        this.punish = p;
+        return this;
+    }
+
+    /** The ranked snake, when a board has no order. */
+    static final List<String> SNAKE = List.of(LiveGameModel.BLUE, LiveGameModel.RED, LiveGameModel.RED, LiveGameModel.BLUE,
+            LiveGameModel.BLUE, LiveGameModel.RED, LiveGameModel.RED, LiveGameModel.BLUE, LiveGameModel.BLUE, LiveGameModel.RED);
+
+    /**
+     * Rodada 20.b: where a side's next pick falls in the order: {the other side's picks still to come after it, this
+     * side's own picks still to come after it}.
+     */
+    public int[] after(Board b, String side) {
+        List<String> order = b.order == null || b.order.isEmpty() ? SNAKE : b.order;
+        int made = b.of(side).size();
+        int seen = 0;
+        int pos = -1;
+        for (int i = 0; i < order.size(); i++) {
+            if (order.get(i).equals(side) && seen++ == made) {
+                pos = i;
+                break;
+            }
+        }
+        if (pos < 0) {
+            return new int[] {0, 0};
+        }
+        int other = 0;
+        int own = 0;
+        for (int i = pos + 1; i < order.size(); i++) {
+            if (order.get(i).equals(side)) {
+                own++;
+            } else {
+                other++;
+            }
+        }
+        return new int[] {other, own};
+    }
+
+    /**
+     * Rodada 20.b: how much o punishes c in a lane, for the counter-pick risk and the bans: the measured (or profile)
+     * advantage plus the mechanics' punishment, clamped to 0..1.
+     */
+    public double punishes(String o, String c, String lane) {
+        double a = advantage(o, c, lane);
+        double m = punish == null ? 0 : punish.of(o, c);
+        return Math.max(0, Math.min(1, a + w.counterMechanics * m));
     }
 
     /** Rodada 20.b: a champion's lane chances from the seed's order alone (sums to 1). */
@@ -332,10 +412,46 @@ public final class DraftModel {
         return new ArrayList<>(out.subList(0, Math.min(k, out.size())));
     }
 
-    /** The bans: the other side's best candidates, the ones that threaten this side most. */
+    /**
+     * The bans: the other side's best candidates, the ones that threaten this side most. Rodada 20.b: a candidate that
+     * counter-picks this side's picks already made goes up (in the lanes both are likely to play: the measured advantage
+     * plus the mechanics, by {@link Weights#banCounter}).
+     */
     public List<Scored> threats(Board b, String side, int k) {
         String other = LiveGameModel.BLUE.equals(side) ? LiveGameModel.RED : LiveGameModel.BLUE;
-        return rank(b, other, k);
+        List<Pick> mine = b.of(side);
+        if (mine.isEmpty() || w.banCounter <= 0) {
+            return rank(b, other, k);
+        }
+        LaneAssignment.Result myLanes = assignment(b, side);
+        List<Scored> pool = rank(b, other, Math.max(4 * k, 40));
+        for (Scored s : pool) {
+            double best = 0;
+            Pick victim = null;
+            for (int i = 0; i < mine.size(); i++) {
+                double v = 0;
+                for (int l = 0; l < lanes.size(); l++) {
+                    double po = s.lanes.getOrDefault(lanes.get(l), 0.0);
+                    double pa = myLanes.marginal[i][l];
+                    if (po > 0 && pa > 0) {
+                        v += po * pa * punishes(s.champion, mine.get(i).champion, lanes.get(l));
+                    }
+                }
+                if (v > best) {
+                    best = v;
+                    victim = mine.get(i);
+                }
+            }
+            s.parts.put("contraEscolha", best);
+            s.score += 100 * w.banCounter * best;
+            if (victim != null && best >= 0.2) {
+                String why = punish == null ? null : punish.why(s.champion, victim.champion);
+                s.reasons.add(0, why == null ? new Reason("contraEscolhe", "champ", victim.champion)
+                        : new Reason("contraEscolheMecanica", "champ", victim.champion, "mech", why));
+            }
+        }
+        pool.sort(Comparator.comparingDouble((Scored s) -> -s.score).thenComparing(s -> s.champion));
+        return new ArrayList<>(pool.subList(0, Math.min(k, pool.size())));
     }
 
     /** What every candidate of one ranking shares: the two teams' lane distributions. */
@@ -348,6 +464,9 @@ public final class DraftModel {
         final List<Pick> theirs;
         final LaneAssignment.Result myLanes;
         final LaneAssignment.Result theirLanes;
+        /** The other side's picks still to come after this one, and this side's own. */
+        final int laterOther;
+        final int laterOwn;
 
         Ctx(Board b, String side, String other, Set<String> taken) {
             this.b = b;
@@ -358,6 +477,9 @@ public final class DraftModel {
             this.theirs = b.of(other);
             this.myLanes = assignment(b, side);
             this.theirLanes = assignment(b, other);
+            int[] a = after(b, side);
+            this.laterOther = a[0];
+            this.laterOwn = a[1];
         }
     }
 
@@ -469,38 +591,56 @@ public final class DraftModel {
         }
         // composition
         double pComp = composition(x.mine, c, s);
-        // counter-pick risk: in each likely lane, by the chance of the other side's rival lane still being open
+        // Rodada 20.b: flex: two or more open lanes with real presence, worth more the more own picks are still to come
+        List<String> flexLanes = new ArrayList<>();
+        for (int l = 0; l < lanes.size(); l++) {
+            if (c.lanePrior.getOrDefault(lanes.get(l), 0.0) >= w.flexMin && x.myLanes.open[l] >= 0.5) {
+                flexLanes.add(lanes.get(l));
+            }
+        }
+        double earliness = (double) x.laterOwn / Math.max(1, lanes.size() - 1);
+        double pFlex = flexLanes.size() >= 2 ? earliness : 0;
+        if (pFlex >= 0.25) {
+            s.reasons.add(new Reason("flex", "lanes", String.join(" / ", flexLanes)));
+        }
+        // counter-pick risk: in each likely lane, by the chance of the other side's rival lane still being open, times
+        // the other side's picks still to come after this one (the last pick has no risk)
         double pCounter = 0;
         String worst = null;
         double worstRisk = 0;
-        for (int l = 0; l < pc.length; l++) {
+        double position = Math.min(1, (double) x.laterOther / Math.max(1, w.counterFullAfter));
+        for (int l = 0; l < pc.length && position > 0; l++) {
             double openThere = x.theirLanes.open[l];
             if (pc[l] <= 0 || openThere <= 0) {
                 continue;
             }
             Object[] r = laneRisk(x, c, lanes.get(l));
             double risk = (double) r[0];
-            pCounter -= pc[l] * openThere * risk;
+            pCounter -= pc[l] * openThere * risk * position;
             if (pc[l] * openThere * risk > worstRisk) {
                 worstRisk = pc[l] * openThere * risk;
                 worst = (String) r[1];
             }
         }
-        if (pCounter <= -0.3 && worst != null) {
-            s.reasons.add(new Reason("risco", "champ", worst));
+        if (pCounter <= -0.15 && worst != null) {
+            String why = punish == null ? null : punish.why(worst, c.name);
+            s.reasons.add(why == null ? new Reason("risco", "champ", worst, "later", x.laterOther)
+                    : new Reason("riscoMecanica", "champ", worst, "later", x.laterOther, "mech", why));
         }
         s.parts.put("meta", pMeta);
         s.parts.put("rota", laneFit);
         s.parts.put("matchup", pMatch);
         s.parts.put("composicao", pComp);
         s.parts.put("contra", pCounter);
-        s.score = 100 * (w.meta * pMeta + w.lane * laneFit + w.matchup * pMatch + w.composition * pComp + w.counter * pCounter);
+        s.parts.put("flex", pFlex);
+        s.score = 100 * (w.meta * pMeta + w.lane * laneFit + w.matchup * pMatch + w.composition * pComp + w.counter * pCounter
+                + w.flex * pFlex);
         return s;
     }
 
     /**
-     * How much the other side's available champions that play a lane punish a candidate there: the mean of the 3
-     * biggest advantages over it (0..1), and the one that punishes most.
+     * How much the other side's available champions that play a lane punish a candidate there (0..1): the strongest
+     * counter and the mean of the 3 strongest (Rodada 20.b), and the one that punishes most.
      */
     Object[] laneRisk(Ctx x, Champ c, String lane) {
         List<double[]> risks = new ArrayList<>();
@@ -510,7 +650,7 @@ public final class DraftModel {
             if (o.name.equals(c.name) || x.taken.contains(o.name) || otherOff.contains(o.name) || !o.possibleLanes.contains(lane)) {
                 continue;
             }
-            double a = advantage(o.name, c.name, lane);
+            double a = punishes(o.name, c.name, lane);
             if (a > 0) {
                 risks.add(new double[] {a, names.size()});
                 names.add(o.name);
@@ -522,7 +662,12 @@ public final class DraftModel {
         for (int i = 0; i < n; i++) {
             sum += risks.get(i)[0];
         }
-        return new Object[] {n == 0 ? 0.0 : sum / 3, n == 0 ? null : names.get((int) risks.get(0)[1])};
+        if (n == 0) {
+            return new Object[] {0.0, null};
+        }
+        // Rodada 20.b: one strong counter is a risk by itself: the strongest weighs w.counterTop, the mean of the 3 the rest
+        double risk = w.counterTop * risks.get(0)[0] + (1 - w.counterTop) * sum / 3;
+        return new Object[] {risk, names.get((int) risks.get(0)[1])};
     }
 
     private double cal(String feature) {

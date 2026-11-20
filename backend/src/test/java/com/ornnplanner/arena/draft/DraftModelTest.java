@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -91,8 +92,11 @@ class DraftModelTest {
         DraftModel.Board fixed = b.with(new DraftModel.Pick(RED, "Barão3", "Barão", true));
         List<DraftModel.Scored> after = m.rank(fixed, BLUE, 5);
         assertNotEquals(DraftModel.names(before), DraftModel.names(after));
-        assertEquals("Barão4", after.get(0).champion);
-        assertTrue(after.get(0).reasons.stream().anyMatch(r -> "ganhaRota".equals(r.key) && Boolean.TRUE.equals(r.vars.get("predicted"))));
+        // Rodada 20.b: the first Barão-only answer is Barão4 (a flex Barão/Meio may come before it on an early pick)
+        DraftModel.Scored answer = after.stream().filter(s -> s.lanes.keySet().equals(java.util.Set.of("Barão"))).findFirst().orElseThrow();
+        assertEquals("Barão4", answer.champion);
+        assertTrue(after.indexOf(answer) <= 1, "near the top: " + DraftModel.names(after));
+        assertTrue(answer.reasons.stream().anyMatch(r -> "ganhaRota".equals(r.key) && Boolean.TRUE.equals(r.vars.get("predicted"))));
         // and the enemy's prediction no longer offers the predicted one
         assertFalse(DraftModel.names(m.rank(fixed, RED, 40)).contains("Barão3"));
     }
@@ -234,12 +238,153 @@ class DraftModelTest {
     }
 
     @Test
-    void theBansAreTheOtherSidesBest() {
+    void theBansAreTheOtherSidesBestAndWhoCountersThePicksGoesUp() {
         DraftModel m = model();
         DraftModel.Board b = new DraftModel.Board();
         b.picks.add(new DraftModel.Pick(BLUE, "Barão3", "Barão", false));
         List<DraftModel.Scored> bans = m.threats(b, BLUE, 5);
-        assertEquals(DraftModel.names(m.rank(b, RED, 5)), DraftModel.names(bans));
         assertEquals("Barão4", bans.get(0).champion, "the one that beats the ally's pick");
+        assertTrue(bans.get(0).reasons.stream().anyMatch(r -> "contraEscolhe".equals(r.key) && "Barão3".equals(r.vars.get("champ"))));
+        // without picks, the bans are just the other side's best
+        assertEquals(DraftModel.names(m.rank(new DraftModel.Board(), RED, 5)), DraftModel.names(m.threats(new DraftModel.Board(), BLUE, 5)));
+    }
+
+    // ------------------------------------------------------------------ Rodada 20.b, Parte 3: flex and the counter-pick
+
+    /** Only Barão5 has a strong counter (Barão6 beats it); the meta puts Barão5 on top. */
+    static final DraftModel.Matchup ONE_COUNTER = (a, b, lane) ->
+            "Barão".equals(lane) && "Barão6".equals(a) && "Barão5".equals(b) ? Double.valueOf(0.95)
+                    : "Barão".equals(lane) && "Barão5".equals(a) && "Barão6".equals(b) ? Double.valueOf(-0.95) : Double.valueOf(0);
+
+    static DraftModel counterModel() {
+        DraftModel.Meta top = new DraftModel.Meta();
+        top.presence = 0.3;
+        top.ban = 0.2;
+        top.win = 0.56;
+        DraftModel.Weights w = new DraftModel.Weights();
+        w.counter = 0.30;   // the seed's
+        return new DraftModel(champs(), Map.of("Barão5", Map.of("Barão", top)), ONE_COUNTER, w, LANES);
+    }
+
+    private static int position(List<DraftModel.Scored> l, String name) {
+        for (int i = 0; i < l.size(); i++) {
+            if (l.get(i).champion.equals(name)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    @Test
+    void aCandidateWithAStrongCounterFallsOnTheFirstPickAndRisesOnTheLast() {
+        DraftModel m = counterModel();
+        // red's first pick: blue has 4 picks still to come after it (blue's first is Selva0)
+        DraftModel.Board first = new DraftModel.Board();
+        first.picks.add(new DraftModel.Pick(BLUE, "Selva0", "Selva", false));
+        List<DraftModel.Scored> early = m.rank(first, RED, 100);
+        DraftModel.Scored e5 = early.get(position(early, "Barão5"));
+        assertTrue(e5.parts.get("contra") < -0.4, "a strong counter is still available: " + e5.parts.get("contra"));
+        assertTrue(e5.reasons.stream().anyMatch(r -> "risco".equals(r.key) && "Barão6".equals(r.vars.get("champ"))));
+        // red's last pick: nobody comes after it, so there is no risk
+        DraftModel.Board last = new DraftModel.Board();
+        for (String lane : LANES) {
+            last.picks.add(new DraftModel.Pick(BLUE, lane + "0", lane, false));
+        }
+        // a balanced red team (physical and magic, a frontline, control) so the composition does not pick for it
+        for (String c : List.of("Selva2", "Meio3", "Dragão5", "Suporte4")) {
+            last.picks.add(new DraftModel.Pick(RED, c, c.replaceAll("[0-9]", ""), false));
+        }
+        last.picks.removeIf(p -> p.side.equals(BLUE) && p.champion.equals("Barão0"));
+        last.picks.add(new DraftModel.Pick(BLUE, "Selva3", "Barão", false));
+        assertArrayEquals(new int[] {0, 0}, m.after(last, RED));
+        List<DraftModel.Scored> late = m.rank(last, RED, 100);
+        DraftModel.Scored l5 = late.get(position(late, "Barão5"));
+        assertEquals(0, l5.parts.get("contra"), 1e-12, "the last pick has no counter-pick risk");
+        assertEquals(0, position(late, "Barão5"), "on the last pick it is the best again");
+        assertTrue(position(early, "Barão5") > 0, "on the first pick it falls: " + position(early, "Barão5"));
+    }
+
+    @Test
+    void banningTheCounterBringsTheCandidateBackToTheTop() {
+        DraftModel m = counterModel();
+        DraftModel.Board b = new DraftModel.Board();
+        b.picks.add(new DraftModel.Pick(BLUE, "Selva0", "Selva", false));
+        assertTrue(position(m.rank(b, RED, 100), "Barão5") > 0);
+        b.unavailable.put(BLUE, new LinkedHashSet<>(List.of("Barão6")));   // the counter is banned
+        List<DraftModel.Scored> after = m.rank(b, RED, 100);
+        assertEquals("Barão5", after.get(0).champion);
+        assertTrue(after.get(0).parts.get("contra") > -0.1);
+    }
+
+    @Test
+    void aFlexIsWorthMoreOnTheFirstPickThanOnTheFifth() {
+        DraftModel m = model();
+        // blue's first pick: four own picks to come
+        DraftModel.Board b = new DraftModel.Board();
+        double first = flexOf(m.rank(b, BLUE, 100), "Barão7");
+        // blue's fourth pick (Selva, Dragão, Suporte taken; Barão and Meio open): one own pick to come
+        for (String lane : List.of("Selva", "Dragão", "Suporte")) {
+            b.picks.add(new DraftModel.Pick(BLUE, lane + "0", lane, false));
+        }
+        for (int i = 0; i < 4; i++) {
+            b.picks.add(new DraftModel.Pick(RED, LANES.get(i) + "2", LANES.get(i), false));
+        }
+        double fourth = flexOf(m.rank(b, BLUE, 100), "Barão7");
+        // the fifth: nothing to hide
+        b.picks.add(new DraftModel.Pick(BLUE, "Meio0", "Meio", false));
+        DraftModel.Scored fifth = m.rank(b, BLUE, 100).stream().filter(s -> "Barão7".equals(s.champion)).findFirst().orElseThrow();
+        assertTrue(first > fourth, first + " > " + fourth);
+        assertTrue(fourth > 0, "two open lanes, one own pick to come");
+        assertEquals(0, fifth.parts.get("flex"), 1e-12);
+        assertTrue(m.rank(new DraftModel.Board(), BLUE, 100).stream().filter(s -> "Barão7".equals(s.champion)).findFirst().orElseThrow()
+                .reasons.stream().anyMatch(r -> "flex".equals(r.key)));
+        // a one-lane champion is never a flex
+        assertEquals(0, flexOf(m.rank(new DraftModel.Board(), BLUE, 100), "Barão6"), 1e-12);
+    }
+
+    private static double flexOf(List<DraftModel.Scored> l, String name) {
+        return l.stream().filter(s -> name.equals(s.champion)).findFirst().orElseThrow().parts.get("flex");
+    }
+
+    @Test
+    void theMechanicsThatPunishAddToTheMeasure() {
+        // a: chained short dashes and healing; b: slows; c: anti-heal; d: nothing
+        Map<String, Object> seed = new org.yaml.snakeyaml.Yaml().load(String.join("\n",
+                "vulnerabilidades:",
+                "  saltos_curtos: {punida_por: [lentidao_no_kit], peso: 0.6}",
+                "  cura: {punida_por: [item_feridas], peso: 0.5}",
+                "punicoes:",
+                "  lentidao_no_kit: {nome: x}",
+                "  item_feridas: {nome: y}"));
+        Map<String, CounterMechanics.Traits> t = new java.util.LinkedHashMap<>();
+        t.put("a", traits(List.of("saltos_curtos", "cura"), List.of()));
+        t.put("b", traits(List.of(), List.of("lentidao_no_kit")));
+        t.put("c", traits(List.of(), List.of("item_feridas", "lentidao_no_kit")));
+        t.put("d", traits(List.of(), List.of()));
+        CounterMechanics cm = new CounterMechanics(seed, t);
+        assertEquals(0.6, cm.punish("b", "a"), 1e-12);
+        assertEquals(1.0, cm.punish("c", "a"), 1e-12, "capped at 1");
+        assertEquals(0, cm.punish("d", "a"), 1e-12);
+        assertEquals(0, cm.punish("a", "b"), 1e-12);
+        assertEquals("saltos_curtos", cm.why("b", "a").get(0).vulnerability);
+    }
+
+    private static CounterMechanics.Traits traits(List<String> v, List<String> p) {
+        CounterMechanics.Traits t = new CounterMechanics.Traits();
+        t.vulnerabilities.addAll(v);
+        t.punishments.addAll(p);
+        return t;
+    }
+
+    @Test
+    void theSheetsShortDashesAndHealthShareTerms() {
+        Map<String, Object> kit = new org.yaml.snakeyaml.Yaml().load(String.join("\n",
+                "habilidades:",
+                "  '1': {forma: avanco, alcance: 300, recarga: [4, 3, 2]}",
+                "  '2': {forma: avanco, alcance: 300, recarga: [14, 12]}",
+                "  '3': {forma: avanco, alcance: 900, recarga: [2]}",
+                "  R: {forma: area, dano: {tipo: fisico, base: [100], vida_perdida_alvo: 0.1}}"));
+        assertEquals(1, CounterMechanics.shortDashes(kit, 450, 8));
+        assertEquals(1, CounterMechanics.healthShareTerms(kit));
     }
 }

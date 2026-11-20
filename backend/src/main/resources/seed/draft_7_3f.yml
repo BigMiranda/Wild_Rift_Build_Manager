@@ -73,7 +73,9 @@ nota:
     rota: 0.35          # Rodada 20.b: a chance de as rotas do candidato estarem abertas no time (1 = livres); quase nula = fora da lista
     matchup: 0.30       # vantagem 1x1 contra os adversários prováveis de rota (média pela distribuição; tabela, senão subclasse x subclasse)
     composicao: 0.30    # o quanto o candidato completa o time (dano físico/mágico, linha de frente, controle...)
-    contra: 0.20        # risco de contra-escolha: o quanto os disponíveis do outro time punem o candidato (negativo)
+    contra: 0.30        # Rodada 20.b: risco de contra-escolha (negativo): o quanto os disponíveis do outro time punem o
+                        # candidato x os picks do outro time que ainda vêm depois deste (o último pick não tem risco)
+    flex: 0.15          # Rodada 20.b: serve a 2+ rotas abertas com presença real; vale mais cedo, zero no último pick do time
   # Composição: o que falta num time de 5 (cada parte de 0 a 1), lido dos perfis (ChampionProfiles) e das fichas.
   composicao:
     dano_magico_min: 0.30     # parte do dano do time; abaixo disso, um candidato mágico completa
@@ -93,6 +95,14 @@ nota:
     banimento: 0.2
     vitoria: 0.4
     vitoria_escala: 0.05      # 55% de vitória = +1 nesta parte
+  # Rodada 20.b, Parte 3: flex e contra-escolha pela posição no draft.
+  flex:
+    presenca_real: 0.15       # uma rota conta para o flex com esta parte da presença do campeão (meta; sem meta, a ordem do seed)
+  contra:
+    cheio_com: 5              # o risco é cheio com 5 picks do outro time ainda por vir (x 4/5 com 4, ... 0 no último)
+    mais_forte: 0.6           # numa rota, o risco = 0,6 x o contra mais forte + 0,4 x a média dos 3 mais fortes
+    mecanicas: 0.3            # a punição por mecânicas (contra_mecanicas_7_3f.yml) somada à vantagem medida, 0..1
+    banimentos: 0.5           # banimentos: o peso de contra-escolher os picks já feitos do seu time
   # A árvore de cenários: só os `feixe` primeiros de cada passo são calculados; um ramo se expande ao tocar nele.
   feixe: 5
   # Rodada 20.b, Parte 2: picks livres de rota. Cada pick tem rotas possíveis e o time, uma distribuição de rotas (as 120
@@ -136,3 +146,4 @@ primeiro_encontro:
     padrao: auto                # a IA do campeão ou da classe
     cauteloso: tactical         # troca e recua com a vida baixa
   inimigos_mais_provaveis: 0     # quantos itens iniciais do inimigo entram, pelos mais prováveis (0 = todos)
+

@@ -1,0 +1,95 @@
+# Rodada 20.b, Parte 3: mecânicas que punem (rascunho para o usuário conferir; tudo EST).
+#
+# O risco de contra-escolha do draft (draft_7_3f.yml › nota.contra) junta duas medidas de "quem pune quem":
+#   1. a tabela de matchup medida (Admin › Draft), que já luta com as builds prováveis de cada um (o modelo de
+#      progressão da Rodada 19: um contra que tende a fechar um item de lentidão em ataques já está na medida);
+#   2. esta tabela: vulnerabilidades de um campeão e o que as pune, lidas de campos da ficha (kits_7_3f.yml), do perfil
+#      (ChampionProfiles, das habilidades de campeoes_7_3f.yml) e dos itens da build provável (a continuação mais provável
+#      da progressão, sem nenhum item comprado). Nada cita campeão no código; os nomes só aparecem aqui, nos campos que a
+#      ficha ainda não tem (`por_campeao`).
+#
+# Uma vulnerabilidade vale 0 ou 1 para um campeão (passa ou não do mínimo); uma punição também. A punição de B sobre A é
+#   min(1, Σ vulnerabilidade de A × max(punições de B que a punem) × peso da vulnerabilidade)
+# e entra no risco de contra-escolha e nos banimentos somada à vantagem medida, vezes `nota.contra.mecanicas`.
+#
+# Campos (o leitor está em arena/draft/CounterMechanics):
+#   ficha.avancos_curtos   avanços (forma avanco / piscar, ou salta) com alcance até `alcance_max` que se encadeiam:
+#                          recarga no último rank até `recarga_max`, reconjuração (reconjurar.versoes) ou reinício de ataque
+#   ficha.dano_pct_vida    termos de dano pela Vida do alvo (vida_max_alvo, vida_atual_alvo, vida_perdida_alvo) nas habilidades
+#   ficha.ataque_projetil  ataque básico com projétil (velocidade_projetil) e alcance de pelo menos `alcance_min`
+#   perfil.curas           habilidades com cura (ChampionProfiles.heals)
+#   perfil.escudos         habilidades com escudo (ChampionProfiles.shields)
+#   perfil.lentidao        habilidades com lentidão (ChampionProfiles.control.lentidao)
+#   perfil.dano_verdadeiro a parte de dano verdadeiro do kit (ChampionProfiles.trueDamage)
+#   perfil.linha_sem_fuga  linha de frente (Vida e resistências no nível 15 no terço de cima) sem nenhum avanço (mobilidade 0)
+#   build.efeito           a build provável tem um item com este tipo de efeito de combate (combate_7_3f.yml: feridas,
+#                          corta_escudo...)
+#   build.texto            a build provável tem um item cuja passiva (loja_7_3f.yml) casa com esta expressão
+#   por_campeao            lista de campeões (EST: um campo que as fichas ainda não têm)
+patch: "7.3f"
+fonte: "EST: rascunho da Rodada 20.b (docs/rodada-20b.md); limiares e pesos meus, a conferir pelo usuário"
+
+vulnerabilidades:
+  saltos_curtos:
+    nome: Mobilidade em saltos curtos encadeados
+    nome_en: Chained short dashes
+    exemplo: "um atirador que salta depois de atacar fica mais tempo exposto com lentidão (exemplo do usuário)"
+    le: {campo: ficha.avancos_curtos, minimo: 1, alcance_max: 450, recarga_max: 8}
+    punida_por: [lentidao_no_kit, item_de_lentidao]
+    peso: 0.6
+  cura:
+    nome: Cura no kit
+    nome_en: Healing in the kit
+    le: {campo: perfil.curas, minimo: 1}
+    punida_por: [item_feridas]
+    peso: 0.5
+  escudos:
+    nome: Escudos no kit
+    nome_en: Shields in the kit
+    le: {campo: perfil.escudos, minimo: 1}
+    punida_por: [item_corta_escudo]
+    peso: 0.4
+  linha_sem_fuga:
+    nome: Linha de frente sem fuga
+    nome_en: Frontline without an escape
+    le: {campo: perfil.linha_sem_fuga}
+    punida_por: [dano_verdadeiro, dano_pct_vida]
+    peso: 0.5
+  projeteis:
+    nome: Depende de projéteis
+    nome_en: Relies on projectiles
+    le: {campo: ficha.ataque_projetil, alcance_min: 450}
+    punida_por: [anula_projetil]
+    peso: 0.6
+
+punicoes:
+  lentidao_no_kit:
+    nome: lentidão no kit
+    nome_en: slows in the kit
+    le: {campo: perfil.lentidao, minimo: 1}
+  item_de_lentidao:
+    nome: item de lentidão na build provável
+    nome_en: a slowing item in the likely build
+    le: {campo: build.texto, expressao: "\\d+% de Lentidão"}
+  item_feridas:
+    nome: corte de cura (Feridas Dolorosas) na build provável
+    nome_en: anti-heal (Grievous Wounds) in the likely build
+    le: {campo: build.efeito, tipo: feridas}
+  item_corta_escudo:
+    nome: anti-escudo na build provável
+    nome_en: shield reaver in the likely build
+    le: {campo: build.efeito, tipo: corta_escudo}
+  dano_verdadeiro:
+    nome: dano verdadeiro
+    nome_en: true damage
+    le: {campo: perfil.dano_verdadeiro, minimo: 0.15}
+  dano_pct_vida:
+    nome: dano por % da Vida
+    nome_en: damage by % of health
+    le: {campo: ficha.dano_pct_vida, minimo: 1}
+  anula_projetil:
+    nome: anula projéteis
+    nome_en: blocks projectiles
+    # EST: as fichas ainda não têm um campo de "bloqueia projéteis" (parede de vento, escudo que intercepta, giro que
+    # destrói projéteis). Quando tiverem, troque por `campo: ficha.<campo>`.
+    le: {campo: por_campeao, campeoes: [Yasuo, Braum, Samira]}

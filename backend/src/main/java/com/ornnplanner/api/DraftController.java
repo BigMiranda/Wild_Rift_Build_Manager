@@ -113,6 +113,12 @@ public class DraftController {
         }
     }
 
+    /** Rodada 20.b, Parte 3: the mechanics that punish (the seed's table and each champion's vulnerabilities and punishments). */
+    @GetMapping("/mecanicas")
+    public Map<String, Object> mechanics() {
+        return draft.mechanicsInfo();
+    }
+
     /** Parte 3: the precomputed tables (Admin): the job's state. */
     @GetMapping("/tabelas")
     public DraftTablesService.Status tablesStatus() {

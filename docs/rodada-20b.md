@@ -80,3 +80,48 @@ listas, e um time com dois picks só de Meio segue com listas, árvore e distrib
 deixa as duas "talvez ocupadas" (a principal mais) até ser resolvido, e fixar ou marcar uma rota abre a outra; picks
 indefinidos funcionam até o fim do draft (o 5º recomendado vai para a rota que sobra; com 5 picks a lista fica vazia); a
 enumeração das 120 permutações.
+
+## Parte 3: a recomendação que entende a ordem (✅)
+
+A nota ganha duas partes e a contra-escolha passa a depender da posição; os pesos ficam em `draft_7_3f.yml › nota` e
+"Como a nota é feita" explica cada um (com a tabela das mecânicas, abaixo).
+
+| Parte | Peso | O que é |
+|---|---|---|
+| flex | 0,15 (novo) | o candidato serve a 2+ rotas **abertas** com presença real (≥ `flex.presenca_real`, 15% da presença dele); vale × (picks do próprio time ainda por vir) / 4: cheio no 1º pick, zero no último pick do time |
+| contra | 0,30 (era 0,20) | − (em cada rota provável dele, pesada pela chance de a rota do adversário estar aberta) o quanto os disponíveis do outro time o punem × (picks do outro time ainda por vir depois deste) / `contra.cheio_com` (5): o **último pick não tem risco** |
+
+- **Quem pune quem**, sem nome de campeão no código: `DraftModel.punishes(o, c, rota)` = a vantagem medida (as tabelas do
+  Admin lutam com a build padrão da campanha ou, sem ela, a mais provável da progressão; um contra que tende a fechar um
+  item de lentidão já está na medida) + `contra.mecanicas` (0,3) × a punição por mecânicas, de 0 a 1. Numa rota, o risco
+  é 0,6 × o contra mais forte + 0,4 × a média dos 3 mais fortes (`contra.mais_forte`): um contra forte sozinho já é risco
+  (antes era só a média dos 3, que diluía).
+- **Mecânicas que punem**: seed novo `contra_mecanicas_7_3f.yml` (rascunho **EST** para o usuário conferir;
+  `arena/draft/CounterMechanics`), a tabela "vulnerabilidade → o que pune". Cada vulnerabilidade e cada punição é um campo:
+
+| Vulnerabilidade | Campo | Punida por | Peso | Campeões (7.3f) |
+|---|---|---|---|---|
+| saltos curtos encadeados | ficha: avanço/piscar/salto até 450 de alcance com recarga até 8 s no último rank, reconjuração ou reinício de ataque | lentidão no kit (perfil) ou item de lentidão na build provável (passiva com "N% de Lentidão") | 0,6 | 13 (Vayne, Lucian, Zeri, Riven, Fiora...) |
+| cura | perfil: habilidades com cura | Feridas Dolorosas na build provável (`combate: feridas`) | 0,5 | 70 |
+| escudos | perfil: habilidades com escudo | anti-escudo na build provável (`combate: corta_escudo`) | 0,4 | 59 |
+| linha de frente sem fuga | perfil: Vida e resistências no terço de cima e nenhum avanço | dano verdadeiro (≥ 15% do kit) ou dano por % da Vida (ficha: `vida_max_alvo`, `vida_atual_alvo`, `vida_perdida_alvo`) | 0,5 | 5 |
+| depender de projéteis | ficha: ataque com `velocidade_projetil` e alcance ≥ 450 | anula projéteis | 0,6 | 67 |
+
+  Punidores encontrados: lentidão no kit 107, item de lentidão 27, Feridas 8, anti-escudo 0 (nenhuma build provável o tem),
+  dano verdadeiro 9, % da Vida 38, anula projéteis 3. **Anula projéteis** não é campo de ficha ainda: fica como lista no
+  seed (Yasuo, Braum, Samira; EST) até a ficha ganhar o campo. A punição de B sobre A = min(1, Σ das vulnerabilidades de A
+  que alguma punição de B responde × o peso). As builds prováveis de 143 campeões levam ~13 s: a tabela é calculada uma
+  vez **em segundo plano** no primeiro pedido do draft; até ficar pronta, o risco usa só a medida e a tela diz
+  "mecânicas que punem em cálculo". `GET /api/draft/mecanicas` mostra a tabela e os campeões de cada linha (botão "Ver a
+  tabela" em "Como a nota é feita").
+- **Os motivos** dizem o porquê: "risco de contra-escolha: Barão6 (4 picks do outro time depois deste)", "... X pune
+  saltos curtos encadeados", "flex (Barão / Meio): esconde a rota".
+- **Banimentos** ("o que ameaça o seu time"): os melhores do outro time **mais** `contra.banimentos` (0,5) × o quanto cada
+  um contra-escolhe um pick já feito do seu time (nas rotas em que os dois são prováveis, a vantagem medida mais as
+  mecânicas); o motivo vem primeiro: "contra-escolhe Ornn (pune cura)".
+
+**Testes** (`DraftModelTest`): um candidato com contra forte disponível (só ele tem contra) cai no 1º pick do vermelho
+(risco < −0,4, motivo com o contra) e volta a ser o 1º no último pick (risco zero, `after` = 0 depois); banir o contra
+devolve o candidato ao topo; um flex vale mais no 1º pick que no 4º e zero no 5º, e um campeão de uma rota nunca é flex;
+os banimentos põem em cima quem contra-escolhe o pick feito; a punição por mecânicas (soma, teto 1, o porquê); a leitura
+dos saltos curtos e dos termos por % da Vida numa ficha sintética.
