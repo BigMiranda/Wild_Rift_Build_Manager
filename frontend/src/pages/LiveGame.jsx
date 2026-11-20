@@ -8,18 +8,26 @@ import { ChampionAvatar } from '../components/ChampionAvatar.jsx';
 import ItemIcon from '../components/ItemIcon.jsx';
 import LivePlayerEditor, { ChampionGrid, SpellRuneIcons } from '../components/LivePlayerEditor.jsx';
 import {
-  BLUE, NO_BAN, RED, addEvent, bannedChampions, cannotBan, clockSeconds, clone, emptyGame, enemyOf, formatOf, mmssOf, parseClock,
-  pushHistory, seriesBanned, setClock, teamKey, toggleClock, updatePlayer,
+  BLUE, NO_BAN, RED, STAGES, addEvent, applyLikely, bannedChampions, cannotBan, clockSeconds, clone, emptyGame, enemyOf, formatOf,
+  mmssOf, parseClock, pushHistory, seriesBanned, setClock, stageOf, teamKey, toggleClock, updatePlayer,
 } from '../liveGame.js';
 import LivePanels from '../components/LivePanels.jsx';
 import VoiceBar from '../components/VoiceBar.jsx';
 import PickLanes, { LikelyLane } from '../components/PickLanes.jsx';
+import DraftSteps from '../components/DraftSteps.jsx';
+import DraftPanel from '../components/DraftPanel.jsx';
+import LoadingStage from '../components/LoadingStage.jsx';
 import { laneDistBySlot, useDraftSuggestions } from '../useDraft.js';
 
 /**
  * Rodada 20: Simulações › Draft e partida. For whoever WATCHES a match (replay, stream, championship, coaching): the
  * tool only uses what the user tells it (clicks, voice); nothing reads the game. One match (or a Fearless series)
  * from the draft to the end: two columns of five cards, a clock the user sets, quick actions and an always visible undo.
+ *
+ * Rodada 20.b, Parte 4: three stages with a step bar on top and "Próxima etapa" at the end of each: Draft (the bans and
+ * picks in the format's order, the lists of the turn, the possible lanes of each pick; "Pular draft"), Carregamento
+ * (fix each lane, spells and runes, the voice at hand, the ally's recommended loadout) and Partida (items, events, the
+ * first encounter, likely builds and tips). Going back is always possible and nothing is lost: the stage is only a view.
  */
 export default function LiveGame() {
   const { items } = useBuild();
@@ -199,9 +207,34 @@ export default function LiveGame() {
     }
   };
 
+  const stage = stageOf(game);
+  /** Moves to a stage; entering the loading screen the first time fixes the likely assignment where nothing is fixed. */
+  const goStage = (k) => {
+    let g = { ...clone(game), stage: k };
+    if (k === 'carregamento') {
+      for (const side of [BLUE, RED]) {
+        if (!g[teamKey(side)].players.some((p) => p.lane)) g = applyLikely(g, side, draft.data?.lanes?.[side]);
+      }
+    }
+    change(g);
+    window.scrollTo?.({ top: 0 });
+  };
+  const nextStage = () => goStage(STAGES[Math.min(STAGES.length - 1, STAGES.indexOf(stage) + 1)]);
+  /** A step of the draft: a ban opens the ban picker, a pick the champion tab of its card. */
+  const openTurn = (tn) => (tn.action === 'ban' ? setBanning({ side: tn.side, index: tn.index }) : setEditing({ side: tn.side, index: tn.index, tab: 'campeao', draft: true }));
+  const skipBan = (tn) => {
+    const g = clone(game);
+    const bans = g[teamKey(tn.side)].bans ?? [];
+    while (bans.length <= tn.index) bans.push(null);
+    bans[tn.index] = NO_BAN;
+    g[teamKey(tn.side)].bans = bans;
+    change(g);
+  };
+
   const team = (side) => {
     const tm = game[teamKey(side)];
     const dist = laneDistBySlot(draft.data, side);
+    const inDraft = stage === 'draft';
     const bans = formatOf(game, formats)?.turns?.filter((x) => x.action === 'ban' && x.side === side).length ?? 5;
     return (
       <section className={`live-team ${side}${side === ally ? ' ally' : ' enemy'}`} aria-label={t(`live.side.${side}`)}>
@@ -227,7 +260,7 @@ export default function LiveGame() {
           return (
             <div key={i} className={`live-card${isSel ? ' selected' : ''}${p.champion ? '' : ' empty'}`}>
               <button type="button" className="live-card-main" aria-pressed={isSel}
-                onClick={() => (p.champion ? setSelected(isSel ? null : { side, index: i }) : setEditing({ side, index: i, tab: 'campeao' }))}>
+                onClick={() => (p.champion && !inDraft ? setSelected(isSel ? null : { side, index: i }) : setEditing({ side, index: i, tab: 'campeao', draft: inDraft }))}>
                 <ChampionAvatar name={p.champion ?? pred} size={44} />
                 <span className="live-card-text">
                   <strong>{p.champion ?? (pred ? `${pred}?` : t('live.emptySlot'))}</strong>
@@ -245,7 +278,7 @@ export default function LiveGame() {
               </button>
               <button type="button" className="live-card-edit" aria-label={t('live.edit')} title={t('live.edit')}
                 onClick={() => setEditing({ side, index: i })}>✎</button>
-              {p.champion && !p.lane && (
+              {inDraft && p.champion && !p.lane && (
                 <PickLanes compact player={p} possible={possibleOf(p.champion)}
                   onChange={(lanes) => change(updatePlayer(game, side, i, (x) => { x.lanes = lanes; }))} />
               )}
@@ -288,68 +321,113 @@ export default function LiveGame() {
           <button type="button" onClick={() => setGame({ ...game, notices: [] })}>{t('live.upgrade.ok')}</button>
         </div>
       )}
-      {fmt?.fearless && <SeriesStrip game={game} onChange={change} onAdd={(k) => setSeriesAdd(k)} />}
 
-      <div className="live-bar">
-        <div className="live-clock">
-          {clockEdit != null ? (
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const s = parseClock(clockEdit);
-              if (s != null) change(setClock(game, s));
-              setClockEdit(null);
-            }}>
-              <input autoFocus inputMode="numeric" value={clockEdit} placeholder="7:30" aria-label={t('live.clockSet')}
-                onChange={(e) => setClockEdit(e.target.value)} onBlur={() => setClockEdit(null)} />
-            </form>
-          ) : (
-            <button type="button" className="live-time" title={t('live.clockSet')} onClick={() => setClockEdit('')}>{mmssOf(now)}</button>
-          )}
-          <button type="button" className="live-play" onClick={() => change(toggleClock(game))} aria-label={game.clock?.paused ? t('live.play') : t('live.pause')}>
-            {game.clock?.paused ? '▶' : '⏸'}
-          </button>
-        </div>
-        <div className="live-actions" role="toolbar" aria-label={t('live.quick')}>
-          <button type="button" onClick={needSel(() => setEditing({ ...selected, tab: 'itens' }))}>{t('live.q.bought')}</button>
-          <button type="button" onClick={needSel(() => event({ kind: 'morte', side: selected.side, player: selected.index }))}>{t('live.q.died')}</button>
-          <button type="button" onClick={needSel(() => event({ kind: 'abate', side: selected.side, player: selected.index }))}>{t('live.q.killed')}</button>
-          <button type="button" onClick={() => setObjective('dragao')}>{t('live.q.dragon')}</button>
-          <button type="button" onClick={() => setObjective('arauto')}>{t('live.q.herald')}</button>
-          <button type="button" onClick={() => setObjective('barao')}>{t('live.q.baron')}</button>
-        </div>
+      <nav className="stage-bar" aria-label={t('stage.bar')}>
+        <ol>
+          {STAGES.map((k, i) => (
+            <li key={k}>
+              <button type="button" className={`stage-step${stage === k ? ' active' : ''}${STAGES.indexOf(stage) > i ? ' done' : ''}`}
+                aria-current={stage === k ? 'step' : undefined} onClick={() => goStage(k)}>
+                <span className="stage-n">{i + 1}</span> {t(`stage.${k}`)}
+              </button>
+            </li>
+          ))}
+        </ol>
         <button type="button" className="live-undo" disabled={!history.length} onClick={undo} title={t('live.undo')}>↶ {t('live.undo')}</button>
-        <VoiceBar game={game} champions={champions} items={items} onApply={change} onUndo={history.length ? undo : null} />
-      </div>
-      {sel && <p className="live-sel small">{t('live.selected', { name: sel.champion })}</p>}
+      </nav>
       {error && <div className="notice error" onClick={() => setError(null)}>{error}</div>}
 
-      <div className="live-teams">
-        {team(ally)}
-        {team(enemy)}
-      </div>
+      {stage === 'draft' && (
+        <>
+          {fmt?.fearless && <SeriesStrip game={game} onChange={change} onAdd={(k) => setSeriesAdd(k)} />}
+          <DraftSteps game={game} fmt={fmt} onTurn={openTurn} onSkipBan={skipBan} />
+          <div className="live-teams">
+            {team(ally)}
+            {team(enemy)}
+          </div>
+          <DraftPanel game={game} onChange={change} root={draft} />
+          <div className="stage-nav">
+            <button type="button" onClick={() => goStage('carregamento')} title={t('stage.skipDraftHelp')}>{t('stage.skipDraft')}</button>
+            <button type="button" className="primary live-big" onClick={nextStage}>{t('stage.next')} ›</button>
+          </div>
+        </>
+      )}
 
-      <LivePanels game={game} champions={champions} profiles={profiles} items={items} formats={formats} selected={selected}
-        unavailableFor={unavailableFor} onChange={change} panel={panel} onPanel={setPanel} draft={draft} />
+      {stage === 'carregamento' && (
+        <>
+          <LoadingStage game={game} draftData={draft.data} ally={ally} enemy={enemy} onChange={change}
+            onEdit={(side, index, tab) => setEditing({ side, index, tab })}
+            voice={<div className="live-bar ld-voice"><VoiceBar game={game} champions={champions} items={items} onApply={change} onUndo={history.length ? undo : null} /></div>} />
+          <div className="stage-nav">
+            <button type="button" onClick={() => goStage('draft')}>‹ {t('stage.draft')}</button>
+            <button type="button" className="primary live-big" onClick={nextStage}>{t('stage.next')} ›</button>
+          </div>
+        </>
+      )}
 
-      {game.events?.length > 0 && (
-        <section className="panel live-events">
-          <h4>{t('live.events')}</h4>
-          <ul>
-            {[...game.events].reverse().slice(0, 30).map((e, k) => {
-              const p = e.side != null && e.player != null ? game[teamKey(e.side)].players[e.player] : null;
-              return (
-                <li key={k}><span className="muted">{mmssOf(e.t)}</span> {t(`live.ev.${e.kind}`)} {p?.champion ?? (e.side ? t(`live.side.${e.side}`) : '')}
-                  {e.item != null && <> <ItemIcon id={e.item} size={16} /> {items.find((i) => i.id === e.item)?.name}</>} {e.detail ?? ''}</li>
-              );
-            })}
-          </ul>
-        </section>
+      {stage === 'partida' && (
+        <>
+          <div className="live-bar">
+            <div className="live-clock">
+              {clockEdit != null ? (
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const sec = parseClock(clockEdit);
+                  if (sec != null) change(setClock(game, sec));
+                  setClockEdit(null);
+                }}>
+                  <input autoFocus inputMode="numeric" value={clockEdit} placeholder="7:30" aria-label={t('live.clockSet')}
+                    onChange={(e) => setClockEdit(e.target.value)} onBlur={() => setClockEdit(null)} />
+                </form>
+              ) : (
+                <button type="button" className="live-time" title={t('live.clockSet')} onClick={() => setClockEdit('')}>{mmssOf(now)}</button>
+              )}
+              <button type="button" className="live-play" onClick={() => change(toggleClock(game))} aria-label={game.clock?.paused ? t('live.play') : t('live.pause')}>
+                {game.clock?.paused ? '▶' : '⏸'}
+              </button>
+            </div>
+            <div className="live-actions" role="toolbar" aria-label={t('live.quick')}>
+              <button type="button" onClick={needSel(() => setEditing({ ...selected, tab: 'itens' }))}>{t('live.q.bought')}</button>
+              <button type="button" onClick={needSel(() => event({ kind: 'morte', side: selected.side, player: selected.index }))}>{t('live.q.died')}</button>
+              <button type="button" onClick={needSel(() => event({ kind: 'abate', side: selected.side, player: selected.index }))}>{t('live.q.killed')}</button>
+              <button type="button" onClick={() => setObjective('dragao')}>{t('live.q.dragon')}</button>
+              <button type="button" onClick={() => setObjective('arauto')}>{t('live.q.herald')}</button>
+              <button type="button" onClick={() => setObjective('barao')}>{t('live.q.baron')}</button>
+            </div>
+            <VoiceBar game={game} champions={champions} items={items} onApply={change} onUndo={history.length ? undo : null} />
+          </div>
+          {sel && <p className="live-sel small">{t('live.selected', { name: sel.champion })}</p>}
+          <div className="live-teams">
+            {team(ally)}
+            {team(enemy)}
+          </div>
+          <LivePanels game={game} champions={champions} profiles={profiles} items={items} formats={formats} selected={selected}
+            unavailableFor={unavailableFor} onChange={change} panel={panel} onPanel={setPanel} draft={draft} />
+          {game.events?.length > 0 && (
+            <section className="panel live-events">
+              <h4>{t('live.events')}</h4>
+              <ul>
+                {[...game.events].reverse().slice(0, 30).map((e, k) => {
+                  const pl = e.side != null && e.player != null ? game[teamKey(e.side)].players[e.player] : null;
+                  return (
+                    <li key={k}><span className="muted">{mmssOf(e.t)}</span> {t(`live.ev.${e.kind}`)} {pl?.champion ?? (e.side ? t(`live.side.${e.side}`) : '')}
+                      {e.item != null && <> <ItemIcon id={e.item} size={16} /> {items.find((i) => i.id === e.item)?.name}</>} {e.detail ?? ''}</li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+          <div className="stage-nav">
+            <button type="button" onClick={() => goStage('carregamento')}>‹ {t('stage.carregamento')}</button>
+          </div>
+        </>
       )}
 
       {editing && (
         <LivePlayerEditor
           player={game[teamKey(editing.side)].players[editing.index]} side={editing.side} startTab={editing.tab}
           champions={champions} lanesOf={lanesOf} possibleOf={possibleOf} unavailable={unavailableFor()} fearless={fearlessSet()} items={items}
+          closeOnPick={!!editing.draft}
           onClose={() => setEditing(null)}
           onChange={(p) => {
             const before = game[teamKey(editing.side)].players[editing.index];

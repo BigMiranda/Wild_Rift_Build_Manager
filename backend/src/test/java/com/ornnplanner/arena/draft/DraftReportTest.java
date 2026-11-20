@@ -61,6 +61,9 @@ class DraftReportTest {
         LiveGameModel.Game g = new LiveGameModel.Game();
         g.blue.players.get(0).champion = "Ornn";
         g.red.players.get(0).champion = "Darius";
+        // Rodada 20.b: lanes are open until the loading screen; the per-player panels read a fixed lane
+        g.blue.players.get(0).lane = "Barão";
+        g.red.players.get(0).lane = "Barão";
 
         FirstEncounterService.Result e = encounter.run(g, LiveGameModel.BLUE, 0);
         sb.append(String.format(Locale.ROOT, "encontro: %d inícios do Ornn x %d do Darius, %d lutas, %.1f s (%.1f s preparando)%n",

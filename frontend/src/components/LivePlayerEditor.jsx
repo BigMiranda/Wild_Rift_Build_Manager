@@ -65,7 +65,7 @@ const TABS = ['campeao', 'feiticos', 'runas', 'itens', 'placar'];
  * Rodada 20: a player's card opened in the shop's style: champion, lane, spells, runes, items (purchases in order,
  * components apart, the starting item) and the score (level, gold, K/D/A). Every change goes through onChange(player).
  */
-export default function LivePlayerEditor({ player, side, champions, lanesOf, possibleOf = () => [], unavailable, fearless, items, onChange, onClose, startTab }) {
+export default function LivePlayerEditor({ player, side, champions, lanesOf, possibleOf = () => [], unavailable, fearless, items, onChange, onClose, startTab, closeOnPick }) {
   const [tab, setTab] = useState(startTab ?? (player.champion ? 'itens' : 'campeao'));
   const [runes, setRunes] = useState(false);
   const [startMode, setStartMode] = useState(false);
@@ -139,7 +139,9 @@ export default function LivePlayerEditor({ player, side, champions, lanesOf, pos
             onPick={(name) => {
               // Rodada 20.b: a new pick comes with its possible lanes prefilled (the seed's and the meta's)
               set({ champion: name, lanes: name === player.champion && player.lanes ? player.lanes : [...possibleOf(name)] });
-              setTab('feiticos');
+              // Rodada 20.b: in the draft a pick goes back to the draft (spells and runes come on the loading screen)
+              if (closeOnPick) onClose();
+              else setTab('feiticos');
             }} />
         </>
       )}

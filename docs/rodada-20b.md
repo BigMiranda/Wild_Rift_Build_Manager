@@ -125,3 +125,50 @@ A nota ganha duas partes e a contra-escolha passa a depender da posição; os pe
 devolve o candidato ao topo; um flex vale mais no 1º pick que no 4º e zero no 5º, e um campeão de uma rota nunca é flex;
 os banimentos põem em cima quem contra-escolhe o pick feito; a punição por mecânicas (soma, teto 1, o porquê); a leitura
 dos saltos curtos e dos termos por % da Vida numa ficha sintética.
+
+## Parte 4: a tela em etapas, Draft → Carregamento → Partida (✅)
+
+Uma **barra de passos** no topo (fixa ao rolar; no celular deitado ela rola junto) com as três etapas, o Desfazer ao lado
+(no celular ele flutua no canto, como na Rodada 20), e **"Próxima etapa"** no fim de cada uma. Voltar é sempre possível e
+nada se perde: a etapa é só uma vista (`game.stage`, salva). Partidas antigas abrem pela etapa do que têm (eventos =
+Partida; dez picks = Carregamento; senão Draft).
+
+1. **Draft** (`components/DraftSteps.jsx`, os times e `DraftPanel`):
+   - a faixa de pré-banidos do Fearless (Parte 1) no topo;
+   - os banimentos e as escolhas **na ordem do formato**, agrupados (Banimentos 1, Escolhas 1, Banimentos 2...), com a cor
+     do lado, o campeão de cada passo feito e **o passo atual em destaque**; o anúncio "Vermelho: banimento 2 de 5 · fase
+     1" com "Banir" / "Escolher" e, no Campeonato, "Sem banimento"; na Ranqueada "banimentos às cegas (em qualquer
+     ordem)"; um passo com fonte EST mostra a marca. Tocar em qualquer passo abre o seletor dele (dá para trocar depois);
+   - escolher um campeão no draft volta ao draft (feitiços e runas ficam para o Carregamento);
+   - os dois times com as vagas na ordem de escolha, a rota provável com a % e as rotas possíveis de cada pick (Parte 2);
+   - as listas da vez (previsão, recomendação, banimentos e a árvore, Partes 2 e 3);
+   - **"Pular draft"** vai direto ao Carregamento.
+2. **Carregamento** (`components/LoadingStage.jsx`):
+   - por time, as cinco rotas em linhas; **tocar num campeão e depois na rota** fixa (troca com quem estava lá), e com o
+     mouse dá para **arrastar** o campeão até a rota; "Deixar a rota em aberto" e "Usar a atribuição provável"; ao entrar
+     pela primeira vez, o time sem nenhuma rota fixada recebe a **atribuição provável pronta** (a mais provável inteira);
+   - "Feitiços e runas" em cada campeão (o editor nas abas de feitiços e runas);
+   - a **voz** (Rodada 20) no topo da etapa;
+   - o que faltar fica em branco e se preenche na Partida;
+   - **Recomendação do aliado** ("Sugestão"; `POST /api/draft/carregamento`, `LoadoutService`): feitiços e fundamental
+     **mesmo sem a rota definida** — a melhor de cada rota provável (com a chance), a **ponderada** (a de melhor valor
+     esperado pelas chances) e a **mais robusta** (a melhor no pior caso entre as rotas com chance ≥ 20%); "Aplicar" põe
+     no cartão (a fundamental própria leva a página padrão inteira). **EST**: não há medida de feitiço ou runa por rota;
+     as regras estão em `draft_7_3f.yml › carregamento` (os pares de feitiços de cada rota na ordem, Golpear só na Selva,
+     e a fundamental por rota e classe quando a da página padrão dele, campanha ou 1ª build salva, não serve à rota).
+3. **Partida**: o relógio, as ações rápidas, a voz, os cartões (itens, placar), os painéis Primeiro encontro, Builds
+   prováveis e Dicas (o painel do Draft saiu daqui: é a etapa 1) e os eventos, como na Rodada 20; "‹ Carregamento" e a
+   barra de passos levam de volta para corrigir runas e rotas.
+
+**Conferido** em 1920 × 1080, 844 × 390 e 390 × 844 (painel do navegador do app; `docs/rodada-20b/`): no retrato o
+Carregamento empilha os dois times (em duas colunas os botões não cabiam); as rotas possíveis quebram em duas linhas no
+cartão; alvos de toque de 36 a 52 px.
+
+| Tamanho | Capturas |
+|---|---|
+| 1920 × 1080 | `draft-1920x1080.jpg`, `carregamento-1920x1080.jpg` (a sugestão do Ornn sem rota: ponderada, robusta, Suporte 51%, Barão 49%), `partida-1920x1080.jpg` |
+| 844 × 390 | `draft-844x390.jpg`, `carregamento-844x390.jpg`, `partida-844x390.jpg` |
+| 390 × 844 | `draft-390x844.jpg`, `draft-390x844-times.jpg`, `carregamento-390x844.jpg` |
+
+**Testes:** `LoadoutTest` (um flex Barão/Selva: cada rota com a sua melhor, Golpear só na Selva, a fundamental própria
+servindo; um Mago no Suporte troca o Ritmo Fatal por Aery; com a rota fixada, ponderada = robusta = a da rota).

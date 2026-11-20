@@ -147,3 +147,37 @@ primeiro_encontro:
     cauteloso: tactical         # troca e recua com a vida baixa
   inimigos_mais_provaveis: 0     # quantos itens iniciais do inimigo entram, pelos mais prováveis (0 = todos)
 
+# Rodada 20.b, Parte 4: a recomendação de feitiços e runas do Carregamento, mesmo sem a rota definida (EST: regras minhas,
+# a conferir; não há dado medido de feitiço ou runa por rota). Para cada rota provável do campeão: o par de feitiços (a
+# lista da rota, na ordem; o par da build padrão dele ganha `bonus_proprio` quando cabe na rota) e a fundamental (a da
+# página padrão dele, da campanha ou da 1ª build salva, se servir à rota; senão a 1ª da lista da rota para a classe dele).
+# A tela mostra a melhor de cada rota, a ponderada pela chance de cada rota e a mais robusta (a melhor no pior caso entre
+# as rotas com chance de pelo menos `robusta_minimo`).
+carregamento:
+  feiticos_por_rota:
+    Barão: [[Flash, Teleporte], [Flash, Incendiar], [Flash, Fantasma]]
+    Selva: [[Golpear, Flash], [Golpear, Fantasma]]
+    Meio: [[Flash, Incendiar], [Flash, Barreira], [Flash, Teleporte]]
+    Dragão: [[Flash, Curar], [Flash, Barreira], [Flash, Fantasma]]
+    Suporte: [[Flash, Exaustão], [Flash, Incendiar], [Flash, Curar]]
+  pontos_por_ordem: [1, 0.7, 0.5]
+  bonus_proprio: 0.4
+  # um feitiço que só faz sentido numa rota (fora dela o par vale 0)
+  so_na_rota: {Golpear: Selva}
+  # a fundamental por rota e classe principal, quando a do campeão não serve (vazio = qualquer uma serve)
+  fundamentais_por_rota:
+    Selva:
+      Lutador: [Conquistador, Ímpeto Gradual]
+      Assassino: [Eletrocutar, Colheita Sombria]
+      Tanque: [Aperto dos Mortos-Vivos, Suserano do Gelo]
+      Mago: [Colheita Sombria, Eletrocutar]
+      Atirador: [Ritmo Fatal, Conquistador]
+      Suporte: [Aperto dos Mortos-Vivos, Guardião]
+    Suporte:
+      Tanque: [Aperto dos Mortos-Vivos, Guardião, Suserano do Gelo]
+      Suporte: [Aery, Guardião]
+      Mago: [Aery, Cometa Arcano, Eletrocutar]
+      Lutador: [Aperto dos Mortos-Vivos, Guardião]
+      Assassino: [Eletrocutar, Aperto dos Mortos-Vivos]
+      Atirador: [Aery, Cometa Arcano]
+  robusta_minimo: 0.2

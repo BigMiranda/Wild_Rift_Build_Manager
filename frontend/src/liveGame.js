@@ -283,3 +283,70 @@ export function applyIntent(g, intent, items = [], runeInfo = () => null, now = 
     default: return { game: g, error: 'tipo' };
   }
 }
+
+// ------------------------------------------------------------------ Rodada 20.b, Parte 4: the screen in stages
+
+export const STAGES = ['draft', 'carregamento', 'partida'];
+
+/** The stage a game opens in: the saved one; an old game by what it has (events = the match, ten picks = loading). */
+export function stageOf(g) {
+  if (g?.stage && STAGES.includes(g.stage)) return g.stage;
+  if ((g?.events ?? []).length > 0) return 'partida';
+  const ten = picks(g, BLUE).length + picks(g, RED).length === 10;
+  return ten ? 'carregamento' : 'draft';
+}
+
+/**
+ * The next turn of the draft (DraftCatalog.next): the first turn of the format whose slot is still empty; a skipped
+ * ban counts as done; the k-th pick of a side is its k-th card. null = the draft is over.
+ */
+export function nextTurn(g, fmt) {
+  for (const tn of fmt?.turns ?? []) {
+    const team = g[teamKey(tn.side)];
+    if (tn.action === 'ban') {
+      if (!team.bans?.[tn.index]) return tn;
+    } else if (!team.players[tn.index]?.champion) {
+      return tn;
+    }
+  }
+  return null;
+}
+
+/** What fills a turn: the ban (a champion or NO_BAN) or the pick's champion, or null. */
+export function turnValue(g, tn) {
+  const team = g[teamKey(tn.side)];
+  return tn.action === 'ban' ? team.bans?.[tn.index] ?? null : team.players[tn.index]?.champion ?? null;
+}
+
+/**
+ * Fixes a player's lane on the loading screen: the card that had it gives it up and takes this one's old lane (a swap;
+ * null stays open). lane = null takes the lane off.
+ */
+export function assignLane(g, side, index, lane) {
+  const out = clone(g);
+  const ps = out[teamKey(side)].players;
+  const old = ps[index].lane ?? null;
+  if (lane) {
+    const other = ps.findIndex((p, k) => k !== index && p.lane === lane);
+    if (other >= 0) ps[other].lane = old;
+  }
+  ps[index].lane = lane ?? null;
+  return out;
+}
+
+/**
+ * The likely assignment, fixed: every picked card of a side without a lane gets the one of its team's most likely
+ * whole assignment (draft suggestions' `lanes[side].picks[].likely`), when that lane is still free.
+ */
+export function applyLikely(g, side, laneView) {
+  const out = clone(g);
+  const ps = out[teamKey(side)].players;
+  const taken = new Set(ps.map((p) => p.lane).filter(Boolean));
+  for (const x of laneView?.picks ?? []) {
+    const p = ps[x.slot];
+    if (x.slot < 0 || !p?.champion || p.lane || !x.likely || taken.has(x.likely)) continue;
+    p.lane = x.likely;
+    taken.add(x.likely);
+  }
+  return out;
+}

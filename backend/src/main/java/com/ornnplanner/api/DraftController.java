@@ -6,6 +6,7 @@ import com.ornnplanner.arena.draft.DraftService;
 import com.ornnplanner.arena.draft.DraftTablesService;
 import com.ornnplanner.arena.draft.FirstEncounterService;
 import com.ornnplanner.arena.draft.LiveBuildsService;
+import com.ornnplanner.arena.draft.LoadoutService;
 import com.ornnplanner.arena.draft.TipsService;
 import com.ornnplanner.arena.draft.LiveGameModel;
 import com.ornnplanner.arena.draft.LiveGameRepository;
@@ -40,9 +41,11 @@ public class DraftController {
     private final FirstEncounterService encounter;
     private final LiveBuildsService builds;
     private final TipsService tips;
+    private final LoadoutService loadout;
 
     public DraftController(LiveGameRepository games, DraftCatalog catalog, VoiceAliases aliases, DraftService draft, DraftTablesService tables,
-                           FirstEncounterService encounter, LiveBuildsService builds, TipsService tips) {
+                           FirstEncounterService encounter, LiveBuildsService builds, TipsService tips, LoadoutService loadout) {
+        this.loadout = loadout;
         this.tips = tips;
         this.encounter = encounter;
         this.builds = builds;
@@ -98,6 +101,19 @@ public class DraftController {
     public LiveBuildsService.Result builds(@RequestBody PlayerRequest q, @RequestParam(defaultValue = "true") boolean medir) {
         try {
             return builds.run(draft.resolved(q.game), q.side, q.index, medir);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    /**
+     * Rodada 20.b, Parte 4: the loading screen's spells and keystone for a card, even without its lane fixed: the best
+     * per likely lane, the weighted one and the most robust.
+     */
+    @PostMapping("/carregamento")
+    public LoadoutService.Result loadout(@RequestBody PlayerRequest q) {
+        try {
+            return loadout.run(q.game, q.side, q.index);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }

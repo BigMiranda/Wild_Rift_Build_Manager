@@ -1,19 +1,19 @@
 import { useState } from 'react';
 import { t } from '../i18n.js';
-import DraftPanel from './DraftPanel.jsx';
 import EncounterPanel from './EncounterPanel.jsx';
 import LiveBuildsPanel from './LiveBuildsPanel.jsx';
 import TipsPanel from './TipsPanel.jsx';
 
-const PANELS = ['draft', 'encontro', 'builds', 'dicas'];
+// Rodada 20.b: the draft is a stage of its own; the match's panels are these
+const PANELS = ['encontro', 'builds', 'dicas'];
 
 /**
  * Rodada 20: the panels under the two teams, one at a time (the screen stays short on a phone): the draft (Parte 3),
  * the first encounter (Parte 4), the likely builds (Parte 5) and the tips (Parte 6).
  */
 export default function LivePanels(props) {
-  const [own, setOwn] = useState('draft');
-  const panel = props.panel ?? own;
+  const [own, setOwn] = useState('encontro');
+  const panel = PANELS.includes(props.panel) ? props.panel : own;
   const setPanel = (k) => (props.onPanel ? props.onPanel(k) : setOwn(k));
   return (
     <div className="live-panels">
@@ -24,7 +24,6 @@ export default function LivePanels(props) {
           </button>
         ))}
       </div>
-      {panel === 'draft' && <DraftPanel game={props.game} onChange={props.onChange} root={props.draft} />}
       {panel === 'encontro' && <EncounterPanel game={props.game} selected={props.selected} />}
       {panel === 'builds' && <LiveBuildsPanel game={props.game} selected={props.selected} />}
       {panel === 'dicas' && <TipsPanel game={props.game} selected={props.selected} />}
