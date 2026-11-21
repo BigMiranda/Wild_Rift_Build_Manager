@@ -42,12 +42,17 @@ public class PlannerService {
     private final com.ornnplanner.seed.ShopRules shopRules;
 
     private final SlowEstimator slows;
+    /** Rodada 21: the "objetivos" section of objetivos_<patch>.yml (the drakes, souls, Elder, Hand of Baron). */
+    private final Map<String, Object> objectiveRules;
 
     public PlannerService(CatalogRepository catalog, ReferenceRepository reference,
                           com.ornnplanner.seed.RuneCatalog runes, com.ornnplanner.seed.ChampionCatalog champions,
                           com.ornnplanner.seed.ItemEffectCatalog itemEffects, com.ornnplanner.seed.ShopRules shopRules,
-                          SlowEstimator slows) {
+                          SlowEstimator slows,
+                          @org.springframework.beans.factory.annotation.Value("${planner.seed.objectives:classpath:seed/objetivos_7_3d.yml}")
+                          org.springframework.core.io.Resource objectivesFile) {
         this.slows = slows;
+        this.objectiveRules = com.ornnplanner.arena.rift.RiftRules.load(objectivesFile).map("objetivos");
         this.shopRules = shopRules;
         this.catalog = catalog;
         this.reference = reference;
@@ -341,6 +346,26 @@ public class PlannerService {
     }
 
     /** Engine input of a build: unit, gold / XP, purchases and moments, runes and champion effects. */
+    /** Rodada 21: the planner's objectives (the selector's, sent with the build) in the engine's terms; null = none. */
+    static com.ornnplanner.engine.ObjectiveRules.Objectives objectives(com.ornnplanner.arena.ArenaModel.ObjectiveBuffs b) {
+        if (b == null) {
+            return null;
+        }
+        com.ornnplanner.engine.ObjectiveRules.Objectives o = new com.ornnplanner.engine.ObjectiveRules.Objectives();
+        if (b.dragons != null) {
+            o.dragons.putAll(b.dragons);
+        }
+        o.soul = b.soul;
+        o.elder = b.elder;
+        o.baron = b.baron;
+        return o.any() ? o : null;
+    }
+
+    /** The objectives' rules (the "objetivos" section of the seed), for who mirrors them. */
+    public Map<String, Object> objectiveRules() {
+        return objectiveRules;
+    }
+
     private EngineInput input(Build build) {
         EngineInput in = new EngineInput();
         in.sellRate = shopRules.sellRate;
@@ -350,6 +375,8 @@ public class PlannerService {
         in.unit = resolveUnit(build);
         in.goldPerMin = build.goldPerMin;
         in.xpPerMin = build.xpPerMin;
+        in.objectives = objectives(build.objectives);
+        in.objectiveRules = objectiveRules;
         in.assumeHalfItems = build.assumeHalfItems;
         in.assumeSmallItems = build.assumeSmallItems;
         in.matchEnd = build.matchEnd;

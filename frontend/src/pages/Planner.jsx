@@ -312,7 +312,7 @@ export function StatusSection() {
         <BuildDock point={point} itemsById={itemsById} selected={selectedMinute != null} draft={payload} inline
           overlay={passiveValues.overlayAt('active', point.minute)} prices={result?.statPrices}
           sales={[...(result?.steps ?? []), ...(result?.ignored ?? [])].filter((x) => x.saleTiming)}
-          objectives={<ObjectivesPicker value={objectives} onChange={setObjectives} compact />} />
+          objectives={<ObjectivesPicker value={objectives} onChange={setObjectives} compact point={point} />} />
       </div>
     </div>
   );

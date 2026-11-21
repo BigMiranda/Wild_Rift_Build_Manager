@@ -1,0 +1,666 @@
+{
+  "_" : "Rodada 21: gerado por ObjectivesParityTest (-Dparity.write=true); lido por frontend/test/objectives.test.mjs",
+  "rules" : {
+    "dragao" : {
+      "aparece" : {
+        "valor" : 360,
+        "fonte" : "RPN 6.2"
+      },
+      "renasce" : {
+        "valor" : 255,
+        "fonte" : "Guia do Rift (07/11/2026) (era 270, RPN 4.2)"
+      },
+      "some" : {
+        "valor" : 1110,
+        "em_luta" : 1130,
+        "fonte" : "Guia do Rift (07/11/2026): 18:30 (era 17:30, RPN 4.2); em luta: +20 s, como antes (EST)"
+      },
+      "elementais_por_partida" : {
+        "valor" : 3,
+        "fonte" : "Guia do Rift (07/11/2026): até 3, sem repetir; o terreno muda depois do 1º (fora do modelo)"
+      },
+      "vida" : {
+        "valor" : 4000,
+        "por_nivel" : 180,
+        "fonte" : "RPN 4.2"
+      },
+      "dda" : {
+        "valor" : 110,
+        "por_nivel" : 12,
+        "fonte" : "EST"
+      },
+      "armadura" : {
+        "valor" : 40,
+        "fonte" : "EST"
+      },
+      "rm" : {
+        "valor" : 40,
+        "fonte" : "EST"
+      },
+      "velocidade_ataque" : {
+        "valor" : 0.5,
+        "fonte" : "EST"
+      },
+      "alcance" : {
+        "valor" : 500,
+        "fonte" : "EST"
+      },
+      "ouro_time" : {
+        "valor" : 40,
+        "fonte" : "RPN 4.2"
+      },
+      "xp" : {
+        "valor" : 400,
+        "fonte" : "EST"
+      },
+      "acumulos_para_alma" : {
+        "valor" : 3,
+        "fonte" : "print do usuário (05/11/2026)"
+      },
+      "ordem" : {
+        "valores" : [ "oceano", "montanha", "infernal" ],
+        "sorteada" : true,
+        "fonte" : "print do usuário (05/11/2026): a ordem muda por partida; a partida sorteia pela semente"
+      },
+      "elementos" : {
+        "infernal" : {
+          "status" : [ {
+            "stat" : "Attack Damage",
+            "ratio" : 0.04,
+            "ref" : "Attack Damage",
+            "escopo" : "total"
+          }, {
+            "stat" : "Ability Power",
+            "ratio" : 0.04,
+            "ref" : "Ability Power",
+            "escopo" : "total"
+          } ],
+          "fonte" : "print do usuário (05/11/2026): receba 4% de Dano de Ataque e Poder de Habilidade"
+        },
+        "montanha" : {
+          "status" : [ {
+            "stat" : "Armor",
+            "valor" : 4
+          }, {
+            "stat" : "Magic Resistance",
+            "valor" : 4
+          }, {
+            "stat" : "Armor",
+            "ratio" : 0.03,
+            "ref" : "Armor",
+            "escopo" : "total"
+          }, {
+            "stat" : "Magic Resistance",
+            "ratio" : 0.03,
+            "ref" : "Magic Resistance",
+            "escopo" : "total"
+          } ],
+          "fonte" : "print do usuário (05/11/2026): recebe 4+3% de Armadura e Resistência Mágica"
+        },
+        "oceano" : {
+          "regeneracao_vida_perdida" : 0.028,
+          "a_cada" : 5,
+          "fonte" : "print do usuário (05/11/2026): regenera 2,8% da Vida perdida a cada 5s"
+        }
+      },
+      "almas" : {
+        "infernal" : {
+          "dano" : {
+            "tipo" : "adaptativo",
+            "base" : 180,
+            "dda_bonus" : 0.35,
+            "pdh" : 0.15
+          },
+          "raio" : 250,
+          "recarga" : 5,
+          "fonte" : "print do usuário (05/11/2026)"
+        },
+        "montanha" : {
+          "escudo" : 350,
+          "apos" : 5,
+          "fonte" : "print do usuário (05/11/2026): sem dano de campeões inimigos ou torres"
+        },
+        "oceano" : {
+          "cura" : {
+            "base" : 250,
+            "dda_bonus" : 0.48,
+            "pdh" : 0.25,
+            "vida_bonus" : 0.1
+          },
+          "duracao" : 4,
+          "recarga" : 6,
+          "fonte" : "print do usuário (05/11/2026)"
+        }
+      }
+    },
+    "anciao" : {
+      "aparece" : {
+        "valor" : 1140,
+        "apos_terceiro" : true,
+        "fonte" : "RPN 6.2; WR:Dragon_pit"
+      },
+      "renasce" : {
+        "valor" : 270,
+        "fonte" : "Guia do Rift (07/11/2026) (era 360, WR:Dragon_pit)"
+      },
+      "vida" : {
+        "valor" : 7000,
+        "por_min" : 120,
+        "fonte" : "EST"
+      },
+      "dda" : {
+        "valor" : 200,
+        "fonte" : "EST"
+      },
+      "armadura" : {
+        "valor" : 70,
+        "fonte" : "EST"
+      },
+      "rm" : {
+        "valor" : 70,
+        "fonte" : "EST"
+      },
+      "velocidade_ataque" : {
+        "valor" : 0.5,
+        "fonte" : "EST"
+      },
+      "alcance" : {
+        "valor" : 500,
+        "fonte" : "EST"
+      },
+      "buff" : {
+        "duracao" : 120,
+        "verdadeiro" : 450,
+        "em" : 3,
+        "executa_abaixo" : 0.15,
+        "fonte" : "WR:Dragon_Slayer; dano: RPN 6.2"
+      }
+    },
+    "mao_do_barao" : {
+      "duracao" : {
+        "valor" : 120,
+        "fonte" : "Guia do Rift (07/11/2026) (a RPN 6.2 dava 90 à primeira)"
+      },
+      "dda_pdh_por_min" : {
+        "dda" : 2,
+        "pdh" : 3,
+        "base_dda" : 24,
+        "base_pdh" : 40,
+        "fonte" : "EST: a página diz que cresce por minuto, sem números"
+      },
+      "tropas" : {
+        "reducao_contra_campeoes" : {
+          "combatente" : 0.65,
+          "conjuradora" : 0.65,
+          "canhao" : 0.35,
+          "fonte" : "NP 7.3d (55–75% e 35%; o meio da faixa)"
+        },
+        "dano_contra_tropas" : {
+          "combatente" : 0.9,
+          "outras" : 0.25,
+          "fonte" : "NP 7.3d"
+        },
+        "dano_contra_torres" : {
+          "valor" : 0.3,
+          "fonte" : "NP 7.3d"
+        }
+      }
+    }
+  },
+  "cases" : [ {
+    "objectives" : {
+      "dragons" : {
+        "oceano" : 1,
+        "montanha" : 0,
+        "infernal" : 0
+      },
+      "soul" : null,
+      "elder" : false,
+      "baron" : false
+    },
+    "minute" : 8.0,
+    "total" : {
+      "Attack Damage" : 90.0,
+      "Ability Power" : 0.0,
+      "Armor" : 60.0,
+      "Magic Resistance" : 40.0,
+      "Max Health" : 1500.0
+    },
+    "base" : {
+      "Attack Damage" : 70.0,
+      "Ability Power" : 0.0,
+      "Armor" : 45.0,
+      "Magic Resistance" : 32.0,
+      "Max Health" : 1300.0
+    },
+    "expected" : [ {
+      "source" : "oceano",
+      "stacks" : 1,
+      "delta" : { },
+      "fight" : {
+        "kind" : "cura",
+        "value" : 42.0,
+        "seconds" : 10.0,
+        "each" : 21.0,
+        "times" : 2.0,
+        "detail" : "regeneracao_vida_perdida x 0.5 da Vida máxima a cada 5.0 s"
+      },
+      "estimate" : false
+    } ]
+  }, {
+    "objectives" : {
+      "dragons" : {
+        "oceano" : 0,
+        "montanha" : 1,
+        "infernal" : 0
+      },
+      "soul" : null,
+      "elder" : false,
+      "baron" : false
+    },
+    "minute" : 12.0,
+    "total" : {
+      "Attack Damage" : 120.0,
+      "Ability Power" : 30.0,
+      "Armor" : 180.0,
+      "Magic Resistance" : 90.0,
+      "Max Health" : 3200.0
+    },
+    "base" : {
+      "Attack Damage" : 85.0,
+      "Ability Power" : 0.0,
+      "Armor" : 80.0,
+      "Magic Resistance" : 50.0,
+      "Max Health" : 2100.0
+    },
+    "expected" : [ {
+      "source" : "montanha",
+      "stacks" : 1,
+      "delta" : {
+        "Armor" : 9.52,
+        "Magic Resistance" : 6.82
+      },
+      "fight" : null,
+      "estimate" : false
+    } ]
+  }, {
+    "objectives" : {
+      "dragons" : {
+        "oceano" : 0,
+        "montanha" : 0,
+        "infernal" : 1
+      },
+      "soul" : null,
+      "elder" : false,
+      "baron" : false
+    },
+    "minute" : 14.5,
+    "total" : {
+      "Attack Damage" : 210.0,
+      "Ability Power" : 140.0,
+      "Armor" : 95.0,
+      "Magic Resistance" : 60.0,
+      "Max Health" : 2400.0
+    },
+    "base" : {
+      "Attack Damage" : 90.0,
+      "Ability Power" : 0.0,
+      "Armor" : 70.0,
+      "Magic Resistance" : 45.0,
+      "Max Health" : 1900.0
+    },
+    "expected" : [ {
+      "source" : "infernal",
+      "stacks" : 1,
+      "delta" : {
+        "Attack Damage" : 8.4,
+        "Ability Power" : 5.6000000000000005
+      },
+      "fight" : null,
+      "estimate" : false
+    } ]
+  }, {
+    "objectives" : {
+      "dragons" : {
+        "oceano" : 1,
+        "montanha" : 1,
+        "infernal" : 1
+      },
+      "soul" : "oceano",
+      "elder" : false,
+      "baron" : false
+    },
+    "minute" : 20.0,
+    "total" : {
+      "Attack Damage" : 260.0,
+      "Ability Power" : 90.0,
+      "Armor" : 140.0,
+      "Magic Resistance" : 110.0,
+      "Max Health" : 3900.0
+    },
+    "base" : {
+      "Attack Damage" : 100.0,
+      "Ability Power" : 0.0,
+      "Armor" : 90.0,
+      "Magic Resistance" : 55.0,
+      "Max Health" : 2300.0
+    },
+    "expected" : [ {
+      "source" : "oceano",
+      "stacks" : 1,
+      "delta" : { },
+      "fight" : {
+        "kind" : "cura",
+        "value" : 109.2,
+        "seconds" : 10.0,
+        "each" : 54.6,
+        "times" : 2.0,
+        "detail" : "regeneracao_vida_perdida x 0.5 da Vida máxima a cada 5.0 s"
+      },
+      "estimate" : false
+    }, {
+      "source" : "montanha",
+      "stacks" : 1,
+      "delta" : {
+        "Armor" : 8.32,
+        "Magic Resistance" : 7.42
+      },
+      "fight" : null,
+      "estimate" : false
+    }, {
+      "source" : "infernal",
+      "stacks" : 1,
+      "delta" : {
+        "Attack Damage" : 10.4,
+        "Ability Power" : 3.6
+      },
+      "fight" : null,
+      "estimate" : false
+    }, {
+      "source" : "soul:oceano",
+      "stacks" : null,
+      "delta" : {
+        "Heal" : 509.3
+      },
+      "fight" : {
+        "kind" : "cura",
+        "value" : 509.3,
+        "seconds" : 4.0,
+        "each" : 509.3,
+        "times" : 1.0,
+        "detail" : "cura em 4.0 s"
+      },
+      "estimate" : false
+    } ]
+  }, {
+    "objectives" : {
+      "dragons" : {
+        "oceano" : 1,
+        "montanha" : 1,
+        "infernal" : 1
+      },
+      "soul" : "infernal",
+      "elder" : true,
+      "baron" : true
+    },
+    "minute" : 24.0,
+    "total" : {
+      "Attack Damage" : 310.0,
+      "Ability Power" : 400.0,
+      "Armor" : 120.0,
+      "Magic Resistance" : 80.0,
+      "Max Health" : 3100.0
+    },
+    "base" : {
+      "Attack Damage" : 110.0,
+      "Ability Power" : 0.0,
+      "Armor" : 95.0,
+      "Magic Resistance" : 60.0,
+      "Max Health" : 2400.0
+    },
+    "expected" : [ {
+      "source" : "oceano",
+      "stacks" : 1,
+      "delta" : { },
+      "fight" : {
+        "kind" : "cura",
+        "value" : 86.8,
+        "seconds" : 10.0,
+        "each" : 43.4,
+        "times" : 2.0,
+        "detail" : "regeneracao_vida_perdida x 0.5 da Vida máxima a cada 5.0 s"
+      },
+      "estimate" : false
+    }, {
+      "source" : "montanha",
+      "stacks" : 1,
+      "delta" : {
+        "Armor" : 7.72,
+        "Magic Resistance" : 6.52
+      },
+      "fight" : null,
+      "estimate" : false
+    }, {
+      "source" : "infernal",
+      "stacks" : 1,
+      "delta" : {
+        "Attack Damage" : 12.4,
+        "Ability Power" : 16.0
+      },
+      "fight" : null,
+      "estimate" : false
+    }, {
+      "source" : "soul:infernal",
+      "stacks" : null,
+      "delta" : { },
+      "fight" : {
+        "kind" : "dano",
+        "value" : 620.0,
+        "seconds" : 10.0,
+        "each" : 310.0,
+        "times" : 2.0,
+        "detail" : "dano adaptativo em área a cada 5.0 s"
+      },
+      "estimate" : false
+    }, {
+      "source" : "elder",
+      "stacks" : null,
+      "delta" : { },
+      "fight" : {
+        "kind" : "dano_verdadeiro",
+        "value" : 1500.0,
+        "seconds" : 10.0,
+        "each" : 450.0,
+        "times" : 3.3333333333333335,
+        "detail" : "queima de 450.0 em 3.0 s, reaplicada; executa abaixo de 15%"
+      },
+      "estimate" : false
+    }, {
+      "source" : "baron",
+      "stacks" : null,
+      "delta" : {
+        "Attack Damage" : 72.0,
+        "Ability Power" : 112.0
+      },
+      "fight" : null,
+      "estimate" : true
+    } ]
+  }, {
+    "objectives" : {
+      "dragons" : {
+        "oceano" : 1,
+        "montanha" : 1,
+        "infernal" : 1
+      },
+      "soul" : "montanha",
+      "elder" : false,
+      "baron" : true
+    },
+    "minute" : 22.0,
+    "total" : {
+      "Attack Damage" : 150.0,
+      "Ability Power" : 60.0,
+      "Armor" : 260.0,
+      "Magic Resistance" : 190.0,
+      "Max Health" : 5200.0
+    },
+    "base" : {
+      "Attack Damage" : 95.0,
+      "Ability Power" : 0.0,
+      "Armor" : 100.0,
+      "Magic Resistance" : 60.0,
+      "Max Health" : 2500.0
+    },
+    "expected" : [ {
+      "source" : "oceano",
+      "stacks" : 1,
+      "delta" : { },
+      "fight" : {
+        "kind" : "cura",
+        "value" : 145.6,
+        "seconds" : 10.0,
+        "each" : 72.8,
+        "times" : 2.0,
+        "detail" : "regeneracao_vida_perdida x 0.5 da Vida máxima a cada 5.0 s"
+      },
+      "estimate" : false
+    }, {
+      "source" : "montanha",
+      "stacks" : 1,
+      "delta" : {
+        "Armor" : 11.92,
+        "Magic Resistance" : 9.82
+      },
+      "fight" : null,
+      "estimate" : false
+    }, {
+      "source" : "infernal",
+      "stacks" : 1,
+      "delta" : {
+        "Attack Damage" : 6.0,
+        "Ability Power" : 2.4
+      },
+      "fight" : null,
+      "estimate" : false
+    }, {
+      "source" : "soul:montanha",
+      "stacks" : null,
+      "delta" : {
+        "Shield" : 350.0
+      },
+      "fight" : null,
+      "estimate" : false
+    }, {
+      "source" : "baron",
+      "stacks" : null,
+      "delta" : {
+        "Attack Damage" : 68.0,
+        "Ability Power" : 106.0
+      },
+      "fight" : null,
+      "estimate" : true
+    } ]
+  }, {
+    "objectives" : {
+      "dragons" : {
+        "oceano" : 1,
+        "montanha" : 0,
+        "infernal" : 1
+      },
+      "soul" : "oceano",
+      "elder" : true,
+      "baron" : false
+    },
+    "minute" : 18.0,
+    "total" : {
+      "Attack Damage" : 200.0,
+      "Ability Power" : 100.0,
+      "Armor" : 110.0,
+      "Magic Resistance" : 70.0,
+      "Max Health" : 2800.0
+    },
+    "base" : {
+      "Attack Damage" : 100.0,
+      "Ability Power" : 0.0,
+      "Armor" : 85.0,
+      "Magic Resistance" : 52.0,
+      "Max Health" : 2200.0
+    },
+    "expected" : [ {
+      "source" : "oceano",
+      "stacks" : 1,
+      "delta" : { },
+      "fight" : {
+        "kind" : "cura",
+        "value" : 78.4,
+        "seconds" : 10.0,
+        "each" : 39.2,
+        "times" : 2.0,
+        "detail" : "regeneracao_vida_perdida x 0.5 da Vida máxima a cada 5.0 s"
+      },
+      "estimate" : false
+    }, {
+      "source" : "infernal",
+      "stacks" : 1,
+      "delta" : {
+        "Attack Damage" : 8.0,
+        "Ability Power" : 4.0
+      },
+      "fight" : null,
+      "estimate" : false
+    }, {
+      "source" : "elder",
+      "stacks" : null,
+      "delta" : { },
+      "fight" : {
+        "kind" : "dano_verdadeiro",
+        "value" : 1500.0,
+        "seconds" : 10.0,
+        "each" : 450.0,
+        "times" : 3.3333333333333335,
+        "detail" : "queima de 450.0 em 3.0 s, reaplicada; executa abaixo de 15%"
+      },
+      "estimate" : false
+    } ]
+  }, {
+    "objectives" : {
+      "dragons" : {
+        "oceano" : 5,
+        "montanha" : 0,
+        "infernal" : 0
+      },
+      "soul" : null,
+      "elder" : false,
+      "baron" : false
+    },
+    "minute" : 10.0,
+    "total" : {
+      "Attack Damage" : 100.0,
+      "Ability Power" : 0.0,
+      "Armor" : 70.0,
+      "Magic Resistance" : 40.0,
+      "Max Health" : 1800.0
+    },
+    "base" : {
+      "Attack Damage" : 80.0,
+      "Ability Power" : 0.0,
+      "Armor" : 55.0,
+      "Magic Resistance" : 35.0,
+      "Max Health" : 1500.0
+    },
+    "expected" : [ {
+      "source" : "oceano",
+      "stacks" : 1,
+      "delta" : { },
+      "fight" : {
+        "kind" : "cura",
+        "value" : 50.4,
+        "seconds" : 10.0,
+        "each" : 25.2,
+        "times" : 2.0,
+        "detail" : "regeneracao_vida_perdida x 0.5 da Vida máxima a cada 5.0 s"
+      },
+      "estimate" : false
+    } ]
+  } ]
+}

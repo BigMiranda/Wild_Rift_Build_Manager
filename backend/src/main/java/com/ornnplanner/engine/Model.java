@@ -552,6 +552,9 @@ public final class Model {
         public Double matchEnd;
         /** Extra gold earned at given minutes (e.g. runes Demolir, Primeiro Ataque): {minute, gold}. */
         public List<double[]> extraGold = new ArrayList<>();
+        /** Rodada 21: the objectives of the reading (null = none) and the "objetivos" section of their rules. */
+        public ObjectiveRules.Objectives objectives;
+        public Map<String, Object> objectiveRules;
         /** Runes of the build: held from the start, no cost, no inventory slot. */
         public List<ItemDef> runes = new ArrayList<>();
         /** Per rune (same order): count its conditional effects. */
@@ -690,6 +693,9 @@ public final class Model {
         public boolean rune;
         /** From the champion's own passive or abilities (also flagged as rune: held from the start, no cost). */
         public boolean champion;
+        /** Rodada 21: the objectives of the reading (drakes, soul, Baron), one source "Objetivos" (also flagged as rune). */
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        public boolean objective;
         public long itemId;
         public String itemName;
         public boolean conditionalIncluded;
@@ -897,6 +903,11 @@ public final class Model {
         /** Estimated slow put on the enemies at this point (lentidao_<patch>.yml), null when not worked out. */
         @JsonInclude(JsonInclude.Include.NON_NULL)
         public SlowEstimate slow;
+        /** Rodada 21: what the reading's objectives add to the totals (null = none), and each source with its fight effect. */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public Map<String, Double> objectiveDelta;
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public List<ObjectiveRules.Part> objectiveParts;
         /** Where the values of this point come from (relevance report with passed-on passives). */
         @JsonIgnore
         public Attribution attribution;

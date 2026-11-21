@@ -1379,6 +1379,7 @@ public class TimelineEngine {
         x.implied = c.implied;
         x.rune = c.rune;
         x.champion = c.champion;
+        x.objective = c.objective;
         x.itemId = c.itemId;
         x.itemName = c.itemName;
         x.conditionalIncluded = c.conditionalIncluded;
@@ -1636,6 +1637,9 @@ public class TimelineEngine {
             p.forgePct = snap.forgePct;
             p.contributions = snap.contributions;
             p.attribution = snap.attribution;
+            if (in.objectives != null && in.objectives.any()) {
+                ObjectiveRules.apply(p, in.objectives, in.objectiveRules, ref.statPrices);
+            }
             result.series.add(p);
         }
     }

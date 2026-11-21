@@ -309,6 +309,9 @@ public class ArenaController {
         m.put("elementos", arena.riftRules().map("objetivos", "dragao", "elementos"));
         m.put("almas", arena.riftRules().map("objetivos", "dragao", "almas"));
         m.put("mao_do_barao", arena.riftRules().map("objetivos", "mao_do_barao"));
+        // Rodada 21: the whole section, as the planner's engine reads it (objectives.js mirrors ObjectiveRules)
+        m.put("dragao", arena.riftRules().map("objetivos", "dragao"));
+        m.put("anciao", arena.riftRules().map("objetivos", "anciao"));
         return m;
     }
 

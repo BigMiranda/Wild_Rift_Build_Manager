@@ -1879,3 +1879,36 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .ld-lane > .ld-chip { flex-shrink: 0; }
 .ld-setup { min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
 @media (max-width: 760px) { .ld-lane > .ld-chip .ld-chip-name { max-width: 84px; } .ld-sr { padding: 2px 6px; } }
+
+/* Rodada 21, part 6: the objectives' selector, one component (planner, Arena, effectiveness, Draft e partida) */
+.obj-picker { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.obj-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.obj-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; align-items: stretch; }
+.obj-row.obj-big { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.obj-row.obj-soul { grid-template-columns: auto repeat(3, minmax(0, 1fr)); }
+.obj-row.obj-soul.locked .obj-card { opacity: .55; }
+.obj-label { align-self: center; font-weight: 600; font-size: .9em; padding-right: 4px; }
+.obj-card { position: relative; min-width: 0; }
+.obj-card > button { width: 100%; height: 100%; display: flex; gap: 8px; align-items: center; text-align: left; padding: 6px 8px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--panel, transparent); color: inherit; cursor: pointer;
+  touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+.obj-card > button:disabled { cursor: not-allowed; }
+.obj-card.on > button { border-color: var(--accent, #c9a227); box-shadow: inset 0 0 0 1px var(--accent, #c9a227);
+  background: color-mix(in srgb, var(--accent, #c9a227) 12%, transparent); }
+.obj-card .obj-icon { flex: 0 0 auto; }
+.obj-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.obj-text strong { font-size: .92em; }
+.obj-text small { opacity: .8; font-size: .8em; overflow-wrap: anywhere; }
+.obj-card.small > button { padding: 4px 6px; }
+.obj-pop { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; width: max(100%, 260px); max-width: 340px; white-space: pre-line;
+  padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg, #1c1c1c); font-size: .85em;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .35); pointer-events: none; }
+.obj-picker.compact .obj-text small { font-size: .75em; }
+@media (max-width: 560px) {
+  .obj-row { grid-template-columns: 1fr; }
+  .obj-row.obj-soul { grid-template-columns: 1fr 1fr 1fr; }
+  .obj-row.obj-soul .obj-label { grid-column: 1 / -1; }
+  .obj-row.obj-big { grid-template-columns: 1fr 1fr; }
+}
+/* the last card of a row opens its description to the left, so it stays on the screen */
+.obj-row > .obj-card:last-child .obj-pop { left: auto; right: 0; }

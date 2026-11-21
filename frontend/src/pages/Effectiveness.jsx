@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
+import ObjectivesPicker, { emptyObjectives, hasObjectives } from '../components/ObjectivesPicker.jsx';
 import { statLabel, t } from '../i18n.js';
 import { n0, n1 } from '../format.js';
 import { BOT_STATS, ROLES, effectMeta, newBot, newTest, testKey } from '../effectiveness.js';
@@ -260,6 +261,7 @@ function TryNow({ test }) {
   const [buildId, setBuildId] = useState('');
   const [minute, setMinute] = useState(20);
   const [ref, setRef] = useState({ kind: 'proprio' });
+  const [objectives, setObjectives] = useState(emptyObjectives);
   const [out, setOut] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -270,7 +272,7 @@ function TryNow({ test }) {
     }).catch(() => {});
   }, []);
   const job = { test: { ...test, preset: false } };
-  const req = { buildId: Number(buildId), minute, reference: ref, jobs: [job] };
+  const req = { buildId: Number(buildId), minute, reference: ref, jobs: [job], objectives: hasObjectives(objectives) ? objectives : null };
   const go = async () => {
     setBusy(true);
     setError(null);
@@ -304,6 +306,7 @@ function TryNow({ test }) {
         <button className="primary" onClick={go} disabled={!buildId || busy}>{busy ? t('efx.running') : t('efx.tryNowRun')}</button>
         <button onClick={open} disabled={!buildId}>{t('efx.openArena')}</button>
       </div>
+      <ObjectivesPicker value={objectives} onChange={(v) => { setObjectives(v); setOut(null); }} compact />
       {error && <p className="error">{error}</p>}
       {out?.error && <p className="error">{out.error}</p>}
       {m && (

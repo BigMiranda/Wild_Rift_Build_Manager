@@ -127,7 +127,7 @@ export function RelevanceReport({ point, prices, itemsById, draft, overlay }) {
   const forgeGold = Object.entries(point.forge ?? {}).reduce((sum, [k, v]) => sum + v * (prices[k] ?? 0), 0);
   // With the passive values on, a passive without stats counts as in the effective gold; by tier the report is the stats'.
   const eff = overlay ? effectiveGold(point, itemsById, prices, overlay) : null;
-  const rows = (point.contributions ?? []).map((c) => {
+  const rows = (point.contributions ?? []).filter((c) => !c.objective).map((c) => {
     const x = eff?.items.find((i) => i.purchaseIndex === c.purchaseIndex);
     const passiveGold = x ? x.passiveGold : c.passiveGold;
     return { ...c, passiveGold, gold: c.flatGold + passiveGold, passiveList: x?.passives };
@@ -142,14 +142,13 @@ export function RelevanceReport({ point, prices, itemsById, draft, overlay }) {
     <section className="panel">
       <h3>{t('report.title', { time: mmss(point.minute) })}</h3>
       <p className="muted" style={{ marginTop: 0 }}>{t('report.help')}</p>
-      {objectiveGold > 0 && (
+      {(objectiveGold > 0 || (point.objectiveParts ?? []).length > 0) && (
         <p><strong>{t('objectives.title')}</strong>: {n0(objectiveGold)} ({n0(share(objectiveGold))}%)
-          {(point.objectiveParts ?? []).length > 1 && ' — ' + point.objectiveParts.map((p) => {
+          {(point.objectiveParts ?? []).length > 0 && ' — ' + point.objectiveParts.map((p) => {
             const g = Object.entries(p.delta).reduce((sum, [k, v]) => sum + v * (prices[k] ?? 0), 0);
-            const name = objectiveName(p);
-            return `${name}: ${n0(g)}`;
+            const fight = p.fight ? ` (${t('objectives.fightEffect')}: ${t(`objectives.fight.${p.fight.kind}`, { v: n0(p.fight.value), s: n0(p.fight.seconds) })})` : '';
+            return `${objectiveName(p)}${g >= 0.5 ? `: ${n0(g)}` : ''}${fight}`;
           }).join(' · ')}
-          {(point.objectiveParts ?? []).length === 1 && ` — ${objectiveName(point.objectiveParts[0])}`}
         </p>
       )}
       {draft && rows.length > 0 && (
@@ -493,9 +492,10 @@ export function PassivesPanel({ point, series, itemsById, builds = [], draft }) 
 /** A source of the objectives by name: Baron, a soul (fight-only ones say so), or a drake. */
 function objectiveName(p) {
   if (p.source === 'baron') return t('objectives.baron');
+  if (p.source === 'elder') return t('objectives.elder');
   if (p.source.startsWith('soul:')) {
     const name = t('objectives.soulOf', { element: t(`objectives.${p.source.slice(5)}`) });
-    return p.fightOnly ? `${name} (${t('objectives.fightOnly')})` : name;
+    return name;
   }
   return t(`objectives.${p.source}`);
 }

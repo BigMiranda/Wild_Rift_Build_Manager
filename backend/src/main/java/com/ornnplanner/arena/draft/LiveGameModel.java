@@ -100,6 +100,8 @@ public final class LiveGameModel {
         public Integer dragons;
         public Integer heralds;
         public Integer barons;
+        /** Rodada 21: the objectives the team holds now (the selector's: drakes by element, soul, Elder, Baron). */
+        public com.ornnplanner.arena.ArenaModel.ObjectiveBuffs objectives;
 
         static List<Player> defaultPlayers() {
             List<Player> out = new ArrayList<>();

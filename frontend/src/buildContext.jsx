@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api } from './api.js';
 import { t, violationText } from './i18n.js';
 import { pointAt } from './components/MomentPanels.jsx';
-import { emptyObjectives, useObjectiveRules, withObjectives } from './components/ObjectivesPicker.jsx';
+import { emptyObjectives, hasObjectives, useObjectiveRules, withObjectives } from './components/ObjectivesPicker.jsx';
 import { ALIGN_ITEM } from './effective.js';
 import { SERIES_COLORS } from './format.js';
 import { evolutionPairs } from './shopModel.js';
@@ -183,7 +183,12 @@ export function BuildProvider({ meta, items, children }) {
   }, [draft, dirty, selectedMinute, condOverride]);
 
   /** The build as every screen reads it: the draft with the conditionals of the header. */
-  const effective = useMemo(() => (draft && condOverride ? applyConditionals(draft, condOverride) : draft), [draft, condOverride]);
+  const effective = useMemo(() => {
+    const b = draft && condOverride ? applyConditionals(draft, condOverride) : draft;
+    // Rodada 21: the objectives of the selector go with the build: the backend counts them as the source "Objetivos"
+    // (Relevance, effective gold, the sheet and the passives see them); never saved with the build
+    return b && hasObjectives(objectives) ? { ...b, objectives } : b;
+  }, [draft, condOverride, objectives]);
 
   // Live recalculation of the (possibly unsaved) active build.
   const calcSeq = useRef(0);

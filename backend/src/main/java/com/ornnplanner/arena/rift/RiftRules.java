@@ -106,27 +106,8 @@ public final class RiftRules {
      * reads the total after every other source and the fixed part of the drakes ({@code total} gives the stat before the
      * drakes). Each drake adds its lines again. Stat -> amount, in the order of the lines.
      */
-    @SuppressWarnings("unchecked")
     public static Map<String, Double> dragonDelta(Map<String, Object> element, int stacks, java.util.function.ToDoubleFunction<String> total) {
-        Map<String, Double> out = new java.util.LinkedHashMap<>();
-        Object status = element == null ? null : element.get("status");
-        if (!(status instanceof List) || stacks <= 0) {
-            return out;
-        }
-        for (Map<String, Object> l : (List<Map<String, Object>>) status) {
-            if (l.get("ratio") == null) {
-                out.merge(String.valueOf(l.get("stat")), value(l.get("valor"), 0) * stacks, Double::sum);
-            }
-        }
-        Map<String, Double> fixed = new java.util.LinkedHashMap<>(out);
-        for (Map<String, Object> l : (List<Map<String, Object>>) status) {
-            if (l.get("ratio") != null) {
-                String ref = String.valueOf(l.getOrDefault("ref", l.get("stat")));
-                double before = total.applyAsDouble(ref) + fixed.getOrDefault(ref, 0.0);
-                out.merge(String.valueOf(l.get("stat")), value(l.get("ratio"), 0) * stacks * before, Double::sum);
-            }
-        }
-        return out;
+        return com.ornnplanner.engine.ObjectiveRules.dragonDelta(element, stacks, total);   // Rodada 21: one rule, the planner's too
     }
 
     /**

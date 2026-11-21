@@ -209,3 +209,45 @@ de classe), e quem corre fica com a Vida que tinha (a corrida já tratava "quem 
 **Testes**: `AiCampaignTest.everyPlayerProcessIsAutomaticAndTheRagdollsStand`; os testes que passam pelos serviços
 trocados (`BuildScoreTest`, `EffectReferenceTest`, `EffectTestsTest`, `LifebarRaceTest`, `MatchDraftTest`,
 `MacroTrainingTest`, `TwoTempoTest`, `PublicProfileTest` e outros: 77 testes) passaram.
+
+## Parte 6: dragões, almas, Barão e Ancião legíveis e presentes (✅)
+
+**O que a revisão achou, e o que mudou:**
+
+| achado | agora |
+|---|---|
+| o `ObjectivesPicker` só tinha caixas e um `select`, sem texto de efeito | um cartão por objetivo, com ícone, nome e o efeito numa linha com o valor no minuto |
+| o Ancião não entrava em `objectiveParts` | entra: 450 de dano verdadeiro em 3 s, reaplicado, lido em 10 s de troca (1500), e "executa abaixo de 15%" |
+| o Oceano não virava número | o dragão Oceano: 2,8% da Vida perdida a cada 5 s, lido com 50% perdida, em 10 s de troca; a alma Oceano: a cura no minuto |
+| o planejador não recebia os objetivos (`/api/calculate`, `/api/relevance`, `/api/passives/*`) | o `payload` leva `objectives`; o motor soma a fonte "Objetivos" |
+
+**O seletor** (`components/ObjectivesPicker.jsx`, um componente só, usado no Planejador, na Arena — por lado —, na
+Efetividade — "Testar agora" — e no Draft e partida — por time, durante a partida, guardado em
+`live_game.objectives`): os 3 dragões lado a lado; a faixa da alma só abre com os 3, e escolhe-se entre eles; Ancião e
+Barão na mesma faixa. Ícones: SVG simples por elemento (`ObjectiveIcon`) até os do jogo chegarem. **Segurar o cartão
+(ou passar o mouse)** abre a descrição inteira: o efeito do jogo, o valor com a build aberta e a fonte do seed — por
+exemplo "Alma Oceano: … Com esta build: cura 518 em 4 s. Fonte: print do usuário (05/11/2026)". Sem build (Arena,
+Draft), a linha diz o efeito sem número. Em tela estreita os cartões ficam um por linha (a alma em 3).
+
+**No motor** (`engine/ObjectiveRules`, puro): `parts` dá cada fonte (dragão por elemento, alma, Ancião, Barão) com os
+seus status e o seu **efeito de luta** (`Fight`: dano, dano verdadeiro ou cura, o valor em 10 s de troca, cada ativação
+e quantas); `apply` soma os status ao ponto do minuto como **uma contribuição "Objetivos"** (`ItemContribution.objective`,
+segurada como runa, o ouro pelos preços dos status) e guarda `objectiveDelta` e `objectiveParts`. O `TimelineEngine`
+chama `apply` em cada ponto da série quando o `EngineInput` tem objetivos (o `PlannerService` converte os
+`objectives` do `Build`). A regra é **a mesma das lutas**: `RiftRules.dragonDelta` agora delega para
+`ObjectiveRules.dragonDelta` (os % leem o total depois de todas as outras fontes e do fixo dos dragões). Com isso eles
+aparecem em **Relevância** (a contribuição entra no relatório), **Ouro efetivo** (no bloco das runas e da Forja),
+**Status** e **passivas** (o `snapshot` passa pelo mesmo motor). No relatório do momento, a linha "Objetivos" lista cada
+fonte com o ouro dos status e, para Infernal (alma), Oceano e Ancião, o "efeito de luta" com o valor em 10 s.
+
+**Paridade JS × Java**: o frontend (`src/objectives.js`, puro) espelha `ObjectiveRules.parts`. `ObjectivesParityTest`
+calcula 8 casos (cada dragão, dois, três, cada alma, alma sem os três, Ancião, Barão, acúmulos acima de 1) com as
+regras do seed e confere a fixture `frontend/test/objetivos-paridade.json` (regras + casos + o esperado;
+`-Dparity.write=true` a gera de novo); `frontend/test/objectives.test.mjs` (`npm test`) confere o JS contra a mesma
+fixture. `ObjectivesPlannerTest`: com objetivos, o total de cada status é o sem objetivos mais o delta, a contribuição
+"Objetivos" tem ouro, o Ancião e o Oceano têm efeito de luta, e a relevância vê a fonte.
+
+**A Mão do Barão continua `EST`** (`objetivos_7_3d.yml › mao_do_barao.dda_pdh_por_min`: 24 + 2/min de DdA, 40 + 3/min de
+PdH). **Pedido de print:** o status de um campeão (DdA e PdH na ficha) logo antes de pegar o Barão e de novo 2 minutos
+depois, com o minuto da partida visível — dá a base e o crescimento por minuto. O cartão do Barão e a descrição dizem
+que é estimado.

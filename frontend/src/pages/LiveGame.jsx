@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
+import ObjectivesPicker, { hasObjectives } from '../components/ObjectivesPicker.jsx';
 import { t } from '../i18n.js';
 import { useBuild } from '../buildContext.jsx';
 import { useRoute } from '../router.js';
@@ -246,6 +247,12 @@ export default function LiveGame() {
             {tm.dragons ? `🐉${tm.dragons} ` : ''}{tm.heralds ? `👁${tm.heralds} ` : ''}{tm.barons ? `🟣${tm.barons}` : ''}
           </span>
         </header>
+        {!inDraft && (
+          <details className="live-team-objs">
+            <summary>{t('objectives.title')}{hasObjectives(tm.objectives) ? ' ●' : ''}</summary>
+            <ObjectivesPicker compact value={tm.objectives} onChange={(v) => change({ ...clone(game), [teamKey(side)]: { ...tm, objectives: v } })} />
+          </details>
+        )}
         <div className="live-bans" aria-label={t('live.bans')}>
           {Array.from({ length: bans }, (_, i) => (
             <button key={i} type="button" className="live-ban" title={tm.bans?.[i] ?? t('live.ban')} onClick={() => setBanning({ side, index: i })}>
