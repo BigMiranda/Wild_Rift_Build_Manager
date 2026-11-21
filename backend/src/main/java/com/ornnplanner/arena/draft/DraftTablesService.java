@@ -362,13 +362,13 @@ public class DraftTablesService {
     }
 
     /** A champion's fighter at a minute: the campaign's standard build, or the progression's most likely one. */
-    Arena.Input prepare(String champion, double minute, int team) {
+    public Arena.Input prepare(String champion, double minute, int team) {
         BuildRepository.Build b = buildOf(champion);
         ArenaModel.Slot me = new ArenaModel.Slot();
         me.team = team;
         me.build = b;
         me.minute = minute;
-        me.brain = ArenaService.STAND;
+        me.brain = com.ornnplanner.arena.BrainDefaults.of("draft_tabelas");   // Rodada 21: was tactical_stand
         ArenaModel.Slot dummy = new ArenaModel.Slot();
         dummy.team = 1 - team;
         dummy.dummy = new ArenaModel.Dummy();
@@ -439,7 +439,7 @@ public class DraftTablesService {
     }
 
     /** The race of side A (its first fighter's view, with its allies) in start k. */
-    double race(List<Arena.Input> sideA, List<Arena.Input> sideB, int k, double duration) {
+    public double race(List<Arena.Input> sideA, List<Arena.Input> sideB, int k, double duration) {
         return raceWithTrade(sideA, sideB, k, duration, -1)[0];
     }
 

@@ -759,7 +759,7 @@ public class EffectTestService {
         s.team = 0;
         s.build = b;
         s.minute = minute;
-        s.brain = ArenaService.STAND;
+        s.brain = BrainDefaults.of("efetividade");   // tactical_stand on purpose (ia_padrao_<patch>.yml)
         return s;
     }
 

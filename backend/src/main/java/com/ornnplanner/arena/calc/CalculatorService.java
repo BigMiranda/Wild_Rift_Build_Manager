@@ -653,7 +653,7 @@ public class CalculatorService {
                 me.team = team;
                 me.build = order(order);
                 me.minute = minute;
-                me.brain = "tactical";
+                me.brain = com.ornnplanner.arena.BrainDefaults.of("calculadora");   // Rodada 21: was tactical
                 ArenaModel.Slot other = new ArenaModel.Slot();
                 other.team = 1 - team;
                 other.dummy = new ArenaModel.Dummy();

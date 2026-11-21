@@ -170,3 +170,42 @@ treino termina, é validada e salva) e o progresso no sino (`useTask`: quem, a g
 **Testes**: `AiCampaignTest` (a ordem: classes primeiro, depois presença na meta e A/B antes de C/D; sem IA da liga tudo
 precisa de treino e a tabela diz "sem treino"; a estimativa conta os campeões com ficha). `AiCampaignReportTest`
 (opt-in `-Daicamp.report=data/ornn-planner.db`, numa cópia): a campanha das 7 classes e dos primeiros campeões.
+
+## Parte 5: que IA cada processo usa (✅)
+
+**Ajuste central** `ia_padrao_7_3f.yml` (`arena/BrainDefaults`, `GET /api/arena/brain-defaults`; no frontend
+`brainDefaults.js`, lido uma vez na abertura, com `auto` enquanto não chega e na versão pública). Todos os pontos que
+escolhem um cérebro, achados com `grep -rn "brain = \|brain: '"` no backend e no frontend:
+
+| processo | onde | cérebro | antes |
+|---|---|---|---|
+| Arena: lugar novo do cenário | `pages/Arena.jsx › newSlot` | `arena` = auto | auto |
+| Planejador: Testar na Arena | `components/TestInArena.jsx › slot` | `testar_na_arena` = auto | **tactical** |
+| Partida (Simulações › Partida) | `pages/Match.jsx`, `MatchService.Draft.slot` (sem cérebro no pedido) | `partida` = auto | **tactical** (tela), script (sem cérebro) |
+| Campanha de builds: confrontos | `CampaignService.duel` | `campanha` = auto | auto |
+| Descoberta e nota robusta | `BuildScore.slot` | `descoberta` = auto | auto |
+| Calculadora de builds | `CalculatorService.input` | `calculadora` = auto | **tactical** |
+| Atlas | `AtlasService` (quando a execução não diz; `atlas_7_3d.yml › cerebro: auto`) | `atlas` = auto | auto (seed) |
+| Draft e partida: tabelas do draft | `DraftTablesService.prepare` | `draft_tabelas` = auto | **tactical_stand** |
+| Draft e partida: primeiro encontro | `FirstEncounterService` | `primeiro_encontro` = auto | auto |
+| Draft e partida: builds prováveis | `LiveBuildsService` | `builds_provaveis` = auto | auto |
+| Modelos do mapa inteiro | `RiftTemplates.slot` | `modelos_do_mapa` = auto | auto |
+| Efetividade: a build contra os bonecos | `EffectTestService.slot` | `efetividade` = **tactical_stand** | tactical_stand |
+| Efetividade, leitura "comportamento fixo" | `EffectTestService` (replay das decisões gravadas) | script, de propósito | script |
+| Efetividade ofensiva, Atlas de runs antigas | recebem o cérebro de quem chama (`fighter(…, brain)`, `brainOf` = tactical_stand para runs de antes da Rodada 19) | — | — |
+| Treino (o lugar treinado) | `ArenaTrainingService.remember` | a IA treinada (`ai:<id>`) | — |
+| Liga: os outros lutadores do banco | `LeagueService` (`cerebro_outros` do banco) | tactical, de propósito (a matriz não pode mudar com as IAs salvas) | — |
+| Admin › Fichas (prévia), Arena "gravar ordens", boneco atacante | `KitsReview.jsx`, `Arena.jsx`, `TestInArena.jsx` | script, de propósito (mostrar a ficha ou repetir ordens) | script |
+
+**Por que a Efetividade fica no `tactical_stand`:** a nota mede o quanto a build aguenta e causa contra bonecos fixos;
+com um cérebro que foge, a nota passaria a medir a fuga (e a corrida das barras pararia antes do fim), e mudaria quando
+uma IA nova fosse aceita. A troca parada é a mesma para todo campeão e todo dia.
+
+**As tabelas do draft passam a `auto`**: o custo coube (`DraftBrainCostTest`, opt-in, numa cópia: 40 pares de Lutadores
+e Tanques, 3 largadas, minuto 10): **17,5 s com o Automático contra 11,5 s com o `tactical_stand` (1,52×)**; a corrida
+muda em média 11,8 pontos por par e o favorito troca em 1 dos 40. O Automático escolhe a IA de cada campeão (aqui, as
+de classe), e quem corre fica com a Vida que tinha (a corrida já tratava "quem segura nunca zera").
+
+**Testes**: `AiCampaignTest.everyPlayerProcessIsAutomaticAndTheRagdollsStand`; os testes que passam pelos serviços
+trocados (`BuildScoreTest`, `EffectReferenceTest`, `EffectTestsTest`, `LifebarRaceTest`, `MatchDraftTest`,
+`MacroTrainingTest`, `TwoTempoTest`, `PublicProfileTest` e outros: 77 testes) passaram.

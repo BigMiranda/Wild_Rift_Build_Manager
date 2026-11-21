@@ -33,6 +33,9 @@ import Community from './pages/Community.jsx';
 import { PUBLIC } from './publicMode.js';
 import { unzoom } from './zoom.js';
 import { decodeBuild } from './shareLink.js';
+import { loadBrainDefaults } from './brainDefaults.js';
+
+loadBrainDefaults();
 
 /** Interface scale (Rodada 8, parte 6): normal | grande | live, remembered in the browser. */
 const SCALES = ['normal', 'grande', 'live'];

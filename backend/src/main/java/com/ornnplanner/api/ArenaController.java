@@ -312,6 +312,12 @@ public class ArenaController {
         return m;
     }
 
+    /** Rodada 21, part 5: the brain of each process (ia_padrao_<patch>.yml), for the screens' new slots. */
+    @GetMapping("/brain-defaults")
+    public Map<String, String> brainDefaults() {
+        return com.ornnplanner.arena.BrainDefaults.all();
+    }
+
     @GetMapping("/kits")
     public Map<String, Object> kits() {
         return arena.kits();

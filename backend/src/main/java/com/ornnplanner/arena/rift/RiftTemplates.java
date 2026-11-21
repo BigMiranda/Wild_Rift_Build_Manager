@@ -116,7 +116,7 @@ public final class RiftTemplates {
         s.team = team;
         s.x = (double) Math.round(at[0]);
         s.y = (double) Math.round(at[1]);
-        s.brain = "auto";
+        s.brain = com.ornnplanner.arena.BrainDefaults.of("modelos_do_mapa");
         return s;
     }
 

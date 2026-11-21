@@ -3,6 +3,7 @@ import { pageZoom } from '../zoom.js';
 import { BuildLink } from '../components/BuildPreview.jsx';
 import { useTask } from '../tasks.js';
 import { api } from '../api.js';
+import { defaultBrain } from '../brainDefaults.js';
 import ObjectivesPicker from '../components/ObjectivesPicker.jsx';
 import ItemPicker from '../components/ShopPicker.jsx';
 import { t } from '../i18n.js';
@@ -35,7 +36,7 @@ const FOCUS = ['nearest', 'lowest_hp', 'lowest_effective_hp', 'most_damage', 'or
 // Scenarios saved before team plans have none (teams: null): each champion picks its own target, as before.
 const newPlan = () => ({ focus: 'nearest', order: [], shared: true, switchBelow: 0.25, chainCc: false });
 const emptyScenario = () => ({ id: null, name: t('arena.newName'), note: '', duration: 40, fighters: [newSlot(0), newSlot(1)], actions: [], teams: [newPlan(), newPlan()] });
-const newSlot = (team) => ({ team, buildId: null, minute: null, x: null, y: null, target: null, followTeam: true, autoAbilities: true, priority: ['R', '3', '1', '2'], brain: 'auto', activations: {} });
+const newSlot = (team) => ({ team, buildId: null, minute: null, x: null, y: null, target: null, followTeam: true, autoAbilities: true, priority: ['R', '3', '1', '2'], brain: defaultBrain('arena'), activations: {} });
 
 function loadDraft() {
   try {

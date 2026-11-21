@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { mmss } from '../format.js';
+import { defaultBrain } from '../brainDefaults.js';
 
 /** The ragdoll the build is tested on by default: 10000 health, 100/100, hitting once a second (so "in combat" starts). */
 export const ATTACKING_DUMMY = {
@@ -12,7 +13,7 @@ export const ATTACKING_DUMMY = {
 const plan = () => ({ focus: 'nearest', order: [], shared: true, switchBelow: 0.25, chainCc: false });
 const slot = (team, patch) => ({
   team, buildId: null, minute: null, x: null, y: null, target: null, followTeam: true, autoAbilities: true,
-  priority: ['R', '3', '1', '2'], brain: 'tactical', activations: {}, ...patch,
+  priority: ['R', '3', '1', '2'], brain: defaultBrain('testar_na_arena'), activations: {}, ...patch,
 });
 
 /** Opens the arena on an unsaved scenario, playing as soon as it has run (the arena reads its saved state). */
@@ -68,7 +69,7 @@ export default function TestInArena({ buildId, buildName, minute, builds, compac
       const k = Number(index);
       openInArena({
         ...sc, id: null, name: `${sc.name} · ${buildName}`,
-        fighters: sc.fighters.map((f, i) => (i === k ? { ...f, buildId, minute: at, brain: 'tactical' } : f)),
+        fighters: sc.fighters.map((f, i) => (i === k ? { ...f, buildId, minute: at, brain: defaultBrain('testar_na_arena') } : f)),
       });
     } catch (e) {
       setError(e.message);

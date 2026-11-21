@@ -702,12 +702,12 @@ public class CampaignService {
         sa.team = 0;
         sa.build = a;
         sa.minute = minute;
-        sa.brain = com.ornnplanner.arena.AutoBrain.AUTO;
+        sa.brain = com.ornnplanner.arena.BrainDefaults.of("campanha");
         ArenaModel.Slot sb = new ArenaModel.Slot();
         sb.team = 1;
         sb.build = b;
         sb.minute = minute;
-        sb.brain = com.ornnplanner.arena.AutoBrain.AUTO;
+        sb.brain = com.ornnplanner.arena.BrainDefaults.of("campanha");
         ArenaModel.Scenario sc = new ArenaModel.Scenario();
         sc.fighters = List.of(sa, sb);
         List<Arena.Input> in = arena.prepareSlots(sc);

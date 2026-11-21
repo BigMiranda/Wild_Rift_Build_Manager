@@ -209,7 +209,7 @@ public class LiveBuildsService {
         me.build = b;
         me.minute = Math.max(1, minute);
         me.holdItems = new ArrayList<>(hold);
-        me.brain = AutoBrain.AUTO;
+        me.brain = com.ornnplanner.arena.BrainDefaults.of("builds_provaveis");
         ArenaModel.Slot dummy = new ArenaModel.Slot();
         dummy.team = 1 - team;
         dummy.dummy = new ArenaModel.Dummy();

@@ -196,7 +196,7 @@ public class FirstEncounterService {
         me.matchSteps = 0;
         me.matchLevel = level;
         me.holdItems = new ArrayList<>(List.of(start));
-        me.brain = AutoBrain.AUTO;
+        me.brain = com.ornnplanner.arena.BrainDefaults.of("primeiro_encontro");
         ArenaModel.Slot dummy = new ArenaModel.Slot();
         dummy.team = 1 - team;
         dummy.dummy = new ArenaModel.Dummy();

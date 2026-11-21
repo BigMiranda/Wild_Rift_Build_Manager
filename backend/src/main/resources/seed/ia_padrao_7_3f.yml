@@ -1,0 +1,31 @@
+# Rodada 21, parte 5: o cérebro de cada processo, num lugar só. Quem representa um jogador usa o Automático (auto: a
+# IA do campeão quando ela vence a da classe na validação, senão a da classe, senão o Tático; AutoBrain); os bonecos da
+# Efetividade ficam no tactical_stand de propósito (abaixo). Valores: auto | tactical | tactical_stand | script.
+# A tabela de todos os processos (com o grep por "brain =") está em docs/rodada-21.md.
+patch: 7.3f
+processos:
+  # Simulações › Arena: o lugar novo de um cenário
+  arena: auto
+  # Planejador: "Testar na Arena"
+  testar_na_arena: auto
+  # Simulações › Partida e a partida do Draft e partida (cada lugar, quando o pedido não diz)
+  partida: auto
+  # Admin › Campanhas: os confrontos (x1 contra os representantes de cada classe)
+  campanha: auto
+  # Descoberta e a nota robusta (BuildScore)
+  descoberta: auto
+  # Calculadora de builds
+  calculadora: auto
+  # Atlas: só quando a execução não diz o seu (atlas_7_3d.yml › cerebro)
+  atlas: auto
+  # Draft e partida: as tabelas pré-calculadas (o 1x1 de rota e a dupla do Dragão), o primeiro encontro e as builds
+  # prováveis
+  draft_tabelas: auto
+  primeiro_encontro: auto
+  builds_provaveis: auto
+  # Os modelos de cenário do mapa inteiro (RiftTemplates)
+  modelos_do_mapa: auto
+  # Efetividade: a build contra bonecos de teste. tactical_stand de propósito: a troca parada (as regras táticas sem
+  # fugir), para a nota medir o quanto a build aguenta e causa, e não o quanto o cérebro foge; o mesmo para todo
+  # campeão, sem depender de qual IA existe
+  efetividade: tactical_stand

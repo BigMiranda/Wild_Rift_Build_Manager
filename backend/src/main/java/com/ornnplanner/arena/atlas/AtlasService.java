@@ -169,7 +169,7 @@ public class AtlasService {
             }
         }
         c.seed = (long) num(all.get("semente"), c.seed);
-        c.brain = str(all.get("cerebro"));
+        c.brain = all.get("cerebro") != null ? str(all.get("cerebro")) : com.ornnplanner.arena.BrainDefaults.of("atlas");
         c.guideMode = str(all.get("modo_guia"));
         if (all.get("minutos_progressao") instanceof List) {
             c.progressionMinutes = new ArrayList<>();

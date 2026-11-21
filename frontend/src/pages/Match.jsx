@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { BuildLink } from '../components/BuildPreview.jsx';
 import { useTask } from '../tasks.js';
 import { api } from '../api.js';
+import { defaultBrain } from '../brainDefaults.js';
 import { t } from '../i18n.js';
 import { mmss, n0 } from '../format.js';
 import { RiftGround, RiftLegend, TEAM } from './Arena.jsx';
@@ -201,7 +202,7 @@ export default function Match() {
     setError(null);
     setPlaying(false);
     try {
-      const slots = picks.map((id, i) => (id ? { buildId: Number(id), team: i < SEATS ? 0 : 1, brain: 'tactical' } : null)).filter(Boolean);
+      const slots = picks.map((id, i) => (id ? { buildId: Number(id), team: i < SEATS ? 0 : 1, brain: defaultBrain('partida') } : null)).filter(Boolean);
       const known = (m) => (m === 'script' || macros.some((x) => `macro:${x.id}` === m && current(x, meta)) ? m : 'script');
       const r = await api.post('/api/match/run', { slots, limit, seed, macroBlue: known(macroPick[0]), macroRed: known(macroPick[1]) });
       setResult(r);

@@ -382,7 +382,7 @@ public class MatchService {
             s.minute = (double) Math.max(1, Math.round(minute));
             s.matchSteps = prefix(seat, done);
             s.matchLevel = level;
-            s.brain = slots.get(seat).brain;
+            s.brain = slots.get(seat).brain != null ? slots.get(seat).brain : com.ornnplanner.arena.BrainDefaults.of("partida");
             return s;
         }
 

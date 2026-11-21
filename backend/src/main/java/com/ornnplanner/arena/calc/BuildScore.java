@@ -518,7 +518,7 @@ public class BuildScore {
         s.team = team;
         s.build = b;
         s.minute = minute;
-        s.brain = com.ornnplanner.arena.AutoBrain.AUTO;
+        s.brain = com.ornnplanner.arena.BrainDefaults.of("descoberta");
         return s;
     }
 
