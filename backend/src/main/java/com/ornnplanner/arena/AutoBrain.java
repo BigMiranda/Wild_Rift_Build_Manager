@@ -146,19 +146,34 @@ public class AutoBrain {
         if (alike != null) {
             return fill(c, "parecido", usable.get(alike.policyId), alike);
         }
-        Row general = best(rows, r -> !usable.get(r.policyId).champion.startsWith(CLASS_PREFIX));
+        // Rodada 21: a champion's own AI is used in general only if it beats its class AI on the champion's validation
+        PolicyRepository.Record ofClass = null;
+        for (String cl : classes) {
+            ofClass = bestSaved(usable, CLASS_PREFIX + cl);
+            if (ofClass != null) {
+                break;
+            }
+        }
+        PolicyRepository.Record classAi = ofClass;
+        Map<Long, Boolean> gate = new java.util.HashMap<>();
+        java.util.function.Predicate<PolicyRepository.Record> allowed = p -> p.champion.startsWith(CLASS_PREFIX)
+                || gate.computeIfAbsent(p.id, id -> !Boolean.FALSE.equals(championOverClass(p, classAi, champion)));
+        Row general = best(rows, r -> !usable.get(r.policyId).champion.startsWith(CLASS_PREFIX) && allowed.test(usable.get(r.policyId)));
         if (general != null) {
             return fill(c, "geral", usable.get(general.policyId), general);
         }
-        PolicyRepository.Record saved = bestSaved(usable, champion);
+        Map<Long, PolicyRepository.Record> own = new LinkedHashMap<>();
+        usable.forEach((id, p) -> {
+            if (allowed.test(p)) {
+                own.put(id, p);
+            }
+        });
+        PolicyRepository.Record saved = bestSaved(own, champion);
         if (saved != null) {
             return fill(c, "geral", saved, null);
         }
-        for (String cl : classes) {
-            PolicyRepository.Record p = bestSaved(usable, CLASS_PREFIX + cl);
-            if (p != null) {
-                return fill(c, "classe", p, null);
-            }
+        if (classAi != null) {
+            return fill(c, "classe", classAi, null);
         }
         c.kind = "tatico";
         c.brain = "tactical";
@@ -208,10 +223,33 @@ public class AutoBrain {
         return out;
     }
 
-    /** An owner's saved AI with no fight behind it: accepted first, the one that wins its own scenario, the newest. */
+    /**
+     * Rodada 21: whether a champion's AI beats its class AI on the champion's validation (ai_validation); null = nothing to
+     * compare (no matrix of either on that champion), the old order then.
+     */
+    public Boolean championOverClass(PolicyRepository.Record mine, PolicyRepository.Record cls, String champion) {
+        if (cls == null || mine == null) {
+            return null;
+        }
+        double[] c = results.validation(cls.id, champion);
+        double[] m = results.validation(mine.id, champion);
+        if (c == null && m == null) {
+            return null;
+        }
+        if (m == null) {
+            return false;
+        }
+        return c == null ? m[0] > m[1] : m[0] > c[0];
+    }
+
+    /**
+     * An owner's saved AI with no fight behind it: accepted first, then one of the league (Rodada 21, validated on the
+     * bank), the one that wins its own scenario, the newest.
+     */
     private static PolicyRepository.Record bestSaved(Map<Long, PolicyRepository.Record> usable, String owner) {
         return usable.values().stream().filter(p -> p.champion.equalsIgnoreCase(owner))
                 .max(Comparator.<PolicyRepository.Record, Boolean>comparing(p -> p.accepted)
+                        .thenComparing(p -> "liga".equals(p.objective))
                         .thenComparing(p -> Boolean.TRUE.equals(p.winsScenario))
                         .thenComparingInt(p -> p.version)).orElse(null);
     }

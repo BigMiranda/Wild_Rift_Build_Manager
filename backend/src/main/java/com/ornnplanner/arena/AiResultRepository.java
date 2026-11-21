@@ -73,6 +73,16 @@ public class AiResultRepository {
         return jdbc.query("SELECT * FROM ai_result WHERE champion = ? COLLATE NOCASE ORDER BY id", this::row, champion);
     }
 
+    /**
+     * Rodada 21: an AI's newest matrix on the validation bank played by a champion (table ai_validation): {success,
+     * the tactical rules' in the same fights}, in %; null = never measured on that champion.
+     */
+    public double[] validation(long policyId, String champion) {
+        List<double[]> l = jdbc.query("SELECT mean, tactical_mean FROM ai_validation WHERE policy_id = ? AND champion = ? COLLATE NOCASE "
+                + "ORDER BY id DESC LIMIT 1", (rs, i) -> new double[] {rs.getDouble(1), rs.getDouble(2)}, policyId, champion);
+        return l.isEmpty() ? null : l.get(0);
+    }
+
     /** An AI that was deleted leaves no results behind. */
     public void forgetPolicy(long policyId) {
         jdbc.update("DELETE FROM ai_result WHERE policy_id = ?", policyId);

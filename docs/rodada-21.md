@@ -118,3 +118,26 @@ de liga de classe (orçamento 3 × 8 × 6) contra uma IA em uso: se aceita, a m�
 que o limite, se recusada fica salva sem aceite (no teste: aceita, 46,4% contra 41,1% da em uso — exatamente o Tático,
 o ganho veio de decidir a cada passo); "fugir" chega à torre mais vezes que "padrão" da mesma posição (15 × 11).
 `LeagueModelTest` (puro): 504 lutas, 18 por célula, determinismo e a regra de aceite.
+
+## Parte 3: hierarquia classe → campeão (✅)
+
+`arena/league/LeagueHierarchy`:
+
+1. **IA de classe em liga primeiro** (`trainClass`): joga, em rodízio, todos os campeões com ficha da classe; a
+   referência do aceite é a IA de classe em uso (a mais nova aceita da liga, senão a da Rodada 18). Começa dela quando
+   ela é melhor que o Tático no banco (`inicio_classe: melhor`; `atual` = sempre dela, `zero` = do Tático); a linha de
+   base mostrou todas as da Rodada 18 abaixo do Tático, então as primeiras da liga começam do Tático.
+2. **IA por campeão = ajuste fino** (`trainChampion`): começa da rede da IA de classe do campeão (com a ligação de estilo
+   zerada, quando ela não tem), na mesma liga, só com o próprio kit; orçamento menor (`orcamentos.*.campeao`). O aceite
+   compara com a **IA da classe jogando o mesmo campeão**, no banco daquele campeão; as duas matrizes ficam em
+   `ai_validation` com `champion` = o campeão.
+3. **O Automático** (`AutoBrain.choose`): no "geral" (sem histórico do cenário), a IA do campeão só é usada se
+   `championOverClass` — o êxito dela no banco daquele campeão maior que o da IA da classe ali (ou, só ela medida, maior
+   que o Tático); medida só a da classe, a da classe. Sem matriz de nenhuma das duas, a ordem antiga (as IAs de antes
+   da liga não somem). O "cenário" e o "parecido" (a IA que venceu aquela luta, ou uma parecida) continuam na frente:
+   são evidência daquela luta. Entre as IAs salvas de um dono, as da liga (validadas no banco) vêm antes das outras
+   aceitas.
+
+**Teste** (`AutoBrainTest.theChampionsAiOnlyWhenItBeatsItsClassOnItsValidation`): sem matrizes, a do campeão; a da
+classe medida e a do campeão não, a da classe; a do campeão abaixo da classe, a da classe; uma versão nova acima, a do
+campeão.

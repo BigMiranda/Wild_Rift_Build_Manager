@@ -188,6 +188,38 @@ class AutoBrainTest {
         assertEquals(1, arena.run(here).brainChoices.size());
     }
 
+    private void validation(PolicyRepository.Record p, String champion, double mean, double tactical) {
+        jdbc.update("INSERT INTO ai_validation (policy_id, owner, champion, bank, mean, tactical_mean, matrix, created_at) "
+                + "VALUES (?,?,?,?,?,?,?,?)", p.id, p.champion, champion, "teste", mean, tactical, "{}", "2026-11-20");
+    }
+
+    /**
+     * Rodada 21, part 3: with matrices on the champion's validation, the champion's own AI is used in general only if
+     * it beats its class AI there; otherwise the class AI plays it.
+     */
+    @Test
+    void theChampionsAiOnlyWhenItBeatsItsClassOnItsValidation() {
+        jdbc.update("DELETE FROM ai_validation");
+        ArenaModel.Scenario here = scenario("DARIUS", "auto");
+        PolicyRepository.Record ofClass = policy("class:Tanque", true);
+        PolicyRepository.Record own = policy("Ornn", true);
+        // no matrices: the old order (the champion's own AI)
+        assertEquals(own.id, choice(here).policyId);
+        // the class AI measured on Ornn and Ornn's own not: the class AI
+        validation(ofClass, "Ornn", 40, 35);
+        assertEquals("classe", choice(here).kind);
+        assertEquals(ofClass.id, choice(here).policyId);
+        // Ornn's own measured below its class on Ornn: still the class AI
+        validation(own, "Ornn", 38, 35);
+        assertEquals(ofClass.id, choice(here).policyId);
+        // a new version above the class: the champion's
+        PolicyRepository.Record better = policy("Ornn", true);
+        validation(better, "Ornn", 47, 35);
+        assertEquals("geral", choice(here).kind);
+        assertEquals(better.id, choice(here).policyId);
+        jdbc.update("DELETE FROM ai_validation");
+    }
+
     /** A clean victory: the side wins, the champion ends alive and every enemy dies. */
     @Test
     void cleanVictoryNeedsEveryEnemyDeadAndTheChampionAlive() {
