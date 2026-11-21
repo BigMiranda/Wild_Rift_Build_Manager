@@ -251,3 +251,81 @@ fixture. `ObjectivesPlannerTest`: com objetivos, o total de cada status é o sem
 PdH). **Pedido de print:** o status de um campeão (DdA e PdH na ficha) logo antes de pegar o Barão e de novo 2 minutos
 depois, com o minuto da partida visível — dá a base e o crescimento por minuto. O cartão do Barão e a descrição dizem
 que é estimado.
+
+## Depois do relatório: o Automático não usa IA pior que o Tático, e a seleção pelo êxito
+
+Duas mudanças que os números da campanha pediram:
+
+- **O Automático deixa de usar uma IA que o banco mediu abaixo do Tático** (`AutoBrain.belowTactical`: a matriz dela no
+  campeão, ou a da rotação de uma IA de classe, com êxito menor que o do Tático nas mesmas lutas). Antes, com a linha de
+  base salva, as 7 IAs de classe da Rodada 18 e as 5 próprias continuariam valendo mesmo perdendo do Tático por 2 a 16
+  pontos. Uma IA nunca medida continua na ordem antiga. Teste:
+  `AutoBrainTest.anAiBelowTheTacticalRulesOnTheBankIsNotUsed`.
+- **A seleção da melhor geração passa a medir o êxito do banco** (`selecao.metrica: exito`, 48 lutas): a recompensa do
+  estilo só desempata. Com a recompensa sozinha a seleção escolhia gerações que pioravam no banco.
+
+## Relatório final
+
+### A matriz de generalização antes e depois
+
+Antes = a IA em uso (linha de base, Parte 1); depois = a versão nova da liga (numa cópia do banco de 20/11; detalhe por
+célula em `docs/rodada-21/campanha-*.md`). Êxito no banco de 504 lutas, em %.
+
+| IA | antes (em uso) | Tático | liga, orçamento rápido | liga, completo (seleção pela recompensa) | liga, completo (seleção pelo êxito) |
+|---|---|---|---|---|---|
+| classe Tanque | 26,8 | 29,0 | 29,0 (recusada: célula Controlador · rota −27,8) | — | — |
+| classe Lutador | 42,9 | 58,7 | 51,8 (recusada: Mago · fuga −33,3) | 50,6 (recusada) | 44,2 (recusada) |
+| classe Assassino | 46,4 | 58,5 | **58,5 (aceita**: +12,1 de média, pior célula −5,6) | 48,0 (recusada) | — |
+| classe Mago | 21,4 | 25,2 | 25,2 (recusada: Lutador · rota −22,2) | — | — |
+| classe Atirador | 25,8 | 36,1 | 28,2 (recusada: Mago · aberto −38,9) | — | — |
+| classe Controlador | 21,8 | 26,8 | 26,4 (recusada: Atirador · aberto −22,2) | — | — |
+| classe Especialista | 33,3 | 36,7 | 36,7 (recusada: Tanque · rota −38,9) | — | — |
+| Ornn | 61,3 (classe Tanque no Ornn) | 72,2 | 61,5 (recusada) | — | — |
+| Twisted Fate | 29,6 (classe Mago nele) | 46,2 | 30,0 (recusada) | — | — |
+| Caitlyn | 23,6 (classe Atirador nela) | 35,1 | 23,4 (recusada) | — | — |
+
+**Leitura honesta.** O treino em liga **ainda não produz uma IA melhor que o Tático** no banco. No orçamento rápido, em
+4 das 7 classes a melhor geração foi a 0 (a rede zerada, que agora é exatamente o Tático); a única aceita (Assassino)
+é o próprio Tático, aceito porque a IA em uso era 12 pontos pior. Com o orçamento completo (80 gerações × 32 × 12), as
+gerações escolhidas melhoram nas lutas do sorteio do treino e **pioram no banco**, que tem campeões que o treino não viu
+(`exclui_banco`) — o mesmo sobreajuste da Parte 1, agora ao pool em vez de a um cenário. O aceite pela matriz inteira
+fez o seu papel: nenhuma versão pior entrou. As IAs antigas, mesmo abaixo do Tático na média, ganham dele de longe em
+algumas células (até +39 pontos), por isso a regra "nenhuma célula pior que 15" as segura; com a correção acima o
+Automático usa o Tático nesses casos, que joga melhor na média.
+
+O que muda o resultado, em ordem de custo (fica como proposta, não feito):
+1. **mais lutas por geração** (12 lutas muito diferentes por geração é pouco sinal; 48–64, com a mesma distribuição);
+2. a **seleção num conjunto com a forma do banco** (as mesmas 7 classes × 4 tipos, outros campeões), e só aceitar a
+   geração se ela vence a de partida ali por margem (evita a "maldição do vencedor" de escolher o máximo de 40 medidas
+   ruidosas);
+3. **começar das saídas que importam**: hoje a rede mexe nas 38 ações; uma correção só em recuar / atacar / esperar
+   e no uso de habilidades por alvo tem muito menos pesos.
+
+### O custo do treino em liga e a projeção para os 143
+
+20 núcleos, numa cópia do banco (`AiCampaignReportTest`):
+
+| orçamento | por IA de classe | por campeão (ajuste fino) | os 143 + as 7 classes |
+|---|---|---|---|
+| rápido (classe 20 × 16 × 8; campeão 8 × 12 × 8) | 66 s (48–80; treino 37–62 s, validação 10–18 s) | 29 s (25–32) | **1,3 h** |
+| completo (classe 80 × 32 × 12; campeão 30 × 24 × 12) | 7,1 min (413–420 s de treino, 11–16 s de validação) | ≈ 2,5 min (projeção: 11× as lutas do rápido; a classe escalou 9×) | **≈ 7 h** (projeção) |
+
+Com a campanha de builds rodando (metade dos núcleos, `com_campanha_de_builds: 0,5`): classe 83 s em vez de 80 s,
+campeão 32 s em vez de 29 s — **+4% a +10%**; o treino quase não escala além de 10 núcleos com este tamanho de
+geração (16 candidatos × 8 lutas), então dividir os núcleos custa pouco a ele (o custo para a campanha de builds não
+foi medido com as duas ao mesmo tempo). As validações (504 lutas × 2 ou 3 cérebros) levam 10 a 20 s.
+
+### A tabela de cérebros por processo
+
+Na Parte 5 (acima): o Automático em tudo que representa um jogador; `tactical_stand` nos bonecos da Efetividade; script
+onde se repete ou mostra (Fichas, gravar ordens); o Tático fixo nos outros lutadores do banco de validação.
+
+### As telas
+
+- Admin › Campanhas, a campanha de treino (fila, motivo, resultado, estimativa): `docs/rodada-21/campanha-ias-fila.jpg`;
+  a tabela dos 143: `docs/rodada-21/campanha-ias-tabela.jpg`;
+- o seletor de objetivos no Planejador (Status do campeão), todos desligados — cada cartão diz o que daria com a build
+  no minuto: `docs/rodada-21/objetivos-desligados.jpg`; com os 3 dragões e a alma Oceano, a descrição inteira ao passar
+  o mouse ("Com esta build: cura 445 em 4 s", a Cura da ficha de 1.083 para 1.528): `docs/rodada-21/objetivos-alma-oceano.jpg`;
+  a fonte "Objetivos" na Relevância: `docs/rodada-21/objetivos-relevancia.jpg`; no celular (375 × 812):
+  `docs/rodada-21/objetivos-375x812.jpg`.

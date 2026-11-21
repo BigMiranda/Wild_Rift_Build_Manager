@@ -72,9 +72,11 @@ orcamentos:
   completo:
     classe: {geracoes: 80, populacao: 32, episodios: 12}
     campeao: {geracoes: 30, populacao: 24, episodios: 12}
-# a escolha da melhor geração: a cada geração, a rede mede-se num conjunto fixo de lutas de seleção do mesmo
-# sorteio (outra semente), no estilo de cada luta, contra o Tático nas mesmas lutas
-selecao: {lutas: 24, a_cada: 2}
+# a escolha da melhor geração: a cada 2 gerações, a rede mede-se num conjunto fixo de lutas de seleção do mesmo
+# sorteio (outra semente). metrica: exito = o êxito do banco (vitória limpa; na fuga, chegar vivo) primeiro e a
+# recompensa do estilo só desempata (o que o aceite mede); recompensa = só a recompensa (a 1ª versão: escolhia
+# gerações que pioravam no banco, ver docs/rodada-21.md)
+selecao: {lutas: 48, a_cada: 2, metrica: exito}
 # os arquétipos para onde uma build "errada" é puxada (classificacao_7_3d.yml)
 arquetipos: [tanque, lutador, mago_explosivo, mago_continuo, critico, ao_acertar, letalidade, suporte]
 # as IAs de classe começam da atual quando ela é melhor que o Tático no banco; senão, do zero (o Tático)

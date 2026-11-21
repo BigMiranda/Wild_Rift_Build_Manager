@@ -220,6 +220,23 @@ class AutoBrainTest {
         jdbc.update("DELETE FROM ai_validation");
     }
 
+    /** Rodada 21: an AI measured below the tactical rules on the bank is left out; with none left, the tactical rules. */
+    @Test
+    void anAiBelowTheTacticalRulesOnTheBankIsNotUsed() {
+        jdbc.update("DELETE FROM ai_validation");
+        ArenaModel.Scenario here = scenario("DARIUS", "auto");
+        PolicyRepository.Record ofClass = policy("class:Tanque", true);
+        validation(ofClass, "*", 26.8, 29.0);
+        assertEquals("tatico", choice(here).kind);
+        PolicyRepository.Record own = policy("Ornn", true);
+        validation(own, "Ornn", 61.3, 72.2);
+        assertEquals("tatico", choice(here).kind);
+        PolicyRepository.Record good = policy("class:Tanque", true);
+        validation(good, "*", 29.0, 29.0);
+        assertEquals(good.id, choice(here).policyId);
+        jdbc.update("DELETE FROM ai_validation");
+    }
+
     /** A clean victory: the side wins, the champion ends alive and every enemy dies. */
     @Test
     void cleanVictoryNeedsEveryEnemyDeadAndTheChampionAlive() {

@@ -46,6 +46,8 @@ class AiCampaignReportTest {
     AiCampaignService campaign;
     @Autowired
     LeagueService league;
+    @Autowired
+    com.ornnplanner.arena.league.LeagueTrainer trainer;
 
     private final StringBuilder out = new StringBuilder();
 
@@ -81,6 +83,18 @@ class AiCampaignReportTest {
             }
         }
         q.champions = firstChampions;
+        String only = System.getProperty("aicamp.classes", "");
+        if (!only.isBlank()) {
+            q.classNames = List.of(only.split(","));
+        }
+        if (champions == 0) {
+            q.champions = List.of("-");   // no champion: a name with no sheet queues nothing
+        }
+        // -Daicamp.share=0.5: train with this share of the cores, as with the builds campaign running (the impact)
+        String share = System.getProperty("aicamp.share");
+        if (share != null) {
+            trainer.settings().workersAlone = Double.parseDouble(share);
+        }
         long t0 = System.nanoTime();
         campaign.enqueue(q);
         line("# Campanha de treino das IAs (Rodada 21): orçamento %s, %d núcleos", budget, Runtime.getRuntime().availableProcessors());

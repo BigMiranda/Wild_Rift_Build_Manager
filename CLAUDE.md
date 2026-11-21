@@ -67,6 +67,11 @@ Opt-in tests, gated by system properties (skipped by default):
 - `-Dclassai.db=data/ornn-planner.db` (+ `-Dclassai.generations=80 -Dclassai.classes=Mago,…`) — `ClassAiTrainTest`: on a copy
   (`target/classai/copy.db`), an AI per main class (3 champions each, 1 x 1 at minute 15); then
   `python tools/importar_ias_de_classe.py` copies the good ones into the real database, live (no restart needed).
+- `-Dleague.report=data/ornn-planner.db` (+ `-Dleague.owners=Ornn,class:Tanque -Dleague.seeds=3`) — `LeagueReportTest`: on a copy, every
+  AI in use on the fixed validation bank (Rodada 21), its matrix against the tactical rules and on its training scenario.
+- `-Daicamp.report=data/ornn-planner.db` (+ `-Daicamp.budget=rapido|completo -Daicamp.classes=Lutador -Daicamp.champions=3
+  -Daicamp.share=0.5`) — `AiCampaignReportTest`: on a copy, the mass AI training campaign and its numbers.
+- `-Ddraftbrain.db=data/ornn-planner.db` — `DraftBrainCostTest`: the draft tables' cost with the automatic brain against tactical_stand.
 - `-Darena.golden.write=true` — **re-records** the golden files in `src/test/resources/arena/`
   (`ArenaRegressionTest`: SHA-256 fingerprints of full fight results for ~35 scenarios; `ArenaPolicyMigrationTest`:
   `golden-ai-v2.txt`). Only re-record when a behavior change is intended, and say so; a golden mismatch otherwise
@@ -181,6 +186,20 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
   `draft_tabelas` from the Admin; optional meta from `tools/importar_meta.py` into `data/meta/meta.json`); the first
   encounter (`FirstEncounterService`), likely builds (`LiveBuildsService`, the Rodada 19 progression) and tips
   (`TipsService`: templates with measured numbers and their source). `DraftReportTest` is opt-in (`-Ddraft.report=`).
+- Rodada 21 (`docs/rodada-21.md`): `arena/league/`. A fixed validation bank (`ia_validacao_7_3f.yml`, 504 fights: 2
+  champions per class by the meta, progression builds at 6/12/20, fight types rota (full-map lane with minions) / aberto
+  / dupla / fuga, 3 seeds; `LeagueService`, `LeagueModel`) gives each AI a matrix (opponent class x fight type) against the
+  tactical rules in the same fights, kept in table `ai_validation`. `LeagueTrainer` trains in a league (a pool drawn per
+  generation, curriculum, opponents tactical / other AIs / the hall; `treino_liga_7_3f.yml`) and accepts a version only
+  if it is better on the whole matrix. Observation **schema 4** appends the requested style (one of six, `Arena.Input.style`;
+  `Network.skip` wires it straight to the outputs; `StyleReward` per style). League AIs decide every step
+  (`Weights.interval = 0`: zero weights == tactical exactly); saved ones keep 0.1 s. `LeagueHierarchy`: class AIs first,
+  champions as fine-tuning; `AutoBrain` uses a champion's AI only if it beats its class AI on its bank, and never an AI
+  measured below the tactical rules. Admin › Campanhas "Treinar IAs de todos os campeões" (`AiCampaignService`, table
+  `ai_training_queue`). `ia_padrao_7_3f.yml` (`BrainDefaults`): the brain of each process (auto for players,
+  tactical_stand for the effectiveness ragdolls). Objectives in the planner: `engine/ObjectiveRules` (the fights' rule;
+  `RiftRules.dragonDelta` delegates) adds the source "Objetivos" when the build carries `objectives`; the frontend mirror
+  is `objectives.js` (parity fixture `frontend/test/objetivos-paridade.json`); one selector, `ObjectivesPicker`.
 - `arena/calc/` — the build calculator: `BuildSearch` (beam over purchase orders, apart from how an order is measured), `GameTree` (maximin, fictitious play), `CalculatorService` (`api/CalculatorController`).
 - `arena/fight/ChampionProfiles` and `BuildArchetypes` (`api/ArchetypeController`) — the profile computed from a champion's sheet, and a
   build's archetype by the gold of its items' stats; rules in `classificacao_<patch>.yml`, never by name.
@@ -205,7 +224,7 @@ Backend: Spring Boot 2.7 (web + jdbc), Java 11, package `com.ornnplanner`. **No 
 **Data lives in YAML seeds, not code** (`backend/src/main/resources/seed/`, patch-suffixed; current patch **7.3f**,
 suffix `_7_3f` for the seven files the notes touch, `_7_3d` for the rest): `loja_7_3f.yml` (171 shop items; header documents each field), `precos_status.yml`,
 `efeitos_itens_7_3f.yml`, `campeoes_7_3f.yml`, `runas_7_3f.yml` (+ `runas/` icons), `feiticos_7_3f.yml`,
-`combate_7_3f.yml`, `kits_7_3f.yml`, `lentidao_7_3f.yml` (the chart's slow estimate, `service/SlowEstimator`), `mapa_7_3d.yml`, `objetivos_7_3d.yml`, `macro_7_3d.yml`, `efetividade_7_3d.yml`, `classificacao_7_3d.yml`, `ia_automatica_7_3d.yml`, `regras_loja.yml`. `application.properties` and the `@Value` defaults point at
+`combate_7_3f.yml`, `kits_7_3f.yml`, `lentidao_7_3f.yml` (the chart's slow estimate, `service/SlowEstimator`), `mapa_7_3d.yml`, `objetivos_7_3d.yml`, `macro_7_3d.yml`, `efetividade_7_3d.yml`, `classificacao_7_3d.yml`, `ia_automatica_7_3d.yml`, `regras_loja.yml`, and Rodada 21's `ia_validacao_7_3f.yml`, `treino_liga_7_3f.yml`, `ia_padrao_7_3f.yml`. `application.properties` and the `@Value` defaults point at
 the current patch; older `_7_3`, `_7_3b` and (for those seven) `_7_3d` files stay as history. New game data or modeled effects usually mean editing these
 files plus a test, not Java. `LojaCatalogTest` enforces catalog consistency (components exist and cost less, every
 stat has a price).

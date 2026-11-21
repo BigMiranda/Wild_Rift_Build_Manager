@@ -146,18 +146,25 @@ public class AutoBrain {
         if (alike != null) {
             return fill(c, "parecido", usable.get(alike.policyId), alike);
         }
-        // Rodada 21: a champion's own AI is used in general only if it beats its class AI on the champion's validation
+        // Rodada 21: an AI measured on the validation bank below the tactical rules is not used in general (the
+        // tactical rules play better); a champion's own AI only if it also beats its class AI on the champion's bank
+        Map<Long, PolicyRepository.Record> fit = new LinkedHashMap<>();
+        usable.forEach((id, p) -> {
+            if (!belowTactical(p, champion)) {
+                fit.put(id, p);
+            }
+        });
         PolicyRepository.Record ofClass = null;
         for (String cl : classes) {
-            ofClass = bestSaved(usable, CLASS_PREFIX + cl);
+            ofClass = bestSaved(fit, CLASS_PREFIX + cl);
             if (ofClass != null) {
                 break;
             }
         }
         PolicyRepository.Record classAi = ofClass;
         Map<Long, Boolean> gate = new java.util.HashMap<>();
-        java.util.function.Predicate<PolicyRepository.Record> allowed = p -> p.champion.startsWith(CLASS_PREFIX)
-                || gate.computeIfAbsent(p.id, id -> !Boolean.FALSE.equals(championOverClass(p, classAi, champion)));
+        java.util.function.Predicate<PolicyRepository.Record> allowed = p -> fit.containsKey(p.id) && (p.champion.startsWith(CLASS_PREFIX)
+                || gate.computeIfAbsent(p.id, id -> !Boolean.FALSE.equals(championOverClass(p, classAi, champion))));
         Row general = best(rows, r -> !usable.get(r.policyId).champion.startsWith(CLASS_PREFIX) && allowed.test(usable.get(r.policyId)));
         if (general != null) {
             return fill(c, "geral", usable.get(general.policyId), general);
@@ -221,6 +228,18 @@ public class AutoBrain {
             }
         }
         return out;
+    }
+
+    /**
+     * Rodada 21: whether an AI's matrix on the validation bank (played by this champion, else a class AI's rotation)
+     * is below the tactical rules' in the same fights; false when never measured.
+     */
+    public boolean belowTactical(PolicyRepository.Record p, String champion) {
+        double[] v = results.validation(p.id, champion);
+        if (v == null && p.champion.startsWith(CLASS_PREFIX)) {
+            v = results.validation(p.id, "*");
+        }
+        return v != null && v[0] < v[1] - 1e-9;
     }
 
     /**

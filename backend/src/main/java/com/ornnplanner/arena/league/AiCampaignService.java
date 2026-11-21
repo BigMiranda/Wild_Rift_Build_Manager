@@ -48,6 +48,8 @@ public class AiCampaignService {
         public String budget = "rapido";
         /** The class AIs first (true), then the champions. */
         public boolean classes = true;
+        /** Only these classes (empty = the seven). */
+        public List<String> classNames = new ArrayList<>();
         /** Champions by name; empty = every champion with a sheet. */
         public List<String> champions = new ArrayList<>();
         /** Queue again even the owners whose AI is up to date (same sheet, same patch). */
@@ -187,10 +189,13 @@ public class AiCampaignService {
         List<String> out = new ArrayList<>();
         if (r.classes) {
             for (String c : league.bankSettings().classes) {
-                out.add(AutoBrain.CLASS_PREFIX + c);
+                if (r.classNames == null || r.classNames.isEmpty() || r.classNames.contains(c)) {
+                    out.add(AutoBrain.CLASS_PREFIX + c);
+                }
             }
         }
         List<String> pool = r.champions == null || r.champions.isEmpty() ? league.withSheet() : new ArrayList<>(r.champions);
+        pool.retainAll(league.withSheet());   // only champions with a sheet can be trained
         List<String> next = buildsNext();
         pool.sort(Comparator.<String>comparingInt(c -> next.contains(c) ? next.indexOf(c) : Integer.MAX_VALUE)
                 .thenComparingDouble(c -> -league.presence(c))

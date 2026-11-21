@@ -74,6 +74,8 @@ public class LeagueTrainer {
         public double acceptWorstCell = 15;
         public Map<String, Map<String, Budget>> budgets = new LinkedHashMap<>();
         public int selectionFights = 24;
+        /** exito (the bank's success first, the reward breaks ties) | recompensa (the style reward alone). */
+        public String selectionMetric = "exito";
         public int selectionEvery = 2;
         public List<String> archetypes = new ArrayList<>();
         /** melhor | atual | zero: where a class AI starts. */
@@ -224,6 +226,7 @@ public class LeagueTrainer {
         Map<String, Object> sel = map(root.get("selecao"));
         s.selectionFights = num(sel.get("lutas"), 24).intValue();
         s.selectionEvery = num(sel.get("a_cada"), 2).intValue();
+        s.selectionMetric = String.valueOf(sel.getOrDefault("metrica", "exito"));
         ((List<Object>) root.getOrDefault("arquetipos", List.of())).forEach(a -> s.archetypes.add(String.valueOf(a)));
         s.classStart = String.valueOf(root.getOrDefault("inicio_classe", "melhor"));
         Map<String, Object> workers = map(root.get("trabalhadores"));
@@ -238,6 +241,9 @@ public class LeagueTrainer {
             });
         }
     }
+
+    /** Above any style reward: one success more always wins the selection. */
+    static final double SUCCESS_WEIGHT = 1e6;
 
     static final List<String> TERMS = List.of("vitoria", "limpa", "rapidez", "dano", "vida", "viveu", "tempo_vivo", "chegou",
             "chegou_cedo", "presos", "controle", "ouro", "vantagem");
@@ -642,7 +648,11 @@ public class LeagueTrainer {
         return out;
     }
 
-    /** The style reward of each episode with these weights (null = the tactical rules as prepared). */
+    /**
+     * The selection value of each episode with these weights (null = the tactical rules as prepared): with the metric
+     * "exito", the bank's success (1 or 0, the clean victory or the escape) weighs {@link #SUCCESS_WEIGHT} and the style
+     * reward only breaks ties; with "recompensa", the style reward alone.
+     */
     private double[] scores(List<Gym.Episode> eps, Network net, Settings s, int threads) {
         List<java.util.concurrent.Callable<Double>> calls = new ArrayList<>();
         for (Gym.Episode e : eps) {
@@ -654,7 +664,8 @@ public class LeagueTrainer {
                     ep = LeagueService.withInput(e, me);
                 }
                 ArenaModel.Result r = league.gym().play(ep, null);
-                return StyleReward.score(r, 0, 0, b.duration, weights(s, b.style));
+                double reward = StyleReward.score(r, 0, 0, b.duration, weights(s, b.style));
+                return "exito".equals(s.selectionMetric) ? (LeagueModel.success(r, b) ? SUCCESS_WEIGHT : 0) + reward : reward;
             });
         }
         List<Double> r = LeagueService.all(threads, calls);
