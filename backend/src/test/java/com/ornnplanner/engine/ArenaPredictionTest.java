@@ -76,7 +76,8 @@ class ArenaPredictionTest {
         Arena.Input darius = ArenaScenarios.champion("Darius", 1, 1400, 0, 3000, 100, 90);
         Probe p = probe(ornn, darius, List.of(), o -> true, 1);
         assertEquals(Observation.SIZE, p.seen.vector().length);
-        assertEquals(3, Observation.SCHEMA_VERSION);
+        assertEquals(4, Observation.SCHEMA_VERSION);   // Rodada 21: the style appended (schema 3 is its first 241)
+        assertEquals(Observation.V3_SIZE + Observation.STYLES.size(), Observation.SIZE);
         for (double v : p.seen.vector()) {
             assertTrue(v >= -1 && v <= 1);
         }

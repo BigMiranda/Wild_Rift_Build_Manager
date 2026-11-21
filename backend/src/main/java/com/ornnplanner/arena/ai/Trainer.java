@@ -36,6 +36,13 @@ public final class Trainer {
     @FunctionalInterface
     public interface Evaluator {
         double evaluate(Network candidate, int episode);
+
+        /**
+         * Called before each generation's fights, on the trainer's thread (Rodada 21: the league draws a new pool of
+         * episodes per generation, from the generation's number).
+         */
+        default void generationStart(int generation) {
+        }
     }
 
     /** One generation's outcome. */
@@ -81,6 +88,7 @@ public final class Trainer {
         try {
             for (int gen = 1; gen <= cfg.generations && !listener.cancelled() && !listener.stop(); gen++) {
                 Random rnd = new Random(cfg.seed * 1_000_003L + gen);
+                eval.generationStart(gen);
                 int[] chosen = pick(episodes, cfg.episodesPerGeneration, rnd);
                 double[][] noise = new double[pairs][n];
                 for (double[] e : noise) {
@@ -95,7 +103,7 @@ public final class Trainer {
                         for (int i = 0; i < n; i++) {
                             w[i] = theta[i] + sign * cfg.sigma * e[i];
                         }
-                        candidates.add(new Network(layers, w));
+                        candidates.add(start.withWeights(w));
                     }
                 }
                 double[] fitness = evaluate(pool, candidates, chosen, eval);
@@ -119,7 +127,7 @@ public final class Trainer {
                     double vh = v[i] / (1 - Math.pow(b2, gen));
                     theta[i] += cfg.learningRate * mh / (Math.sqrt(vh) + 1e-8) - cfg.weightDecay * cfg.learningRate * theta[i];
                 }
-                center = new Network(layers, theta);
+                center = start.withWeights(theta);
                 Generation g = new Generation();
                 g.index = gen;
                 g.mean = Arrays.stream(fitness).average().orElse(0);

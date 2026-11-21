@@ -13,7 +13,7 @@ import java.util.function.Consumer;
  */
 public final class Observation {
 
-    public static final int SCHEMA_VERSION = 3;
+    public static final int SCHEMA_VERSION = 4;
     public static final int ALLIES = 2;
     public static final String DAMAGE = "dano";
     public static final String DEFENSE = "defesa";
@@ -29,7 +29,16 @@ public final class Observation {
     public static final int PREDICTIONS = 6;
     public static final int SELF3_SIZE = SLOTS * PREDICTIONS + 2 + 6;
     public static final int ENEMY3_SIZE = 12;
-    public static final int SIZE = V2_SIZE + SELF3_SIZE + ActionSpace.ENEMIES * ENEMY3_SIZE;
+    /** The schema 3 vector (241): schema 4 appends the style to it, so its indexes stay. */
+    public static final int V3_SIZE = V2_SIZE + SELF3_SIZE + ActionSpace.ENEMIES * ENEMY3_SIZE;
+    /**
+     * Rodada 21 (schema 4): the style asked, one input per style (one of six is 1; no style asked = padrao). A migrated
+     * schema 3 network weighs them all zero, so it reads every style as it read the fight: as padrao. Padrao has an
+     * input of its own so that one weight can move only the standard fights (with all zeros for it, a network could not
+     * learn "flee when asked, fight otherwise" except by two coordinated changes).
+     */
+    public static final java.util.List<String> STYLES = java.util.List.of("padrao", "agressivo", "cauteloso", "enrolar", "fugir", "farmar");
+    public static final int SIZE = V3_SIZE + STYLES.size();
 
     /** The deciding champion. Distances in map units, times in seconds. */
     public static final class Self {
@@ -138,7 +147,8 @@ public final class Observation {
 
     /**
      * Where each input of an older schema's vector is in this one (an explicit index map): schema 2's 85 features are
-     * the first 85 of schema 3 (the new ones are appended), so a migrated network sees them where it learned them.
+     * the first 85 of schema 3 and schema 3's 241 the first 241 of schema 4 (the new ones are appended), so a migrated
+     * network sees them where it learned them.
      */
     public static int[] migration(int fromSchema) {
         if (fromSchema == SCHEMA_VERSION) {
@@ -148,11 +158,12 @@ public final class Observation {
             }
             return same;
         }
-        if (fromSchema != 2) {
+        if (fromSchema != 2 && fromSchema != 3) {
             throw new IllegalArgumentException("no migration from observation schema " + fromSchema);
         }
-        int[] map = new int[V2_SIZE];
-        for (int i = 0; i < V2_SIZE; i++) {
+        int n = fromSchema == 2 ? V2_SIZE : V3_SIZE;
+        int[] map = new int[n];
+        for (int i = 0; i < n; i++) {
             map[i] = i;
         }
         return map;
@@ -168,6 +179,7 @@ public final class Observation {
     private boolean predictedYet;
     private double time;
     private double duration;
+    private String style;
 
     /** @param filler writes the facts into the observation (through the setters), once, when first read */
     public Observation(Consumer<Observation> filler) {
@@ -252,6 +264,16 @@ public final class Observation {
         return allies[k];
     }
 
+    /** Rodada 21: the style asked of the deciding champion (null = padrao). */
+    public void setStyle(String style) {
+        this.style = style;
+    }
+
+    public String style() {
+        fill();
+        return style == null ? "padrao" : style;
+    }
+
     public void setClock(double time, double duration) {
         this.time = time;
         this.duration = duration;
@@ -330,6 +352,11 @@ public final class Observation {
             v[i++] = flag(e.cleanseReady);
             v[i++] = e.attackRange / 1000;
             v[i++] = flag(e.reachesMe);
+        }
+        // schema 4, appended: the style asked, one of six (none asked = padrao)
+        String asked = style == null || !STYLES.contains(style) ? "padrao" : style;
+        for (String st : STYLES) {
+            v[i++] = flag(st.equals(asked));
         }
         for (int k = 0; k < v.length; k++) {
             v[k] = Math.max(-1, Math.min(1, v[k]));

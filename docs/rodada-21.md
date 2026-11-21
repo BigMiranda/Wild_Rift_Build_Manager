@@ -66,3 +66,55 @@ naquela luta (a Lutador "melhor que o Tático" em 97% do seu cenário). É o sob
 uma rede zerada da classe Lutador fez 41,1% contra 46,4% do Tático: −5 pontos só pela demora em decidir. As IAs salvas
 continuam com 0,1 s (o golden das IAs não muda); as da liga decidem a cada passo (`Weights.interval = 0`, Parte 2), e o
 teste `zeroLeagueNetworkPlaysExactlyLikeTheTacticalRules` confere a igualdade célula a célula.
+
+## Parte 2: treino em liga, estilos como entrada (✅)
+
+O `Trainer` (estratégia evolutiva) é o mesmo; ele só ganhou `Evaluator.generationStart(g)`, chamado antes das lutas de
+cada geração, e passou a perturbar a rede pelo seu próprio formato (`Network.withWeights`). O que muda é **de onde vêm
+os episódios** (`arena/league/LeagueTrainer`, seed `treino_liga_7_3f.yml`):
+
+- **pool sorteado a cada geração** (12 lutas por padrão; cada candidato joga todas), da semente da geração: adversários
+  de todas as classes (classe sorteada por igual, depois o campeão; ficha A, B ou C; os adversários do banco ficam de
+  fora, `exclui_banco`), minutos de 3 a 25, builds pela progressão (20% puxadas para outro arquétipo: a build "errada"
+  provável), 30% com outro feitiço e outra runa fundamental, os 4 tipos de luta do banco (as mesmas posições), e na
+  fuga a Vida de quem foge sorteada de 30% a 100%;
+- **currículo**: os pesos dos tipos de luta vão do começo (`rota` 0,6, `aberto` 0,3, `dupla` e `fuga` 0,05) ao fim
+  (0,25 cada), e o teto dos minutos sobe de 10 a 25;
+- **adversários em liga**: o Tático (0,4), as IAs aceitas dos adversários (a do campeão, senão a da classe; 0,3) e o
+  **salão** (0,3): as 4 últimas versões da própria IA e ela mesma de 5 gerações atrás (self-play);
+- **seleção**: a cada 2 gerações a rede joga 24 lutas fixas do mesmo sorteio (outra semente, o fim do currículo, todos
+  com o Tático); a melhor geração por recompensa média é a escolhida;
+- **aceite pela matriz inteira** (`LeagueModel.accept`, `aceite` no seed): a média acima da IA em uso (`media_acima: 0`)
+  e nenhuma célula pior que 15 pontos (`pior_celula`). Sem IA em uso, a referência é o Tático nas mesmas lutas.
+  Recusada, a versão fica salva com `accepted = false` e o motivo; a anterior continua valendo.
+
+**Estilos como entrada: Observation schema 4.** O vetor do schema 3 (241 entradas) fica no começo, intacto, e o estilo
+pedido vai no fim, um entre seis (`padrao`, `agressivo`, `cauteloso`, `enrolar`, `fugir`, `farmar`; sem pedido =
+`padrao`), lido de `Arena.Input.style`. Uma rede joga todos os estilos; a recompensa de cada um é uma soma de termos
+medidos na luta (`StyleReward`; termos e pesos no seed: vitória, vitória limpa, rapidez, dano, Vida, viveu, chegou à
+zona e quão cedo, inimigos presos × segundos, controle aplicado, ouro, vantagem de Vida). "Enrolar" pontua inimigos
+presos × segundos com o jogador vivo e a Vida preservada; "fugir" pontua chegar à torre (e cedo); o "padrão" é o
+objetivo das IAs de antes (vencer rápido), e sair da luta para a torre não ajuda (`chegou: −300`).
+
+Três decisões que mudaram no caminho, cada uma medida:
+
+1. **Decidir a cada passo.** As IAs da liga decidem a cada passo livre, como o Tático (`NeuralPolicy.everyStep`,
+   `Weights.interval = 0`), e então pesos zero são exatamente o Tático (Parte 1). As salvas continuam a cada 0,1 s.
+2. **O "padrão" codificado também.** Com o "padrão" como tudo zero, nenhum peso mexia só nas lutas padrão; a rede
+   aprendia "fugir sempre" e o teste "fugir chega mais que padrão" empatava (13 × 13).
+3. **O estilo ligado direto às saídas** (`Network.skip`: as 6 entradas de estilo somam um peso por ação, 6 × 38). Pela
+   camada oculta (tanh) "fugir só quando pedido" exige mudanças coordenadas que a estratégia evolutiva acha devagar: com
+   40 gerações a rede continuava fugindo nos dois estilos. Com a ligação direta, na mesma posição (Vida cheia, o rival
+   350 atrás): **fugir chega 15 de 16, padrão 11, o Tático 4** (só recuar: 16). Uma rede salva antes não tem essa
+   ligação (`skip` nulo): continua igual. Uma rede do schema 3 de onde um treino de liga parte ganha a ligação zerada.
+
+**IAs salvas no schema 3** continuam abrindo: a migração põe as entradas novas com peso zero, e a rede lê qualquer
+estilo como lia a luta (o "padrão"); o banco deu os **mesmos números** com o schema 4 (linha de base refeita). O
+`ArenaPredictionTest` confere a versão 4 e o tamanho.
+
+**Testes** (`LeagueTrainingTest`, banco novo com o catálogo do seed): uma IA do schema 3 carrega e lê todo estilo como o
+padrão; a rede zerada da liga joga igual ao Tático em todas as células; o treino é igual com 1 e com N threads; uma IA
+de liga de classe (orçamento 3 × 8 × 6) contra uma IA em uso: se aceita, a média é maior e nenhuma célula piora mais
+que o limite, se recusada fica salva sem aceite (no teste: aceita, 46,4% contra 41,1% da em uso — exatamente o Tático,
+o ganho veio de decidir a cada passo); "fugir" chega à torre mais vezes que "padrão" da mesma posição (15 × 11).
+`LeagueModelTest` (puro): 504 lutas, 18 por célula, determinismo e a regra de aceite.

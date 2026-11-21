@@ -2010,6 +2010,7 @@ public class Arena {
             other(u, k < allies.size() ? allies.get(k) : null, o.rawAlly(k), false);
         }
         o.setClock(now, duration);
+        o.setStyle(u.in.style);
     }
 
     private void other(U u, U x, Observation.Other o, boolean enemy) {

@@ -130,7 +130,7 @@ public class PolicyRepository {
     }
 
     /** Observation schemas whose weights read into the current one, and the action counts they had. */
-    static final Map<Integer, Integer> OBS_SIZES = Map.of(2, Observation.V2_SIZE, 3, Observation.SIZE);
+    static final Map<Integer, Integer> OBS_SIZES = Map.of(2, Observation.V2_SIZE, 3, Observation.V3_SIZE, 4, Observation.SIZE);
     /** Actions of the layouts before the current one (32 until combos). */
     static final List<Integer> OLD_ACTIONS = List.of(32, 36);
 
@@ -154,6 +154,7 @@ public class PolicyRepository {
                 ActionSpace.migration(actions), ActionSpace.SIZE, ActionSpace.NEW_ACTION_BIAS);
         Weights out = Weights.of(net, w.bonus);
         out.base = w.base;
+        out.interval = w.interval;
         return out;
     }
 
@@ -166,12 +167,17 @@ public class PolicyRepository {
         public double bonus = NeuralPolicy.BASE_BONUS;
         /** {@link #PREDICTIVE}, or null: the tactical rules before the predictions ({@link TacticalPolicy#legacy}). */
         public String base;
+        /** Rodada 21: seconds between decisions (null = {@link NeuralPolicy#INTERVAL}, as every version before the league). */
+        public Double interval;
+        /** Rodada 21: inputs that also reach the outputs directly (the style; null = none). */
+        public Integer skip;
 
         public static Weights of(Network net, double bonus) {
             Weights w = new Weights();
             w.layers = net.layers();
             w.weights = net.weights();
             w.bonus = bonus;
+            w.skip = net.skip() > 0 ? net.skip() : null;
             return w;
         }
 
@@ -183,13 +189,14 @@ public class PolicyRepository {
         }
 
         public Network network() {
-            return new Network(layers, weights);
+            return new Network(layers, weights, skip == null ? 0 : skip);
         }
 
         /** The policy of these weights on their own base. */
         public NeuralPolicy policy(List<String> priority) {
             return new NeuralPolicy(network(), bonus,
-                    PREDICTIVE.equals(base) ? new TacticalPolicy(priority) : TacticalPolicy.legacy(priority));
+                    PREDICTIVE.equals(base) ? new TacticalPolicy(priority) : TacticalPolicy.legacy(priority),
+                    interval == null ? NeuralPolicy.INTERVAL : interval);
         }
     }
 

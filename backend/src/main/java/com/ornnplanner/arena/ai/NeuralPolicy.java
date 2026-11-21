@@ -19,6 +19,7 @@ public final class NeuralPolicy implements Policy {
     private final Network net;
     private final Policy base;
     private final double bonus;
+    private final double interval;
 
     /** @param priority ability order for the tactical base; read at each decision, not copied. */
     public NeuralPolicy(Network net, List<String> priority) {
@@ -32,9 +33,23 @@ public final class NeuralPolicy implements Policy {
 
     /** Residual over a given base (a saved version keeps the base it was trained on: {@link TacticalPolicy#legacy}). */
     public NeuralPolicy(Network net, double bonus, Policy base) {
+        this(net, bonus, base, INTERVAL);
+    }
+
+    /**
+     * Rodada 21: with its own decision interval. The league's AIs decide every step the champion is free (0), as the
+     * tactical rules do, so zero weights play exactly like them; the versions saved before keep {@link #INTERVAL}.
+     */
+    public NeuralPolicy(Network net, double bonus, Policy base, double interval) {
         this.net = net;
         this.base = base;
         this.bonus = bonus;
+        this.interval = interval;
+    }
+
+    /** A league AI: residual over the tactical rules with predictions, deciding every step. */
+    public static NeuralPolicy everyStep(Network net, List<String> priority) {
+        return new NeuralPolicy(net, BASE_BONUS, new TacticalPolicy(priority), 0);
     }
 
     public Policy base() {
@@ -47,7 +62,7 @@ public final class NeuralPolicy implements Policy {
 
     @Override
     public double interval() {
-        return INTERVAL;
+        return interval;
     }
 
     @Override

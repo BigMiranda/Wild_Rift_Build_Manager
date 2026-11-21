@@ -1,0 +1,87 @@
+# Rodada 21, parte 2: o treino em liga. O Trainer (estratégia evolutiva) é o mesmo; o que muda é de onde vêm os
+# episódios: um pool sorteado a cada geração, com adversários de todas as classes, minutos de 3 a 25, builds pela
+# progressão (inclusive as "erradas" prováveis), os 4 tipos de luta do banco, feitiços e runas variados e um estilo
+# pedido. A semente do sorteio é própria: nunca repete uma luta do banco de validação (ia_validacao_7_3f.yml).
+patch: 7.3f
+semente_base: 7301
+
+pool:
+  # lutas sorteadas por geração (cada candidato joga todas)
+  episodios: 12
+  minutos: [3, 25]
+  # tirar do sorteio os adversários do banco de validação (a validação mede campeões que o treino não viu)
+  exclui_banco: true
+  # parte das builds puxada para outro arquétipo (uma build "errada" provável)
+  build_errada: 0.2
+  # parte das lutas com outros feitiços (de feiticos_7_3f.yml) e outra página de runas da progressão
+  feiticos_variados: 0.3
+  # adversários só com ficha de qualidade A, B ou C (D fica fora do treino)
+  qualidade_minima: C
+  # na fuga do treino, quem foge começa com uma Vida sorteada neste intervalo (o banco usa 40%): com a Vida cheia o
+  # "padrão" luta e o "fugir" corre, e a rede aprende a diferença
+  vida_na_fuga: [0.3, 1.0]
+
+# currículo: o peso de cada tipo de luta no começo e no fim do treino (interpolado pela geração); os minutos cedo pesam
+# mais no começo (minutos_cedo: o teto do sorteio no começo, que sobe até o fim do intervalo do pool)
+curriculo:
+  inicio: {rota: 0.6, aberto: 0.3, dupla: 0.05, fuga: 0.05}
+  fim: {rota: 0.25, aberto: 0.25, dupla: 0.25, fuga: 0.25}
+  minutos_cedo: 10
+
+# os cérebros dos adversários: o Tático, as IAs aceitas de outros campeões e classes (a do campeão, senão a da classe)
+# e o salão: as últimas versões da própria IA (e a versão do próprio treino de algumas gerações atrás, como self-play)
+adversarios: {tatico: 0.4, ias: 0.3, salao: 0.3}
+salao: {versoes: 4, self_play_a_cada: 5}
+# os aliados da dupla jogam com o Tático
+aliados: tactical
+
+# o estilo pedido em cada tipo de luta (sorteado pelos pesos); a recompensa da luta é a do estilo
+estilos_por_tipo:
+  rota: {padrao: 0.4, agressivo: 0.2, cauteloso: 0.15, farmar: 0.15, enrolar: 0.1}
+  aberto: {padrao: 0.5, agressivo: 0.25, cauteloso: 0.15, enrolar: 0.1}
+  dupla: {padrao: 0.4, agressivo: 0.2, cauteloso: 0.1, enrolar: 0.3}
+  fuga: {fugir: 0.7, padrao: 0.3}
+
+# a recompensa de cada estilo: uma soma de termos medidos na luta, com estes pesos. Termos:
+#   vitoria (1 se o lado venceu), limpa (vitória limpa: o jogador vivo, todo inimigo morto), rapidez (1 - duração/limite
+#   quando vence), dano (dano causado / Vida máxima do jogador), vida (fração da Vida no fim), viveu (1 se não morreu),
+#   tempo_vivo (fração da luta vivo), chegou (1 se chegou vivo à zona segura), chegou_cedo (1 - instante/limite ao
+#   chegar), presos (inimigos vivos e ocupados × segundos com o jogador vivo, sobre o limite: o "enrolar"), controle
+#   (segundos de controle aplicados / limite), ouro (ouro ganho / 100: tropas na rota), vantagem (Vida do lado menos a
+#   dos inimigos, -1..1).
+recompensas:
+  # o padrão é o objetivo das IAs de antes (vencer rápido): sair da luta para a torre não ajuda (chegou negativo)
+  padrao: {vitoria: 1000, limpa: 500, rapidez: 300, dano: 100, viveu: 150, vantagem: 500, chegou: -300}
+  agressivo: {vitoria: 1000, limpa: 800, rapidez: 600, dano: 200, viveu: 100, vantagem: 300, chegou: -600}
+  cauteloso: {vitoria: 600, limpa: 300, vida: 600, viveu: 900, vantagem: 600}
+  enrolar: {viveu: 800, vida: 300, presos: 1500, controle: 200, vantagem: 200}
+  fugir: {chegou: 2000, chegou_cedo: 500, viveu: 800, vida: 300}
+  farmar: {ouro: 200, viveu: 800, vida: 300, vantagem: 300}
+
+# aceite: a IA nova só substitui a que está em uso se for melhor na matriz de validação inteira: a média acima da
+# atual em mais de media_acima pontos e nenhuma célula (classe adversária x tipo de luta) pior que pior_celula pontos.
+# Sem IA em uso (uma classe ou um campeão novo), a referência é o Tático nas mesmas lutas; para o ajuste fino de um
+# campeão, a da classe dele jogando o mesmo campeão.
+aceite: {media_acima: 0.0, pior_celula: 15}
+
+# orçamentos (Parte 4): rápido e completo. classe = do zero (ou da atual); campeao = ajuste fino a partir da classe.
+orcamentos:
+  rapido:
+    classe: {geracoes: 20, populacao: 16, episodios: 8}
+    campeao: {geracoes: 8, populacao: 12, episodios: 8}
+  completo:
+    classe: {geracoes: 80, populacao: 32, episodios: 12}
+    campeao: {geracoes: 30, populacao: 24, episodios: 12}
+# a escolha da melhor geração: a cada geração, a rede mede-se num conjunto fixo de lutas de seleção do mesmo
+# sorteio (outra semente), no estilo de cada luta, contra o Tático nas mesmas lutas
+selecao: {lutas: 24, a_cada: 2}
+# os arquétipos para onde uma build "errada" é puxada (classificacao_7_3d.yml)
+arquetipos: [tanque, lutador, mago_explosivo, mago_continuo, critico, ao_acertar, letalidade, suporte]
+# as IAs de classe começam da atual quando ela é melhor que o Tático no banco; senão, do zero (o Tático)
+inicio_classe: melhor
+
+# a campanha "Treinar IAs de todos os campeões" (Parte 4): com a campanha de builds rodando, as duas dividem os
+# trabalhadores: o treino fica com esta parte dos núcleos (o resto é da campanha de builds); sozinha, com todos.
+trabalhadores: {sozinha: 1.0, com_campanha_de_builds: 0.5}
+# a estimativa: medida com os primeiros campeões treinados (e as classes) e projetada para todos os campeões com ficha
+estimativa: {amostra: 3}
