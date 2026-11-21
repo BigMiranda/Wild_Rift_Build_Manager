@@ -240,6 +240,11 @@ public class CampaignService {
         return out;
     }
 
+    /** Rodada 21: whether the builds campaign is working now (the AI training campaign shares the cores with it). */
+    public boolean running() {
+        return running;
+    }
+
     public State state() {
         State s = new State();
         s.running = running;
@@ -478,10 +483,15 @@ public class CampaignService {
             m.put("rival", scorer.championOf(rival));
             m.put("build", rival.name);
             Map<String, Double> byMinute = new LinkedHashMap<>();
+            Map<String, Object> choices = new LinkedHashMap<>();
             for (double minute : new double[] {10, 15, 20}) {
-                byMinute.put(String.valueOf(minute), duel(mine, rival, minute));
+                List<Map<String, Object>> used = new ArrayList<>();
+                byMinute.put(String.valueOf(minute), duel(mine, rival, minute, used));
+                choices.put(String.valueOf(minute), used);
             }
             m.put("minutes", byMinute);
+            // Rodada 21: which AI each side played with (the automatic brain's choice), per minute
+            m.put("brainChoices", choices);
             m.put("mean", byMinute.values().stream().mapToDouble(Double::doubleValue).average().orElse(0));
             out.add(m);
         }
@@ -683,6 +693,11 @@ public class CampaignService {
     }
 
     double duel(BuildRepository.Build a, BuildRepository.Build b, double minute) {
+        return duel(a, b, minute, null);
+    }
+
+    /** The duel; {@code used} (when given) gets each side's automatic brain choice: kind, owner, version. */
+    double duel(BuildRepository.Build a, BuildRepository.Build b, double minute, List<Map<String, Object>> used) {
         ArenaModel.Slot sa = new ArenaModel.Slot();
         sa.team = 0;
         sa.build = a;
@@ -696,6 +711,18 @@ public class CampaignService {
         ArenaModel.Scenario sc = new ArenaModel.Scenario();
         sc.fighters = List.of(sa, sb);
         List<Arena.Input> in = arena.prepareSlots(sc);
+        if (used != null) {
+            for (Arena.Input i : in) {
+                com.ornnplanner.arena.AutoBrain.Choice ch = i.autoChoice;
+                Map<String, Object> u = new LinkedHashMap<>();
+                u.put("champion", i.f.champion);
+                u.put("kind", ch == null ? null : ch.kind);
+                u.put("brain", ch == null ? null : ch.brain);
+                u.put("owner", ch == null ? null : ch.owner);
+                u.put("version", ch == null ? null : ch.version);
+                used.add(u);
+            }
+        }
         Arena.Input x = in.get(0).copy();
         Arena.Input y = in.get(1).copy();
         x.x = 4600;

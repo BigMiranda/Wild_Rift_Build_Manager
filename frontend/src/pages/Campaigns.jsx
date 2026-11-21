@@ -5,6 +5,13 @@ import { mmss, n0, n1 } from '../format.js';
 import { useTask } from '../tasks.js';
 import Help from '../components/Help.jsx';
 import { KitIcons } from './Discovery.jsx';
+import AiCampaign from '../components/AiCampaign.jsx';
+
+/** Rodada 21: which AI each side played with in a matchup (the automatic brain's choice at the first minute). */
+const brainText = (choices) => {
+  const first = Object.values(choices)[0] ?? [];
+  return first.map((c) => `${c.champion}: ${c.kind === 'tatico' || !c.kind ? t('camp.brainTactical') : `${c.kind === 'classe' ? t('aicamp.class') + ' ' : ''}${c.owner} v${c.version}`}`).join(' · ');
+};
 
 const duration = (s) => (s >= 3600 ? `${n1(s / 3600)} h` : mmss(s / 60));
 
@@ -149,7 +156,7 @@ export default function Campaigns() {
               <table className="table">
                 <tbody>
                   {result.matchups.map((m, i) => (
-                    <tr key={i}><td>{m.rival}</td><td><small>{m.build}</small></td>
+                    <tr key={i}><td>{m.rival}{m.brainChoices && <><br /><small className="muted" title={t('camp.brainsHelp')}>{brainText(m.brainChoices)}</small></>}</td><td><small>{m.build}</small></td>
                       {Object.entries(m.minutes).map(([k, v]) => <td key={k} className={v >= 0 ? 'delta-up' : 'delta-down'}>{mmss(Number(k))}: {n0(v)}</td>)}
                     </tr>
                   ))}
@@ -159,6 +166,7 @@ export default function Campaigns() {
           )}
         </section>
       )}
+      <AiCampaign />
     </div>
   );
 }

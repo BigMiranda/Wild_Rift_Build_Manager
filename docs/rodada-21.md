@@ -141,3 +141,32 @@ o ganho veio de decidir a cada passo); "fugir" chega à torre mais vezes que "pa
 **Teste** (`AutoBrainTest.theChampionsAiOnlyWhenItBeatsItsClassOnItsValidation`): sem matrizes, a do campeão; a da
 classe medida e a do campeão não, a da classe; a do campeão abaixo da classe, a da classe; uma versão nova acima, a do
 campeão.
+
+## Parte 4: a campanha "Treinar IAs de todos os campeões" (✅)
+
+Admin › Campanhas ganhou uma segunda campanha (`components/AiCampaign.jsx`, `arena/league/AiCampaignService`,
+`api/AiCampaignController` em `/api/ai-campaign`, só local; tabela `ai_training_queue`, também do schema v33), no mesmo
+modelo da de builds: um trabalhador de fundo, uma linha por IA treinada, retomar depois de um servidor parado (a linha
+"rodando" volta para a fila), **pausar** (a IA em treino volta como "pausado"), **parar após o atual** (a que está em
+treino termina, é validada e salva) e o progresso no sino (`useTask`: quem, a geração, a validação).
+
+- **Ordem** (`AiCampaignService.order`): as 7 de classe; depois os campeões que a campanha de builds vai usar a seguir
+  (as linhas dela pendentes / rodando / pausadas, por prioridade); depois a presença na meta; depois fichas A/B antes de
+  C/D; o nome desempata. A tela mostra a ordem antes de enfileirar.
+- **Por IA**: o orçamento do seed (`orcamentos.rapido` e `.completo`, um para classe e outro para campeão). A estimativa
+  mede as primeiras `estimativa.amostra` (3) de cada tipo e projeta a fila e todos os campeões com ficha.
+- **Uso imediato**: o Automático lê as IAs do banco a cada escolha; a aceita vale na próxima luta. O relatório da
+  campanha de builds guarda, em cada confronto, a IA de cada lado por minuto (`brainChoices`: tipo, dono, versão),
+  e a tela mostra ao lado do rival.
+- **Treinar de novo** (`needs`): sem IA da liga, a última recusada, o patch mudou ou a ficha mudou (o hash da ficha fica
+  na matriz da IA, `ai_validation.sheet_hash`). As atualizadas ficam de fora (a menos de "também as atualizadas"). A
+  antiga vale até a nova ser aceita.
+- **Tabela dos 143**: IA própria (versão, data, êxito no banco dela, o da IA da classe e o do Tático no mesmo campeão; "não
+  usada" quando abaixo da classe; "desatualizada" com o motivo), na fila, recusada (o motivo do aceite) ou sem treino.
+- **Com a campanha de builds rodando**, as duas dividem os núcleos: o treino fica com `trabalhadores.com_campanha_de_builds`
+  (0,5) deles, decidido no começo de cada IA (`CampaignService.running()`); sozinho, com `sozinha` (1,0). A linha guarda
+  quantos usou e se dividiu. O impacto medido está no relatório final.
+
+**Testes**: `AiCampaignTest` (a ordem: classes primeiro, depois presença na meta e A/B antes de C/D; sem IA da liga tudo
+precisa de treino e a tabela diz "sem treino"; a estimativa conta os campeões com ficha). `AiCampaignReportTest`
+(opt-in `-Daicamp.report=data/ornn-planner.db`, numa cópia): a campanha das 7 classes e dos primeiros campeões.

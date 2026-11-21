@@ -422,3 +422,24 @@ CREATE TABLE IF NOT EXISTS ai_validation (
 CREATE INDEX IF NOT EXISTS idx_ai_validation_policy ON ai_validation (policy_id);
 CREATE INDEX IF NOT EXISTS idx_ai_validation_champion ON ai_validation (champion);
 
+-- Version 33 (Rodada 21, part 4): the queue of the campaign "Treinar IAs de todos os campeões" (Admin › Campanhas):
+-- the class AIs first, then the champions; one row per owner trained, its result as JSON.
+CREATE TABLE IF NOT EXISTS ai_training_queue (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    patch       TEXT NOT NULL,
+    owner       TEXT NOT NULL,                    -- a champion, or class:<Classe>
+    kind        TEXT NOT NULL,                    -- classe | campeao
+    position    INTEGER NOT NULL,                 -- the campaign's order
+    budget      TEXT NOT NULL,                    -- rapido | completo (treino_liga_<patch>.yml)
+    status      TEXT NOT NULL,                    -- pendente | rodando | aceita | recusada | erro | pausado | cancelado
+    campaign    TEXT,
+    reason      TEXT,                             -- why it was queued: sem IA, ficha mudou, patch mudou, pedido
+    result      TEXT,                             -- JSON: version, matrices' means, acceptance, seconds, threads
+    policy_id   INTEGER,
+    sheet_hash  TEXT,
+    seconds     REAL,
+    error       TEXT,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ai_training_queue_status ON ai_training_queue (status);
