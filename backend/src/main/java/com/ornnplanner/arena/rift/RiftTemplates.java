@@ -56,6 +56,18 @@ public final class RiftTemplates {
         return t;
     }
 
+    /**
+     * Rodada 21: the two starts of a duel in a lane, between its outer towers, {@code gap} apart (blue first): the
+     * league's "1x1 de rota com tropas".
+     */
+    public static double[][] laneDuel(RiftMap map, String lane, double gap) {
+        double[] own = tower(map, lane, 0);
+        double[] other = tower(map, lane, 1);
+        double[] mid = {(own[0] + other[0]) / 2, (own[1] + other[1]) / 2};
+        double[] toOther = unit(own, other);
+        return new double[][] {shift(mid, toOther, -gap / 2), shift(mid, toOther, gap / 2)};
+    }
+
     private static void duels(List<Template> out, RiftMap map, String lane, String label) {
         double[] own = tower(map, lane, 0);
         double[] other = tower(map, lane, 1);

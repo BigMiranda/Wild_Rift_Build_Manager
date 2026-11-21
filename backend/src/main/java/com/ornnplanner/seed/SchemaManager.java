@@ -19,7 +19,7 @@ import java.util.List;
 public class SchemaManager {
 
     private static final Logger log = LoggerFactory.getLogger(SchemaManager.class);
-    static final int VERSION = 32;
+    static final int VERSION = 33;
 
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
@@ -173,6 +173,7 @@ public class SchemaManager {
         // v28 (proposta-macro-treinada.md, Parte 4): macro_policy is a new table, created by schema.sql
         // v29 (Rodada 16): atlas_run is a new table, created by schema.sql
         // v32 (Rodada 20): live_game, draft_apelido and draft_tabelas are new tables, created by schema.sql
+        // v33 (Rodada 21): ai_validation (the AIs' generalization matrices) is a new table, created by schema.sql
         // v16 / v17 / v18 / v24 / v25: arena_combo, arena_dummy, arena_guideline, ai_result, meta_build and build_discovery are new tables, created by schema.sql
         new ResourceDatabasePopulator(new ClassPathResource("schema.sql")).execute(dataSource);
         if (version < VERSION) {

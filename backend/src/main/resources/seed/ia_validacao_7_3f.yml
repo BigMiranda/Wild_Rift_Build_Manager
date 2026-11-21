@@ -1,0 +1,68 @@
+# Rodada 21, parte 1: o banco fixo de validação das IAs de luta. Nunca entra no treino: as sementes são próprias e o
+# treino em liga (treino_liga_7_3f.yml) tira estes adversários do seu sorteio (exclui_banco).
+#
+# Cada IA joga contra 2 campeões de cada uma das 7 classes, com builds amostradas pela progressão natural (Rodada 19)
+# em 3 minutos, em 4 tipos de luta, com 3 sementes: 7 x 2 x 3 x 4 x 3 = 504 lutas. Os mesmos lutadores, na mesma
+# posição, jogam também com o cérebro Tático: a matriz dá o êxito da IA e a diferença para o Tático em cada célula
+# (classe adversária x tipo de luta, 18 lutas por célula).
+#
+# Êxito: vitória limpa (o lado vence, o jogador termina vivo e todo inimigo morreu). Na fuga, quando quem foge é o
+# jogador, chegar vivo à zona segura (a torre) também é êxito.
+patch: 7.3f
+
+classes: [Tanque, Lutador, Assassino, Mago, Atirador, Controlador, Especialista]
+adversarios_por_classe: 2
+# quem uma IA de classe joga, em rodízio pelas sementes: os primeiros da classe na mesma ordem
+jogadores_por_classe: 2
+# a ordem dos campeões de cada classe: presença na meta (data/meta/meta.json, o maior das rotas), depois a qualidade
+# da ficha (A antes de D) e o nome. Só entram campeões com ficha.
+ordem: [meta, qualidade, nome]
+# fixos por classe (opcional; nomes do catálogo): substituem a escolha pela ordem
+fixos: {}
+
+minutos: [6, 12, 20]
+lutas: [rota, aberto, dupla, fuga]
+sementes: 3
+semente_base: 2111
+
+# segundos de luta por tipo
+duracao: {rota: 40, aberto: 40, dupla: 40, fuga: 25}
+# o estilo pedido ao jogador em cada tipo (Observation schema 4; as IAs do schema 3 leem "padrao")
+estilo: {rota: padrao, aberto: padrao, dupla: padrao, fuga: fugir}
+# o cérebro de todos os outros lutadores (adversários e aliados): fixo, para a matriz não mudar com as IAs salvas
+cerebro_outros: tactical
+
+rota:
+  # rotas do mapa inteiro, em rodízio pela semente; com tropas e torres no minuto da luta, sem visão (todos se veem)
+  rotas: [barao, meio, dragao]
+  distancia: 600
+aberto:
+  # a rota única, sem zona segura
+  centro: 5000
+  distancia: 600
+  desvio_y: 150
+dupla:
+  centro: 5000
+  distancia: 600
+  # o aliado de cada lado vem de outra classe do banco (deslocamento na lista de classes)
+  aliado_meu: 3
+  aliado_deles: 5
+fuga:
+  # quem foge começa com 40% de Vida, longe da zona segura do seu lado; o outro vem logo atrás, com a Vida cheia.
+  # Semente par: o jogador foge; ímpar: o jogador persegue (perseguição).
+  vida: 0.4
+  profundidade_zona: 1200
+  distancia_da_zona: 2600
+  perseguidor_atras: 350
+  dano_da_torre: 0
+
+# "no cenário em que treinou": os campeões com que cada IA de classe da Rodada 18 foi treinada (ClassAiTrainTest), no
+# lugar 0 do cenário salvo, com a build da progressão no minuto do lugar. Sem a classe aqui, os jogadores do banco.
+jogadores_do_treino:
+  Tanque: [Ornn, Malphite, K'Sante]
+  Lutador: [Darius, Garen, Aatrox]
+  Atirador: [Caitlyn, Jinx, Ezreal]
+  Mago: [Ahri, Lux, Annie]
+  Assassino: [Kha'Zix, Akali, Diana]
+  Controlador: [Thresh, Morgana, Nami]
+  Especialista: [Teemo, Singed, Kennen]

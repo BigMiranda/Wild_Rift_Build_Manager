@@ -133,6 +133,11 @@ public class Arena {
         public Double permanentStacks;
         /** What it starts with from the objectives (null = nothing). */
         public ArenaModel.ObjectiveBuffs objectives;
+        /**
+         * Rodada 21: the style asked of a learned policy (Observation schema 4: agressivo, cauteloso, enrolar, fugir,
+         * farmar); null or "padrao" = the schema 3 vector. The rules and the script never read it.
+         */
+        public String style;
 
         /**
          * A shallow copy (same fighter, sheet and build effects, which a run only reads): to change the start or the
@@ -167,6 +172,7 @@ public class Arena {
             c.markedBy = markedBy;
             c.permanentStacks = permanentStacks;
             c.objectives = objectives;
+            c.style = style;
             return c;
         }
     }

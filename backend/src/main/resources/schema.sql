@@ -401,3 +401,24 @@ CREATE TABLE IF NOT EXISTS draft_tabelas (
     created_at  TEXT NOT NULL,
     PRIMARY KEY (lane, a, b, minute)
 );
+
+-- Version 33 (Rodada 21): each AI's matrix on the fixed validation bank (ia_validacao_<patch>.yml): success per
+-- opponent class x fight type, its own and the tactical rules' in the same fights; the automatic brain reads it to
+-- pick a champion's AI over its class's, and the mass training campaign to accept a new version.
+CREATE TABLE IF NOT EXISTS ai_validation (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    policy_id     INTEGER,                        -- the AI measured; NULL = the tactical rules alone
+    owner         TEXT NOT NULL,                  -- its champion, or class:<Classe>
+    champion      TEXT NOT NULL,                  -- who played it: a champion, or * for a class AI's rotation
+    bank          TEXT NOT NULL,                  -- fingerprint of the bank (seed + resolved champions)
+    mean          REAL NOT NULL,                  -- success over every fight, 0..100
+    tactical_mean REAL NOT NULL,                  -- the tactical rules' in the same fights
+    matrix        TEXT NOT NULL,                  -- JSON: the cells and, when measured, the training scenario's numbers
+    sheet_hash    TEXT,                           -- hash of the champion's kit sheet when measured (NULL for '*')
+    game_patch    TEXT,
+    seconds       REAL,
+    created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ai_validation_policy ON ai_validation (policy_id);
+CREATE INDEX IF NOT EXISTS idx_ai_validation_champion ON ai_validation (champion);
+

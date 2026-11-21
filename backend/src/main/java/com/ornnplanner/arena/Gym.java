@@ -26,6 +26,10 @@ public final class Gym {
         public final String opponent;
         /** The scenario's safe zone (null = none). */
         public ArenaModel.SafeZone safeZone;
+        /** Rodada 21: a fight on the full map (a lane with minions and towers); null = the single lane. */
+        public ArenaModel.RiftOptions rift;
+        /** Rodada 21: the league's bout this episode plays (null outside the league), for its style's reward. */
+        public Object tag;
 
         public Episode(List<Arena.Input> inputs, List<ArenaModel.Action> actions, double duration, int me,
                        Policy[] policies, String opponent) {
@@ -44,10 +48,19 @@ public final class Gym {
 
     private final CombatCatalog catalog;
     private final Map<String, Object> map;
+    private com.ornnplanner.arena.rift.RiftMap riftMap;
+    private com.ornnplanner.arena.rift.RiftRules riftRules;
 
     public Gym(CombatCatalog catalog, Map<String, Object> map) {
         this.catalog = catalog;
         this.map = map;
+    }
+
+    /** Rodada 21: the full map, for the episodes that fight on it ({@link Episode#rift}). */
+    public Gym withRift(com.ornnplanner.arena.rift.RiftMap geometry, com.ornnplanner.arena.rift.RiftRules rules) {
+        this.riftMap = geometry;
+        this.riftRules = rules;
+        return this;
     }
 
     /** A policy against a reference on the same episodes. */
@@ -99,6 +112,10 @@ public final class Gym {
             }
             in.add(c);
         }
-        return new Arena(catalog, map).withoutFrames().withSafeZone(e.safeZone).run(in, e.actions, e.duration);
+        Arena a = new Arena(catalog, map).withoutFrames().withSafeZone(e.safeZone);
+        if (e.rift != null && riftMap != null) {
+            a = a.withRift(riftMap, riftRules, e.rift);
+        }
+        return a.run(in, e.actions, e.duration);
     }
 }
